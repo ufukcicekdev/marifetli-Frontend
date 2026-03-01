@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { useAuthModalStore } from '../stores/auth-modal-store';
 import { useAuthStore } from '../stores/auth-store';
@@ -32,6 +33,7 @@ export function AuthModal() {
       const { access, refresh, user } = res.data;
       setAuth(user, access);
       if (refresh) localStorage.setItem('refresh_token', refresh);
+      toast.success('Giriş başarılı');
       close();
     } catch (err: unknown) {
       const e = err as { response?: { data?: { error?: string }; status?: number }; message?: string };
@@ -57,6 +59,7 @@ export function AuthModal() {
       const { access, refresh, user } = res.data;
       setAuth(user, access);
       if (refresh) localStorage.setItem('refresh_token', refresh);
+      toast.success('Hesabınız oluşturuldu!');
       close();
       router.push('/onboarding');
     } catch (err: unknown) {

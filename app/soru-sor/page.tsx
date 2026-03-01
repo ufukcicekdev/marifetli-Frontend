@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import toast from 'react-hot-toast';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -60,10 +61,12 @@ export default function SoruSorPage() {
     mutationFn: (payload: { title: string; description: string; content: string; category?: number | null; tags?: number[]; status: string }) =>
       api.createQuestionRaw(payload).then((r) => r.data),
     onSuccess: (data) => {
+      toast.success(data?.slug ? 'Gönderi yayınlandı!' : 'Kaydedildi');
       const slug = data?.slug;
       if (slug) router.push(`/soru/${slug}`);
       else router.push('/sorular');
     },
+    onError: () => toast.error('Gönderi oluşturulamadı'),
   });
 
   const handleMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {

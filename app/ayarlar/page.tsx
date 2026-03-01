@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/src/lib/api';
@@ -64,6 +65,7 @@ export default function AyarlarPage() {
       const u = useAuthStore.getState().user;
       if (u && res.data) useAuthStore.getState().setUser({ ...u, ...res.data });
     },
+    onError: () => toast.error('Güncelleme başarısız'),
   });
 
   const uploadAvatar = useMutation({
@@ -72,7 +74,9 @@ export default function AyarlarPage() {
       queryClient.invalidateQueries({ queryKey: ['myProfile'] });
       const u = useAuthStore.getState().user;
       if (u && res.data) useAuthStore.getState().setUser({ ...u, ...res.data });
+      toast.success('Profil fotoğrafı güncellendi');
     },
+    onError: () => toast.error('Fotoğraf yüklenemedi'),
   });
 
   const updateProfile = useMutation({
@@ -86,12 +90,20 @@ export default function AyarlarPage() {
       youtube_url?: string;
       pinterest_url?: string;
     }) => api.updateUserProfile(data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['myProfile'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['myProfile'] });
+      toast.success('Profil kaydedildi');
+    },
+    onError: () => toast.error('Kaydetme başarısız'),
   });
 
   const updateNotif = useMutation({
     mutationFn: (data: Partial<NotificationSetting>) => api.updateNotificationSettings(data),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['notificationSettings'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notificationSettings'] });
+      toast.success('Bildirim ayarları güncellendi');
+    },
+    onError: () => toast.error('Güncelleme başarısız'),
   });
 
   const fileInputRef = useRef<HTMLInputElement>(null);

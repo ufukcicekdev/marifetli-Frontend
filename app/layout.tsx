@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import { Toaster } from 'react-hot-toast';
 import { QueryProvider } from '@/src/providers/query-provider';
 import { ThemeProvider } from '@/src/components/theme-provider';
 import { Header } from '@/src/components/header';
@@ -35,6 +36,7 @@ export default function RootLayout({
             </OnboardingGuard>
           </QueryProvider>
         </ThemeProvider>
+        <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
       </body>
     </html>
   );
