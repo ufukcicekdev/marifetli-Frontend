@@ -28,12 +28,12 @@ export function PostFeedControls({
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-4 p-3 border-b border-gray-200 dark:border-gray-800">
-      <div className="flex items-center gap-2 flex-wrap">
-        <div className="relative">
+    <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-4 p-3 border-b border-gray-200 dark:border-gray-800 min-w-0">
+      <div className="flex items-center gap-2 flex-wrap min-w-0">
+        <div className="relative shrink-0">
           <button
             onClick={() => setSortDropdownOpen((o) => !o)}
-            className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+            className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg whitespace-nowrap"
           >
             {SORT_LABELS[sort]}
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -58,7 +58,7 @@ export function PostFeedControls({
           )}
         </div>
 
-        <div className="flex items-center border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+        <div className="flex items-center border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden shrink-0">
           <button
             onClick={() => onViewModeChange('card')}
             title="Kart görünümü"

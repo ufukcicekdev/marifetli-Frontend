@@ -27,6 +27,8 @@ export default function QuestionDetailPage() {
   const richContent = question ? (question as { content?: string }).content : undefined;
   const mediaItems = useMemo(() => extractMediaFromHtml(richContent), [richContent]);
   const contentWithoutMedia = useMemo(() => stripMediaFromHtml(richContent), [richContent]);
+  const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const [answerFormOpen, setAnswerFormOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -62,7 +64,6 @@ export default function QuestionDetailPage() {
   const authorName = author?.username ?? author?.first_name ?? 'Anonim';
   const isAuthor = currentUser && author && (currentUser.id === author.id || currentUser.username === authorName);
   const hasHtml = contentWithoutMedia && /<[a-z][\s\S]*>/i.test(contentWithoutMedia);
-  const [saveModalOpen, setSaveModalOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 overflow-x-hidden">
@@ -143,9 +144,44 @@ export default function QuestionDetailPage() {
         <SaveModal questionId={question.id} isOpen={saveModalOpen} onClose={() => setSaveModalOpen(false)} />
 
         <div className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-800 p-4 sm:p-6 mb-6 overflow-hidden">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">
-            {answers.length} Cevap
-          </h2>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">
+              {answers.length} Cevap
+            </h2>
+            {currentUser && (
+              <button
+                onClick={() => setAnswerFormOpen((o) => !o)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  answerFormOpen
+                    ? 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                    : 'bg-orange-500 hover:bg-orange-600 text-white'
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                {answerFormOpen ? 'İptal' : 'Cevapla'}
+              </button>
+            )}
+          </div>
+
+          {answerFormOpen && currentUser && (
+            <form className="mb-6 p-4 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
+              <textarea
+                rows={4}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500 mb-3"
+                placeholder="Cevabınızı buraya yazın..."
+              />
+              <div className="flex justify-end">
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-orange-500 text-white rounded-md text-sm font-medium hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+                >
+                  Cevabı Gönder
+                </button>
+              </div>
+            </form>
+          )}
 
           {answersLoading ? (
             <div className="space-y-4">
@@ -207,27 +243,6 @@ export default function QuestionDetailPage() {
               })}
             </div>
           )}
-        </div>
-
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-800 p-4 sm:p-6 overflow-hidden">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">Cevabınızı Yazın</h2>
-          <form>
-            <div className="mb-4">
-              <textarea
-                rows={6}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
-                placeholder="Cevabınızı buraya yazın..."
-              />
-            </div>
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                className="px-4 py-2 bg-orange-500 text-white rounded-md text-sm font-medium hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
-              >
-                Cevabı Gönder
-              </button>
-            </div>
-          </form>
         </div>
       </main>
 

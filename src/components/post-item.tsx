@@ -210,29 +210,31 @@ export function PostItem({ id, slug, title, content, category, author, timeAgo, 
 
   return (
     <div className="p-3 sm:p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-b border-gray-200 dark:border-gray-800 last:border-b-0">
-      <div className="flex gap-2 sm:gap-3 min-w-0">
+      <div className="flex gap-2 sm:gap-3">
         <VoteButtons />
-        <div className="flex-1 min-w-0 overflow-hidden">
-          <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-orange-600 line-clamp-1">
-            <Link href={href} className="block truncate">{title}</Link>
+        <div className="flex-1 w-0 flex flex-col gap-1">
+          <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-orange-600">
+            <Link href={href} className="block break-words">{title}</Link>
           </h3>
           <Meta />
-          <ActionBar compact />
-        </div>
-        {firstMedia && (
-          <Link href={href} className="w-16 h-16 shrink-0 rounded overflow-hidden bg-gray-100 dark:bg-gray-800">
-            {firstMedia.type === 'image' ? (
-              <img src={firstMedia.url} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <video src={firstMedia.url} className="w-full h-full object-cover" muted playsInline />
+          <div className="flex items-center gap-3 flex-wrap">
+            <ActionBar compact />
+            {viewCount != null && (
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                {viewCount >= 1000 ? `${(viewCount / 1000).toFixed(1)}k` : viewCount} görüntüleme
+              </span>
             )}
-          </Link>
-        )}
-        {viewCount != null && (
-          <div className="hidden sm:flex items-center text-xs text-gray-500 dark:text-gray-400 shrink-0">
-            {viewCount >= 1000 ? `${(viewCount / 1000).toFixed(1)}k` : viewCount} görüntüleme
           </div>
-        )}
+          {firstMedia && (
+            <Link href={href} className="mt-1 block w-20 h-20 rounded overflow-hidden bg-gray-100 dark:bg-gray-800 self-start">
+              {firstMedia.type === 'image' ? (
+                <img src={firstMedia.url} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <video src={firstMedia.url} className="w-full h-full object-cover" muted playsInline />
+              )}
+            </Link>
+          )}
+        </div>
       </div>
     </div>
   );

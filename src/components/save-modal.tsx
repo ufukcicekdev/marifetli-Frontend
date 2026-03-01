@@ -90,7 +90,7 @@ export function SaveModal({ questionId, isOpen, onClose, onSaved }: SaveModalPro
                 <span className="font-medium text-gray-900 dark:text-gray-100">Kaydettiklerim</span>
                 <span className="text-xs text-gray-500">Varsayılan liste</span>
               </button>
-              {collections?.filter((c) => !c.is_default).map((c) => (
+              {(Array.isArray(collections) ? collections : []).filter((c) => !c.is_default).map((c) => (
                 <button
                   key={c.id}
                   onClick={() => handleSaveToCollection(c.id)}
