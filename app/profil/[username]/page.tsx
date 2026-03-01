@@ -7,6 +7,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/src/lib/api';
 import { useAuthStore } from '@/src/stores/auth-store';
 import { PostItem } from '@/src/components/post-item';
+import { SavedCollectionsTab } from '@/src/components/saved-collections-tab';
 import { formatTimeAgo } from '@/src/lib/format-time';
 
 type ProfileTab = 'ozet' | 'gonderiler' | 'yorumlar' | 'kaydettiklerim' | 'gecmis';
@@ -224,11 +225,7 @@ export default function ProfilePage() {
                 </div>
               )}
               {activeTab === 'kaydettiklerim' && (
-                <div className="p-6 sm:p-8">
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">
-                    Kaydettiğiniz gönderiler burada listelenecek.
-                  </p>
-                </div>
+                <SavedCollectionsTab isOwnProfile={isOwnProfile} />
               )}
               {activeTab === 'gecmis' && (
                 <div className="p-6 sm:p-8">

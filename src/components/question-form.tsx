@@ -104,7 +104,7 @@ export function QuestionForm({
     queryKey: ['categories'],
     queryFn: () => api.getCategories().then((r) => r.data),
   });
-  const categories = Array.isArray(categoriesRaw) ? categoriesRaw : (categoriesRaw as { results?: unknown[] })?.results ?? [];
+  const categories = Array.isArray(categoriesRaw) ? categoriesRaw : (categoriesRaw as unknown as { results?: unknown[] })?.results ?? [];
 
   const { data: tagsData = [] } = useQuery({
     queryKey: ['tags'],

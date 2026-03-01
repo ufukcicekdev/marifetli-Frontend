@@ -3,13 +3,15 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuestion } from '@/src/hooks/use-questions';
 import api from '@/src/lib/api';
+import type { Answer } from '@/src/types';
 import { useAuthStore } from '@/src/stores/auth-store';
 import { formatTimeAgo } from '@/src/lib/format-time';
 import { extractMediaFromHtml, stripMediaFromHtml } from '@/src/lib/extract-media';
 import { MediaSlider } from '@/src/components/media-slider';
+import { SaveModal } from '@/src/components/save-modal';
 
 export default function QuestionDetailPage() {
   const params = useParams();
@@ -21,7 +23,7 @@ export default function QuestionDetailPage() {
     queryFn: () => api.getQuestionAnswers(question!.id).then((r) => r.data),
     enabled: !!question?.id,
   });
-  const answers = Array.isArray(answersData) ? answersData : (answersData?.results ?? []);
+  const answers: Answer[] = Array.isArray(answersData) ? answersData : ((answersData as unknown as { results?: Answer[] })?.results ?? []);
   const richContent = question ? (question as { content?: string }).content : undefined;
   const mediaItems = useMemo(() => extractMediaFromHtml(richContent), [richContent]);
   const contentWithoutMedia = useMemo(() => stripMediaFromHtml(richContent), [richContent]);
@@ -60,6 +62,7 @@ export default function QuestionDetailPage() {
   const authorName = author?.username ?? author?.first_name ?? 'Anonim';
   const isAuthor = currentUser && author && (currentUser.id === author.id || currentUser.username === authorName);
   const hasHtml = contentWithoutMedia && /<[a-z][\s\S]*>/i.test(contentWithoutMedia);
+  const [saveModalOpen, setSaveModalOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 overflow-x-hidden">
@@ -97,7 +100,18 @@ export default function QuestionDetailPage() {
               </div>
 
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-t border-gray-200 dark:border-gray-700 pt-4">
-                <div className="flex items-center gap-2 min-w-0">
+                <div className="flex items-center gap-3 min-w-0">
+                  {currentUser && (
+                    <button
+                      onClick={() => setSaveModalOpen(true)}
+                      className="text-sm font-medium text-orange-500 hover:text-orange-600 shrink-0 flex items-center gap-1"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                      </svg>
+                      Kaydet
+                    </button>
+                  )}
                   {isAuthor && (
                     <Link
                       href={`/soru/${slug}/duzenle`}
@@ -126,6 +140,7 @@ export default function QuestionDetailPage() {
             </div>
           </div>
         </div>
+        <SaveModal questionId={question.id} isOpen={saveModalOpen} onClose={() => setSaveModalOpen(false)} />
 
         <div className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-800 p-4 sm:p-6 mb-6 overflow-hidden">
           <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">

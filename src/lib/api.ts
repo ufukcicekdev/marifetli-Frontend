@@ -131,7 +131,8 @@ class ApiService {
   getUserFollowers = () => this.axiosInstance.get<User[]>('/auth/followers/');
 
   // Question methods
-  getQuestions = (params?: Record<string, unknown>) => this.axiosInstance.get<{results: Question[]}>('/questions/', { params });
+  getQuestions = (params?: Record<string, unknown>) =>
+    this.axiosInstance.get<{ results: Question[]; count?: number }>('/questions/', { params });
 
   getQuestion = (slug: string) => this.axiosInstance.get<Question>(`/questions/${slug}/`);
 
@@ -141,7 +142,7 @@ class ApiService {
   createQuestionRaw = (payload: { title: string; description: string; content: string; category?: number | null; tags?: number[]; status?: string }) =>
     this.axiosInstance.post('/questions/', payload);
 
-  updateQuestion = (slug: string, questionData: Partial<Omit<Question, 'id' | 'author' | 'created_at' | 'updated_at'>>) =>
+  updateQuestion = (slug: string, questionData: Partial<Omit<Question, 'id' | 'author' | 'created_at' | 'updated_at' | 'tags'>> & { tags?: number[] }) =>
     this.axiosInstance.put(`/questions/${slug}/`, questionData);
 
   deleteQuestion = (slug: string) => this.axiosInstance.delete(`/questions/${slug}/`);
@@ -207,6 +208,51 @@ class ApiService {
   // Achievements
   getAchievementsByUsername = (username: string) =>
     this.axiosInstance.get<AchievementCategoryResponse[]>(`/achievements/users/${username}/`);
+
+  // Favorites / Saved collections
+  getSavedCollections = () =>
+    this.axiosInstance.get<SavedCollection[]>('/favorites/collections/');
+
+  createSavedCollection = (name: string) =>
+    this.axiosInstance.post<SavedCollection>('/favorites/collections/', { name });
+
+  getSavedCollectionItems = (collectionId: number) =>
+    this.axiosInstance.get<SavedItem[]>('/favorites/collections/' + collectionId + '/items/');
+
+  saveQuestion = (questionId: number, collectionId?: number) =>
+    this.axiosInstance.post<{ id: number; collection: SavedCollection; message: string }>(
+      `/favorites/save/${questionId}/`,
+      collectionId ? { collection_id: collectionId } : {}
+    );
+
+  saveQuestionToNewCollection = (questionId: number, name: string) =>
+    this.axiosInstance.post<{ collection: SavedCollection; message: string }>(
+      `/favorites/save/${questionId}/new/`,
+      { name }
+    );
+
+  removeFromSaved = (questionId: number) =>
+    this.axiosInstance.delete(`/favorites/remove/${questionId}/`);
+
+  checkSaved = (questionId: number) =>
+    this.axiosInstance.get<{ saved: boolean; collections: SavedCollection[] }>(
+      `/favorites/check/${questionId}/`
+    );
+}
+
+export interface SavedCollection {
+  id: number;
+  name: string;
+  is_default: boolean;
+  item_count: number;
+  created_at: string;
+}
+
+export interface SavedItem {
+  id: number;
+  collection: number;
+  question: Question | null;
+  created_at: string;
 }
 
 // Achievements types

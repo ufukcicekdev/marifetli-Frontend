@@ -20,7 +20,7 @@ export default function QuestionEditPage() {
 
   const updateMutation = useMutation({
     mutationFn: (payload: QuestionFormPayload) =>
-      api.updateQuestion(slug, { ...payload, status: (question?.status as string) ?? 'open' }),
+      api.updateQuestion(slug, { ...payload, status: (question?.status ?? 'open') as 'draft' | 'open' | 'closed' | 'archived' }),
     onSuccess: () => {
       toast.success('Gönderi güncellendi');
       queryClient.invalidateQueries({ queryKey: questionKeys.all });
