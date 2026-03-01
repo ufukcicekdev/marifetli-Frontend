@@ -2,16 +2,19 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
-import { useQuestion } from '@/src/hooks/use-questions';
+import { useQuestion, questionKeys } from '@/src/hooks/use-questions';
 import api from '@/src/lib/api';
+import toast from 'react-hot-toast';
 import type { Answer } from '@/src/types';
 import { useAuthStore } from '@/src/stores/auth-store';
 import { formatTimeAgo } from '@/src/lib/format-time';
 import { extractMediaFromHtml, stripMediaFromHtml } from '@/src/lib/extract-media';
 import { MediaSlider } from '@/src/components/media-slider';
 import { SaveModal } from '@/src/components/save-modal';
+import { CommentItem } from '@/src/components/comment-item';
+import { CommentEditor } from '@/src/components/comment-editor';
 
 export default function QuestionDetailPage() {
   const params = useParams();
@@ -29,6 +32,88 @@ export default function QuestionDetailPage() {
   const contentWithoutMedia = useMemo(() => stripMediaFromHtml(richContent), [richContent]);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [answerFormOpen, setAnswerFormOpen] = useState(false);
+  const [answerText, setAnswerText] = useState('');
+  const [optimisticVote, setOptimisticVote] = useState<'up' | 'down' | null>(null);
+  const queryClient = useQueryClient();
+  const displayVoteCount = (question?.like_count ?? 0) + (optimisticVote === 'up' ? 1 : optimisticVote === 'down' ? -1 : 0);
+
+  const likeMutation = useMutation({
+    mutationFn: () => api.likeQuestion(question!.id),
+    onMutate: () => setOptimisticVote('up'),
+    onSuccess: () => {
+      setOptimisticVote(null);
+      queryClient.invalidateQueries({ queryKey: questionKeys.all });
+      queryClient.invalidateQueries({ queryKey: questionKeys.detail(slug) });
+    },
+    onError: () => {
+      setOptimisticVote(null);
+      toast.error('Beğeni işlemi başarısız.');
+    },
+  });
+  const unlikeMutation = useMutation({
+    mutationFn: () => api.unlikeQuestion(question!.id),
+    onMutate: () => setOptimisticVote('down'),
+    onSuccess: () => {
+      setOptimisticVote(null);
+      queryClient.invalidateQueries({ queryKey: questionKeys.all });
+      queryClient.invalidateQueries({ queryKey: questionKeys.detail(slug) });
+    },
+    onError: () => {
+      setOptimisticVote(null);
+      toast.error('İşlem başarısız.');
+    },
+  });
+
+  const createAnswerMutation = useMutation({
+    mutationFn: ({ content, parentId }: { content: string; parentId?: number }) =>
+      api.createAnswer(question!.id, parentId ? { content, parent: parentId } : { content }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['answers', question?.id] });
+      queryClient.invalidateQueries({ queryKey: questionKeys.all });
+      queryClient.invalidateQueries({ queryKey: questionKeys.detail(slug) });
+      setAnswerText('');
+      setAnswerFormOpen(false);
+      toast.success('Cevabınız gönderildi!');
+    },
+    onError: () => toast.error('Cevap gönderilemedi. Lütfen tekrar deneyin.'),
+  });
+
+  const hasContent = (html: string) => html.replace(/<[^>]*>/g, '').trim().length > 0;
+
+  const handleAnswerSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = answerText.trim();
+    if (!hasContent(trimmed)) {
+      toast.error('Lütfen bir yorum yazın.');
+      return;
+    }
+    createAnswerMutation.mutate({ content: trimmed });
+  };
+
+  const handleReplySubmit = (content: string, parentId: number) => {
+    createAnswerMutation.mutate({ content, parentId });
+  };
+
+  const topLevelAnswers = useMemo(
+    () => answers.filter((a) => !a.parent),
+    [answers]
+  );
+  const totalCommentCount = answers.length;
+
+  const handleShare = async () => {
+    const url = typeof window !== 'undefined' ? `${window.location.origin}/soru/${slug}` : '';
+    try {
+      if (typeof navigator !== 'undefined' && navigator.share) {
+        await navigator.share({ title: question?.title, url, text: question?.title });
+        toast.success('Paylaşıldı');
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success('Link kopyalandı');
+      }
+    } catch {
+      toast.error('Paylaşım başarısız.');
+    }
+  };
 
   if (isLoading) {
     return (
@@ -69,18 +154,7 @@ export default function QuestionDetailPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 overflow-x-hidden">
       <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-4xl min-w-0">
         <div className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-800 p-4 sm:p-6 mb-6 overflow-hidden">
-          <div className="flex items-start gap-3 sm:gap-4 min-w-0">
-            <div className="flex flex-col items-center shrink-0 text-gray-500 dark:text-gray-400">
-              <span className="font-bold text-lg">{question.like_count ?? 0}</span>
-              <span>oy</span>
-              <button className="mt-2 text-gray-400 hover:text-orange-600">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="flex-1 min-w-0">
+          <div className="min-w-0">
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4 break-words">{question.title}</h1>
               {mediaItems.length > 0 && <MediaSlider items={mediaItems} className="mb-6" />}
               {hasHtml ? (
@@ -92,7 +166,7 @@ export default function QuestionDetailPage() {
                 <p className="text-gray-700 dark:text-gray-300 mb-6 whitespace-pre-wrap">{contentWithoutMedia || question.description}</p>
               )}
 
-              <div className="flex flex-wrap gap-2 mb-6">
+              <div className="flex flex-wrap gap-2 mb-4">
                 {question.tags?.map((tag) => (
                   <span key={tag.id} className="bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 text-sm font-medium px-2.5 py-0.5 rounded">
                     {tag.name}
@@ -100,19 +174,109 @@ export default function QuestionDetailPage() {
                 ))}
               </div>
 
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-t border-gray-200 dark:border-gray-700 pt-4">
-                <div className="flex items-center gap-3 min-w-0">
-                  {currentUser && (
+              <div className="flex items-center gap-4 py-3 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => currentUser ? likeMutation.mutate() : toast.error('Beğenmek için giriş yapın.')}
+                  className={`flex items-center gap-1.5 transition-colors ${optimisticVote === 'up' ? 'text-orange-500' : 'text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-500'}`}
+                  title="Beğen"
+                >
+                  <svg className="w-5 h-5" fill={optimisticVote === 'up' ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                  </svg>
+                  <span className="text-sm font-medium">{displayVoteCount}</span>
+                </button>
+                <button
+                  onClick={() => currentUser ? unlikeMutation.mutate() : toast.error('Giriş yapın.')}
+                  className={`transition-colors ${optimisticVote === 'down' ? 'text-orange-500' : 'text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-500'}`}
+                  title="Beğenme bırak"
+                >
+                  <svg className="w-5 h-5" fill={optimisticVote === 'down' ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                <a
+                  href="#cevaplar"
+                  className="flex items-center gap-1.5 text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-500 transition-colors"
+                  title="Yorumlar"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                  <span className="text-sm">{Math.max(totalCommentCount, question.answer_count ?? 0)} yorum</span>
+                </a>
+                <button
+                  onClick={handleShare}
+                  className="flex items-center gap-1.5 text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-500 transition-colors"
+                  title="Paylaş"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                  </svg>
+                  <span className="text-sm">Paylaş</span>
+                </button>
+                {currentUser && (
+                  <button
+                    onClick={() => setSaveModalOpen(true)}
+                    className="flex items-center gap-1.5 text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-500 transition-colors ml-auto"
+                    title="Kaydet"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                    </svg>
+                    <span className="text-sm">Kaydet</span>
+                  </button>
+                )}
+              </div>
+
+              {currentUser && (
+                <div className="py-3 border-t border-gray-200 dark:border-gray-700">
+                  {!answerFormOpen ? (
                     <button
-                      onClick={() => setSaveModalOpen(true)}
-                      className="text-sm font-medium text-orange-500 hover:text-orange-600 shrink-0 flex items-center gap-1"
+                      type="button"
+                      onClick={() => setAnswerFormOpen(true)}
+                      className="w-full flex items-center gap-2 text-left px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                      <svg className="w-5 h-5 shrink-0 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                       </svg>
-                      Kaydet
+                      <span className="font-medium text-sm">Aa</span>
+                      <span className="flex-1">Sohbete katıl...</span>
                     </button>
+                  ) : (
+                    <form onSubmit={handleAnswerSubmit} className="space-y-3">
+                      <CommentEditor
+                        content={answerText}
+                        onChange={setAnswerText}
+                        placeholder="Düşüncenizi paylaşın..."
+                        minHeight="100px"
+                        disabled={createAnswerMutation.isPending}
+                      />
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAnswerFormOpen(false);
+                            setAnswerText('');
+                          }}
+                          className="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                        >
+                          İptal
+                        </button>
+                        <button
+                          type="submit"
+                          disabled={createAnswerMutation.isPending || !hasContent(answerText)}
+                          className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                        >
+                          {createAnswerMutation.isPending ? 'Gönderiliyor...' : 'Yorum yap'}
+                        </button>
+                      </div>
+                    </form>
                   )}
+                </div>
+              )}
+
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-3 min-w-0">
                   {isAuthor && (
                     <Link
                       href={`/soru/${slug}/duzenle`}
@@ -138,50 +302,14 @@ export default function QuestionDetailPage() {
                   <span>{question.view_count ?? 0} görüntülenme • {formatTimeAgo(question.created_at)}</span>
                 </div>
               </div>
-            </div>
           </div>
         </div>
         <SaveModal questionId={question.id} isOpen={saveModalOpen} onClose={() => setSaveModalOpen(false)} />
 
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-800 p-4 sm:p-6 mb-6 overflow-hidden">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-            <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">
-              {answers.length} Cevap
-            </h2>
-            {currentUser && (
-              <button
-                onClick={() => setAnswerFormOpen((o) => !o)}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  answerFormOpen
-                    ? 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                    : 'bg-orange-500 hover:bg-orange-600 text-white'
-                }`}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                {answerFormOpen ? 'İptal' : 'Cevapla'}
-              </button>
-            )}
-          </div>
-
-          {answerFormOpen && currentUser && (
-            <form className="mb-6 p-4 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
-              <textarea
-                rows={4}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500 mb-3"
-                placeholder="Cevabınızı buraya yazın..."
-              />
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-orange-500 text-white rounded-md text-sm font-medium hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
-                >
-                  Cevabı Gönder
-                </button>
-              </div>
-            </form>
-          )}
+        <div id="cevaplar" className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-800 p-4 sm:p-6 mb-6 overflow-hidden">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">
+            {totalCommentCount} Yorum
+          </h2>
 
           {answersLoading ? (
             <div className="space-y-4">
@@ -189,58 +317,19 @@ export default function QuestionDetailPage() {
               <div className="animate-pulse h-24 bg-gray-100 dark:bg-gray-800 rounded-lg" />
             </div>
           ) : answers.length === 0 ? (
-            <p className="text-gray-500 dark:text-gray-400 py-4">Henüz cevap yok. İlk cevabı siz yazın!</p>
+            <p className="text-gray-500 dark:text-gray-400 py-4">Henüz yorum yok. İlk yorumu siz yapın!</p>
           ) : (
-            <div className="space-y-6">
-              {answers.map((answer) => {
-                const ansAuthor = typeof answer.author === 'object' ? answer.author : null;
-                const ansAuthorName = ansAuthor?.username ?? ansAuthor?.first_name ?? 'Anonim';
-                return (
-                  <div
-                    key={answer.id}
-                    className={`p-4 rounded-lg ${answer.is_best_answer ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800' : 'bg-gray-50 dark:bg-gray-800/50'}`}
-                  >
-                    {answer.is_best_answer && (
-                      <div className="flex items-center mb-2">
-                        <span className="bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 text-xs font-medium px-2 py-1 rounded">
-                          ✓ En İyi Cevap
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex gap-3 sm:gap-4 min-w-0">
-                      <div className="flex flex-col items-center shrink-0 text-gray-500 dark:text-gray-400">
-                        <span className="font-bold text-lg">{answer.like_count ?? 0}</span>
-                        <span>oy</span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div
-                          className="prose prose-sm max-w-none text-gray-700 dark:text-gray-300 mb-4"
-                          dangerouslySetInnerHTML={{ __html: answer.content }}
-                        />
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-t border-gray-200 dark:border-gray-700 pt-4">
-                          <div className="flex items-center">
-                            {ansAuthor?.profile_picture ? (
-                              <img src={ansAuthor.profile_picture} alt="" className="w-8 h-8 rounded-full object-cover" />
-                            ) : (
-                              <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-sm font-bold text-gray-500">
-                                {ansAuthorName.charAt(0).toUpperCase()}
-                              </div>
-                            )}
-                            <div className="ml-2">
-                              <Link href={`/profil/${ansAuthorName}`} className="text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-orange-600">
-                                u/{ansAuthorName}
-                              </Link>
-                            </div>
-                          </div>
-                          <div className="text-sm text-gray-500 dark:text-gray-400">
-                            {formatTimeAgo(answer.created_at)}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="space-y-4">
+              {topLevelAnswers.map((answer) => (
+                <CommentItem
+                  key={answer.id}
+                  answer={answer}
+                  questionId={question.id}
+                  onCreateReply={handleReplySubmit}
+                  isSubmitting={createAnswerMutation.isPending}
+                  allAnswers={answers}
+                />
+              ))}
             </div>
           )}
         </div>

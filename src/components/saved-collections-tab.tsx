@@ -34,14 +34,15 @@ export function SavedCollectionsTab({ isOwnProfile }: SavedCollectionsTabProps) 
     },
   });
 
-  const { data: collections, isLoading } = useQuery({
+  const { data: collectionsRaw, isLoading } = useQuery({
     queryKey: ['saved-collections'],
     queryFn: () => api.getSavedCollections().then((r) => r.data),
     enabled: isOwnProfile,
   });
+  const collections = Array.isArray(collectionsRaw) ? collectionsRaw : (collectionsRaw as { results?: SavedCollection[] })?.results ?? [];
 
   useEffect(() => {
-    if (collections?.length && selectedCollectionId == null) {
+    if (collections.length && selectedCollectionId == null) {
       const def = collections.find((c) => c.is_default) ?? collections[0];
       setSelectedCollectionId(def?.id ?? null);
     }
@@ -72,7 +73,7 @@ export function SavedCollectionsTab({ isOwnProfile }: SavedCollectionsTabProps) 
     );
   }
 
-  if (!collections?.length) {
+  if (!collections.length) {
     return (
       <div className="p-6 sm:p-8">
         <p className="text-gray-500 dark:text-gray-400 text-sm">

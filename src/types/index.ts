@@ -62,6 +62,7 @@ export interface Question {
 export interface Answer {
   id: number;
   question: number;
+  parent?: number | null;
   author: User;
   content: string;
   is_best_answer: boolean;

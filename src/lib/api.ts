@@ -164,7 +164,7 @@ class ApiService {
   getCategories = () => this.axiosInstance.get<{ id: number; name: string; slug: string; parent: number | null; subcategories?: unknown[] }[]>('/categories/');
 
   // Answer methods
-  createAnswer = (questionId: number, answerData: Omit<Answer, 'id' | 'author' | 'created_at' | 'updated_at'>) =>
+  createAnswer = (questionId: number, answerData: { content: string; parent?: number }) =>
     this.axiosInstance.post(`/answers/${questionId}/answers/`, answerData);
 
   updateAnswer = (questionId: number, answerId: number, answerData: Partial<Omit<Answer, 'id' | 'author' | 'created_at' | 'updated_at'>>) =>
