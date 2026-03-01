@@ -6,6 +6,8 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/src/lib/api';
 import { useAuthStore } from '@/src/stores/auth-store';
+import { PostItem } from '@/src/components/post-item';
+import { formatTimeAgo } from '@/src/lib/format-time';
 
 type ProfileTab = 'ozet' | 'gonderiler' | 'yorumlar' | 'kaydettiklerim' | 'gecmis';
 
@@ -35,6 +37,13 @@ export default function ProfilePage() {
     queryFn: () => api.getAchievementsByUsername(username).then((r) => r.data),
     enabled: !!username,
   });
+
+  const { data: questionsData, isLoading: questionsLoading } = useQuery({
+    queryKey: ['questions', 'user', profile?.id],
+    queryFn: () => api.getQuestions({ author: profile!.id, ordering: '-created_at' }).then((r) => r.data),
+    enabled: !!profile?.id,
+  });
+  const userQuestions = questionsData?.results ?? [];
 
   const followMutation = useMutation({
     mutationFn: (userId: number) => api.followUser(userId),
@@ -152,7 +161,7 @@ export default function ProfilePage() {
                 )}
 
                 {/* Tab'lar */}
-                <div className="mt-4 flex overflow-x-auto gap-1 border-b border-gray-200 dark:border-gray-800 -mb-px">
+                <div className="mt-4 flex overflow-x-auto overflow-y-hidden gap-1 border-b border-gray-200 dark:border-gray-800 -mb-px">
                   {tabs.map((tab) => (
                     <button
                       key={tab}
@@ -172,20 +181,39 @@ export default function ProfilePage() {
 
             {/* Tab içeriği */}
             <div className="mt-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden min-h-[200px]">
-              {activeTab === 'ozet' && (
-                <div className="p-6 sm:p-8">
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">
-                    {isOwnProfile
-                      ? 'Henüz gönderin yok. Topluluğa katılıp ilk sorunuzu sorduğunuzda burada görünecek.'
-                      : `@${profile.username} henüz gönderi paylaşmamış.`}
-                  </p>
-                </div>
-              )}
-              {activeTab === 'gonderiler' && (
-                <div className="p-6 sm:p-8">
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">
-                    {isOwnProfile ? 'Gönderileriniz burada listelenecek.' : 'Bu kullanıcının gönderileri burada listelenecek.'}
-                  </p>
+              {(activeTab === 'ozet' || activeTab === 'gonderiler') && (
+                <div>
+                  {questionsLoading ? (
+                    <div className="p-8 text-center text-gray-500 dark:text-gray-400">Yükleniyor...</div>
+                  ) : userQuestions.length === 0 ? (
+                    <div className="p-6 sm:p-8">
+                      <p className="text-gray-500 dark:text-gray-400 text-sm">
+                        {isOwnProfile
+                          ? 'Henüz gönderin yok. Topluluğa katılıp ilk sorunuzu sorduğunuzda burada görünecek.'
+                          : `${profile.username} henüz gönderi paylaşmamış.`}
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-gray-200 dark:divide-gray-800">
+                      {userQuestions.map((q) => (
+                        <PostItem
+                          key={q.id}
+                          id={q.id}
+                          slug={q.slug}
+                          title={q.title}
+                          content={(q as { content?: string }).content}
+                          category={q.tags?.[0]?.name}
+                          author={typeof q.author === 'object' ? q.author?.username ?? '' : ''}
+                          timeAgo={formatTimeAgo(q.created_at)}
+                          commentCount={q.answer_count ?? 0}
+                          voteCount={q.like_count ?? 0}
+                          viewCount={q.view_count ?? 0}
+                          viewMode="compact"
+                          showEditButton={isOwnProfile}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
               {activeTab === 'yorumlar' && (

@@ -1,33 +1,34 @@
 'use client';
 
-import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { PostFeedControls, type SortOption, type ViewMode } from '@/src/components/post-feed-controls';
 import { PostItem } from '@/src/components/post-item';
+import { useQuestions } from '@/src/hooks/use-questions';
+import { formatTimeAgo } from '@/src/lib/format-time';
 
-const MOCK_POSTS = [
-  { id: 1, title: "Bebek yeleği örmek için hangi ip kalınlığını kullanmalıyım?", category: 'örgü', author: 'ayse_', timeAgo: '1 saat önce', comments: 3, votes: 21, views: 120 },
-  { id: 2, title: "Amigurumi oyuncak yapımında hangi tığ numarası uygun?", category: 'el sanatları', author: 'zehrak', timeAgo: '2 saat önce', comments: 6, votes: 22, views: 240 },
-  { id: 3, title: "Dantel masa örtüsü deseni önerebilir misiniz?", category: 'dantel', author: 'fatma_h', timeAgo: '3 saat önce', comments: 9, votes: 23, views: 360 },
-  { id: 4, title: "Keçeden çanta yaparken hangi yapıştırıcıyı kullanmalıyım?", category: 'keçe', author: 'elifm', timeAgo: '4 saat önce', comments: 12, votes: 24, views: 480 },
-  { id: 5, title: "Makrome duvar süsü yapımında ip uzunluğu nasıl hesaplanır?", category: 'makrome', author: 'zeynep_k', timeAgo: '5 saat önce', comments: 15, votes: 25, views: 600 },
-  { id: 6, title: "Pul boncuk işi bileklik yapımına başlamak için ne gerekir?", category: 'takı tasarımı', author: 'seda_n', timeAgo: '6 saat önce', comments: 18, votes: 26, views: 720 },
-  { id: 7, title: "Kanaviçe işleme başlangıç seti önerir misiniz?", category: 'nakış', author: 'melek_y', timeAgo: '7 saat önce', comments: 21, votes: 27, views: 840 },
-  { id: 8, title: "Tığ işi battaniye için hangi motif güzel durur?", category: 'tığ işi', author: 'derya_k', timeAgo: '8 saat önce', comments: 24, votes: 28, views: 960 },
-  { id: 9, title: "Ev dekorasyonu için makrome bitki askısı nasıl yapılır?", category: 'dekorasyon', author: 'cansu_a', timeAgo: '9 saat önce', comments: 27, votes: 29, views: 1080 },
-  { id: 10, title: "Örgü haraşo ve düz örgü arasındaki fark nedir?", category: 'örgü', author: 'buse_t', timeAgo: '10 saat önce', comments: 30, votes: 30, views: 1200 },
-];
+const SORT_TO_ORDER: Record<SortOption, string> = {
+  hot: '-hot_score',
+  new: '-created_at',
+  top: '-like_count',
+  best: '-hot_score',
+};
 
 export default function QuestionsPage() {
   const [sort, setSort] = useState<SortOption>('hot');
-  const [viewMode, setViewMode] = useState<ViewMode>(() => {
-    if (typeof window === 'undefined') return 'compact';
-    return (localStorage.getItem('feedViewMode') as ViewMode) || 'compact';
-  });
+  const [viewMode, setViewMode] = useState<ViewMode>('compact');
+  const params = useMemo(() => ({ ordering: SORT_TO_ORDER[sort] }), [sort]);
+  const { data, isLoading, error } = useQuestions(params);
 
+  useEffect(() => {
+    const stored = localStorage.getItem('feedViewMode') as ViewMode | null;
+    if (stored === 'card' || stored === 'compact') setViewMode(stored);
+  }, []);
   useEffect(() => {
     localStorage.setItem('feedViewMode', viewMode);
   }, [viewMode]);
+
+  const questions = data?.results ?? [];
+  const totalCount = typeof data?.count === 'number' ? data.count : questions.length;
 
   return (
     <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 flex flex-col lg:flex-row gap-4 sm:gap-6 min-w-0">
@@ -38,21 +39,32 @@ export default function QuestionsPage() {
               onSortChange={setSort}
               viewMode={viewMode}
               onViewModeChange={setViewMode}
-              totalCount={2847}
+              totalCount={totalCount}
             />
 
             <div>
-              {MOCK_POSTS.map((p) => (
+              {isLoading && (
+                <div className="p-8 text-center text-gray-500 dark:text-gray-400">Yükleniyor...</div>
+              )}
+              {error && (
+                <div className="p-8 text-center text-amber-600 dark:text-amber-400">Gönderiler yüklenemedi.</div>
+              )}
+              {!isLoading && !error && questions.length === 0 && (
+                <div className="p-8 text-center text-gray-500 dark:text-gray-400">Henüz gönderi yok.</div>
+              )}
+              {!isLoading && questions.map((q) => (
                 <PostItem
-                  key={p.id}
-                  id={p.id}
-                  title={p.title}
-                  category={p.category}
-                  author={p.author}
-                  timeAgo={p.timeAgo}
-                  commentCount={p.comments}
-                  voteCount={p.votes}
-                  viewCount={p.views}
+                  key={q.id}
+                  id={q.id}
+                  slug={q.slug}
+                  title={q.title}
+                  content={(q as { content?: string }).content}
+                  category={q.tags?.[0]?.name}
+                  author={typeof q.author === 'object' ? q.author?.username ?? '' : ''}
+                  timeAgo={formatTimeAgo(q.created_at)}
+                  commentCount={q.answer_count ?? 0}
+                  voteCount={q.like_count ?? 0}
+                  viewCount={q.view_count ?? 0}
                   viewMode={viewMode}
                 />
               ))}

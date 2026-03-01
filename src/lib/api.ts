@@ -15,12 +15,15 @@ class ApiService {
       },
     });
 
-    // Request interceptor to add token to headers
+    // Request interceptor: add token; for FormData, remove Content-Type so browser sets multipart/form-data
     this.axiosInstance.interceptors.request.use(
       (config) => {
         const token = localStorage.getItem('access_token');
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
+        }
+        if (config.data instanceof FormData) {
+          delete config.headers['Content-Type'];
         }
         return config;
       },
@@ -29,15 +32,25 @@ class ApiService {
       }
     );
 
-    // Response interceptor to handle token refresh
+    // Public endpoints: 401'de token olmadan tekrar dene, /giris'e yönlendirme
+    const PUBLIC_PATHS = ['/questions/', '/categories/', '/questions/tags'];
+    const isPublicPath = (url: string) => PUBLIC_PATHS.some((p) => url?.includes(p));
+
+    // Response interceptor: token refresh; public path'te 401'de girişe yönlendirme
     this.axiosInstance.interceptors.response.use(
       (response) => response,
       async (error) => {
         const originalRequest = error.config;
+        const url = originalRequest?.url ?? '';
 
         if (error.response?.status === 401 && !originalRequest._retry) {
           originalRequest._retry = true;
-          
+
+          if (isPublicPath(url)) {
+            delete originalRequest.headers.Authorization;
+            return this.axiosInstance(originalRequest);
+          }
+
           try {
             const refreshToken = localStorage.getItem('refresh_token');
             if (!refreshToken) {
