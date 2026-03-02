@@ -153,8 +153,34 @@ export default function QuestionDetailPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 overflow-x-hidden">
       <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-4xl min-w-0">
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-800 p-4 sm:p-6 mb-6 overflow-hidden">
-          <div className="min-w-0">
+        <div className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-800 overflow-hidden mb-6">
+          <div className="min-w-0 p-4 sm:p-6">
+              <div className="flex items-center gap-3 mb-4">
+                {author?.profile_picture ? (
+                  <img src={author.profile_picture} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
+                ) : (
+                  <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-sm font-bold text-gray-500 shrink-0">
+                    {authorName.charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="flex items-center gap-2 flex-wrap min-w-0">
+                  <Link href={`/profil/${authorName}`} className="text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-orange-600 shrink-0">
+                    u/{authorName}
+                  </Link>
+                  <span className="text-sm text-gray-500 dark:text-gray-400 shrink-0">
+                    {formatTimeAgo(question.created_at)}
+                    {question.view_count != null && ` • ${question.view_count} görüntülenme`}
+                  </span>
+                  {isAuthor && (
+                    <Link
+                      href={`/soru/${slug}/duzenle`}
+                      className="text-sm font-medium text-orange-500 hover:text-orange-600 shrink-0"
+                    >
+                      Düzenle
+                    </Link>
+                  )}
+                </div>
+              </div>
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-4 break-words">{question.title}</h1>
               {mediaItems.length > 0 && <MediaSlider items={mediaItems} className="mb-6" />}
               {hasHtml ? (
@@ -274,43 +300,9 @@ export default function QuestionDetailPage() {
                   )}
                 </div>
               )}
-
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-4 border-t border-gray-200 dark:border-gray-700">
-                <div className="flex items-center gap-3 min-w-0">
-                  {isAuthor && (
-                    <Link
-                      href={`/soru/${slug}/duzenle`}
-                      className="text-sm font-medium text-orange-500 hover:text-orange-600 shrink-0"
-                    >
-                      Düzenle
-                    </Link>
-                  )}
-                  {author?.profile_picture ? (
-                    <img src={author.profile_picture} alt="" className="w-10 h-10 rounded-full object-cover" />
-                  ) : (
-                    <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-lg font-bold text-gray-500">
-                      {authorName.charAt(0).toUpperCase()}
-                    </div>
-                  )}
-                  <div className="ml-3">
-                    <Link href={`/profil/${authorName}`} className="text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-orange-600">
-                      u/{authorName}
-                    </Link>
-                  </div>
-                </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400 shrink-0">
-                  <span>{question.view_count ?? 0} görüntülenme • {formatTimeAgo(question.created_at)}</span>
-                </div>
-              </div>
           </div>
-        </div>
-        <SaveModal questionId={question.id} isOpen={saveModalOpen} onClose={() => setSaveModalOpen(false)} />
 
-        <div id="cevaplar" className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-800 p-4 sm:p-6 mb-6 overflow-hidden">
-          <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200 mb-4">
-            {totalCommentCount} Yorum
-          </h2>
-
+          <div id="cevaplar" className="border-t border-gray-200 dark:border-gray-700 p-4 sm:p-6">
           {answersLoading ? (
             <div className="space-y-4">
               <div className="animate-pulse h-24 bg-gray-100 dark:bg-gray-800 rounded-lg" />
@@ -325,6 +317,7 @@ export default function QuestionDetailPage() {
                   key={answer.id}
                   answer={answer}
                   questionId={question.id}
+                  slug={slug}
                   onCreateReply={handleReplySubmit}
                   isSubmitting={createAnswerMutation.isPending}
                   allAnswers={answers}
@@ -332,7 +325,9 @@ export default function QuestionDetailPage() {
               ))}
             </div>
           )}
+          </div>
         </div>
+        <SaveModal questionId={question.id} isOpen={saveModalOpen} onClose={() => setSaveModalOpen(false)} />
       </main>
 
       <footer className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 mt-12 py-8">
