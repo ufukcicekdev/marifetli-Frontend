@@ -55,12 +55,12 @@ export function AppSidebar() {
       />
       <aside
         className={`
-          fixed lg:relative inset-y-0 left-0 z-50 lg:z-auto
-          pt-[52px] lg:pt-0
-          lg:min-w-0
+          fixed left-0 z-40 lg:z-30
+          top-[52px] bottom-0
+          pt-0
           ${isOpen ? 'w-64 translate-x-0' : 'w-16 -translate-x-full lg:translate-x-0'}
-          flex-shrink-0 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900
-          transition-all duration-200 flex flex-col min-h-[calc(100vh-52px)]
+          shrink-0 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900
+          transition-all duration-200 flex flex-col
           shadow-xl lg:shadow-none
         `}
       >

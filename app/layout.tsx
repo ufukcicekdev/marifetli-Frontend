@@ -27,9 +27,9 @@ export default function RootLayout({
           <QueryProvider>
             <OnboardingGuard>
               <Header />
-              <div className="flex min-h-[calc(100vh-52px)]">
+              <div className="flex min-h-[calc(100vh-52px)] pt-[52px]">
                 <AppSidebar />
-                <main className="flex-1 min-w-0 overflow-x-hidden bg-gray-50 dark:bg-gray-950">
+                <main className="flex-1 min-w-0 overflow-x-hidden bg-gray-50 dark:bg-gray-950 lg:ml-64">
                   {children}
                 </main>
               </div>

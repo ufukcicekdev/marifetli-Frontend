@@ -35,7 +35,7 @@ export default function HomePage() {
       : questions.length;
 
   return (
-    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 flex flex-col lg:flex-row gap-4 sm:gap-6 min-w-0">
+    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 flex flex-col lg:flex-row lg:items-start gap-4 sm:gap-6 min-w-0">
       <div className="flex-1 min-w-0 overflow-hidden">
           <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
             <PostFeedControls
@@ -76,7 +76,7 @@ export default function HomePage() {
           </div>
       </div>
 
-      <div className="w-80 flex-shrink-0 hidden lg:block">
+      <div className="w-80 flex-shrink-0 hidden lg:block self-start sticky top-[52px] max-h-[calc(100vh-52px)] overflow-y-auto">
           <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4">
             <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-3">Hakkımızda</h3>
             <p className="text-sm text-gray-700 dark:text-gray-300">
