@@ -63,8 +63,8 @@ export default function HomePage() {
                   slug={q.slug}
                   title={q.title}
                   content={(q as { content?: string }).content}
-                  category={q.tags?.[0]?.name}
                   author={typeof q.author === 'object' ? q.author?.username ?? '' : ''}
+                  authorAvatar={typeof q.author === 'object' ? (q.author as { profile_picture?: string })?.profile_picture : undefined}
                   timeAgo={formatTimeAgo(q.created_at)}
                   commentCount={q.answer_count ?? 0}
                   voteCount={q.like_count ?? 0}

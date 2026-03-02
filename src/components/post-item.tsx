@@ -18,6 +18,7 @@ interface PostItemProps {
   content?: string | null;
   category?: string;
   author: string;
+  authorAvatar?: string | null;
   timeAgo: string;
   commentCount: number;
   voteCount: number;
@@ -26,7 +27,7 @@ interface PostItemProps {
   showEditButton?: boolean;
 }
 
-export function PostItem({ id, slug, title, content, category, author, timeAgo, commentCount, voteCount, viewCount, viewMode, showEditButton }: PostItemProps) {
+export function PostItem({ id, slug, title, content, category, author, authorAvatar, timeAgo, commentCount, voteCount, viewCount, viewMode, showEditButton }: PostItemProps) {
   const mediaItems = useMemo(() => extractMediaFromHtml(content), [content]);
   const firstMedia = mediaItems[0];
   const href = `/soru/${slug ?? id}`;
@@ -109,35 +110,21 @@ export function PostItem({ id, slug, title, content, category, author, timeAgo, 
     }
   };
 
-  const VoteButtons = () => (
-    <div className="flex flex-col items-center shrink-0">
-      <button onClick={handleLike} className={`transition-colors ${optimisticVote === 'up' ? 'text-orange-500' : 'text-gray-400 hover:text-orange-500'}`} title="Beğen" aria-label="Beğen">
-        <svg className="w-5 h-5" fill={optimisticVote === 'up' ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-        </svg>
-      </button>
-      <span className="text-sm font-medium text-gray-900 dark:text-gray-100 my-0.5">{displayCount}</span>
-      <button onClick={handleUnlike} className={`transition-colors ${optimisticVote === 'down' ? 'text-orange-500' : 'text-gray-400 hover:text-orange-500'}`} title="Beğenme bırak" aria-label="Beğenme bırak">
-        <svg className="w-5 h-5" fill={optimisticVote === 'down' ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-    </div>
-  );
-
   const ActionBar = ({ compact = false }: { compact?: boolean }) => (
-    <div className={`flex items-center gap-3 ${compact ? 'mt-1' : 'mt-3 pt-2 border-t border-gray-200 dark:border-gray-700'}`}>
-      <button onClick={handleLike} className={`flex items-center gap-1 transition-colors ${optimisticVote === 'up' ? 'text-orange-500' : 'text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-500'}`} title="Beğen" aria-label="Beğen">
-        <svg className="w-4 h-4" fill={optimisticVote === 'up' ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-        </svg>
-        <span className="text-xs font-medium">{displayCount}</span>
-      </button>
-      <button onClick={handleUnlike} className={`transition-colors ${optimisticVote === 'down' ? 'text-orange-500' : 'text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-500'}`} title="Beğenme bırak" aria-label="Beğenme bırak">
-        <svg className="w-4 h-4" fill={optimisticVote === 'down' ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
+    <div className={`flex items-center gap-4 ${compact ? 'mt-1' : 'mt-3 pt-2 border-t border-gray-200 dark:border-gray-700'}`}>
+      <div className="flex items-center gap-0.5">
+        <button onClick={handleLike} className={`p-0.5 -m-0.5 rounded transition-colors ${optimisticVote === 'up' ? 'text-orange-500' : 'text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-500'}`} title="Beğen" aria-label="Beğen">
+          <svg className="w-4 h-4" fill={optimisticVote === 'up' ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+          </svg>
+        </button>
+        <span className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-[1.25rem] text-center">{displayCount}</span>
+        <button onClick={handleUnlike} className={`p-0.5 -m-0.5 rounded transition-colors ${optimisticVote === 'down' ? 'text-orange-500' : 'text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-500'}`} title="Beğenme bırak" aria-label="Beğenme bırak">
+          <svg className="w-4 h-4" fill={optimisticVote === 'down' ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+      </div>
       <Link href={href} className="flex items-center gap-1 text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-500 transition-colors" title="Yorumlar">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -160,17 +147,14 @@ export function PostItem({ id, slug, title, content, category, author, timeAgo, 
     </div>
   );
 
-  const Meta = () => (
-    <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 mt-1 flex-wrap gap-x-1 gap-y-0.5">
-      {category && <span className="bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 px-2 py-0.5 rounded shrink-0">{category}</span>}
-      <span className="min-w-0 truncate" title={`u/${author}`}>u/{author}</span>
-      <span className="shrink-0">•</span>
+  const AuthorMeta = () => (
+    <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 flex-wrap gap-x-1 gap-y-0.5">
+      <Link href={`/profil/${author}`} className="min-w-0 truncate hover:text-orange-500" title={`u/${author}`}>u/{author}</Link>
+      <span className="shrink-0">·</span>
       <span className="shrink-0">{timeAgo}</span>
-      <span className="shrink-0">•</span>
-      <span className="shrink-0">{commentCount} yorum</span>
       {showEditButton && slug && (
         <>
-          <span className="shrink-0">•</span>
+          <span className="shrink-0">·</span>
           <Link href={`/soru/${slug}/duzenle`} className="shrink-0 text-orange-500 hover:text-orange-600">
             Düzenle
           </Link>
@@ -179,30 +163,47 @@ export function PostItem({ id, slug, title, content, category, author, timeAgo, 
     </div>
   );
 
+  const Meta = () => (
+    <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 flex-wrap gap-x-1 gap-y-0.5">
+      {category && <span className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded shrink-0">r/{category}</span>}
+      <AuthorMeta />
+      {viewCount != null && (
+        <>
+          <span className="shrink-0">·</span>
+          <span className="shrink-0">{viewCount >= 1000 ? `${(viewCount / 1000).toFixed(1)}k` : viewCount} görüntüleme</span>
+        </>
+      )}
+    </div>
+  );
+
   if (viewMode === 'card') {
     return (
       <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-800 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
-        <div className="flex gap-2 sm:gap-4 min-w-0">
-          <VoteButtons />
-          <div className="flex-1 min-w-0 overflow-hidden">
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 sm:gap-2">
-              <h3 className="font-medium text-gray-900 dark:text-gray-100 hover:text-orange-600 line-clamp-2 min-w-0">
-                <Link href={href} className="block break-words">{title}</Link>
-              </h3>
-              {viewCount != null && (
-                <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">
-                  {viewCount >= 1000 ? `${(viewCount / 1000).toFixed(1)}k` : viewCount} görüntüleme
-                </span>
-              )}
+        <div className="flex flex-col min-w-0">
+          {category && (
+            <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+              r/{category}
             </div>
-            <Meta />
-            {mediaItems.length > 0 ? (
-              <Link href={href} className="mt-3 block">
-                <MediaSlider items={mediaItems} className="border-0" />
-              </Link>
-            ) : null}
-            <ActionBar />
+          )}
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 hover:text-orange-600 line-clamp-2 min-w-0 mb-2">
+            <Link href={href} className="block break-words">{title}</Link>
+          </h2>
+          <div className="flex items-center gap-2 mb-3">
+            {authorAvatar ? (
+              <img src={authorAvatar} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
+            ) : (
+              <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[10px] font-bold text-gray-500 shrink-0">
+                {author?.charAt(0)?.toUpperCase() ?? '?'}
+              </div>
+            )}
+            <AuthorMeta />
           </div>
+          {mediaItems.length > 0 ? (
+            <Link href={href} className="block mb-3">
+              <MediaSlider items={mediaItems} className="border-0 rounded-lg overflow-hidden" />
+            </Link>
+          ) : null}
+          <ActionBar />
         </div>
       </div>
     );
@@ -211,7 +212,13 @@ export function PostItem({ id, slug, title, content, category, author, timeAgo, 
   return (
     <div className="p-3 sm:p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-b border-gray-200 dark:border-gray-800 last:border-b-0">
       <div className="flex gap-2 sm:gap-3">
-        <VoteButtons />
+        {authorAvatar ? (
+          <img src={authorAvatar} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
+        ) : (
+          <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-500 shrink-0">
+            {author?.charAt(0)?.toUpperCase() ?? '?'}
+          </div>
+        )}
         <div className="flex-1 w-0 flex flex-col gap-1">
           <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-orange-600">
             <Link href={href} className="block break-words">{title}</Link>
