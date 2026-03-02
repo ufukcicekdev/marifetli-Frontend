@@ -39,7 +39,7 @@ export function SavedCollectionsTab({ isOwnProfile }: SavedCollectionsTabProps) 
     queryFn: () => api.getSavedCollections().then((r) => r.data),
     enabled: isOwnProfile,
   });
-  const collections = Array.isArray(collectionsRaw) ? collectionsRaw : (collectionsRaw as { results?: SavedCollection[] })?.results ?? [];
+  const collections = Array.isArray(collectionsRaw) ? collectionsRaw : (collectionsRaw as unknown as { results?: SavedCollection[] })?.results ?? [];
 
   useEffect(() => {
     if (collections.length && selectedCollectionId == null) {
