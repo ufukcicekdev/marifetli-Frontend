@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/src/lib/api';
+import type { Tag } from '@/src/types';
 import { useAuthStore } from '@/src/stores/auth-store';
 import { useQuestion } from '@/src/hooks/use-questions';
 import { QuestionForm, type QuestionFormPayload, type QuestionFormInitial } from '@/src/components/question-form';
@@ -40,7 +41,10 @@ export default function QuestionEditPage() {
           const cat = question as { category?: number | { id?: number } };
           return typeof cat.category === 'object' ? cat.category?.id ?? null : cat.category ?? null;
         })(),
-        tagIds: question.tags?.map((t) => t.id) ?? [],
+        tagIds: (question.tags ?? []).map((t) => (typeof t === 'object' && t && 'id' in t ? t.id : t as number)),
+        tagsFromQuestion: (question.tags ?? [])
+          .filter((t): t is Tag => typeof t === 'object' && t != null && 'id' in t && 'name' in t)
+          .map((t) => ({ id: t.id, name: t.name })),
       }
     : undefined;
 

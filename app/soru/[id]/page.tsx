@@ -192,14 +192,6 @@ export default function QuestionDetailPage() {
                 <p className="text-gray-700 dark:text-gray-300 mb-6 whitespace-pre-wrap">{contentWithoutMedia || question.description}</p>
               )}
 
-              <div className="flex flex-wrap gap-2 mb-4">
-                {question.tags?.map((tag) => (
-                  <span key={tag.id} className="bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 text-sm font-medium px-2.5 py-0.5 rounded">
-                    {tag.name}
-                  </span>
-                ))}
-              </div>
-
               <div className="flex items-center gap-4 py-3 border-t border-gray-200 dark:border-gray-700">
                 <button
                   onClick={() => currentUser ? likeMutation.mutate() : toast.error('Beğenmek için giriş yapın.')}

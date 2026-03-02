@@ -19,6 +19,8 @@ export type QuestionFormPayload = {
   content: string;
   category?: number | null;
   tags?: number[];
+  /** Yeni oluşturulacak etiket isimleri (API'de yoksa) */
+  tag_names?: string[];
   status?: string;
 };
 
@@ -27,6 +29,8 @@ export type QuestionFormInitial = {
   content: string;
   categoryId: number | null;
   tagIds: number[];
+  /** Gönderiden gelen etiket objeleri - tags API yüklenmeden chip isimlerini göstermek için */
+  tagsFromQuestion?: { id: number; name: string }[];
   linkUrl?: string;
   pollOptions?: string[];
   postType?: string;
@@ -40,10 +44,30 @@ type QuestionFormProps = {
   showDraftButton?: boolean;
 };
 
-function parseContentForEdit(content: string): { linkUrl: string; pollOptions: string[]; postType: string } {
+function extractImageUrls(html: string): string[] {
+  const urls: string[] = [];
+  const imgRegex = /<img[^>]+src=["']([^"']+)["']/gi;
+  let m: RegExpExecArray | null;
+  while ((m = imgRegex.exec(html)) !== null) urls.push(m[1]);
+  return urls;
+}
+
+function stripImagesFromHtml(html: string): string {
+  return html.replace(/<p>\s*<img[^>]*>\s*<\/p>/gi, '').replace(/<img[^>]*>/gi, '').trim() || '<p></p>';
+}
+
+function parseContentForEdit(content: string): {
+  linkUrl: string;
+  pollOptions: string[];
+  postType: string;
+  imageUrls: string[];
+  contentWithoutImages: string;
+} {
   let linkUrl = '';
   let pollOptions: string[] = [];
   let postType = 'text';
+  const imageUrls = extractImageUrls(content);
+  const contentWithoutImages = stripImagesFromHtml(content);
 
   const linkMatch = content.match(/<a\s+href="([^"]+)"[^>]*>/i);
   if (linkMatch) {
@@ -62,7 +86,7 @@ function parseContentForEdit(content: string): { linkUrl: string; pollOptions: s
 
   if (content.includes('<img')) postType = 'media';
 
-  return { linkUrl, pollOptions: pollOptions.length ? pollOptions : ['', ''], postType };
+  return { linkUrl, pollOptions: pollOptions.length ? pollOptions : ['', ''], postType, imageUrls, contentWithoutImages };
 }
 
 export function QuestionForm({
@@ -80,22 +104,32 @@ export function QuestionForm({
   const [content, setContent] = useState(initialValues?.content ?? '');
   const [linkUrl, setLinkUrl] = useState(initialValues?.linkUrl ?? '');
   const [mediaFiles, setMediaFiles] = useState<File[]>([]);
+  const [mediaFilesDataUrls, setMediaFilesDataUrls] = useState<string[]>([]);
+  const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [mediaSlideIndex, setMediaSlideIndex] = useState(0);
   const [pollOptions, setPollOptions] = useState<string[]>(initialValues?.pollOptions ?? ['', '']);
   const [tagInput, setTagInput] = useState('');
   const [tagIds, setTagIds] = useState<number[]>(initialValues?.tagIds ?? []);
+  const [customTagNames, setCustomTagNames] = useState<string[]>([]);
+  const [tagInputFocused, setTagInputFocused] = useState(false);
 
   useEffect(() => {
     if (initialValues && !hasInitialized.current) {
       hasInitialized.current = true;
       const parsed = parseContentForEdit(initialValues.content);
       setTitle(initialValues.title);
-      setContent(initialValues.content);
       setCategoryId(initialValues.categoryId);
       setTagIds(initialValues.tagIds);
+      setCustomTagNames([]);
       if (parsed.linkUrl) setLinkUrl(parsed.linkUrl);
       if (parsed.pollOptions.length) setPollOptions(parsed.pollOptions);
       if (parsed.postType) setPostType(parsed.postType);
+      if (parsed.imageUrls.length > 0) {
+        setMediaUrls(parsed.imageUrls);
+        setContent(parsed.contentWithoutImages);
+      } else {
+        setContent(initialValues.content);
+      }
       setInitialized(true);
     }
   }, [initialValues]);
@@ -112,29 +146,50 @@ export function QuestionForm({
   });
   const tags = Array.isArray(tagsData) ? tagsData : [];
 
+  const mediaItemsCount = mediaUrls.length + mediaFiles.length;
   useEffect(() => {
-    if (mediaFiles.length > 0 && mediaSlideIndex >= mediaFiles.length) {
-      setMediaSlideIndex(mediaFiles.length - 1);
+    if (mediaItemsCount > 0 && mediaSlideIndex >= mediaItemsCount) {
+      setMediaSlideIndex(Math.max(0, mediaItemsCount - 1));
     }
-  }, [mediaFiles.length, mediaSlideIndex]);
+  }, [mediaItemsCount, mediaSlideIndex]);
 
   const handleMediaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     const images = files.filter((f) => f.type.startsWith('image/'));
-    setMediaFiles((prev) => [...prev, ...images].slice(0, 5));
+    const total = mediaUrls.length + mediaFiles.length + images.length;
+    if (total > 5) return;
+    const maxNew = 5 - mediaUrls.length - mediaFiles.length;
+    const toAdd = images.slice(0, maxNew);
+    const startIdx = mediaFiles.length;
+    setMediaFiles((prev) => [...prev, ...toAdd]);
+    setMediaFilesDataUrls((prev) => {
+      const next = [...prev];
+      toAdd.forEach(() => next.push(''));
+      return next;
+    });
     e.target.value = '';
-    images.forEach((file) => {
+    toAdd.forEach((file, i) => {
       const reader = new FileReader();
       reader.onload = () => {
         const dataUrl = reader.result as string;
-        setContent((c) => c + `<p><img src="${dataUrl}" alt="${file.name}" style="max-width:100%;" /></p>`);
+        setMediaFilesDataUrls((prev) => {
+          const next = [...prev];
+          next[startIdx + i] = dataUrl;
+          return next;
+        });
       };
       reader.readAsDataURL(file);
     });
   };
 
-  const removeMediaFile = (index: number) => {
-    setMediaFiles((prev) => prev.filter((_, i) => i !== index));
+  const removeMediaItem = (index: number) => {
+    if (index < mediaUrls.length) {
+      setMediaUrls((prev) => prev.filter((_, i) => i !== index));
+    } else {
+      const fileIndex = index - mediaUrls.length;
+      setMediaFiles((prev) => prev.filter((_, i) => i !== fileIndex));
+      setMediaFilesDataUrls((prev) => prev.filter((_, i) => i !== fileIndex));
+    }
     setMediaSlideIndex((prev) => (prev === index ? Math.max(0, index - 1) : prev > index ? prev - 1 : prev));
   };
 
@@ -163,6 +218,13 @@ export function QuestionForm({
       const list = pollOptions.filter((o) => o.trim()).map((o) => `<li>${o.trim()}</li>`).join('');
       return content ? `${content}<ul>${list}</ul>` : `<ul>${list}</ul>`;
     }
+    if (postType === 'media') {
+      const loadedDataUrls = mediaFilesDataUrls.filter(Boolean);
+      const imgTags = [...mediaUrls, ...loadedDataUrls]
+        .map((src) => `<p><img src="${src}" alt="" style="max-width:100%;" /></p>`)
+        .join('');
+      return content ? `${content}${imgTags}` : imgTags || '<p></p>';
+    }
     return content;
   };
 
@@ -172,16 +234,73 @@ export function QuestionForm({
     return true;
   };
 
-  const addTag = (tag: { id: number; name: string }) => {
-    if (!tagIds.includes(tag.id)) setTagIds((prev) => [...prev, tag.id]);
+  const removeTag = (id: number) => setTagIds((prev) => prev.filter((t) => t !== id));
+  const removeCustomTag = (name: string) => setCustomTagNames((prev) => prev.filter((n) => n !== name));
+
+  const tagCharsCount = tagIds.reduce((acc, id) => {
+    const tag = (tags as { id: number; name: string }[]).find((t) => t.id === id);
+    return acc + (tag?.name.length ?? 0);
+  }, 0) + customTagNames.reduce((acc, n) => acc + n.length, 0);
+  const TAG_CHAR_LIMIT = 100;
+
+  const addTagWithLimit = (tag: { id: number; name: string }) => {
+    if (tagIds.includes(tag.id)) return;
+    const newCount = tagCharsCount + tag.name.length;
+    if (newCount > TAG_CHAR_LIMIT) return;
+    setTagIds((prev) => [...prev, tag.id]);
     setTagInput('');
   };
 
-  const removeTag = (id: number) => setTagIds((prev) => prev.filter((t) => t !== id));
+  const addTagByName = (name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const tagList = tags as { id: number; name: string }[];
+    const lowerTrimmed = trimmed.toLocaleLowerCase('tr');
+    const match = tagList.find((t) => t.name.toLocaleLowerCase('tr') === lowerTrimmed);
+    if (match) {
+      addTagWithLimit(match);
+    } else if (
+      !customTagNames.includes(trimmed) &&
+      !tagList.some((t) => tagIds.includes(t.id) && t.name.toLocaleLowerCase('tr') === lowerTrimmed) &&
+      tagCharsCount + trimmed.length <= TAG_CHAR_LIMIT
+    ) {
+      setCustomTagNames((prev) => [...prev, trimmed]);
+      setTagInput('');
+    }
+  };
 
-  const filteredTags = tagInput
-    ? (tags as { name: string }[]).filter((t) => t.name.toLowerCase().includes(tagInput.toLowerCase())).slice(0, 5)
-    : [];
+  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (filteredTags.length > 0) addTagWithLimit(filteredTags[0]);
+      return;
+    }
+    if (e.key === 'Backspace' && !tagInput && tagIds.length > 0) {
+      e.preventDefault();
+      removeTag(tagIds[tagIds.length - 1]);
+    }
+  };
+
+  const handleTagInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const v = e.target.value;
+    if (tagCharsCount + v.length > TAG_CHAR_LIMIT) return;
+    if (v.includes(',') || v.includes(';')) {
+      const sep = v.includes(',') ? ',' : ';';
+      const segments = v.split(sep).map((s) => s.trim()).filter(Boolean);
+      segments.forEach((part) => addTagByName(part));
+      setTagInput('');
+    } else {
+      setTagInput(v);
+    }
+  };
+
+  const filteredTags = tagInput.trim()
+    ? (tags as { id: number; name: string }[]).filter(
+        (t) =>
+          t.name.toLowerCase().includes(tagInput.toLowerCase().trim()) &&
+          !tagIds.includes(t.id)
+      ).slice(0, 10)
+    : (tags as { id: number; name: string }[]).filter((t) => !tagIds.includes(t.id)).slice(0, 8);
 
   const handleSubmit = (asDraft: boolean) => (e: React.FormEvent) => {
     e.preventDefault();
@@ -192,7 +311,8 @@ export function QuestionForm({
       description: finalContent.replace(/<[^>]*>/g, '').slice(0, 500),
       content: finalContent,
       category: categoryId || undefined,
-      tags: tagIds.length ? tagIds : undefined,
+      tags: tagIds,
+      ...(customTagNames.length > 0 && { tag_names: customTagNames }),
       status: asDraft ? 'draft' : 'open',
     }, asDraft);
   };
@@ -256,41 +376,91 @@ export function QuestionForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Etiketler</label>
-          <div className="flex flex-wrap gap-2 mb-2">
-            {tagIds.map((id) => {
-              const tag = (tags as { id: number; name: string }[]).find((t) => t.id === id);
-              return tag ? (
-                <span key={id} className="inline-flex items-center gap-1 px-2 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded text-sm">
-                  {tag.name}
-                  <button type="button" onClick={() => removeTag(id)} className="hover:text-orange-900">×</button>
-                </span>
-              ) : null;
-            })}
-          </div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Etiketler (isteğe bağlı)</label>
           <div className="relative">
-            <input
-              type="text"
-              value={tagInput}
-              onChange={(e) => setTagInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && filteredTags.length > 0) {
-                  e.preventDefault();
-                  addTag(filteredTags[0] as { id: number; name: string });
-                }
-              }}
-              placeholder="Etiket ekle"
-              className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-            />
-            {filteredTags.length > 0 && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10 py-1">
-                {(filteredTags as { id: number; name: string }[]).map((t) => (
-                  <button key={t.id} type="button" onClick={() => addTag(t)} className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm">
+            <div
+              className={`min-h-[42px] flex flex-wrap items-center gap-2 px-3 py-2 border rounded-lg bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus-within:ring-2 focus-within:ring-orange-500 focus-within:border-transparent`}
+            >
+              {tagIds.map((id) => {
+                const tag =
+                  (tags as { id: number; name: string }[]).find((t) => t.id === id) ??
+                  initialValues?.tagsFromQuestion?.find((t) => t.id === id);
+                return tag ? (
+                  <span
+                    key={`tag-${id}`}
+                    className="inline-flex items-center gap-1 px-2 py-1 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded text-sm"
+                  >
+                    {tag.name}
+                    <button
+                      type="button"
+                      onClick={() => removeTag(id)}
+                      className="w-4 h-4 rounded flex items-center justify-center hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                      aria-label="Etiketi kaldır"
+                    >
+                      <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </span>
+                ) : null;
+              })}
+              {customTagNames.map((name) => (
+                <span
+                  key={`custom-${name}`}
+                  className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-200 rounded text-sm"
+                >
+                  {name}
+                  <button
+                    type="button"
+                    onClick={() => removeCustomTag(name)}
+                    className="w-4 h-4 rounded flex items-center justify-center hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors"
+                    aria-label="Etiketi kaldır"
+                  >
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </span>
+              ))}
+              <input
+                type="text"
+                value={tagInput}
+                onChange={handleTagInputChange}
+                onPaste={(e) => {
+                  const pasted = (e.clipboardData?.getData('text') ?? '').trim();
+                  if (pasted.includes(',') || pasted.includes(';')) {
+                    e.preventDefault();
+                    const sep = pasted.includes(',') ? ',' : ';';
+                    const segments = pasted.split(sep).map((s) => s.trim()).filter(Boolean);
+                    segments.forEach((part) => addTagByName(part));
+                    setTagInput('');
+                  }
+                }}
+                onKeyDown={handleTagInputKeyDown}
+                onFocus={() => setTagInputFocused(true)}
+                onBlur={() => setTimeout(() => setTagInputFocused(false), 150)}
+                placeholder={tagIds.length === 0 && customTagNames.length === 0 ? 'Etiket ekle...' : ''}
+                className="flex-1 min-w-[120px] py-1 px-1 bg-transparent border-0 outline-none text-gray-900 dark:text-gray-100 placeholder-gray-400 text-sm"
+              />
+            </div>
+            {tagInputFocused && filteredTags.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10 py-1 max-h-48 overflow-y-auto">
+                {filteredTags.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => addTagWithLimit(t)}
+                    className="block w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
+                  >
                     {t.name}
                   </button>
                 ))}
               </div>
             )}
+            <div className="flex justify-between mt-1 px-1">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Etiketleri virgülle ayırın</p>
+              <span className="text-xs text-gray-500 dark:text-gray-400">{tagCharsCount + tagInput.length}/{TAG_CHAR_LIMIT}</span>
+            </div>
           </div>
         </div>
 
@@ -310,7 +480,7 @@ export function QuestionForm({
         {postType === 'media' && (
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Görsel / Video</label>
-            {mediaFiles.length === 0 ? (
+            {mediaItemsCount === 0 ? (
               <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 sm:p-12 text-center hover:border-orange-500 transition-colors">
                 <input type="file" accept="image/*" onChange={handleMediaChange} className="hidden" id="media-upload" />
                 <label htmlFor="media-upload" className="cursor-pointer block">
@@ -322,27 +492,35 @@ export function QuestionForm({
             ) : (
               <div className="relative rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
                 <div className="aspect-video min-h-[200px] relative">
-                  {mediaFiles.map((file, i) => (
-                    <div key={i} className={`absolute inset-0 transition-opacity duration-200 ${i === mediaSlideIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
-                      <img src={URL.createObjectURL(file)} alt="" className="w-full h-full object-contain" />
+                  {mediaUrls.map((src, i) => (
+                    <div key={`url-${i}`} className={`absolute inset-0 transition-opacity duration-200 ${i === mediaSlideIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
+                      <img src={src} alt="" className="w-full h-full object-contain" />
                     </div>
                   ))}
+                  {mediaFiles.map((file, i) => {
+                    const idx = mediaUrls.length + i;
+                    return (
+                      <div key={`file-${i}`} className={`absolute inset-0 transition-opacity duration-200 ${idx === mediaSlideIndex ? 'opacity-100 z-10' : 'opacity-0 z-0'}`}>
+                        <img src={URL.createObjectURL(file)} alt="" className="w-full h-full object-contain" />
+                      </div>
+                    );
+                  })}
                   {mediaSlideIndex > 0 && (
                     <button type="button" onClick={() => setMediaSlideIndex((i) => i - 1)} className="absolute left-2 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center">‹</button>
                   )}
-                  {mediaSlideIndex < mediaFiles.length - 1 && (
+                  {mediaSlideIndex < mediaItemsCount - 1 && (
                     <button type="button" onClick={() => setMediaSlideIndex((i) => i + 1)} className="absolute right-2 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center">›</button>
                   )}
-                  <button type="button" onClick={() => removeMediaFile(mediaSlideIndex)} className="absolute top-2 right-2 z-20 w-8 h-8 rounded-full bg-black/50 hover:bg-red-600 text-white flex items-center justify-center text-sm" title="Görseli kaldır">×</button>
+                  <button type="button" onClick={() => removeMediaItem(mediaSlideIndex)} className="absolute top-2 right-2 z-20 w-8 h-8 rounded-full bg-black/50 hover:bg-red-600 text-white flex items-center justify-center text-sm" title="Görseli kaldır">×</button>
                 </div>
                 <div className="flex items-center justify-between px-3 py-2 border-t border-gray-200 dark:border-gray-700">
                   <div className="flex gap-1">
-                    {mediaFiles.map((_, i) => (
+                    {Array.from({ length: mediaItemsCount }).map((_, i) => (
                       <button key={i} type="button" onClick={() => setMediaSlideIndex(i)} className={`w-2 h-2 rounded-full transition-colors ${i === mediaSlideIndex ? 'bg-orange-500' : 'bg-gray-400 dark:bg-gray-600'}`} />
                     ))}
                   </div>
-                  <span className="text-xs text-gray-500">{mediaSlideIndex + 1} / {mediaFiles.length}</span>
-                  {mediaFiles.length < 5 && (
+                  <span className="text-xs text-gray-500">{mediaSlideIndex + 1} / {mediaItemsCount}</span>
+                  {mediaItemsCount < 5 && (
                     <>
                       <input type="file" accept="image/*" onChange={handleMediaChange} className="hidden" id="media-upload-more" />
                       <label htmlFor="media-upload-more" className="text-xs text-orange-500 hover:text-orange-600 cursor-pointer">+ Görsel ekle</label>

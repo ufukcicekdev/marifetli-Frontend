@@ -29,7 +29,10 @@ export default function HomePage() {
   }, [viewMode]);
 
   const questions = data?.results ?? [];
-  const totalCount = typeof data?.count === 'number' ? data.count : questions.length;
+  const totalCount =
+    typeof (data as { count?: number })?.count === 'number'
+      ? (data as { count: number }).count
+      : questions.length;
 
   return (
     <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 flex flex-col lg:flex-row gap-4 sm:gap-6 min-w-0">

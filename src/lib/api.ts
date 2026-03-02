@@ -139,10 +139,10 @@ class ApiService {
   createQuestion = (questionData: Omit<Question, 'id' | 'author' | 'created_at' | 'updated_at'>) => 
     this.axiosInstance.post('/questions/', questionData);
 
-  createQuestionRaw = (payload: { title: string; description: string; content: string; category?: number | null; tags?: number[]; status?: string }) =>
+  createQuestionRaw = (payload: { title: string; description: string; content: string; category?: number | null; tags?: number[]; tag_names?: string[]; status?: string }) =>
     this.axiosInstance.post('/questions/', payload);
 
-  updateQuestion = (slug: string, questionData: Partial<Omit<Question, 'id' | 'author' | 'created_at' | 'updated_at' | 'tags'>> & { tags?: number[] }) =>
+  updateQuestion = (slug: string, questionData: Partial<Omit<Question, 'id' | 'author' | 'created_at' | 'updated_at' | 'tags'>> & { tags?: number[]; tag_names?: string[] }) =>
     this.axiosInstance.put(`/questions/${slug}/`, questionData);
 
   deleteQuestion = (slug: string) => this.axiosInstance.delete(`/questions/${slug}/`);

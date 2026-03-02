@@ -4,7 +4,8 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
 import Link from '@tiptap/extension-link';
-import { useCallback } from 'react';
+import Image from '@tiptap/extension-image';
+import { useCallback, useEffect } from 'react';
 
 const ToolbarButton = ({
   onClick,
@@ -46,6 +47,7 @@ export function RichTextEditor({
       StarterKit.configure({ heading: false }),
       Placeholder.configure({ placeholder }),
       Link.configure({ openOnClick: false }),
+      Image.configure({ inline: false, allowBase64: true }),
     ],
     content: content || '',
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
@@ -55,6 +57,15 @@ export function RichTextEditor({
       },
     },
   });
+
+  useEffect(() => {
+    if (!editor || !content) return;
+    const current = editor.getHTML();
+    if (current === content) return;
+    if (!current || current === '<p></p>') {
+      editor.commands.setContent(content, { emitUpdate: false });
+    }
+  }, [editor, content]);
 
   const setLink = useCallback(() => {
     const previousUrl = editor?.getAttributes('link').href;
