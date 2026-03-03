@@ -38,11 +38,24 @@ export function SavedCollectionsTab({ isOwnProfile }: SavedCollectionsTabProps) 
     queryKey: ['saved-collections'],
     queryFn: () => api.getSavedCollections().then((r) => r.data),
     enabled: isOwnProfile,
+    refetchOnMount: true,
   });
   const collections = Array.isArray(collectionsRaw) ? collectionsRaw : (collectionsRaw as unknown as { results?: SavedCollection[] })?.results ?? [];
 
   useEffect(() => {
-    if (collections.length && selectedCollectionId == null) {
+    if (collections.length === 0) return;
+    try {
+      const stored = sessionStorage.getItem('marifetli_select_collection_id');
+      if (stored) {
+        const id = Number(stored);
+        sessionStorage.removeItem('marifetli_select_collection_id');
+        if (collections.some((c) => c.id === id)) {
+          setSelectedCollectionId(id);
+          return;
+        }
+      }
+    } catch (_) {}
+    if (selectedCollectionId == null) {
       const def = collections.find((c) => c.is_default) ?? collections[0];
       setSelectedCollectionId(def?.id ?? null);
     }

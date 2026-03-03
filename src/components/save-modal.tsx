@@ -43,6 +43,12 @@ export function SaveModal({ questionId, isOpen, onClose, onSaved }: SaveModalPro
       toast.success(data.data.message || 'Kaydedildi');
       queryClient.invalidateQueries({ queryKey: ['saved-collections'] });
       queryClient.invalidateQueries({ queryKey: ['saved-check', questionId] });
+      const collectionId = data?.data?.collection?.id;
+      if (typeof collectionId === 'number') {
+        try {
+          sessionStorage.setItem('marifetli_select_collection_id', String(collectionId));
+        } catch (_) {}
+      }
       onSaved?.();
       onClose();
     },
@@ -53,10 +59,16 @@ export function SaveModal({ questionId, isOpen, onClose, onSaved }: SaveModalPro
 
   const createAndSaveMutation = useMutation({
     mutationFn: (name: string) => api.saveQuestionToNewCollection(questionId, name),
-    onSuccess: () => {
+    onSuccess: (res) => {
       toast.success('Kaydedildi');
       queryClient.invalidateQueries({ queryKey: ['saved-collections'] });
       queryClient.invalidateQueries({ queryKey: ['saved-check', questionId] });
+      const collectionId = res?.data?.collection?.id;
+      if (typeof collectionId === 'number') {
+        try {
+          sessionStorage.setItem('marifetli_select_collection_id', String(collectionId));
+        } catch (_) {}
+      }
       onSaved?.();
       onClose();
       setNewCollectionName('');
