@@ -5,7 +5,9 @@ import { Toaster } from 'react-hot-toast';
 import { QueryProvider } from '@/src/providers/query-provider';
 import { ThemeProvider } from '@/src/components/theme-provider';
 import { Header } from '@/src/components/header';
+import { VerifyEmailBanner } from '@/src/components/verify-email-banner';
 import { AppSidebar } from '@/src/components/app-sidebar';
+import { MainContentWrapper } from '@/src/components/main-content-wrapper';
 import { OnboardingGuard } from '@/src/components/onboarding-guard';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -29,9 +31,10 @@ export default function RootLayout({
               <Header />
               <div className="flex min-h-[calc(100vh-52px)] pt-[52px]">
                 <AppSidebar />
-                <main className="flex-1 min-w-0 overflow-x-hidden bg-gray-50 dark:bg-gray-950 lg:ml-64">
+                <MainContentWrapper>
+                  <VerifyEmailBanner />
                   {children}
-                </main>
+                </MainContentWrapper>
               </div>
             </OnboardingGuard>
           </QueryProvider>

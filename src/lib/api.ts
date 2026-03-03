@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
+import toast from 'react-hot-toast';
 import { User, UserProfile, Question, Answer, Notification, Tag } from '../types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
@@ -78,6 +79,16 @@ class ApiService {
           }
         }
 
+        if (error.response?.status === 403) {
+          const detail = error.response?.data?.detail;
+          const code = typeof detail === 'object' && detail?.code;
+          const message = typeof detail === 'object' && detail?.message ? detail.message : (typeof detail === 'string' ? detail : null);
+          if (code === 'email_not_verified') {
+            toast.error(message || 'Bu işlem için e-posta adresinizi doğrulamanız gerekiyor.');
+            return Promise.reject(error);
+          }
+        }
+
         return Promise.reject(error);
       }
     );
@@ -89,6 +100,18 @@ class ApiService {
 
   login = (credentials: { email: string; password: string }) =>
     this.axiosInstance.post('/auth/login/', credentials);
+
+  verifyEmail = (token: string) =>
+    this.axiosInstance.post<{ message: string }>('/auth/verify-email/', { token });
+
+  resendVerificationEmail = () =>
+    this.axiosInstance.post<{ message: string }>('/auth/resend-verification-email/');
+
+  requestPasswordReset = (email: string) =>
+    this.axiosInstance.post<{ message?: string }>('/auth/request-password-reset/', { email });
+
+  confirmPasswordReset = (token: string, newPassword: string) =>
+    this.axiosInstance.post<{ message: string }>('/auth/confirm-password-reset/', { token, new_password: newPassword });
 
   logout = () => {
     localStorage.removeItem('access_token');

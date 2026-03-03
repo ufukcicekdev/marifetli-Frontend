@@ -8,6 +8,7 @@ import api from '@/src/lib/api';
 import { useAuthStore } from '@/src/stores/auth-store';
 import { PostItem } from '@/src/components/post-item';
 import { SavedCollectionsTab } from '@/src/components/saved-collections-tab';
+import { FollowingModal } from '@/src/components/following-modal';
 import { formatTimeAgo } from '@/src/lib/format-time';
 
 type ProfileTab = 'ozet' | 'gonderiler' | 'yorumlar' | 'kaydettiklerim' | 'gecmis';
@@ -26,6 +27,8 @@ export default function ProfilePage() {
   const queryClient = useQueryClient();
   const { user: currentUser, isAuthenticated } = useAuthStore();
   const [activeTab, setActiveTab] = useState<ProfileTab>('ozet');
+  const [followingModalOpen, setFollowingModalOpen] = useState(false);
+  const isOwnProfile = isAuthenticated && currentUser?.username === username;
 
   const { data: profile, isLoading, error } = useQuery({
     queryKey: ['user', username],
@@ -64,7 +67,6 @@ export default function ProfilePage() {
     },
   });
 
-  const isOwnProfile = isAuthenticated && currentUser?.username === username;
   const unlockedCount = achievementsData?.reduce((s, c) => s + c.unlocked_count, 0) ?? 0;
 
   if (isLoading) {
@@ -247,6 +249,21 @@ export default function ProfilePage() {
                   <span className="text-gray-600 dark:text-gray-400">Takipçi</span>
                   <span className="font-medium text-gray-900 dark:text-gray-100">{profile.followers_count}</span>
                 </div>
+                {isOwnProfile ? (
+                <button
+                  type="button"
+                  onClick={() => setFollowingModalOpen(true)}
+                  className="w-full flex justify-between items-center text-sm rounded-lg py-0.5 -mx-1 px-1 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left"
+                >
+                  <span className="text-gray-600 dark:text-gray-400">Takip ettiklerim</span>
+                  <span className="font-medium text-orange-600 dark:text-orange-400">{profile.following_count ?? 0}</span>
+                </button>
+              ) : (
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Takip ettiklerim</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">{profile.following_count ?? 0}</span>
+                </div>
+              )}
                 <div className="flex justify-between">
                   <span className="text-gray-600 dark:text-gray-400">İtibar</span>
                   <span className="font-medium text-gray-900 dark:text-gray-100">{profile.reputation}</span>
@@ -325,6 +342,9 @@ export default function ProfilePage() {
           </div>
         </div>
       </main>
+      {isOwnProfile && (
+        <FollowingModal isOpen={followingModalOpen} onClose={() => setFollowingModalOpen(false)} />
+      )}
     </div>
   );
 }
