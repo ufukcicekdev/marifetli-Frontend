@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 import { useAuthModalStore } from '../stores/auth-modal-store';
 import { useAuthStore } from '../stores/auth-store';
 import { useSidebarStore } from '../stores/sidebar-store';
@@ -45,7 +46,7 @@ export function Header() {
           <div className="flex items-center gap-2 flex-1 min-w-0 justify-start">
             <button
               onClick={sidebarToggle}
-              className="lg:hidden p-2 -ml-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 shrink-0"
+              className="p-2 -ml-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 shrink-0"
               title="Menü"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -83,14 +84,26 @@ export function Header() {
             <ThemeToggle />
             {isAuthenticated && user ? (
               <>
-                <Link
-                  href="/soru-sor"
-                  className="flex items-center gap-1 sm:gap-1.5 bg-orange-500 hover:bg-orange-600 text-white px-2 sm:px-3 py-1.5 rounded-full text-sm font-medium transition-colors shrink-0"
-                  title="Gönderi Oluştur"
-                >
-                  <span className="text-base leading-none">+</span>
-                  <span className="hidden sm:inline">Gönderi Oluştur</span>
-                </Link>
+                {user.is_verified ? (
+                  <Link
+                    href="/soru-sor"
+                    className="flex items-center gap-1 sm:gap-1.5 bg-orange-500 hover:bg-orange-600 text-white px-2 sm:px-3 py-1.5 rounded-full text-sm font-medium transition-colors shrink-0"
+                    title="Gönderi Oluştur"
+                  >
+                    <span className="text-base leading-none">+</span>
+                    <span className="hidden sm:inline">Gönderi Oluştur</span>
+                  </Link>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => toast.error('Gönderi paylaşmak için önce e-posta adresinizi doğrulayın.')}
+                    className="flex items-center gap-1 sm:gap-1.5 bg-orange-500 hover:bg-orange-600 text-white px-2 sm:px-3 py-1.5 rounded-full text-sm font-medium transition-colors shrink-0"
+                    title="Gönderi Oluştur (e-posta doğrulama gerekli)"
+                  >
+                    <span className="text-base leading-none">+</span>
+                    <span className="hidden sm:inline">Gönderi Oluştur</span>
+                  </button>
+                )}
                 <Link
                   href="/bildirimler"
                   className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400"

@@ -13,6 +13,7 @@ export interface User {
   reputation?: number;
   followers_count?: number;
   following_count?: number;
+  is_verified?: boolean;
 }
 
 interface AuthState {

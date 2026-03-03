@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { useQuery } from '@tanstack/react-query';
@@ -54,6 +54,25 @@ export function SavedCollectionsTab({ isOwnProfile }: SavedCollectionsTabProps) 
     enabled: isOwnProfile && selectedCollectionId != null,
   });
 
+  const displayItems: SavedItem[] = useMemo(() => {
+    if (!items) return [];
+    if (Array.isArray(items)) return items as SavedItem[];
+    const maybe = (items as { results?: SavedItem[] }).results;
+    return Array.isArray(maybe) ? maybe : [];
+  }, [items]);
+
+  const removeMutation = useMutation({
+    mutationFn: (questionId: number) => api.removeFromSaved(questionId),
+    onSuccess: () => {
+      toast.success('Koleksiyondan kaldırıldı');
+      queryClient.invalidateQueries({ queryKey: ['saved-collections'] });
+      queryClient.invalidateQueries({ queryKey: ['saved-collection-items', selectedCollectionId] });
+    },
+    onError: () => {
+      toast.error('Kaldırma işlemi başarısız.');
+    },
+  });
+
   if (!isOwnProfile) {
     return (
       <div className="p-6 sm:p-8">
@@ -82,8 +101,6 @@ export function SavedCollectionsTab({ isOwnProfile }: SavedCollectionsTabProps) 
       </div>
     );
   }
-
-  const displayItems = Array.isArray(items) ? items : [];
 
   return (
     <div className="p-4 sm:p-6">
@@ -156,20 +173,32 @@ export function SavedCollectionsTab({ isOwnProfile }: SavedCollectionsTabProps) 
                     if (!q) return null;
                     const author = typeof q.author === 'object' ? q.author : null;
                     return (
-                      <PostItem
-                        key={item.id}
-                        id={q.id}
-                        slug={q.slug}
-                        title={q.title}
-                        content={(q as { content?: string }).content}
-                        category={q.tags?.[0]?.name}
-                        author={author?.username ?? ''}
-                        timeAgo={formatTimeAgo(item.created_at)}
-                        commentCount={q.answer_count ?? 0}
-                        voteCount={q.like_count ?? 0}
-                        viewCount={q.view_count}
-                        viewMode="compact"
-                      />
+                      <div key={item.id} className="py-3">
+                        <div className="flex items-start gap-3">
+                          <div className="flex-1 min-w-0">
+                            <PostItem
+                              id={q.id}
+                              slug={q.slug}
+                              title={q.title}
+                              content={(q as { content?: string }).content}
+                              category={undefined}
+                              author={author?.username ?? ''}
+                              timeAgo={formatTimeAgo(item.created_at)}
+                              commentCount={q.answer_count ?? 0}
+                              voteCount={q.like_count ?? 0}
+                              viewCount={q.view_count}
+                              viewMode="compact"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeMutation.mutate(q.id)}
+                            className="mt-2 px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                          >
+                            Kaldır
+                          </button>
+                        </div>
+                      </div>
                     );
                   })}
                 </div>

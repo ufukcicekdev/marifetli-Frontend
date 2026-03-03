@@ -66,7 +66,7 @@ export function AppSidebar() {
       >
       <button
         onClick={toggle}
-        className="flex items-center gap-3 p-4 border-b border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors w-full"
+        className={`flex items-center border-b border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors w-full ${isOpen ? 'gap-3 p-4' : 'justify-center p-3'}`}
         title={isOpen ? 'Sidebar\'ı kapat' : 'Sidebar\'ı aç'}
       >
         <svg className="w-5 h-5 text-gray-600 dark:text-gray-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -75,7 +75,7 @@ export function AppSidebar() {
         {isOpen && <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Menü</span>}
       </button>
 
-      <nav className="flex-1 p-3 overflow-y-auto">
+      <nav className={`flex-1 overflow-y-auto ${isOpen ? 'p-3' : 'px-2 py-3'}`}>
         <div className="space-y-1">
           {navItems.map((item) => {
             const active = pathname === item.href || (item.href !== '/sorular' && pathname?.startsWith(item.href));
@@ -83,7 +83,9 @@ export function AppSidebar() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+                className={`flex items-center rounded-lg text-sm transition-colors ${
+                  isOpen ? 'gap-3 px-3 py-2' : 'justify-center p-2'
+                } ${
                   active
                     ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400'
                     : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'

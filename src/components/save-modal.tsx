@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api, { type SavedCollection } from '@/src/lib/api';
 import toast from 'react-hot-toast';
@@ -21,6 +21,21 @@ export function SaveModal({ questionId, isOpen, onClose, onSaved }: SaveModalPro
     queryFn: () => api.getSavedCollections().then((r) => r.data),
     enabled: isOpen,
   });
+
+  const { data: savedInfo } = useQuery({
+    queryKey: ['saved-check', questionId],
+    queryFn: () => api.checkSaved(questionId).then((r) => r.data),
+    enabled: isOpen,
+  });
+
+  const collectionArray: SavedCollection[] = Array.isArray(collections)
+    ? (collections as SavedCollection[])
+    : ((collections as { results?: SavedCollection[] } | undefined)?.results ?? []);
+  const defaultCollection = collectionArray.find((c) => c.is_default);
+  const defaultCollectionId = defaultCollection?.id;
+  const savedCollectionIds = new Set<number>(
+    (savedInfo?.collections ?? []).map((c: SavedCollection) => c.id)
+  );
 
   const saveMutation = useMutation({
     mutationFn: (collectionId?: number) => api.saveQuestion(questionId, collectionId),
@@ -52,6 +67,12 @@ export function SaveModal({ questionId, isOpen, onClose, onSaved }: SaveModalPro
   });
 
   const handleSaveToCollection = (collectionId?: number) => {
+    // Aynı gönderiyi aynı koleksiyona tekrar eklemeyi engelle
+    const targetId = collectionId ?? defaultCollectionId;
+    if (targetId && savedCollectionIds.has(targetId)) {
+      toast.error('Bu gönderi zaten bu koleksiyonda.');
+      return;
+    }
     saveMutation.mutate(collectionId);
   };
 
@@ -84,23 +105,37 @@ export function SaveModal({ questionId, isOpen, onClose, onSaved }: SaveModalPro
             <div className="space-y-1">
               <button
                 onClick={() => handleSaveToCollection(undefined)}
-                disabled={saveMutation.isPending}
-                className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-left transition-colors"
+                disabled={saveMutation.isPending || (defaultCollectionId != null && savedCollectionIds.has(defaultCollectionId))}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left transition-colors ${
+                  defaultCollectionId != null && savedCollectionIds.has(defaultCollectionId)
+                    ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
+                    : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                }`}
               >
                 <span className="font-medium text-gray-900 dark:text-gray-100">Kaydettiklerim</span>
-                <span className="text-xs text-gray-500">Varsayılan liste</span>
+                <span className="text-xs text-gray-500">
+                  {defaultCollectionId != null && savedCollectionIds.has(defaultCollectionId)
+                    ? 'Zaten kayıtlı'
+                    : 'Varsayılan liste'}
+                </span>
               </button>
-              {(Array.isArray(collections) ? collections : []).filter((c) => !c.is_default).map((c) => (
+              {collectionArray.filter((c) => !c.is_default).map((c) => {
+                const alreadyIn = savedCollectionIds.has(c.id);
+                return (
                 <button
                   key={c.id}
                   onClick={() => handleSaveToCollection(c.id)}
-                  disabled={saveMutation.isPending}
-                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-left transition-colors"
+                  disabled={saveMutation.isPending || alreadyIn}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left transition-colors ${
+                    alreadyIn ? 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed' : 'hover:bg-gray-100 dark:hover:bg-gray-800'
+                  }`}
                 >
                   <span className="font-medium text-gray-900 dark:text-gray-100">{c.name}</span>
-                  <span className="text-xs text-gray-500">{c.item_count} gönderi</span>
+                  <span className="text-xs text-gray-500">
+                    {alreadyIn ? 'Bu koleksiyonda kayıtlı' : `${c.item_count} gönderi`}
+                  </span>
                 </button>
-              ))}
+              );})}
             </div>
           )}
           <form onSubmit={handleCreateAndSave} className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">

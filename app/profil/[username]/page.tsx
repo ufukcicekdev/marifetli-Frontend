@@ -2,13 +2,15 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/src/lib/api';
 import { useAuthStore } from '@/src/stores/auth-store';
 import { PostItem } from '@/src/components/post-item';
 import { SavedCollectionsTab } from '@/src/components/saved-collections-tab';
+import { FollowingModal } from '@/src/components/following-modal';
 import { formatTimeAgo } from '@/src/lib/format-time';
+import type { Answer } from '@/src/types';
 
 type ProfileTab = 'ozet' | 'gonderiler' | 'yorumlar' | 'kaydettiklerim' | 'gecmis';
 
@@ -26,6 +28,8 @@ export default function ProfilePage() {
   const queryClient = useQueryClient();
   const { user: currentUser, isAuthenticated } = useAuthStore();
   const [activeTab, setActiveTab] = useState<ProfileTab>('ozet');
+  const [followingModalOpen, setFollowingModalOpen] = useState(false);
+  const isOwnProfile = isAuthenticated && currentUser?.username === username;
 
   const { data: profile, isLoading, error } = useQuery({
     queryKey: ['user', username],
@@ -46,6 +50,35 @@ export default function ProfilePage() {
   });
   const userQuestions = questionsData?.results ?? [];
 
+  const { data: userAnswersData, isLoading: commentsLoading } = useQuery({
+    queryKey: ['user-answers', profile?.id],
+    queryFn: () => api.getUserAnswers(profile!.id).then((r) => r.data),
+    enabled: !!profile?.id && activeTab === 'yorumlar',
+  });
+
+  const userAnswers: Answer[] = useMemo(
+    () =>
+      Array.isArray(userAnswersData)
+        ? userAnswersData
+        : ((userAnswersData as unknown as { results?: Answer[] })?.results ?? []),
+    [userAnswersData]
+  );
+
+  /** Aynı soruya ait yorumları grupla: her soru tek kart, altında o soruya yazılan tüm yorumlar */
+  const answersByQuestion = useMemo(() => {
+    const map = new Map<number, Answer[]>();
+    for (const a of userAnswers) {
+      const q = (a as { question?: { id?: number } }).question;
+      const qId = typeof q === 'object' && q && q.id != null ? q.id : (a as { question?: number }).question as number;
+      if (!map.has(qId)) map.set(qId, []);
+      map.get(qId)!.push(a);
+    }
+    return Array.from(map.entries()).map(([questionId, comments]) => ({
+      questionId,
+      comments: comments as Answer[],
+    }));
+  }, [userAnswers]);
+
   const followMutation = useMutation({
     mutationFn: (userId: number) => api.followUser(userId),
     onSuccess: () => {
@@ -64,7 +97,6 @@ export default function ProfilePage() {
     },
   });
 
-  const isOwnProfile = isAuthenticated && currentUser?.username === username;
   const unlockedCount = achievementsData?.reduce((s, c) => s + c.unlocked_count, 0) ?? 0;
 
   if (isLoading) {
@@ -218,10 +250,64 @@ export default function ProfilePage() {
                 </div>
               )}
               {activeTab === 'yorumlar' && (
-                <div className="p-6 sm:p-8">
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">
-                    {isOwnProfile ? 'Yorumlarınız burada listelenecek.' : 'Bu kullanıcının yorumları burada listelenecek.'}
-                  </p>
+                <div className="p-4 sm:p-6">
+                  {commentsLoading ? (
+                    <div className="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">Yükleniyor...</div>
+                  ) : userAnswers.length === 0 ? (
+                    <p className="text-gray-500 dark:text-gray-400 text-sm">
+                      {isOwnProfile
+                        ? 'Henüz bir yorumunuz yok. Sorulara cevap yazdığınızda burada listelenecek.'
+                        : 'Bu kullanıcının henüz bir yorumu yok.'}
+                    </p>
+                  ) : (
+                    <div className="divide-y divide-gray-200 dark:divide-gray-800">
+                      {answersByQuestion.map(({ questionId, comments }) => {
+                        const first = comments[0];
+                        const q = (first as { question?: unknown }).question as {
+                          id: number;
+                          slug: string;
+                          title: string;
+                          content?: string;
+                          tags?: { name: string }[];
+                          author?: { username: string };
+                          like_count?: number;
+                          answer_count?: number;
+                          view_count?: number;
+                        } | null;
+                        if (!q) return null;
+                        return (
+                          <div key={questionId} className="py-3">
+                            <PostItem
+                              id={q.id}
+                              slug={q.slug}
+                              title={q.title}
+                              content={q.content}
+                              category={undefined}
+                              author={q.author?.username ?? ''}
+                              timeAgo={formatTimeAgo(first.created_at)}
+                              commentCount={q.answer_count ?? 0}
+                              voteCount={q.like_count ?? 0}
+                              viewCount={q.view_count ?? 0}
+                              viewMode="compact"
+                            />
+                            <div className="mt-2 space-y-1.5 pl-0 sm:pl-1">
+                              {comments.map((answer) => {
+                                const snippet = answer.content.replace(/<[^>]*>/g, '').trim();
+                                return (
+                                  <p key={answer.id} className="text-xs text-gray-500 dark:text-gray-400">
+                                    <span className="text-gray-400 dark:text-gray-500">{formatTimeAgo(answer.created_at)}</span>
+                                    {' · '}
+                                    {snippet.slice(0, 150) || '—'}
+                                    {snippet.length > 150 && '…'}
+                                  </p>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
               {activeTab === 'kaydettiklerim' && (
@@ -247,6 +333,21 @@ export default function ProfilePage() {
                   <span className="text-gray-600 dark:text-gray-400">Takipçi</span>
                   <span className="font-medium text-gray-900 dark:text-gray-100">{profile.followers_count}</span>
                 </div>
+                {isOwnProfile ? (
+                <button
+                  type="button"
+                  onClick={() => setFollowingModalOpen(true)}
+                  className="w-full flex justify-between items-center text-sm rounded-lg py-0.5 -mx-1 px-1 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left"
+                >
+                  <span className="text-gray-600 dark:text-gray-400">Takip ettiklerim</span>
+                  <span className="font-medium text-orange-600 dark:text-orange-400">{profile.following_count ?? 0}</span>
+                </button>
+              ) : (
+                <div className="flex justify-between">
+                  <span className="text-gray-600 dark:text-gray-400">Takip ettiklerim</span>
+                  <span className="font-medium text-gray-900 dark:text-gray-100">{profile.following_count ?? 0}</span>
+                </div>
+              )}
                 <div className="flex justify-between">
                   <span className="text-gray-600 dark:text-gray-400">İtibar</span>
                   <span className="font-medium text-gray-900 dark:text-gray-100">{profile.reputation}</span>
@@ -325,6 +426,9 @@ export default function ProfilePage() {
           </div>
         </div>
       </main>
+      {isOwnProfile && (
+        <FollowingModal isOpen={followingModalOpen} onClose={() => setFollowingModalOpen(false)} />
+      )}
     </div>
   );
 }

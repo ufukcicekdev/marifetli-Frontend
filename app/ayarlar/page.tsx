@@ -109,6 +109,7 @@ export default function AyarlarPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const socialDropdownRef = useRef<HTMLDivElement>(null);
   const [socialDropdownOpen, setSocialDropdownOpen] = useState(false);
+  const [resendVerificationLoading, setResendVerificationLoading] = useState(false);
   const [form, setForm] = useState({
     first_name: '',
     last_name: '',
@@ -193,6 +194,20 @@ export default function AyarlarPage() {
     return () => document.removeEventListener('click', handleClickOutside);
   }, [socialDropdownOpen]);
 
+  const handleResendVerification = async () => {
+    if (resendVerificationLoading || user?.is_verified) return;
+    setResendVerificationLoading(true);
+    try {
+      const res = await api.resendVerificationEmail();
+      toast.success(res.data?.message ?? 'Doğrulama linki e-postanıza gönderildi.');
+    } catch (err: unknown) {
+      const e = err as { response?: { data?: { error?: string; message?: string } } };
+      toast.error(e.response?.data?.error ?? e.response?.data?.message ?? 'Gönderilemedi. Lütfen tekrar deneyin.');
+    } finally {
+      setResendVerificationLoading(false);
+    }
+  };
+
   if (hasAccess !== true) return null;
 
   return (
@@ -222,6 +237,23 @@ export default function AyarlarPage() {
             Bildirimler
           </button>
         </div>
+
+        {tab === 'profil' && user && !user.is_verified && (
+          <div className="mb-6 p-4 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-100">
+            <p className="text-sm font-medium mb-1">E-posta adresiniz henüz doğrulanmadı</p>
+            <p className="text-sm text-amber-800 dark:text-amber-200 mb-3">
+              Gönderi paylaşmak, yorum ve beğeni yapmak için e-postanıza gelen doğrulama linkine tıklayın. Mail gelmediyse tekrar gönderebilirsiniz.
+            </p>
+            <button
+              type="button"
+              onClick={handleResendVerification}
+              disabled={resendVerificationLoading}
+              className="px-4 py-2 text-sm font-medium bg-amber-600 hover:bg-amber-700 text-white rounded-lg disabled:opacity-60"
+            >
+              {resendVerificationLoading ? 'Gönderiliyor…' : 'Doğrulama mailini tekrar gönder'}
+            </button>
+          </div>
+        )}
 
         {tab === 'profil' && (
           <form onSubmit={handleSaveProfil} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6 space-y-6">
