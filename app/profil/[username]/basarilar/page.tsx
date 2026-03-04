@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
-import api from '@/src/lib/api';
+import api, { type AchievementItem } from '@/src/lib/api';
 
 export default function AchievementsPage() {
   const params = useParams();
@@ -71,46 +71,73 @@ export default function AchievementsPage() {
               className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden"
             >
               <div className="px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-800 flex flex-wrap items-center justify-between gap-2">
-                <h2 className="font-semibold text-gray-900 dark:text-gray-100">
-                  {category.name}
-                </h2>
-                <span className="text-sm text-gray-500 dark:text-gray-400">
+                <div>
+                  <h2 className="font-semibold text-gray-900 dark:text-gray-100">
+                    {category.name}
+                  </h2>
+                  {category.description && (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 max-w-2xl">
+                      {category.description}
+                    </p>
+                  )}
+                </div>
+                <span className="text-sm text-gray-500 dark:text-gray-400 shrink-0">
                   {category.unlocked_count} / {category.total_count} açıldı
                 </span>
               </div>
               <div className="p-4 sm:p-6">
-                <div className="flex flex-wrap gap-4 sm:gap-6">
-                  {category.achievements.map((a) => (
-                    <div
-                      key={a.id}
-                      className="flex flex-col items-center text-center group"
-                      title={a.unlocked ? `${a.name} - ${a.description}` : a.name}
-                    >
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
+                  {category.achievements.map((a: AchievementItem) => {
+                    const hasProgress = typeof a.current_progress === 'number' && typeof a.target_progress === 'number';
+                    const progressPct = hasProgress && a.target_progress! > 0
+                      ? Math.min(100, (a.current_progress! / a.target_progress!) * 100)
+                      : 0;
+                    return (
                       <div
-                        className={`w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center text-2xl sm:text-3xl transition-all ${
-                          a.unlocked
-                            ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400'
-                            : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500'
-                        }`}
+                        key={a.id}
+                        className="flex flex-col items-center text-center group min-w-0"
+                        title={a.description || a.name}
                       >
-                        {a.icon || '🏆'}
-                      </div>
-                      <span
-                        className={`mt-2 text-xs sm:text-sm font-medium max-w-[80px] sm:max-w-[100px] truncate block ${
-                          a.unlocked
-                            ? 'text-gray-900 dark:text-gray-100'
-                            : 'text-gray-400 dark:text-gray-500'
-                        }`}
-                      >
-                        {a.name}
-                      </span>
-                      {a.unlocked && a.unlocked_at && (
-                        <span className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
-                          {new Date(a.unlocked_at).toLocaleDateString('tr-TR')}
+                        <div
+                          className={`w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-full flex items-center justify-center text-xl sm:text-2xl transition-all ${
+                            a.unlocked
+                              ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 ring-2 ring-orange-400/30'
+                              : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500'
+                          }`}
+                        >
+                          {a.icon || '🏆'}
+                        </div>
+                        <span
+                          className={`mt-2 text-xs sm:text-sm font-medium px-0.5 break-words ${
+                            a.unlocked
+                              ? 'text-gray-900 dark:text-gray-100'
+                              : 'text-gray-400 dark:text-gray-500'
+                          }`}
+                        >
+                          {a.name}
                         </span>
-                      )}
-                    </div>
-                  ))}
+                        {a.unlocked && a.unlocked_at && (
+                          <span className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
+                            {new Date(a.unlocked_at).toLocaleDateString('tr-TR')}
+                          </span>
+                        )}
+                        {!a.unlocked && hasProgress && (
+                          <div className="mt-1.5 w-full max-w-[100px]">
+                            <div className="h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                              <div
+                                className="h-full rounded-full bg-orange-500 dark:bg-orange-500 transition-all"
+                                style={{ width: `${progressPct}%` }}
+                              />
+                            </div>
+                            <span className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
+                              {a.current_progress} / {a.target_progress}
+                              {a.code?.startsWith('streak_') ? ' gün' : ''}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </section>

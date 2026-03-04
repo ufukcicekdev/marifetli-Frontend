@@ -313,6 +313,7 @@ export default function QuestionDetailPage() {
                   onCreateReply={handleReplySubmit}
                   isSubmitting={createAnswerMutation.isPending}
                   allAnswers={answers}
+                  isQuestionAuthor={!!isAuthor}
                 />
               ))}
             </div>

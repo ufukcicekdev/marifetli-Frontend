@@ -10,6 +10,7 @@ import { useAuthStore } from '@/src/stores/auth-store';
 import { formatTimeAgo } from '@/src/lib/format-time';
 import toast from 'react-hot-toast';
 import api from '@/src/lib/api';
+import { questionKeys } from '@/src/hooks/use-questions';
 
 type CommentItemProps = {
   answer: Answer;
@@ -19,6 +20,8 @@ type CommentItemProps = {
   onCreateReply: (content: string, parentId: number) => void;
   isSubmitting: boolean;
   allAnswers: Answer[];
+  /** Soru sahibi mi (sadece soru sahibi en iyi cevap seçebilir) */
+  isQuestionAuthor?: boolean;
 };
 
 export function CommentItem({
@@ -29,6 +32,7 @@ export function CommentItem({
   onCreateReply,
   isSubmitting,
   allAnswers,
+  isQuestionAuthor = false,
 }: CommentItemProps) {
   const { user: currentUser } = useAuthStore();
   const queryClient = useQueryClient();
@@ -48,6 +52,15 @@ export function CommentItem({
     mutationFn: () => api.unlikeAnswer(answer.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['answers', questionId] });
+    },
+    onError: () => toast.error('İşlem başarısız.'),
+  });
+  const markBestMutation = useMutation({
+    mutationFn: () => api.markAsBestAnswer(answer.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['answers', questionId] });
+      if (slug) queryClient.invalidateQueries({ queryKey: questionKeys.detail(slug) });
+      toast.success('En iyi cevap olarak işaretlendi.');
     },
     onError: () => toast.error('İşlem başarısız.'),
   });
@@ -158,6 +171,17 @@ export function CommentItem({
                   ✓ En İyi Cevap
                 </span>
               )}
+              {isQuestionAuthor && !answer.is_best_answer && depth === 0 && (
+                <button
+                  type="button"
+                  onClick={() => markBestMutation.mutate()}
+                  disabled={markBestMutation.isPending}
+                  className="text-xs font-medium text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 hover:underline disabled:opacity-60"
+                  title="Bu cevabı en iyi cevap olarak işaretle"
+                >
+                  {markBestMutation.isPending ? 'İşleniyor...' : 'En iyi cevap seç'}
+                </button>
+              )}
             </div>
             <div className="mb-3">
               {renderContentWithImagesFirst(answer.content)}
@@ -245,6 +269,7 @@ export function CommentItem({
               onCreateReply={onCreateReply}
               isSubmitting={isSubmitting}
               allAnswers={allAnswers}
+              isQuestionAuthor={isQuestionAuthor}
             />
           ))}
         </div>

@@ -291,6 +291,8 @@ export interface AchievementItem {
   order: number;
   unlocked: boolean;
   unlocked_at: string | null;
+  current_progress?: number | null;
+  target_progress?: number | null;
 }
 
 export interface AchievementCategoryResponse {
