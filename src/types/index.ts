@@ -75,9 +75,10 @@ export interface Notification {
   id: number;
   recipient: number;
   sender: User;
-  notification_type: 'answer' | 'like_question' | 'like_answer' | 'follow' | 'mention' | 'best_answer';
+  notification_type: 'answer' | 'like_question' | 'like_answer' | 'follow' | 'mention' | 'best_answer' | 'followed_post';
   question?: number;
   answer?: number;
+  question_slug?: string | null;
   message: string;
   is_read: boolean;
   created_at: string;

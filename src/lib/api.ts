@@ -212,6 +212,12 @@ class ApiService {
   // Notification methods
   getNotifications = () => this.axiosInstance.get<Notification[]>('/notifications/');
 
+  getNotificationUnreadCount = () =>
+    this.axiosInstance.get<{ unread_count: number }>('/notifications/unread-count/');
+
+  registerFCMToken = (token: string, deviceName?: string) =>
+    this.axiosInstance.post('/notifications/fcm-register/', { token: token.trim(), device_name: deviceName || '' });
+
   markNotificationAsRead = (notificationId: number) =>
     this.axiosInstance.patch(`/notifications/${notificationId}/`);
 
