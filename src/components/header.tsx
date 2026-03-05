@@ -21,7 +21,8 @@ export function Header() {
   const { isAuthenticated, user, logout } = useAuthStore();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const dropdownRefDesktop = useRef<HTMLDivElement>(null);
+  const dropdownRefMobile = useRef<HTMLDivElement>(null);
   const sidebarToggle = useSidebarStore((s) => s.toggle);
 
   const { data: unreadData } = useQuery({
@@ -34,9 +35,10 @@ export function Header() {
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setDropdownOpen(false);
-      }
+      const target = e.target as Node;
+      const insideDropdown =
+        dropdownRefDesktop.current?.contains(target) || dropdownRefMobile.current?.contains(target);
+      if (!insideDropdown) setDropdownOpen(false);
     }
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
@@ -59,7 +61,7 @@ export function Header() {
           <div className="flex items-center gap-2 flex-1 min-w-0 justify-start">
             <button
               onClick={sidebarToggle}
-              className="p-2 -ml-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 shrink-0"
+              className="lg:hidden p-2 -ml-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 shrink-0"
               title="Menü"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -86,15 +88,12 @@ export function Header() {
               />
             </div>
           </form>
-          <Link href="/sorular" className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 shrink-0" title="Ara">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </Link>
 
-          {/* Sağ */}
-          <div className="flex items-center justify-end gap-1 sm:gap-2 flex-1 min-w-0">
-            <ThemeToggle />
+          {/* Sağ: masaüstünde tema + giriş/avatar; mobilde sadece giriş yapılmışsa bildirim + avatar (giriş/üye ol sidebar’da) */}
+          <div className="hidden lg:flex items-center justify-end gap-2 shrink-0">
+            <span className="shrink-0">
+              <ThemeToggle />
+            </span>
             {isAuthenticated && user ? (
               <>
                 {user.is_verified ? (
@@ -131,8 +130,9 @@ export function Header() {
                     </span>
                   )}
                 </Link>
-                <div className="relative shrink-0" ref={dropdownRef}>
+                <div className="relative shrink-0" ref={dropdownRefDesktop}>
                   <button
+                    type="button"
                     onClick={() => setDropdownOpen((o) => !o)}
                     className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                   >
@@ -194,18 +194,72 @@ export function Header() {
                 </div>
               </>
             ) : (
-              <>
-                <button onClick={() => openAuth('login')} className="text-gray-600 dark:text-gray-400 hover:text-orange-500 font-medium py-1 px-2">
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => openAuth('login')}
+                  className="min-h-[36px] sm:min-h-0 px-3 py-2 sm:py-1.5 rounded-lg text-sm font-medium border border-gray-300 dark:border-gray-600 bg-transparent text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 hover:border-gray-400 dark:hover:border-gray-500 transition-colors"
+                >
                   Giriş Yap
                 </button>
                 <button
                   onClick={() => openAuth('register')}
-                  className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-1.5 rounded-full text-sm font-medium transition-colors"
+                  className="min-h-[36px] sm:min-h-0 px-3 py-2 sm:py-1.5 rounded-lg text-sm font-medium bg-orange-500 hover:bg-orange-600 text-white transition-colors"
                 >
                   Üye Ol
                 </button>
-              </>
+              </div>
             )}
+          </div>
+
+          {/* Mobil: giriş yapılmışsa bildirim + profil (tema ve giriş/üye ol sidebar’da) */}
+          <div className="flex lg:hidden items-center justify-end gap-2 shrink-0">
+            {isAuthenticated && user ? (
+              <>
+                <Link
+                  href="/bildirimler"
+                  className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400"
+                  title="Bildirimler"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                  </svg>
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-orange-500 text-white text-[10px] font-bold">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
+                </Link>
+                <div className="relative shrink-0" ref={dropdownRefMobile}>
+                  <button
+                    type="button"
+                    onClick={() => setDropdownOpen((o) => !o)}
+                    className="flex items-center gap-1 px-1.5 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-sm overflow-hidden shrink-0">
+                      {user.profile_picture ? (
+                        <OptimizedAvatar src={user.profile_picture} size={32} alt="" className="w-full h-full" priority />
+                      ) : (
+                        (user.first_name || user.username)?.charAt(0)?.toUpperCase() || '?'
+                      )}
+                    </div>
+                  </button>
+                  {dropdownOpen && (
+                    <div className="absolute right-0 mt-1 w-52 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-50">
+                      <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">@{user.username}</p>
+                        <p className="text-xs text-gray-500">Karma · Yeni</p>
+                      </div>
+                      <Link href={`/profil/${user.username}`} className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" onClick={() => setDropdownOpen(false)}>Profilim</Link>
+                      <Link href={`/profil/${user.username}/basarilar`} className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" onClick={() => setDropdownOpen(false)}>Başarılar</Link>
+                      <Link href="/ayarlar" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" onClick={() => setDropdownOpen(false)}>Ayarlar</Link>
+                      <Link href="/bildirimler" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 sm:hidden" onClick={() => setDropdownOpen(false)}>Bildirimler</Link>
+                      <hr className="my-1 border-gray-200 dark:border-gray-700" />
+                      <button onClick={() => { setDropdownOpen(false); logout(); }} className="block w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700">Çıkış Yap</button>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : null}
           </div>
         </div>
       </header>
