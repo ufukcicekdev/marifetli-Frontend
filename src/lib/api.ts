@@ -1,6 +1,6 @@
 import axios, { AxiosInstance } from 'axios';
 import toast from 'react-hot-toast';
-import { User, UserProfile, Question, Answer, Notification, Tag } from '../types';
+import { User, UserProfile, Question, Answer, Notification, Tag, SiteSettings } from '../types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
 
@@ -34,7 +34,7 @@ class ApiService {
     );
 
     // Public endpoints: 401'de token olmadan tekrar dene, /giris'e yönlendirme
-    const PUBLIC_PATHS = ['/questions/', '/categories/', '/questions/tags'];
+    const PUBLIC_PATHS = ['/questions/', '/categories/', '/questions/tags', '/settings/public', '/contact/'];
     const isPublicPath = (url: string) => PUBLIC_PATHS.some((p) => url?.includes(p));
 
     // Response interceptor: token refresh; public path'te 401'de girişe yönlendirme
@@ -185,6 +185,13 @@ class ApiService {
   getTags = () => this.axiosInstance.get<Tag[]>('/questions/tags/');
 
   getCategories = () => this.axiosInstance.get<{ id: number; name: string; slug: string; parent: number | null; subcategories?: unknown[] }[]>('/categories/');
+
+  /** İletişim, sosyal medya, GA/GSC - admin panelden yönetilir */
+  getSiteSettings = () => this.axiosInstance.get<SiteSettings>('/settings/public/');
+
+  /** İletişim formu gönderimi (giriş gerekmez) */
+  submitContactForm = (data: { name: string; email: string; subject: string; message: string }) =>
+    this.axiosInstance.post<{ detail: string }>('/contact/', data);
 
   // Answer methods
   createAnswer = (questionId: number, answerData: { content: string; parent?: number }) =>

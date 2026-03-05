@@ -9,6 +9,7 @@ import { VerifyEmailBanner } from '@/src/components/verify-email-banner';
 import { AppSidebar } from '@/src/components/app-sidebar';
 import { MainContentWrapper } from '@/src/components/main-content-wrapper';
 import { OnboardingGuard } from '@/src/components/onboarding-guard';
+import { SiteAnalytics } from '@/src/components/site-analytics';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -27,6 +28,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <ThemeProvider>
           <QueryProvider>
+            <SiteAnalytics />
             <OnboardingGuard>
               <Header />
               <div className="flex min-h-[calc(100vh-52px)] pt-[52px]">

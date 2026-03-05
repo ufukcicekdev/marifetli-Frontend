@@ -23,6 +23,7 @@ export function AppSidebar() {
     { href: '/sorular', label: 'Anasayfa', icon: '🏠' },
     { href: '/t/populer', label: 'Popüler', icon: '🔥' },
     { href: '/t/tum', label: 'Tümü', icon: '📋' },
+    { href: '/iletisim', label: 'İletişim', icon: '✉️' },
   ];
 
   const communities = [

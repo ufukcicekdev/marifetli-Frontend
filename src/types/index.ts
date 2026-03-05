@@ -42,6 +42,19 @@ export interface Tag {
   created_at: string;
 }
 
+/** Admin panelden yönetilen site ayarları (iletişim, sosyal medya, GA, GSC) */
+export interface SiteSettings {
+  contact: {
+    email: string;
+    phone: string;
+    address: string;
+    description: string;
+  };
+  social_links: { platform: string; url: string; label: string; order: number }[];
+  google_analytics_id: string;
+  google_search_console_meta: string;
+}
+
 export interface Question {
   id: number;
   title: string;
