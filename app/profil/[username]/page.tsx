@@ -9,6 +9,7 @@ import { useAuthStore } from '@/src/stores/auth-store';
 import { PostItem } from '@/src/components/post-item';
 import { SavedCollectionsTab } from '@/src/components/saved-collections-tab';
 import { FollowingModal } from '@/src/components/following-modal';
+import { OptimizedAvatar } from '@/src/components/optimized-avatar';
 import { formatTimeAgo } from '@/src/lib/format-time';
 import type { Answer } from '@/src/types';
 
@@ -150,7 +151,7 @@ export default function ProfilePage() {
                 <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3">
                   <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl bg-white dark:bg-gray-800 border-4 border-white dark:border-gray-900 overflow-hidden flex-shrink-0 shadow">
                     {profile.profile_picture ? (
-                      <img src={profile.profile_picture} alt="" className="w-full h-full object-cover" />
+                      <OptimizedAvatar src={profile.profile_picture} size={96} alt="" className="w-full h-full rounded-xl" />
                     ) : (
                       <div className="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-2xl sm:text-3xl font-bold text-gray-500">
                         {profile.display_name?.charAt(0) || profile.username?.charAt(0) || '?'}

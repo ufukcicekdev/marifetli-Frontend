@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/src/lib/api';
+import { OptimizedAvatar } from '@/src/components/optimized-avatar';
 import { useAuthStore } from '@/src/stores/auth-store';
 
 type Tab = 'profil' | 'bildirimler';
@@ -263,7 +264,7 @@ export default function AyarlarPage() {
               <div className="flex items-center gap-4">
                 <div className="w-20 h-20 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden flex items-center justify-center">
                   {user?.profile_picture ? (
-                    <img src={user.profile_picture} alt="" className="w-full h-full object-cover" />
+                    <OptimizedAvatar src={user.profile_picture} size={80} alt="" className="w-full h-full" />
                   ) : (
                     <span className="text-2xl font-bold text-gray-500">
                       {(user?.first_name || user?.username)?.charAt(0)?.toUpperCase() || '?'}

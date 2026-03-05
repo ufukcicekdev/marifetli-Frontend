@@ -1,8 +1,10 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import { useState } from 'react';
 import type { MediaItem } from '@/src/lib/extract-media';
-import { MediaLightbox } from '@/src/components/media-lightbox';
+
+const MediaLightbox = dynamic(() => import('@/src/components/media-lightbox').then((m) => ({ default: m.MediaLightbox })), { ssr: false });
 
 interface MediaSliderProps {
   items: MediaItem[];

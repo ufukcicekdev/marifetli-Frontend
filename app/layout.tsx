@@ -1,5 +1,5 @@
 import './globals.css';
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import { Toaster } from 'react-hot-toast';
 import { QueryProvider } from '@/src/providers/query-provider';
@@ -11,9 +11,36 @@ import { MainContentWrapper } from '@/src/components/main-content-wrapper';
 import { OnboardingGuard } from '@/src/components/onboarding-guard';
 import { SiteAnalytics } from '@/src/components/site-analytics';
 
-const inter = Inter({ subsets: ['latin'] });
-
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+
+function getApiOrigin(): string {
+  try {
+    const base = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
+    const url = new URL(base);
+    return url.origin;
+  } catch {
+    return 'http://localhost:8000';
+  }
+}
+
+const API_ORIGIN = getApiOrigin();
+
+const inter = Inter({
+  subsets: ['latin'],
+  display: 'optional',
+  adjustFontFallback: true,
+  preload: true,
+});
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+    { media: '(prefers-color-scheme: dark)', color: '#0a0a0a' },
+  ],
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -32,6 +59,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="tr" suppressHydrationWarning>
+      <head>
+        <link rel="preconnect" href={API_ORIGIN} crossOrigin="" />
+        <link rel="dns-prefetch" href={API_ORIGIN} />
+      </head>
       <body className={inter.className}>
         <ThemeProvider>
           <QueryProvider>

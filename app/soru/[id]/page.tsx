@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -12,9 +13,11 @@ import { useAuthStore } from '@/src/stores/auth-store';
 import { formatTimeAgo } from '@/src/lib/format-time';
 import { extractMediaFromHtml, stripMediaFromHtml } from '@/src/lib/extract-media';
 import { MediaSlider } from '@/src/components/media-slider';
-import { SaveModal } from '@/src/components/save-modal';
 import { CommentItem } from '@/src/components/comment-item';
 import { CommentEditor } from '@/src/components/comment-editor';
+import { OptimizedAvatar } from '@/src/components/optimized-avatar';
+
+const SaveModal = dynamic(() => import('@/src/components/save-modal').then((m) => ({ default: m.SaveModal })), { ssr: false });
 
 export default function QuestionDetailPage() {
   const params = useParams();
@@ -157,7 +160,7 @@ export default function QuestionDetailPage() {
           <div className="min-w-0 p-4 sm:p-6">
               <div className="flex items-center gap-3 mb-4">
                 {author?.profile_picture ? (
-                  <img src={author.profile_picture} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
+                  <OptimizedAvatar src={author.profile_picture} size={32} alt="" className="w-8 h-8 shrink-0" />
                 ) : (
                   <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-sm font-bold text-gray-500 shrink-0">
                     {authorName.charAt(0).toUpperCase()}

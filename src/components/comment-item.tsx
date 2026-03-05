@@ -1,9 +1,12 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useState } from 'react';
-import { MediaLightbox } from '@/src/components/media-lightbox';
+import { OptimizedAvatar } from '@/src/components/optimized-avatar';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+
+const MediaLightbox = dynamic(() => import('@/src/components/media-lightbox').then((m) => ({ default: m.MediaLightbox })), { ssr: false });
 import type { Answer } from '@/src/types';
 import { CommentEditor } from '@/src/components/comment-editor';
 import { useAuthStore } from '@/src/stores/auth-store';
@@ -153,7 +156,7 @@ export function CommentItem({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2 flex-wrap">
               {author?.profile_picture ? (
-                <img src={author.profile_picture} alt="" className="w-8 h-8 rounded-full object-cover" />
+                <OptimizedAvatar src={author.profile_picture} size={32} alt="" className="w-8 h-8" />
               ) : (
                 <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-500 shrink-0">
                   {authorName.charAt(0).toUpperCase()}

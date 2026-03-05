@@ -1,13 +1,16 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ViewMode } from './post-feed-controls';
 import { extractMediaFromHtml } from '@/src/lib/extract-media';
 import { MediaSlider } from './media-slider';
-import { SaveModal } from './save-modal';
+import { OptimizedAvatar } from './optimized-avatar';
 import api from '@/src/lib/api';
+
+const SaveModal = dynamic(() => import('./save-modal').then((m) => ({ default: m.SaveModal })), { ssr: false });
 import { useAuthStore } from '@/src/stores/auth-store';
 import toast from 'react-hot-toast';
 
@@ -190,7 +193,7 @@ export function PostItem({ id, slug, title, content, category, author, authorAva
           </h2>
           <div className="flex items-center gap-2 mb-3">
             {authorAvatar ? (
-              <img src={authorAvatar} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
+              <OptimizedAvatar src={authorAvatar} size={24} alt="" className="w-6 h-6" />
             ) : (
               <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[10px] font-bold text-gray-500 shrink-0">
                 {author?.charAt(0)?.toUpperCase() ?? '?'}
@@ -213,7 +216,7 @@ export function PostItem({ id, slug, title, content, category, author, authorAva
     <div className="p-3 sm:p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-b border-gray-200 dark:border-gray-800 last:border-b-0">
       <div className="flex gap-2 sm:gap-3">
         {authorAvatar ? (
-          <img src={authorAvatar} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
+          <OptimizedAvatar src={authorAvatar} size={32} alt="" className="w-8 h-8" />
         ) : (
           <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-500 shrink-0">
             {author?.charAt(0)?.toUpperCase() ?? '?'}
@@ -235,7 +238,7 @@ export function PostItem({ id, slug, title, content, category, author, authorAva
           {firstMedia && (
             <Link href={href} className="mt-1 block w-20 h-20 rounded overflow-hidden bg-gray-100 dark:bg-gray-800 self-start">
               {firstMedia.type === 'image' ? (
-                <img src={firstMedia.url} alt="" className="w-full h-full object-cover" />
+                <OptimizedAvatar src={firstMedia.url} size={80} alt="" className="w-full h-full rounded-none object-cover" />
               ) : (
                 <video src={firstMedia.url} className="w-full h-full object-cover" muted playsInline />
               )}

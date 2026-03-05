@@ -1,5 +1,6 @@
 'use client';
 
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
@@ -9,8 +10,10 @@ import { useAuthModalStore } from '../stores/auth-modal-store';
 import { useAuthStore } from '../stores/auth-store';
 import { useSidebarStore } from '../stores/sidebar-store';
 import { ThemeToggle } from './theme-toggle';
-import { AuthModal } from './auth-modal';
+import { OptimizedAvatar } from './optimized-avatar';
 import api from '@/src/lib/api';
+
+const AuthModal = dynamic(() => import('./auth-modal').then((m) => ({ default: m.AuthModal })), { ssr: false });
 
 export function Header() {
   const router = useRouter();
@@ -135,7 +138,7 @@ export function Header() {
                   >
                     <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-sm overflow-hidden shrink-0">
                       {user.profile_picture ? (
-                        <img src={user.profile_picture} alt="" className="w-full h-full object-cover" />
+                        <OptimizedAvatar src={user.profile_picture} size={32} alt="" className="w-full h-full" priority />
                       ) : (
                         (user.first_name || user.username)?.charAt(0)?.toUpperCase() || '?'
                       )}

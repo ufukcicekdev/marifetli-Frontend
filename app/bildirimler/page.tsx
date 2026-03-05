@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/src/lib/api';
 import type { Notification as NotificationType } from '@/src/types';
 import { useAuthStore } from '@/src/stores/auth-store';
+import { OptimizedAvatar } from '@/src/components/optimized-avatar';
 import { formatTimeAgo } from '@/src/lib/format-time';
 
 export default function BildirimlerPage() {
@@ -113,7 +114,7 @@ export default function BildirimlerPage() {
                     <div className="flex gap-3">
                       <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-lg shrink-0">
                         {n.sender?.profile_picture ? (
-                          <img src={n.sender.profile_picture} alt="" className="w-full h-full rounded-full object-cover" />
+                          <OptimizedAvatar src={n.sender.profile_picture} size={40} alt="" className="w-full h-full" />
                         ) : (
                           (n.sender?.username?.charAt(0) || '?').toUpperCase()
                         )}

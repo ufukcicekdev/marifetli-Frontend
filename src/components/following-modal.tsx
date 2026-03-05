@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
+import { OptimizedAvatar } from '@/src/components/optimized-avatar';
 import api from '@/src/lib/api';
 
 type FollowingUser = {
@@ -86,7 +87,7 @@ export function FollowingModal({ isOpen, onClose }: FollowingModalProps) {
                   >
                     <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden shrink-0">
                       {u.profile_picture ? (
-                        <img src={u.profile_picture} alt="" className="w-full h-full object-cover" />
+                        <OptimizedAvatar src={u.profile_picture} size={40} alt="" className="w-full h-full" />
                       ) : (
                         <span className="w-full h-full flex items-center justify-center text-sm font-medium text-gray-500">
                           {(u.first_name || u.username)?.charAt(0)?.toUpperCase() || '?'}
