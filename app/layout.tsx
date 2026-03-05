@@ -13,9 +13,16 @@ import { SiteAnalytics } from '@/src/components/site-analytics';
 
 const inter = Inter({ subsets: ['latin'] });
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: 'Marifetli - El İşi & El Sanatları Topluluğu',
   description: 'Örgü, dikiş, nakış, takı tasarımı ve el sanatları tutkunlarının buluşma noktası. Sorular sor, deneyimlerini paylaş, el emeğini keşfet.',
+  openGraph: {
+    url: SITE_URL,
+    siteName: 'Marifetli',
+  },
 };
 
 export default function RootLayout({
