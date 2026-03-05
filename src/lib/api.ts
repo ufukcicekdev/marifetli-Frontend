@@ -34,7 +34,7 @@ class ApiService {
     );
 
     // Public endpoints: 401'de token olmadan tekrar dene, /giris'e yönlendirme
-    const PUBLIC_PATHS = ['/questions/', '/categories/', '/questions/tags', '/settings/public', '/contact/'];
+    const PUBLIC_PATHS = ['/questions/', '/categories/', '/questions/tags', '/settings/public', '/contact/', '/blog/'];
     const isPublicPath = (url: string) => PUBLIC_PATHS.some((p) => url?.includes(p));
 
     // Response interceptor: token refresh; public path'te 401'de girişe yönlendirme
@@ -277,6 +277,25 @@ class ApiService {
     this.axiosInstance.get<{ saved: boolean; collections: SavedCollection[] }>(
       `/favorites/check/${questionId}/`
     );
+
+  // Blog (sadece admin yazar; kullanıcılar okuyup yorum/beğeni yapabilir)
+  getBlogPosts = (params?: { page?: number }) =>
+    this.axiosInstance.get<{ results: BlogPostListItem[]; count?: number }>('/blog/', { params });
+
+  getBlogPost = (slug: string) =>
+    this.axiosInstance.get<BlogPostDetailItem>(`/blog/${slug}/`);
+
+  createBlogComment = (slug: string, content: string) =>
+    this.axiosInstance.post<BlogCommentItem>(`/blog/${slug}/comments/`, { content });
+
+  blogLike = (slug: string) =>
+    this.axiosInstance.post<{ liked: boolean; like_count: number }>(`/blog/${slug}/like/`);
+
+  blogUnlike = (slug: string) =>
+    this.axiosInstance.delete<{ liked: boolean; like_count: number }>(`/blog/${slug}/unlike/`);
+
+  getBlogLikeStatus = (slug: string) =>
+    this.axiosInstance.get<{ liked: boolean; like_count: number }>(`/blog/${slug}/like-status/`);
 }
 
 export interface SavedCollection {
@@ -317,6 +336,37 @@ export interface AchievementCategoryResponse {
   total_count: number;
   unlocked_count: number;
   achievements: AchievementItem[];
+}
+
+// Blog types
+export interface BlogPostListItem {
+  id: number;
+  title: string;
+  slug: string;
+  excerpt: string;
+  featured_image: string | null;
+  author: User;
+  published_at: string | null;
+  view_count: number;
+  like_count: number;
+  comment_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BlogCommentItem {
+  id: number;
+  post: number;
+  author: User;
+  content: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface BlogPostDetailItem extends BlogPostListItem {
+  content: string;
+  is_published: boolean;
+  comments: BlogCommentItem[];
 }
 
 export default new ApiService();

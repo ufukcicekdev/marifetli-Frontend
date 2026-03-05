@@ -26,6 +26,7 @@ export function AppSidebar() {
 
   const navItems = [
     { href: '/sorular', label: 'Anasayfa', icon: '🏠' },
+    { href: '/blog', label: 'Blog', icon: '📝' },
     { href: '/t/populer', label: 'Popüler', icon: '🔥' },
     { href: '/t/tum', label: 'Tümü', icon: '📋' },
     { href: '/iletisim', label: 'İletişim', icon: '✉️' },
