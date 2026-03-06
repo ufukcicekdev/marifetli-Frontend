@@ -6,6 +6,17 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve(__dirname),
   },
+  // marifetli.com.tr → www.marifetli.com.tr (301 kalıcı yönlendirme)
+  async redirects() {
+    return [
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: 'marifetli.com.tr' }],
+        destination: 'https://www.marifetli.com.tr/:path*',
+        permanent: true,
+      },
+    ];
+  },
   // Görsel optimizasyonu (Lighthouse – LCP, mobil)
   images: {
     remotePatterns: [
