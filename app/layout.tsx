@@ -11,15 +11,16 @@ import { MainContentWrapper } from '@/src/components/main-content-wrapper';
 import { OnboardingGuard } from '@/src/components/onboarding-guard';
 import { SiteAnalytics } from '@/src/components/site-analytics';
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+// Canlıda NEXT_PUBLIC_SITE_URL deploy ortamında tanımlı olsun; yoksa production URL fallback
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.marifetli.com.tr';
 
 function getApiOrigin(): string {
   try {
-    const base = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
+    const base = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://web-production-5404d.up.railway.app/api';
     const url = new URL(base);
     return url.origin;
   } catch {
-    return 'http://localhost:8000';
+    return 'https://web-production-5404d.up.railway.app';
   }
 }
 
