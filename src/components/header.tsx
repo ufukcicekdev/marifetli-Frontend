@@ -33,6 +33,12 @@ export function Header() {
   });
   const unreadCount = unreadData?.unread_count ?? 0;
 
+  const { data: siteSettings } = useQuery({
+    queryKey: ['site-settings'],
+    queryFn: () => api.getSiteSettings().then((r) => r.data),
+  });
+  const logoUrl = siteSettings?.logo_url ?? null;
+
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       const target = e.target as Node;
@@ -68,8 +74,18 @@ export function Header() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <Link href="/" className="text-lg sm:text-xl font-bold text-orange-500 hover:text-orange-600 truncate">
-              Marifetli
+            <Link href="/" className="flex items-center gap-2 min-w-0 shrink-0">
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt="Marifetli"
+                  className="h-8 w-auto max-w-[120px] sm:h-9 sm:max-w-[140px] object-contain object-left"
+                />
+              ) : (
+                <span className="text-lg sm:text-xl font-bold text-orange-500 hover:text-orange-600 truncate">
+                  Marifetli
+                </span>
+              )}
             </Link>
           </div>
 

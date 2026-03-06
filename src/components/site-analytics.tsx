@@ -20,6 +20,20 @@ export function SiteAnalytics() {
 
   const gaId = settings?.google_analytics_id?.trim();
   const gscMeta = settings?.google_search_console_meta?.trim();
+  const faviconUrl = settings?.favicon_url?.trim() || null;
+
+  useEffect(() => {
+    if (!faviconUrl) return;
+    let link = document.querySelector<HTMLLinkElement>('link[rel="icon"].site-settings-favicon');
+    if (!link) {
+      link = document.createElement('link');
+      link.rel = 'icon';
+      link.classList.add('site-settings-favicon');
+      document.head.appendChild(link);
+    }
+    link.href = faviconUrl;
+    return () => link?.remove();
+  }, [faviconUrl]);
 
   useEffect(() => {
     if (!gscMeta) return;
