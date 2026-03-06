@@ -56,9 +56,9 @@ export function Header() {
   return (
     <>
       <header className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
-        <div className="container mx-auto px-3 sm:px-4 py-2 flex items-center gap-2 sm:gap-4 min-w-0">
-          {/* Sol */}
-          <div className="flex items-center gap-2 flex-1 min-w-0 justify-start">
+        <div className="container mx-auto px-3 sm:px-4 py-2 flex items-center gap-2 sm:gap-4 min-w-0 relative">
+          {/* Sol - eşit alan için flex-1 (arama tam ortada kalsın) */}
+          <div className="flex items-center gap-2 flex-1 min-w-0 justify-start z-10">
             <button
               onClick={sidebarToggle}
               className="lg:hidden p-2 -ml-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 shrink-0"
@@ -73,9 +73,12 @@ export function Header() {
             </Link>
           </div>
 
-          {/* Orta: Arama - ortada */}
-          <form onSubmit={handleSearch} className="hidden md:flex flex-1 justify-center min-w-0 px-2 max-w-xl mx-auto">
-            <div className="relative w-full max-w-md flex items-center bg-gray-100 dark:bg-gray-800 rounded-full border border-gray-200 dark:border-gray-700 focus-within:ring-1 focus-within:ring-orange-500">
+          {/* Orta: Arama - viewport ortasında (absolute) */}
+          <form
+            onSubmit={handleSearch}
+            className="hidden md:block absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md px-2 pointer-events-none"
+          >
+            <div className="pointer-events-auto relative w-full flex items-center bg-gray-100 dark:bg-gray-800 rounded-full border border-gray-200 dark:border-gray-700 focus-within:ring-1 focus-within:ring-orange-500">
               <svg className="w-4 h-4 text-gray-400 dark:text-gray-500 ml-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
@@ -89,8 +92,8 @@ export function Header() {
             </div>
           </form>
 
-          {/* Sağ: masaüstünde tema + giriş/avatar; mobilde sadece giriş yapılmışsa bildirim + avatar (giriş/üye ol sidebar’da) */}
-          <div className="hidden lg:flex items-center justify-end gap-2 shrink-0">
+          {/* Sağ - eşit alan için flex-1 (arama tam ortada kalsın) */}
+          <div className="hidden lg:flex items-center justify-end gap-2 flex-1 min-w-0 shrink-0">
             <span className="shrink-0">
               <ThemeToggle />
             </span>
