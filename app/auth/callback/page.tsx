@@ -11,22 +11,29 @@ function AuthCallbackContent() {
   const searchParams = useSearchParams();
   const { setAuth } = useAuthStore();
   const [status, setStatus] = useState<'loading' | 'ok' | 'error'>('loading');
+  const [errorDetail, setErrorDetail] = useState<string | null>(null);
 
   useEffect(() => {
-    const error = searchParams.get('error');
-    if (error) {
+    // Hata query string'de gelebilir (?error=...)
+    const errorFromQuery = searchParams.get('error');
+    if (errorFromQuery) {
       setStatus('error');
-      if (error === 'not_authenticated') toast.error('Google ile giriş tamamlanamadı.');
-      else toast.error('Giriş başarısız. Lütfen tekrar deneyin.');
-      router.replace('/');
+      setErrorDetail(errorFromQuery);
+      const msg = errorFromQuery === 'not_authenticated'
+        ? 'Google ile giriş tamamlanamadı. (Oturum alınamadı – backend’de kullanıcı session’da yok.)'
+        : `Giriş başarısız: ${errorFromQuery}`;
+      toast.error(msg);
       return;
     }
-    const access = searchParams.get('access');
-    const refresh = searchParams.get('refresh');
+    // Token'lar backend'den #access=...&refresh=... ile gelir (uzun JWT için)
+    const hash = typeof window !== 'undefined' ? window.location.hash.slice(1) : '';
+    const params = new URLSearchParams(hash || searchParams.toString());
+    const access = params.get('access');
+    const refresh = params.get('refresh');
     if (!access) {
       setStatus('error');
-      toast.error('Oturum bilgisi alınamadı.');
-      router.replace('/');
+      setErrorDetail('access_token_yok');
+      toast.error('Oturum bilgisi alınamadı. (URL’de access token gelmedi.)');
       return;
     }
     if (refresh) localStorage.setItem('refresh_token', refresh);
@@ -49,7 +56,23 @@ function AuthCallbackContent() {
       <div className="text-center">
         {status === 'loading' && <p className="text-gray-600 dark:text-gray-400">Giriş tamamlanıyor...</p>}
         {status === 'ok' && <p className="text-gray-600 dark:text-gray-400">Yönlendiriliyorsunuz...</p>}
-        {status === 'error' && <p className="text-red-600 dark:text-red-400">Bir hata oluştu.</p>}
+        {status === 'error' && (
+          <div className="space-y-3">
+            <p className="text-red-600 dark:text-red-400 font-medium">Giriş tamamlanamadı.</p>
+            {errorDetail && (
+              <p className="text-sm text-gray-500 dark:text-gray-400 font-mono break-all">
+                Hata kodu: <strong>{errorDetail}</strong>
+              </p>
+            )}
+            <button
+              type="button"
+              onClick={() => router.replace('/')}
+              className="mt-4 px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600"
+            >
+              Ana sayfaya dön
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -8,7 +8,8 @@ import { useAuthStore } from '../stores/auth-store';
 import api from '../lib/api';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
-const GOOGLE_LOGIN_URL = `${API_BASE}/auth/login/google-oauth2/`;
+// Önce backend session temizlenir, sonra Google OAuth'a gidilir (farklı Gmail ile girişte eski kullanıcıya düşmemek için)
+const GOOGLE_LOGIN_URL = `${API_BASE}/auth/start-google-login/`;
 
 export function AuthModal() {
   const router = useRouter();
@@ -234,6 +235,7 @@ export function AuthModal() {
               </div>
               <a
                 href={GOOGLE_LOGIN_URL}
+                onClick={() => useAuthStore.getState().logout()}
                 className="mt-4 w-full flex items-center justify-center gap-2 py-2.5 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
                 <svg className="w-5 h-5" viewBox="0 0 24 24">
