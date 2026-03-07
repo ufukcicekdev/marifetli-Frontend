@@ -8,6 +8,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import api, { type BlogPostDetailItem, type BlogCommentItem } from '@/src/lib/api';
 import { OptimizedAvatar } from '@/src/components/optimized-avatar';
+import { ShareButton } from '@/src/components/share-button';
 import { useAuthStore } from '@/src/stores/auth-store';
 import { formatTimeAgo } from '@/src/lib/format-time';
 
@@ -217,6 +218,7 @@ export default function BlogPostPage() {
                 </svg>
                 <span className="text-sm font-medium">{likeCount} beğeni</span>
               </button>
+              <ShareButton title={post.title} />
               <span className="text-sm text-gray-500 dark:text-gray-400 shrink-0">
                 {comments.length} yorum
               </span>

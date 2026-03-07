@@ -34,11 +34,22 @@ export default function BlogPage() {
     },
   });
 
+  const { data: popularData } = useQuery({
+    queryKey: ['blog-popular'],
+    queryFn: async () => {
+      const res = await api.getBlogPopularPosts();
+      const list = Array.isArray(res.data) ? res.data : (res.data as { results?: BlogPostListItem[] })?.results ?? [];
+      return list;
+    },
+  });
+
   const posts = data?.results ?? [];
+  const popularPosts = popularData ?? [];
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-10 max-w-4xl">
+      <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-10 flex flex-col lg:flex-row gap-8 max-w-6xl">
+        <main className="min-w-0 flex-1 max-w-4xl">
         <header className="mb-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -200,7 +211,46 @@ export default function BlogPage() {
             })}
           </ul>
         )}
-      </main>
+
+        </main>
+
+        {popularPosts.length > 0 && (
+          <aside className="w-full lg:w-72 shrink-0">
+            <div className="lg:sticky lg:top-24">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">En çok okunanlar</h2>
+              <ul className="space-y-4">
+                {popularPosts.map((post, index) => {
+                  const author = post.author as { username?: string };
+                  return (
+                    <li key={post.id}>
+                      <Link
+                        href={`/blog/${post.slug}`}
+                        className="flex gap-3 rounded-lg p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:border-orange-300 dark:hover:border-orange-700 transition-colors min-w-0"
+                      >
+                        <span className="flex items-center justify-center w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400 text-sm font-bold shrink-0">
+                          {index + 1}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="font-medium text-gray-900 dark:text-gray-100 line-clamp-2 text-sm">
+                            {post.title}
+                          </h3>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                            {post.view_count} görüntülenme
+                            {author?.username && ` · ${author.username}`}
+                          </p>
+                        </div>
+                        <svg className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </aside>
+        )}
+      </div>
     </div>
   );
 }

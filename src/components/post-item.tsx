@@ -11,6 +11,7 @@ import { OptimizedAvatar } from './optimized-avatar';
 import api from '@/src/lib/api';
 
 const SaveModal = dynamic(() => import('./save-modal').then((m) => ({ default: m.SaveModal })), { ssr: false });
+import { ShareButton } from '@/src/components/share-button';
 import { useAuthStore } from '@/src/stores/auth-store';
 import toast from 'react-hot-toast';
 
@@ -97,22 +98,6 @@ export function PostItem({ id, slug, title, content, category, author, authorAva
     setSaveModalOpen(true);
   };
 
-  const handleShare = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    try {
-      if (typeof navigator !== 'undefined' && navigator.share) {
-        await navigator.share({ title, url: fullUrl, text: title });
-        toast.success('Paylaşıldı');
-      } else {
-        await navigator.clipboard.writeText(fullUrl);
-        toast.success('Link kopyalandı');
-      }
-    } catch {
-      toast.error('Paylaşım başarısız.');
-    }
-  };
-
   const ActionBar = ({ compact = false }: { compact?: boolean }) => (
     <div className={`flex items-center gap-4 ${compact ? 'mt-1' : 'mt-3 pt-2 border-t border-gray-200 dark:border-gray-700'}`}>
       <div className="flex items-center gap-0.5">
@@ -140,12 +125,14 @@ export function PostItem({ id, slug, title, content, category, author, authorAva
         </svg>
         <span className="text-xs">Kaydet</span>
       </button>
-      <button onClick={handleShare} className="flex items-center gap-1 text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-500 transition-colors" title="Paylaş" aria-label="Paylaş">
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-        </svg>
-        <span className="text-xs">Paylaş</span>
-      </button>
+      <span onClick={(e) => e.stopPropagation()}>
+        <ShareButton url={fullUrl} title={title} className="flex items-center gap-1 text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-500 transition-colors">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+          </svg>
+          <span className="text-xs">Paylaş</span>
+        </ShareButton>
+      </span>
         <SaveModal questionId={id} isOpen={saveModalOpen} onClose={() => setSaveModalOpen(false)} />
     </div>
   );

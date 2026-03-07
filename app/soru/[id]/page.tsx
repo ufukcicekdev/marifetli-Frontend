@@ -16,6 +16,7 @@ import { MediaSlider } from '@/src/components/media-slider';
 import { CommentItem } from '@/src/components/comment-item';
 import { CommentEditor } from '@/src/components/comment-editor';
 import { OptimizedAvatar } from '@/src/components/optimized-avatar';
+import { ShareButton } from '@/src/components/share-button';
 
 const SaveModal = dynamic(() => import('@/src/components/save-modal').then((m) => ({ default: m.SaveModal })), { ssr: false });
 
@@ -102,21 +103,6 @@ export default function QuestionDetailPage() {
     [answers]
   );
   const totalCommentCount = answers.length;
-
-  const handleShare = async () => {
-    const url = typeof window !== 'undefined' ? `${window.location.origin}/soru/${slug}` : '';
-    try {
-      if (typeof navigator !== 'undefined' && navigator.share) {
-        await navigator.share({ title: question?.title, url, text: question?.title });
-        toast.success('Paylaşıldı');
-      } else {
-        await navigator.clipboard.writeText(url);
-        toast.success('Link kopyalandı');
-      }
-    } catch {
-      toast.error('Paylaşım başarısız.');
-    }
-  };
 
   if (isLoading) {
     return (
@@ -225,16 +211,7 @@ export default function QuestionDetailPage() {
                   </svg>
                   <span className="text-sm">{Math.max(totalCommentCount, question.answer_count ?? 0)} yorum</span>
                 </a>
-                <button
-                  onClick={handleShare}
-                  className="flex items-center gap-1.5 text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-500 transition-colors"
-                  title="Paylaş"
-                >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                  </svg>
-                  <span className="text-sm">Paylaş</span>
-                </button>
+                <ShareButton title={question.title} className="flex items-center gap-1.5 text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-500 transition-colors shrink-0" />
                 {currentUser && (
                   <button
                     onClick={() => setSaveModalOpen(true)}
@@ -317,6 +294,7 @@ export default function QuestionDetailPage() {
                   isSubmitting={createAnswerMutation.isPending}
                   allAnswers={answers}
                   isQuestionAuthor={!!isAuthor}
+                  questionTitle={question.title}
                 />
               ))}
             </div>

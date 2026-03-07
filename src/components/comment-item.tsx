@@ -14,6 +14,7 @@ import { formatTimeAgo } from '@/src/lib/format-time';
 import toast from 'react-hot-toast';
 import api from '@/src/lib/api';
 import { questionKeys } from '@/src/hooks/use-questions';
+import { ShareButton } from '@/src/components/share-button';
 
 type CommentItemProps = {
   answer: Answer;
@@ -25,6 +26,8 @@ type CommentItemProps = {
   allAnswers: Answer[];
   /** Soru sahibi mi (sadece soru sahibi en iyi cevap seçebilir) */
   isQuestionAuthor?: boolean;
+  /** Paylaşım modalında başlık olarak kullanılır */
+  questionTitle?: string;
 };
 
 export function CommentItem({
@@ -36,6 +39,7 @@ export function CommentItem({
   isSubmitting,
   allAnswers,
   isQuestionAuthor = false,
+  questionTitle,
 }: CommentItemProps) {
   const { user: currentUser } = useAuthStore();
   const queryClient = useQueryClient();
@@ -68,11 +72,7 @@ export function CommentItem({
     onError: () => toast.error('İşlem başarısız.'),
   });
 
-  const handleShare = () => {
-    const url = typeof window !== 'undefined' ? `${window.location.origin}/soru/${slug || questionId}#comment-${answer.id}` : '';
-    navigator.clipboard.writeText(url).then(() => toast.success('Link kopyalandı'));
-  };
-
+  const commentShareUrl = typeof window !== 'undefined' && slug ? `${window.location.origin}/soru/${slug}#comment-${answer.id}` : undefined;
   const author = typeof answer.author === 'object' ? answer.author : null;
   const authorName = author?.username ?? author?.first_name ?? 'Anonim';
   const replies = allAnswers.filter((a) => a.parent === answer.id);
@@ -218,16 +218,16 @@ export function CommentItem({
                 </svg>
                 Yanıtla
               </button>
-              <button
-                onClick={handleShare}
+              <ShareButton
+                url={commentShareUrl}
+                title={questionTitle ?? 'Yorum'}
                 className="flex items-center gap-1 hover:text-orange-500 transition-colors"
-                title="Paylaş"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
                 </svg>
                 Paylaş
-              </button>
+              </ShareButton>
             </div>
             {replyOpen && currentUser && (
               <form onSubmit={handleReplySubmit} className="mt-3 p-3 rounded-lg bg-gray-100 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700">
@@ -273,6 +273,7 @@ export function CommentItem({
               isSubmitting={isSubmitting}
               allAnswers={allAnswers}
               isQuestionAuthor={isQuestionAuthor}
+              questionTitle={questionTitle}
             />
           ))}
         </div>

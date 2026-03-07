@@ -79,7 +79,7 @@ export function Header() {
                 <img
                   src={logoUrl}
                   alt="Marifetli"
-                  className="h-8 w-auto max-w-[120px] sm:h-9 sm:max-w-[140px] object-contain object-left"
+                  className="h-10 w-auto max-w-[180px] sm:h-11 sm:max-w-[220px] object-contain object-left"
                 />
               ) : (
                 <span className="text-lg sm:text-xl font-bold text-orange-500 hover:text-orange-600 truncate">

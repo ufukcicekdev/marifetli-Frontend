@@ -282,6 +282,10 @@ class ApiService {
   getBlogPosts = (params?: { page?: number }) =>
     this.axiosInstance.get<{ results: BlogPostListItem[]; count?: number }>('/blog/', { params });
 
+  /** En çok okunan ilk 3 blog yazısı */
+  getBlogPopularPosts = () =>
+    this.axiosInstance.get<BlogPostListItem[]>('/blog/popular/');
+
   getBlogPost = (slug: string) =>
     this.axiosInstance.get<BlogPostDetailItem>(`/blog/${slug}/`);
 
