@@ -6,15 +6,19 @@ import api, { type SavedCollection } from '@/src/lib/api';
 import toast from 'react-hot-toast';
 
 interface SaveModalProps {
-  questionId: number;
+  questionId?: number;
+  blogPostId?: number;
   isOpen: boolean;
   onClose: () => void;
   onSaved?: () => void;
 }
 
-export function SaveModal({ questionId, isOpen, onClose, onSaved }: SaveModalProps) {
+export function SaveModal({ questionId, blogPostId, isOpen, onClose, onSaved }: SaveModalProps) {
   const [newCollectionName, setNewCollectionName] = useState('');
   const queryClient = useQueryClient();
+  const isBlog = blogPostId != null;
+  const entityId = blogPostId ?? questionId!;
+  const checkKey = isBlog ? ['saved-check-blog', blogPostId] : ['saved-check', questionId];
 
   const { data: collections, isLoading } = useQuery({
     queryKey: ['saved-collections'],
@@ -23,9 +27,9 @@ export function SaveModal({ questionId, isOpen, onClose, onSaved }: SaveModalPro
   });
 
   const { data: savedInfo } = useQuery({
-    queryKey: ['saved-check', questionId],
-    queryFn: () => api.checkSaved(questionId).then((r) => r.data),
-    enabled: isOpen,
+    queryKey: checkKey,
+    queryFn: () => (isBlog ? api.checkSavedBlog(blogPostId!).then((r) => r.data) : api.checkSaved(questionId!).then((r) => r.data)),
+    enabled: isOpen && entityId != null,
   });
 
   const collectionArray: SavedCollection[] = Array.isArray(collections)
@@ -38,11 +42,12 @@ export function SaveModal({ questionId, isOpen, onClose, onSaved }: SaveModalPro
   );
 
   const saveMutation = useMutation({
-    mutationFn: (collectionId?: number) => api.saveQuestion(questionId, collectionId),
+    mutationFn: (collectionId?: number) =>
+      isBlog ? api.saveBlogPost(blogPostId!, collectionId) : api.saveQuestion(questionId!, collectionId),
     onSuccess: (data) => {
       toast.success(data.data.message || 'Kaydedildi');
       queryClient.invalidateQueries({ queryKey: ['saved-collections'] });
-      queryClient.invalidateQueries({ queryKey: ['saved-check', questionId] });
+      queryClient.invalidateQueries({ queryKey: checkKey });
       const collectionId = data?.data?.collection?.id;
       if (typeof collectionId === 'number') {
         try {
@@ -58,11 +63,12 @@ export function SaveModal({ questionId, isOpen, onClose, onSaved }: SaveModalPro
   });
 
   const createAndSaveMutation = useMutation({
-    mutationFn: (name: string) => api.saveQuestionToNewCollection(questionId, name),
+    mutationFn: (name: string) =>
+      isBlog ? api.saveBlogPostToNewCollection(blogPostId!, name) : api.saveQuestionToNewCollection(questionId!, name),
     onSuccess: (res) => {
       toast.success('Kaydedildi');
       queryClient.invalidateQueries({ queryKey: ['saved-collections'] });
-      queryClient.invalidateQueries({ queryKey: ['saved-check', questionId] });
+      queryClient.invalidateQueries({ queryKey: checkKey });
       const collectionId = res?.data?.collection?.id;
       if (typeof collectionId === 'number') {
         try {
@@ -82,7 +88,7 @@ export function SaveModal({ questionId, isOpen, onClose, onSaved }: SaveModalPro
     // Aynı gönderiyi aynı koleksiyona tekrar eklemeyi engelle
     const targetId = collectionId ?? defaultCollectionId;
     if (targetId && savedCollectionIds.has(targetId)) {
-      toast.error('Bu gönderi zaten bu koleksiyonda.');
+      toast.error(isBlog ? 'Bu yazı zaten bu koleksiyonda.' : 'Bu gönderi zaten bu koleksiyonda.');
       return;
     }
     saveMutation.mutate(collectionId);
@@ -98,7 +104,7 @@ export function SaveModal({ questionId, isOpen, onClose, onSaved }: SaveModalPro
     createAndSaveMutation.mutate(name);
   };
 
-  if (!isOpen) return null;
+  if (!isOpen || (questionId == null && blogPostId == null)) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
@@ -107,7 +113,7 @@ export function SaveModal({ questionId, isOpen, onClose, onSaved }: SaveModalPro
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-4 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="font-semibold text-gray-900 dark:text-gray-100">Gönderiyi Kaydet</h3>
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100">{isBlog ? 'Yazıyı Kaydet' : 'Gönderiyi Kaydet'}</h3>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Bir koleksiyon seçin veya yeni oluşturun</p>
         </div>
         <div className="p-4 overflow-y-auto flex-1">

@@ -1,11 +1,13 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useEffect, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { useQuery } from '@tanstack/react-query';
 import api, { type SavedCollection, type SavedItem } from '@/src/lib/api';
 import { PostItem } from './post-item';
+import { OptimizedAvatar } from './optimized-avatar';
 import { formatTimeAgo } from '@/src/lib/format-time';
 
 interface SavedCollectionsTabProps {
@@ -74,8 +76,20 @@ export function SavedCollectionsTab({ isOwnProfile }: SavedCollectionsTabProps) 
     return Array.isArray(maybe) ? maybe : [];
   }, [items]);
 
-  const removeMutation = useMutation({
+  const removeQuestionMutation = useMutation({
     mutationFn: (questionId: number) => api.removeFromSaved(questionId),
+    onSuccess: () => {
+      toast.success('Koleksiyondan kaldırıldı');
+      queryClient.invalidateQueries({ queryKey: ['saved-collections'] });
+      queryClient.invalidateQueries({ queryKey: ['saved-collection-items', selectedCollectionId] });
+    },
+    onError: () => {
+      toast.error('Kaldırma işlemi başarısız.');
+    },
+  });
+
+  const removeBlogMutation = useMutation({
+    mutationFn: (blogPostId: number) => api.removeBlogFromSaved(blogPostId),
     onSuccess: () => {
       toast.success('Koleksiyondan kaldırıldı');
       queryClient.invalidateQueries({ queryKey: ['saved-collections'] });
@@ -183,36 +197,85 @@ export function SavedCollectionsTab({ isOwnProfile }: SavedCollectionsTabProps) 
                 <div className="divide-y divide-gray-200 dark:divide-gray-800">
                   {displayItems.map((item: SavedItem) => {
                     const q = item.question;
-                    if (!q) return null;
-                    const author = typeof q.author === 'object' ? q.author : null;
-                    return (
-                      <div key={item.id} className="py-3">
-                        <div className="flex items-start gap-3">
-                          <div className="flex-1 min-w-0">
-                            <PostItem
-                              id={q.id}
-                              slug={q.slug}
-                              title={q.title}
-                              content={(q as { content?: string }).content}
-                              category={undefined}
-                              author={author?.username ?? ''}
-                              timeAgo={formatTimeAgo(item.created_at)}
-                              commentCount={q.answer_count ?? 0}
-                              voteCount={q.like_count ?? 0}
-                              viewCount={q.view_count}
-                              viewMode="compact"
-                            />
+                    const blog = item.blog_post;
+                    if (q) {
+                      const author = typeof q.author === 'object' ? q.author : null;
+                      return (
+                        <div key={item.id} className="py-3">
+                          <div className="flex items-start gap-3">
+                            <div className="flex-1 min-w-0">
+                              <PostItem
+                                id={q.id}
+                                slug={q.slug}
+                                title={q.title}
+                                content={(q as { content?: string }).content}
+                                category={undefined}
+                                author={author?.username ?? ''}
+                                timeAgo={formatTimeAgo(item.created_at)}
+                                commentCount={q.answer_count ?? 0}
+                                voteCount={q.like_count ?? 0}
+                                viewCount={q.view_count}
+                                viewMode="compact"
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeQuestionMutation.mutate(q.id)}
+                              className="mt-2 px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                            >
+                              Kaldır
+                            </button>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => removeMutation.mutate(q.id)}
-                            className="mt-2 px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                          >
-                            Kaldır
-                          </button>
                         </div>
-                      </div>
-                    );
+                      );
+                    }
+                    if (blog) {
+                      const author = typeof blog.author === 'object' ? blog.author : null;
+                      return (
+                        <div key={item.id} className="py-3">
+                          <div className="flex items-start gap-3">
+                            <div className="flex-1 min-w-0">
+                              <Link
+                                href={`/blog/${blog.slug}`}
+                                className="block rounded-lg p-3 border border-gray-200 dark:border-gray-800 hover:border-orange-300 dark:hover:border-orange-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                              >
+                                <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-1">
+                                  {author?.profile_picture ? (
+                                    <OptimizedAvatar src={author.profile_picture} size={24} alt="" className="w-5 h-5 rounded-full shrink-0" />
+                                  ) : (
+                                    <span className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[10px] font-medium shrink-0">
+                                      {author?.username?.charAt(0)?.toUpperCase() ?? '?'}
+                                    </span>
+                                  )}
+                                  <span className="truncate">{author?.username ?? 'Marifetli'}</span>
+                                  <span>·</span>
+                                  <span>{formatTimeAgo(item.created_at)}</span>
+                                </div>
+                                <h3 className="font-medium text-gray-900 dark:text-gray-100 line-clamp-2 text-sm">
+                                  {blog.title}
+                                </h3>
+                                {blog.excerpt && (
+                                  <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-400 line-clamp-1">
+                                    {blog.excerpt}
+                                  </p>
+                                )}
+                                <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                  {blog.like_count} beğeni · {blog.comment_count} yorum
+                                </div>
+                              </Link>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removeBlogMutation.mutate(blog.id)}
+                              className="mt-2 px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                            >
+                              Kaldır
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
                   })}
                 </div>
               )}

@@ -155,7 +155,6 @@ export function PostItem({ id, slug, title, content, category, author, authorAva
 
   const Meta = () => (
     <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 flex-wrap gap-x-1 gap-y-0.5">
-      {category && <span className="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded shrink-0">r/{category}</span>}
       <AuthorMeta />
       {viewCount != null && (
         <>
@@ -170,11 +169,6 @@ export function PostItem({ id, slug, title, content, category, author, authorAva
     return (
       <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-800 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
         <div className="flex flex-col min-w-0">
-          {category && (
-            <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-              r/{category}
-            </div>
-          )}
           <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 hover:text-orange-600 line-clamp-2 min-w-0 mb-2">
             <Link href={href} className="block break-words">{title}</Link>
           </h2>

@@ -8,8 +8,11 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import api, { type BlogPostDetailItem, type BlogCommentItem } from '@/src/lib/api';
 import { OptimizedAvatar } from '@/src/components/optimized-avatar';
+import dynamic from 'next/dynamic';
 import { ShareButton } from '@/src/components/share-button';
 import { useAuthStore } from '@/src/stores/auth-store';
+
+const SaveModal = dynamic(() => import('@/src/components/save-modal').then((m) => ({ default: m.SaveModal })), { ssr: false });
 import { formatTimeAgo } from '@/src/lib/format-time';
 
 function formatDate(s: string | null) {
@@ -23,6 +26,7 @@ export default function BlogPostPage() {
   const queryClient = useQueryClient();
   const { user: currentUser, isAuthenticated } = useAuthStore();
   const [commentText, setCommentText] = useState('');
+  const [saveModalOpen, setSaveModalOpen] = useState(false);
 
   const { data: post, isLoading, error } = useQuery({
     queryKey: ['blog-post', slug],
@@ -219,10 +223,24 @@ export default function BlogPostPage() {
                 <span className="text-sm font-medium">{likeCount} beğeni</span>
               </button>
               <ShareButton title={post.title} />
+              {isAuthenticated && (
+                <button
+                  type="button"
+                  onClick={() => setSaveModalOpen(true)}
+                  className="flex items-center gap-1.5 text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-500 transition-colors shrink-0"
+                  title="Koleksiyona kaydet"
+                >
+                  <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                  </svg>
+                  <span className="text-sm font-medium">Kaydet</span>
+                </button>
+              )}
               <span className="text-sm text-gray-500 dark:text-gray-400 shrink-0">
                 {comments.length} yorum
               </span>
             </div>
+            <SaveModal blogPostId={post.id} isOpen={saveModalOpen} onClose={() => setSaveModalOpen(false)} />
 
             {isAuthenticated && (
               <form onSubmit={handleCommentSubmit} className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">

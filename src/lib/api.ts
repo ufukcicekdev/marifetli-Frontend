@@ -278,6 +278,26 @@ class ApiService {
       `/favorites/check/${questionId}/`
     );
 
+  saveBlogPost = (blogPostId: number, collectionId?: number) =>
+    this.axiosInstance.post<{ id: number; collection: SavedCollection; message: string }>(
+      `/favorites/save-blog/${blogPostId}/`,
+      collectionId ? { collection_id: collectionId } : {}
+    );
+
+  saveBlogPostToNewCollection = (blogPostId: number, name: string) =>
+    this.axiosInstance.post<{ collection: SavedCollection; message: string }>(
+      `/favorites/save-blog/${blogPostId}/new/`,
+      { name }
+    );
+
+  checkSavedBlog = (blogPostId: number) =>
+    this.axiosInstance.get<{ saved: boolean; collections: SavedCollection[] }>(
+      `/favorites/check-blog/${blogPostId}/`
+    );
+
+  removeBlogFromSaved = (blogPostId: number) =>
+    this.axiosInstance.delete(`/favorites/remove-blog/${blogPostId}/`);
+
   // Blog (sadece admin yazar; kullanıcılar okuyup yorum/beğeni yapabilir)
   getBlogPosts = (params?: { page?: number }) =>
     this.axiosInstance.get<{ results: BlogPostListItem[]; count?: number }>('/blog/', { params });
@@ -314,6 +334,7 @@ export interface SavedItem {
   id: number;
   collection: number;
   question: Question | null;
+  blog_post: BlogPostListItem | null;
   created_at: string;
 }
 

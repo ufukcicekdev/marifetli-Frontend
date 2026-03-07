@@ -4,9 +4,13 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import dynamic from 'next/dynamic';
 import api, { type BlogPostListItem } from '@/src/lib/api';
 import { OptimizedAvatar } from '@/src/components/optimized-avatar';
+import { useAuthStore } from '@/src/stores/auth-store';
 import { formatTimeAgo } from '@/src/lib/format-time';
+
+const SaveModal = dynamic(() => import('@/src/components/save-modal').then((m) => ({ default: m.SaveModal })), { ssr: false });
 
 type ViewMode = 'card' | 'compact';
 
@@ -17,6 +21,9 @@ function formatDate(s: string | null) {
 
 export default function BlogPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('card');
+  const [saveModalPostId, setSaveModalPostId] = useState<number | null>(null);
+  const { isAuthenticated } = useAuthStore();
+
   useEffect(() => {
     const stored = localStorage.getItem('blogViewMode') as ViewMode | null;
     if (stored === 'card' || stored === 'compact') setViewMode(stored);
@@ -145,18 +152,34 @@ export default function BlogPage() {
                           </time>
                           <span className="shrink-0">·</span>
                           <span className="shrink-0">{post.like_count} beğeni</span>
-                          <span className="shrink-0">·</span>
-                          <span className="shrink-0">{post.comment_count} yorum</span>
-                        </div>
+                        <span className="shrink-0">·</span>
+                        <span className="shrink-0">{post.comment_count} yorum</span>
+                        {isAuthenticated && (
+                          <>
+                            <span className="shrink-0">·</span>
+                            <button
+                              type="button"
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSaveModalPostId(post.id); }}
+                              className="shrink-0 flex items-center gap-1 text-orange-500 hover:text-orange-600 text-sm"
+                              title="Koleksiyona kaydet"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                              </svg>
+                              Kaydet
+                            </button>
+                          </>
+                        )}
                       </div>
-                      <svg className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                    </Link>
-                  </li>
-                );
-              }
-              return (
+                    </div>
+                    <svg className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </Link>
+                </li>
+              );
+            }
+            return (
                 <li key={post.id}>
                   <Link
                     href={`/blog/${post.slug}`}
@@ -200,9 +223,23 @@ export default function BlogPage() {
                           {post.published_at ? formatDate(post.published_at) : formatTimeAgo(post.created_at)}
                         </time>
                         <span className="shrink-0">·</span>
-                        <span className="shrink-0">{post.like_count} beğeni</span>
-                        <span className="shrink-0">·</span>
                         <span className="shrink-0">{post.comment_count} yorum</span>
+                        {isAuthenticated && (
+                          <>
+                            <span className="shrink-0">·</span>
+                            <button
+                              type="button"
+                              onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSaveModalPostId(post.id); }}
+                              className="shrink-0 flex items-center gap-1 text-orange-500 hover:text-orange-600 text-sm"
+                              title="Koleksiyona kaydet"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
+                              </svg>
+                              Kaydet
+                            </button>
+                          </>
+                        )}
                       </div>
                     </div>
                   </Link>
@@ -251,6 +288,13 @@ export default function BlogPage() {
           </aside>
         )}
       </div>
+      {saveModalPostId != null && (
+        <SaveModal
+          blogPostId={saveModalPostId}
+          isOpen={saveModalPostId != null}
+          onClose={() => setSaveModalPostId(null)}
+        />
+      )}
     </div>
   );
 }
