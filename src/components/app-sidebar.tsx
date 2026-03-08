@@ -27,6 +27,7 @@ export function AppSidebar() {
   const navItems = [
     { href: '/sorular', label: 'Anasayfa', icon: '🏠' },
     { href: '/blog', label: 'Blog', icon: '📝' },
+    { href: '/topluluklar', label: 'Toplulukları Keşfet', icon: '🔍' },
     { href: '/t/populer', label: 'Popüler', icon: '🔥' },
     { href: '/t/tum', label: 'Tümü', icon: '📋' },
     { href: '/iletisim', label: 'İletişim', icon: '✉️' },
@@ -138,6 +139,12 @@ export function AppSidebar() {
               <h3 className="px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
                 Topluluklar
               </h3>
+              <Link
+                href="/topluluklar"
+                className="mb-2 flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+              >
+                🔍 Tümünü keşfet
+              </Link>
               <ul className="space-y-1">
                 {communities.map((c) => (
                   <li key={c.href}>

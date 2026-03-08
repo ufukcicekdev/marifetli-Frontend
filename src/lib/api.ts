@@ -184,7 +184,27 @@ class ApiService {
 
   getTags = () => this.axiosInstance.get<Tag[]>('/questions/tags/');
 
-  getCategories = () => this.axiosInstance.get<{ id: number; name: string; slug: string; parent: number | null; subcategories?: unknown[] }[]>('/categories/');
+  getCategories = () => this.axiosInstance.get<{ id: number; name: string; slug: string; parent: number | null; subcategories?: unknown[]; is_following?: boolean }[]>('/categories/');
+
+  followCategory = (categoryId: number) => this.axiosInstance.post<{ followed: boolean }>(`/categories/${categoryId}/follow/`);
+
+  unfollowCategory = (categoryId: number) => this.axiosInstance.delete(`/categories/${categoryId}/unfollow/`);
+
+  /** Kullanıcıların oluşturduğu topluluklar (kategoriye göre) */
+  getCommunities = (params?: { category?: string }) =>
+    this.axiosInstance.get<CommunityListItem[]>('/communities/', { params });
+
+  createCommunity = (data: { name: string; slug?: string; description?: string; category: number }) =>
+    this.axiosInstance.post<CommunityListItem>('/communities/create/', data);
+
+  joinCommunity = (slug: string) =>
+    this.axiosInstance.post<{ joined: boolean; member_count: number }>(`/communities/${slug}/join/`);
+
+  leaveCommunity = (slug: string) =>
+    this.axiosInstance.post<{ member_count: number }>(`/communities/${slug}/leave/`);
+
+  getCommunity = (slug: string) =>
+    this.axiosInstance.get<CommunityListItem>(`/communities/${slug}/`);
 
   /** İletişim, sosyal medya, GA/GSC - admin panelden yönetilir */
   getSiteSettings = () => this.axiosInstance.get<SiteSettings>('/settings/public/');
@@ -324,6 +344,21 @@ class ApiService {
 
   getBlogLikeStatus = (slug: string) =>
     this.axiosInstance.get<{ liked: boolean; like_count: number }>(`/blog/${slug}/like-status/`);
+}
+
+export interface CommunityListItem {
+  id: number;
+  name: string;
+  slug: string;
+  description: string;
+  category: number;
+  category_name: string;
+  category_slug: string;
+  owner: number;
+  owner_username: string;
+  member_count: number;
+  is_member: boolean;
+  created_at: string;
 }
 
 export interface SavedCollection {
