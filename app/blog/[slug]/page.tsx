@@ -3,10 +3,12 @@
 import Link from 'next/link';
 import Image from 'next/image';
 import { useParams } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import api, { type BlogPostDetailItem, type BlogCommentItem } from '@/src/lib/api';
+import { addRecentBlog } from '@/src/lib/recent-activity';
+import { extractMediaFromHtml } from '@/src/lib/extract-media';
 import { OptimizedAvatar } from '@/src/components/optimized-avatar';
 import dynamic from 'next/dynamic';
 import { ShareButton } from '@/src/components/share-button';
@@ -36,6 +38,14 @@ export default function BlogPostPage() {
     },
     enabled: !!slug,
   });
+
+  useEffect(() => {
+    if (!post?.slug || !post?.title) return;
+    const content = (post as { content?: string }).content;
+    const firstImg = extractMediaFromHtml(content)?.[0];
+    const imageUrl = post.featured_image ?? (firstImg?.type === 'image' ? firstImg.url : undefined);
+    addRecentBlog({ slug: post.slug, title: post.title, imageUrl });
+  }, [post?.slug, post?.title, post?.featured_image, (post as { content?: string })?.content]);
 
   const { data: likeStatus } = useQuery({
     queryKey: ['blog-like-status', slug],

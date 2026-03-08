@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/src/lib/api';
 import { useAuthStore } from '@/src/stores/auth-store';
+import { addRecentProfile } from '@/src/lib/recent-activity';
 import { PostItem } from '@/src/components/post-item';
 import { SavedCollectionsTab } from '@/src/components/saved-collections-tab';
 import { FollowingModal } from '@/src/components/following-modal';
@@ -38,6 +39,15 @@ export default function ProfilePage() {
     queryFn: () => api.getUserByUsername(username).then((r) => r.data),
     enabled: !!username,
   });
+
+  useEffect(() => {
+    if (!username) return;
+    addRecentProfile({
+      username,
+      displayName: profile?.display_name || profile?.first_name ? [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') : undefined,
+      profilePicture: (profile as { profile_picture?: string })?.profile_picture ?? undefined,
+    });
+  }, [username, profile?.display_name, profile?.first_name, profile?.last_name, (profile as { profile_picture?: string })?.profile_picture]);
 
   const { data: achievementsData } = useQuery({
     queryKey: ['achievements', username],

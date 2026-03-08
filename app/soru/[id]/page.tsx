@@ -4,8 +4,9 @@ import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useQuestion, questionKeys } from '@/src/hooks/use-questions';
+import { addRecentQuestion } from '@/src/lib/recent-activity';
 import api from '@/src/lib/api';
 import toast from 'react-hot-toast';
 import type { Answer } from '@/src/types';
@@ -40,6 +41,24 @@ export default function QuestionDetailPage() {
   const [optimisticVote, setOptimisticVote] = useState<'up' | 'down' | null>(null);
   const queryClient = useQueryClient();
   const displayVoteCount = (question?.like_count ?? 0) + (optimisticVote === 'up' ? 1 : optimisticVote === 'down' ? -1 : 0);
+
+  useEffect(() => {
+    if (!question?.id || !question?.title) return;
+    const q = question as { slug?: string; category_slug?: string; category_name?: string; like_count?: number; answer_count?: number; content?: string };
+    const slug = q.slug ?? String(question.id);
+    const firstMedia = extractMediaFromHtml(q.content)?.[0];
+    const imageUrl = firstMedia?.type === 'image' ? firstMedia.url : undefined;
+    addRecentQuestion({
+      id: question.id,
+      slug,
+      title: question.title,
+      categorySlug: q.category_slug,
+      categoryLabel: q.category_name,
+      likeCount: q.like_count,
+      commentCount: q.answer_count,
+      imageUrl,
+    });
+  }, [question?.id, question?.title, question]);
 
   const likeMutation = useMutation({
     mutationFn: () => api.likeQuestion(question!.id),

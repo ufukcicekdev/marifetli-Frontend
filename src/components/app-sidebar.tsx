@@ -41,15 +41,6 @@ export function AppSidebar() {
     { href: '/t/dekorasyon', label: 'Dekorasyon' },
   ];
 
-  const tags = [
-    { href: '/t/orgu', label: 'Örgü' },
-    { href: '/t/tig-isi', label: 'Tığ İşi' },
-    { href: '/t/amigurumi', label: 'Amigurumi' },
-    { href: '/t/dantel', label: 'Dantel' },
-    { href: '/t/makrome', label: 'Makrome' },
-    { href: '/t/kece', label: 'Keçe' },
-  ];
-
   return (
     <>
       {/* Mobil backdrop */}
@@ -159,23 +150,6 @@ export function AppSidebar() {
                   </li>
                 ))}
               </ul>
-            </div>
-
-            <div className="mt-4">
-              <h3 className="px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                Popüler Etiketler
-              </h3>
-              <div className="flex flex-wrap gap-1.5">
-                {tags.map((t) => (
-                  <Link
-                    key={t.href}
-                    href={t.href}
-                    className="inline-block px-2 py-0.5 text-xs rounded bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/60"
-                  >
-                    {t.label}
-                  </Link>
-                ))}
-              </div>
             </div>
           </>
         )}

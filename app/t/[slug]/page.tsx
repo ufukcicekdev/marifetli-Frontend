@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { RecordCommunityVisit } from '@/src/components/record-community-visit';
 
 const slugLabels: Record<string, string> = {
   populer: "Popüler",
@@ -25,6 +26,8 @@ export default async function TagPage({
   const label = slugLabels[slug] || slug;
 
   return (
+    <>
+      <RecordCommunityVisit slug={slug} label={label} />
     <div className="min-h-screen bg-gray-100 dark:bg-gray-950">
       <main className="container mx-auto px-4 py-6">
         <div className="max-w-3xl mx-auto">
@@ -39,5 +42,6 @@ export default async function TagPage({
         </div>
       </main>
     </div>
+    </>
   );
 }

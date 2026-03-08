@@ -6,6 +6,7 @@ import { PostFeedControls, type SortOption, type ViewMode } from '@/src/componen
 import { PostItem } from '@/src/components/post-item';
 import { useQuestions } from '@/src/hooks/use-questions';
 import { formatTimeAgo } from '@/src/lib/format-time';
+import { RecentActivitySidebar } from '@/src/components/recent-activity-sidebar';
 
 const SORT_TO_ORDER: Record<SortOption, string> = {
   hot: '-hot_score',
@@ -131,6 +132,7 @@ function QuestionsContent() {
       </div>
 
       <div className="w-80 shrink-0 hidden lg:block">
+        <RecentActivitySidebar />
         <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4">
             <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-3">İstatistikler</h3>
             <div className="space-y-2 text-sm">
