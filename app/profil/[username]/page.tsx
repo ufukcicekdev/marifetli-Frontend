@@ -30,7 +30,8 @@ export default function ProfilePage() {
   const { user: currentUser, isAuthenticated } = useAuthStore();
   const [activeTab, setActiveTab] = useState<ProfileTab>('ozet');
   const [followingModalOpen, setFollowingModalOpen] = useState(false);
-  const isOwnProfile = isAuthenticated && currentUser?.username === username;
+  const isOwnProfile = isAuthenticated && !!currentUser?.username && !!username &&
+    currentUser.username.toLowerCase() === username.toLowerCase();
 
   const { data: profile, isLoading, error } = useQuery({
     queryKey: ['user', username],
@@ -43,6 +44,14 @@ export default function ProfilePage() {
     queryFn: () => api.getAchievementsByUsername(username).then((r) => r.data),
     enabled: !!username,
   });
+
+  const { data: onboardingStatus } = useQuery({
+    queryKey: ['onboardingStatus'],
+    queryFn: () => api.getOnboardingStatus().then((r) => r.data),
+    enabled: isAuthenticated,
+    refetchOnMount: true,
+  });
+  const showOnboardingCard = isOwnProfile && (onboardingStatus == null || onboardingStatus.completed !== true);
 
   const { data: questionsData, isLoading: questionsLoading } = useQuery({
     queryKey: ['questions', 'user', profile?.id],
@@ -137,6 +146,22 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-6xl min-w-0 overflow-x-hidden">
+        {showOnboardingCard && (
+          <Link
+            href="/onboarding"
+            className="mb-4 flex items-center justify-between gap-4 p-4 rounded-xl border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/40 text-orange-900 dark:text-orange-100 hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-colors"
+          >
+            <div className="min-w-0">
+              <p className="font-medium">Profilini tamamla</p>
+              <p className="text-sm text-orange-700 dark:text-orange-300 mt-0.5">
+                İlgi alanları, cinsiyet ve yaş gibi bilgileri ekleyerek toplulukta daha iyi tanın.
+              </p>
+            </div>
+            <span className="shrink-0 px-4 py-2 text-sm font-medium bg-orange-500 hover:bg-orange-600 text-white rounded-lg">
+              Tamamla
+            </span>
+          </Link>
+        )}
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Sol + Orta: Ana içerik */}
           <div className="flex-1 min-w-0">

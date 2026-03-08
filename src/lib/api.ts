@@ -241,7 +241,11 @@ class ApiService {
   submitOnboarding = (data: { step_id: number; category_ids?: number[]; tag_ids?: number[]; choice_ids?: number[] }) =>
     this.axiosInstance.post('/onboarding/submit/', data);
   completeOnboarding = () => this.axiosInstance.post('/onboarding/complete/');
-  getOnboardingCategories = () => this.axiosInstance.get<{ id: number; name: string; slug: string; parent_id: number | null }[]>('/onboarding/categories/');
+  getOnboardingCategories = (gender?: string) =>
+    this.axiosInstance.get<{ id: number; name: string; slug: string; parent_id: number | null; target_gender?: string }[]>(
+      '/onboarding/categories/',
+      gender ? { params: { gender } } : {}
+    );
   getOnboardingTags = () => this.axiosInstance.get<{ id: number; name: string; slug: string }[]>('/onboarding/tags/');
 
   // Achievements

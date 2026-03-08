@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import toast from 'react-hot-toast';
 import api from '@/src/lib/api';
 import { useAuthStore } from '@/src/stores/auth-store';
 
@@ -13,6 +14,7 @@ interface OnboardingStep {
   step_type: string;
   order: number;
   max_selections: number;
+  is_optional?: boolean;
   choices: { id: number; label: string; value: string; order: number }[];
 }
 
@@ -38,14 +40,33 @@ export default function OnboardingPage() {
 
   const steps = Array.isArray(stepsRaw) ? stepsRaw : ((stepsRaw as unknown as { results?: OnboardingStep[] })?.results ?? []);
 
+  const cinsiyetStep = steps.find((s: OnboardingStep) => s.title === 'Cinsiyet' || (s.step_type === 'custom' && s.order === 0));
+  const selectedGender = (() => {
+    if (!cinsiyetStep) return undefined;
+    const choiceIds = selections[cinsiyetStep.id] || [];
+    const id = choiceIds[0];
+    if (id == null) return undefined;
+    const choice = cinsiyetStep.choices.find((c: { id: number }) => c.id === id);
+    return choice?.value;
+  })();
+
+  const categoryStep = steps.find((s: OnboardingStep) => s.step_type === 'category');
+  const isOnCategoryStep = (steps[stepIndex] as OnboardingStep | undefined)?.step_type === 'category';
+
   useEffect(() => {
-    if (steps.some((s: OnboardingStep) => s.step_type === 'category')) {
-      api.getOnboardingCategories().then((r) => setCategories(r.data));
+    if (isOnCategoryStep && categoryStep) {
+      api.getOnboardingCategories(selectedGender).then((r) => setCategories(Array.isArray(r.data) ? r.data : []));
     }
     if (steps.some((s: OnboardingStep) => s.step_type === 'tag')) {
       api.getOnboardingTags().then((r) => setTags(r.data));
     }
-  }, [steps]);
+  }, [steps, isOnCategoryStep, categoryStep, selectedGender]);
+
+  useEffect(() => {
+    if (steps.some((s: OnboardingStep) => s.step_type === 'category') && !isOnCategoryStep) {
+      setCategories([]);
+    }
+  }, [steps, isOnCategoryStep]);
 
   const submitMutation = useMutation({
     mutationFn: (payload: { step_id: number; category_ids?: number[]; tag_ids?: number[]; choice_ids?: number[] }) =>
@@ -54,9 +75,14 @@ export default function OnboardingPage() {
 
   const completeMutation = useMutation({
     mutationFn: () => api.completeOnboarding(),
-    onSuccess: () => {
+    onSuccess: (res) => {
+      const completedAt = res?.data?.completed_at ?? new Date().toISOString();
+      queryClient.setQueryData(['onboardingStatus'], { completed: true, completed_at: completedAt });
       queryClient.invalidateQueries({ queryKey: ['onboardingStatus'] });
       router.push('/sorular');
+    },
+    onError: () => {
+      toast.error('Tamamlanamadı. Lütfen tekrar deneyin.');
     },
   });
 
@@ -74,7 +100,7 @@ export default function OnboardingPage() {
   const handleNext = async () => {
     if (!currentStep) return;
     const ids = selections[currentStep.id] || [];
-    if (ids.length === 0) return;
+    if (ids.length === 0 && !currentStep.is_optional) return;
 
     const payload: { step_id: number; category_ids?: number[]; tag_ids?: number[]; choice_ids?: number[] } = {
       step_id: currentStep.id,
@@ -153,7 +179,10 @@ export default function OnboardingPage() {
             <>
               <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">{currentStep.title}</h2>
               {currentStep.description && (
-                <p className="text-gray-600 dark:text-gray-400 text-sm mb-6">{currentStep.description}</p>
+                <p className={`text-gray-600 dark:text-gray-400 text-sm ${currentStep.is_optional ? 'mb-2' : 'mb-6'}`}>{currentStep.description}</p>
+              )}
+              {currentStep.is_optional && (
+                <p className="text-gray-500 dark:text-gray-500 text-xs mb-6">Seçim yapmadan &quot;İleri&quot; veya &quot;Atla&quot; ile geçebilirsiniz.</p>
               )}
 
               <div className="space-y-2 mb-6">
@@ -173,23 +202,31 @@ export default function OnboardingPage() {
                     </button>
                   ))}
 
-                {currentStep.step_type === 'category' &&
-                  categories.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => toggleSelection(c.id)}
-                      className={`w-full text-left px-4 py-3 rounded-lg border transition-colors ${
-                        selectedIds.includes(c.id)
-                          ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300'
-                          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-                      }`}
-                    >
-                      {c.name}
-                    </button>
-                  ))}
+                {currentStep.step_type === 'category' && (
+                  categories.length === 0 ? (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 py-4">Kategoriler yükleniyor…</p>
+                  ) : (
+                    categories.map((c) => (
+                      <button
+                        key={c.id}
+                        type="button"
+                        onClick={() => toggleSelection(c.id)}
+                        className={`w-full text-left px-4 py-3 rounded-lg border transition-colors ${
+                          selectedIds.includes(c.id)
+                            ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300'
+                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                        }`}
+                      >
+                        {c.name}
+                      </button>
+                    ))
+                  )
+                )}
 
-                {currentStep.step_type === 'tag' &&
+                {currentStep.step_type === 'tag' && (
+                  tags.length === 0 ? (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 py-4">Etiketler yükleniyor…</p>
+                  ) : (
                   tags.map((t) => (
                     <button
                       key={t.id}
@@ -203,12 +240,16 @@ export default function OnboardingPage() {
                     >
                       {t.name}
                     </button>
-                  ))}
+                  ))
+                  )
+                )}
               </div>
 
-              {currentStep.max_selections > 0 && (
+              {(currentStep.max_selections === 1 || currentStep.max_selections > 1) && (
                 <p className="text-xs text-gray-500 mb-4">
-                  En fazla {currentStep.max_selections} seçim yapabilirsiniz.
+                  {currentStep.max_selections === 1
+                    ? 'Bir seçenek seçin.'
+                    : `En fazla ${currentStep.max_selections} seçim yapabilirsiniz.`}
                 </p>
               )}
 
@@ -223,7 +264,7 @@ export default function OnboardingPage() {
                 <button
                   type="button"
                   onClick={handleNext}
-                  disabled={selectedIds.length === 0 || submitMutation.isPending || completeMutation.isPending}
+                  disabled={(!currentStep.is_optional && selectedIds.length === 0) || submitMutation.isPending || completeMutation.isPending}
                   className="flex-1 py-2 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-lg disabled:opacity-50"
                 >
                   {stepIndex >= steps.length - 1 ? 'Bitir' : 'İleri'}

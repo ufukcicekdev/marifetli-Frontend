@@ -6,6 +6,7 @@ import { QueryProvider } from '@/src/providers/query-provider';
 import { ThemeProvider } from '@/src/components/theme-provider';
 import { Header } from '@/src/components/header';
 import { VerifyEmailBanner } from '@/src/components/verify-email-banner';
+import { OnboardingBanner } from '@/src/components/onboarding-banner';
 import { AppSidebar } from '@/src/components/app-sidebar';
 import { MainContentWrapper } from '@/src/components/main-content-wrapper';
 import { OnboardingGuard } from '@/src/components/onboarding-guard';
@@ -74,6 +75,7 @@ export default function RootLayout({
                 <AppSidebar />
                 <MainContentWrapper>
                   <VerifyEmailBanner />
+                  <OnboardingBanner />
                   {children}
                 </MainContentWrapper>
               </div>
