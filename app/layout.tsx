@@ -46,12 +46,26 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
-  title: 'Marifetli - El İşi & El Sanatları Topluluğu',
+  title: {
+    default: 'Marifetli - El İşi & El Sanatları Topluluğu',
+    template: '%s | Marifetli',
+  },
   description: 'Örgü, dikiş, nakış, takı tasarımı ve el sanatları tutkunlarının buluşma noktası. Sorular sor, deneyimlerini paylaş, el emeğini keşfet.',
   openGraph: {
+    type: 'website',
+    locale: 'tr_TR',
     url: SITE_URL,
     siteName: 'Marifetli',
+    title: 'Marifetli - El İşi & El Sanatları Topluluğu',
+    description: 'Örgü, dikiş, nakış, takı tasarımı ve el sanatları tutkunlarının buluşma noktası. Sorular sor, deneyimlerini paylaş, el emeğini keşfet.',
+    images: [{ url: '/og-default.png', width: 1200, height: 630, alt: 'Marifetli' }],
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Marifetli - El İşi & El Sanatları Topluluğu',
+    description: 'Örgü, dikiş, nakış, takı tasarımı ve el sanatları tutkunlarının buluşma noktası.',
+  },
+  alternates: { canonical: SITE_URL },
 };
 
 export default function RootLayout({
