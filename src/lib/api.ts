@@ -425,6 +425,8 @@ export interface BlogCommentItem {
   content: string;
   created_at: string;
   updated_at: string;
+  /** 0 = İnceleniyor, 1 = Onaylı, 2 = Reddedildi */
+  moderation_status?: number;
 }
 
 export interface BlogPostDetailItem extends BlogPostListItem {

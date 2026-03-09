@@ -74,6 +74,9 @@ export interface Question {
   updated_at: string;
 }
 
+/** 0 = Beklemede, 1 = Onaylı, 2 = Reddedildi */
+export type ModerationStatus = 0 | 1 | 2;
+
 export interface Answer {
   id: number;
   question: number;
@@ -84,6 +87,8 @@ export interface Answer {
   like_count: number;
   created_at: string;
   updated_at: string;
+  /** 0 = İnceleniyor, 1 = Onaylı (yayında), 2 = Reddedildi (listede gösterilmez) */
+  moderation_status?: ModerationStatus;
 }
 
 export interface Notification {

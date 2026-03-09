@@ -31,7 +31,9 @@ export default function QuestionDetailPage() {
     queryFn: () => api.getQuestionAnswers(question!.id).then((r) => r.data),
     enabled: !!question?.id,
   });
-  const answers: Answer[] = Array.isArray(answersData) ? answersData : ((answersData as unknown as { results?: Answer[] })?.results ?? []);
+  const rawAnswers: Answer[] = Array.isArray(answersData) ? answersData : ((answersData as unknown as { results?: Answer[] })?.results ?? []);
+  // Reddedilen (2) yorumları listede gösterme
+  const answers: Answer[] = rawAnswers.filter((a) => (a.moderation_status ?? 1) !== 2);
   const richContent = question ? (question as { content?: string }).content : undefined;
   const mediaItems = useMemo(() => extractMediaFromHtml(richContent), [richContent]);
   const contentWithoutMedia = useMemo(() => stripMediaFromHtml(richContent), [richContent]);
@@ -97,8 +99,18 @@ export default function QuestionDetailPage() {
       setAnswerText('');
       setAnswerFormOpen(false);
       toast.success('Cevabınız alındı ve moderasyon sonrasında yayınlanacak.');
+      // Moderasyon arka planda çalıştıktan sonra listeyi güncelle (reddedilirse cevap listeden gitsin)
+      window.setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['answers', question?.id] });
+        queryClient.invalidateQueries({ queryKey: questionKeys.detail(slug) });
+      }, 5000);
     },
-    onError: () => toast.error('Cevap gönderilemedi. Lütfen tekrar deneyin.'),
+    onError: (err: unknown) => {
+      const msg = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+        : null;
+      toast.error(msg && typeof msg === 'string' ? msg : 'Cevap gönderilemedi. Lütfen tekrar deneyin.');
+    },
   });
 
   const hasContent = (html: string) => html.replace(/<[^>]*>/g, '').trim().length > 0;

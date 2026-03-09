@@ -98,6 +98,10 @@ export default function BlogPostPage() {
       });
       setCommentText('');
       toast.success('Yorumunuz alındı ve moderasyon sonrasında yayınlanacak.');
+      // Moderasyon sonrası listeyi güncelle (reddedilirse yorum listeden gitsin)
+      window.setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['blog-post', slug] });
+      }, 5000);
     },
     onError: (e: { response?: { data?: { detail?: string } } }) => {
       toast.error(e?.response?.data?.detail ?? 'Yorum eklenemedi.');
@@ -159,7 +163,8 @@ export default function BlogPostPage() {
   const author = post.author as { username?: string; profile_picture?: string; first_name?: string };
   const authorName = author?.username ?? author?.first_name ?? 'Marifetli';
   const hasHtml = post.content && /<[a-z][\s\S]*>/i.test(post.content);
-  const comments = post.comments ?? [];
+  // Reddedilen (2) yorumları gösterme
+  const comments = (post.comments ?? []).filter((c) => (c.moderation_status ?? 1) !== 2);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -309,6 +314,11 @@ export default function BlogPostPage() {
                           <span className="text-xs text-gray-500 dark:text-gray-400 shrink-0">
                             {formatTimeAgo(c.created_at)}
                           </span>
+                          {c.moderation_status === 0 && (
+                            <span className="bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 text-xs font-medium px-2 py-0.5 rounded">
+                              İnceleniyor
+                            </span>
+                          )}
                         </div>
                         <p className="mt-0.5 text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap wrap-break-word">
                           {c.content}

@@ -169,6 +169,11 @@ export function CommentItem({
                 u/{authorName}
               </Link>
               <span className="text-sm text-gray-500 dark:text-gray-400">{formatTimeAgo(answer.created_at)}</span>
+              {(answer.moderation_status === 0) && (
+                <span className="bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 text-xs font-medium px-2 py-0.5 rounded">
+                  İnceleniyor
+                </span>
+              )}
               {answer.is_best_answer && (
                 <span className="bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 text-xs font-medium px-2 py-0.5 rounded">
                   ✓ En İyi Cevap
