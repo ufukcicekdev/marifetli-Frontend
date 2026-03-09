@@ -96,7 +96,7 @@ export default function QuestionDetailPage() {
       queryClient.invalidateQueries({ queryKey: questionKeys.detail(slug) });
       setAnswerText('');
       setAnswerFormOpen(false);
-      toast.success('Cevabınız gönderildi!');
+      toast.success('Cevabınız alındı ve moderasyon sonrasında yayınlanacak.');
     },
     onError: () => toast.error('Cevap gönderilemedi. Lütfen tekrar deneyin.'),
   });
@@ -268,6 +268,9 @@ export default function QuestionDetailPage() {
                         minHeight="100px"
                         disabled={createAnswerMutation.isPending}
                       />
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Gönderdiğiniz cevap önce moderasyondan geçer, onaylandıktan sonra herkes tarafından görülebilir.
+                      </p>
                       <div className="flex justify-end gap-2">
                         <button
                           type="button"

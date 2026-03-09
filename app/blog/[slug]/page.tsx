@@ -97,7 +97,7 @@ export default function BlogPostPage() {
         return { ...old, comments, comment_count: comments.length };
       });
       setCommentText('');
-      toast.success('Yorumunuz eklendi.');
+      toast.success('Yorumunuz alındı ve moderasyon sonrasında yayınlanacak.');
     },
     onError: (e: { response?: { data?: { detail?: string } } }) => {
       toast.error(e?.response?.data?.detail ?? 'Yorum eklenemedi.');
@@ -264,6 +264,9 @@ export default function BlogPostPage() {
                   rows={3}
                   className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-y min-h-[80px]"
                 />
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Gönderdiğiniz yorum önce moderasyondan geçer, onaylandıktan sonra herkes tarafından görülebilir.
+                </p>
                 <div className="mt-2 flex justify-end">
                   <button
                     type="submit"
