@@ -158,6 +158,15 @@ export function AppSidebar() {
                 ))}
               </ul>
             </div>
+
+            <div className="mt-8 border-t border-gray-200 dark:border-gray-800 pt-3 px-3">
+              <Link
+                href="/gizlilik-politikasi"
+                className="text-xs text-gray-500 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 hover:underline"
+              >
+                Gizlilik Politikası
+              </Link>
+            </div>
           </>
         )}
       </nav>
