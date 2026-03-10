@@ -14,10 +14,9 @@ import { OptimizedAvatar } from '@/src/components/optimized-avatar';
 import { formatTimeAgo } from '@/src/lib/format-time';
 import type { Answer } from '@/src/types';
 
-type ProfileTab = 'ozet' | 'gonderiler' | 'yorumlar' | 'kaydettiklerim' | 'gecmis';
+type ProfileTab = 'gonderiler' | 'yorumlar' | 'kaydettiklerim' | 'gecmis';
 
 const TAB_LABELS: Record<ProfileTab, string> = {
-  ozet: 'Özet',
   gonderiler: 'Gönderiler',
   yorumlar: 'Yorumlar',
   kaydettiklerim: 'Kaydettiklerim',
@@ -29,7 +28,7 @@ export default function ProfilePage() {
   const username = params?.username as string;
   const queryClient = useQueryClient();
   const { user: currentUser, isAuthenticated } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<ProfileTab>('ozet');
+  const [activeTab, setActiveTab] = useState<ProfileTab>('gonderiler');
   const [followingModalOpen, setFollowingModalOpen] = useState(false);
   const isOwnProfile = isAuthenticated && !!currentUser?.username && !!username &&
     currentUser.username.toLowerCase() === username.toLowerCase();
@@ -149,9 +148,10 @@ export default function ProfilePage() {
     );
   }
 
-  const tabs: ProfileTab[] = isOwnProfile
-    ? ['ozet', 'gonderiler', 'yorumlar', 'kaydettiklerim', 'gecmis']
-    : ['ozet', 'gonderiler', 'yorumlar'];
+  // Başkasının profilinde yorumlar sekmesi gösterilmez; sadece kendi profilde kullanıcı kendi yorumlarını görsün
+const tabs: ProfileTab[] = isOwnProfile
+    ? ['gonderiler', 'yorumlar', 'kaydettiklerim', 'gecmis']
+    : ['gonderiler'];
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -250,7 +250,7 @@ export default function ProfilePage() {
 
             {/* Tab içeriği */}
             <div className="mt-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden min-h-[200px]">
-              {(activeTab === 'ozet' || activeTab === 'gonderiler') && (
+              {activeTab === 'gonderiler' && (
                 <div>
                   {questionsLoading ? (
                     <div className="p-8 text-center text-gray-500 dark:text-gray-400">Yükleniyor...</div>
@@ -361,7 +361,7 @@ export default function ProfilePage() {
 
           {/* Sağ sidebar */}
           <div className="w-full lg:w-80 flex-shrink-0 space-y-4">
-            {/* Özet kartı */}
+            {/* Profil istatistikleri */}
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
               <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-3">{profile.username}</h3>
               <div className="space-y-2 text-sm">
