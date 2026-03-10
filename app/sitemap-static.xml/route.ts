@@ -1,26 +1,44 @@
 import { NextResponse } from 'next/server';
 
 const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.marifetli.com.tr').replace(/\/$/, '');
+const apiBase = (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api').replace(/\/$/, '');
 
-const staticRoutes: { path: string; changefreq: string; priority: string }[] = [
+/** Sabit sayfalar (kategoriden bağımsız) */
+const fixedRoutes: { path: string; changefreq: string; priority: string }[] = [
   { path: '', changefreq: 'daily', priority: '1.0' },
   { path: '/sorular', changefreq: 'daily', priority: '0.9' },
   { path: '/blog', changefreq: 'daily', priority: '0.9' },
+  { path: '/topluluklar', changefreq: 'weekly', priority: '0.8' },
   { path: '/iletisim', changefreq: 'monthly', priority: '0.5' },
+  { path: '/hakkimizda', changefreq: 'monthly', priority: '0.5' },
+  { path: '/gizlilik-politikasi', changefreq: 'monthly', priority: '0.4' },
+  { path: '/kullanim-sartlari', changefreq: 'monthly', priority: '0.4' },
   { path: '/t/populer', changefreq: 'weekly', priority: '0.7' },
   { path: '/t/tum', changefreq: 'weekly', priority: '0.7' },
-  { path: '/t/orgu', changefreq: 'weekly', priority: '0.7' },
-  { path: '/t/dikis', changefreq: 'weekly', priority: '0.7' },
-  { path: '/t/nakis', changefreq: 'weekly', priority: '0.7' },
-  { path: '/t/taki-tasarim', changefreq: 'weekly', priority: '0.7' },
-  { path: '/t/el-sanatlari', changefreq: 'weekly', priority: '0.7' },
-  { path: '/t/dekorasyon', changefreq: 'weekly', priority: '0.7' },
-  { path: '/t/tig-isi', changefreq: 'weekly', priority: '0.7' },
-  { path: '/t/amigurumi', changefreq: 'weekly', priority: '0.7' },
-  { path: '/t/dantel', changefreq: 'weekly', priority: '0.7' },
-  { path: '/t/makrome', changefreq: 'weekly', priority: '0.7' },
-  { path: '/t/kece', changefreq: 'weekly', priority: '0.7' },
 ];
+
+type CategoryItem = { slug: string; subcategories?: CategoryItem[] };
+
+/** API'den tüm kategori slug'larını toplar (üst + alt kategoriler). */
+async function fetchCategorySlugs(): Promise<string[]> {
+  const slugs: string[] = [];
+  try {
+    const res = await fetch(`${apiBase}/categories/`, { next: { revalidate: 3600 } });
+    if (!res.ok) return slugs;
+    const raw = (await res.json()) as CategoryItem[] | { results?: CategoryItem[] };
+    const data = Array.isArray(raw) ? raw : (raw?.results ?? []);
+    const collect = (items: CategoryItem[]) => {
+      for (const c of items) {
+        if (c?.slug) slugs.push(c.slug);
+        if (c?.subcategories?.length) collect(c.subcategories);
+      }
+    };
+    collect(data);
+  } catch {
+    // API yoksa veya hata olursa boş döner; sabit rotalar yine eklenir
+  }
+  return slugs;
+}
 
 function escapeXml(s: string) {
   return s
@@ -32,6 +50,14 @@ function escapeXml(s: string) {
 }
 
 export async function GET() {
+  const categorySlugs = await fetchCategorySlugs();
+  const categoryRoutes: { path: string; changefreq: string; priority: string }[] = categorySlugs.map((slug) => ({
+    path: `/t/${slug}`,
+    changefreq: 'weekly',
+    priority: '0.7',
+  }));
+  const staticRoutes = [...fixedRoutes, ...categoryRoutes];
+
   const now = new Date().toISOString();
   const urls = staticRoutes
     .map(
