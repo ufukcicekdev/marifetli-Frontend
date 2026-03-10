@@ -16,7 +16,8 @@ const SORT_TO_ORDER: Record<SortOption, string> = {
 };
 
 export default function HomePage() {
-  const [sort, setSort] = useState<SortOption>('hot');
+  // Varsayılan olarak en son gelenler yukarıda görünsün diye 'new'
+  const [sort, setSort] = useState<SortOption>('new');
   const [viewMode, setViewMode] = useState<ViewMode>('compact');
   const params = useMemo(() => ({ ordering: SORT_TO_ORDER[sort] }), [sort]);
   const { data, isLoading, error } = useQuestions(params);

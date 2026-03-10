@@ -19,7 +19,8 @@ function QuestionsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const qFromUrl = searchParams.get('q') ?? '';
-  const [sort, setSort] = useState<SortOption>('hot');
+  // Liste açıldığında en son gelenler yukarıda olsun
+  const [sort, setSort] = useState<SortOption>('new');
   const [viewMode, setViewMode] = useState<ViewMode>('compact');
   const [searchInput, setSearchInput] = useState(qFromUrl);
 
