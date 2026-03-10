@@ -70,6 +70,8 @@ export interface Question {
   answer_count: number;
   is_resolved: boolean;
   best_answer?: number;
+  /** 0 = İnceleniyor, 1 = Onaylı, 2 = Reddedildi */
+  moderation_status?: ModerationStatus;
   created_at: string;
   updated_at: string;
 }

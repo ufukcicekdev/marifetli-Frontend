@@ -19,6 +19,8 @@ export interface RecentQuestion {
   likeCount?: number;
   commentCount?: number;
   imageUrl?: string;
+  /** 0 = İnceleniyor, 1 = Onaylı, 2 = Reddedildi (1 dışındakiler son gezilenlerde gösterilmez) */
+  moderation_status?: number;
 }
 
 export interface RecentCommunity {
@@ -42,7 +44,7 @@ export interface RecentBlog {
 }
 
 export type RecentItem =
-  | { type: 'question'; id: number; slug: string; title: string; visitedAt: string; categorySlug?: string; categoryLabel?: string; likeCount?: number; commentCount?: number; imageUrl?: string }
+  | { type: 'question'; id: number; slug: string; title: string; visitedAt: string; categorySlug?: string; categoryLabel?: string; likeCount?: number; commentCount?: number; imageUrl?: string; moderation_status?: number }
   | { type: 'community'; slug: string; label: string; visitedAt: string }
   | { type: 'profile'; username: string; displayName?: string; visitedAt: string; profilePicture?: string }
   | { type: 'blog'; slug: string; title: string; visitedAt: string; imageUrl?: string };
@@ -54,10 +56,13 @@ function getRecentQuestions(): RecentQuestion[] {
   try {
     const raw = localStorage.getItem(KEY_QUESTIONS);
     const arr = raw ? JSON.parse(raw) : [];
-    return (Array.isArray(arr) ? arr.slice(0, MAX) : []).map((q: Record<string, unknown>) => ({
+    const rawArr = Array.isArray(arr) ? arr.slice(0, MAX) : [];
+    const mapped = rawArr.map((q: Record<string, unknown>) => ({
       ...q,
       visitedAt: (q.visitedAt as string) || fallbackDate(),
     })) as RecentQuestion[];
+    // Eğer moderation_status alanı varsa, sadece onaylı (1) olanları göster
+    return mapped.filter((q) => q.moderation_status == null || q.moderation_status === 1);
   } catch {
     return [];
   }

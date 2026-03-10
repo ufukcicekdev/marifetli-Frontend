@@ -46,7 +46,9 @@ export default function QuestionDetailPage() {
 
   useEffect(() => {
     if (!question?.id || !question?.title) return;
-    const q = question as { slug?: string; category_slug?: string; category_name?: string; like_count?: number; answer_count?: number; content?: string };
+    // Moderasyondan geçmeyen (onaylı olmayan) soruları son gezilenlere ekleme
+    const q = question as { slug?: string; category_slug?: string; category_name?: string; like_count?: number; answer_count?: number; content?: string; moderation_status?: number };
+    if (q.moderation_status != null && q.moderation_status !== 1) return;
     const slug = q.slug ?? String(question.id);
     const firstMedia = extractMediaFromHtml(q.content)?.[0];
     const imageUrl = firstMedia?.type === 'image' ? firstMedia.url : undefined;
