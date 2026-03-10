@@ -159,13 +159,22 @@ export function AppSidebar() {
               </ul>
             </div>
 
-            <div className="mt-8 border-t border-gray-200 dark:border-gray-800 pt-3 px-3">
+            <div className="mt-8 border-t border-gray-200 dark:border-gray-800 pt-3 px-3 space-y-1">
               <Link
                 href="/gizlilik-politikasi"
-                className="text-xs text-gray-500 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 hover:underline"
+                className="block text-xs text-gray-500 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 hover:underline"
               >
                 Gizlilik Politikası
               </Link>
+              <Link
+                href="/kullanim-sartlari"
+                className="block text-xs text-gray-500 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 hover:underline"
+              >
+                Kullanım Şartları
+              </Link>
+              <p className="text-[11px] text-gray-500 dark:text-gray-500">
+                © 2026 Marifetli
+              </p>
             </div>
           </>
         )}

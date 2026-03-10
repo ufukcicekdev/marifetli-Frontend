@@ -26,11 +26,6 @@ export default function AboutPage() {
         </div>
       </main>
 
-      <footer className="bg-white border-t mt-12 py-8">
-        <div className="container mx-auto px-4 text-center text-gray-600">
-          <p>© 2026 Marifetli. Tüm hakları saklıdır.</p>
-        </div>
-      </footer>
     </div>
   );
 }
