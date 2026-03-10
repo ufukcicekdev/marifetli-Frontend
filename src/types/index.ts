@@ -74,6 +74,8 @@ export interface Question {
   moderation_status?: ModerationStatus;
   created_at: string;
   updated_at: string;
+  // Soru detayında backend nested olarak cevapları dönebilir
+  answers?: Answer[];
 }
 
 /** 0 = Beklemede, 1 = Onaylı, 2 = Reddedildi */

@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState, useEffect } from 'react';
 import { useQuestion, questionKeys } from '@/src/hooks/use-questions';
 import { addRecentQuestion } from '@/src/lib/recent-activity';
@@ -26,12 +26,9 @@ export default function QuestionDetailPage() {
   const slug = params?.id as string;
   const { user: currentUser } = useAuthStore();
   const { data: question, isLoading, error } = useQuestion(slug ?? '');
-  const { data: answersData, isLoading: answersLoading } = useQuery({
-    queryKey: ['answers', question?.id],
-    queryFn: () => api.getQuestionAnswers(question!.id).then((r) => r.data),
-    enabled: !!question?.id,
-  });
-  const rawAnswers: Answer[] = Array.isArray(answersData) ? answersData : ((answersData as unknown as { results?: Answer[] })?.results ?? []);
+  const rawAnswers: Answer[] = Array.isArray((question as any)?.answers)
+    ? ((question as any).answers as Answer[])
+    : [];
   // Reddedilen (2) yorumları listede gösterme
   const answers: Answer[] = rawAnswers.filter((a) => (a.moderation_status ?? 1) !== 2);
   const richContent = question ? (question as { content?: string }).content : undefined;
@@ -95,7 +92,6 @@ export default function QuestionDetailPage() {
     mutationFn: ({ content, parentId }: { content: string; parentId?: number }) =>
       api.createAnswer(question!.id, parentId ? { content, parent: parentId } : { content }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['answers', question?.id] });
       queryClient.invalidateQueries({ queryKey: questionKeys.all });
       queryClient.invalidateQueries({ queryKey: questionKeys.detail(slug) });
       setAnswerText('');
@@ -103,7 +99,6 @@ export default function QuestionDetailPage() {
       toast.success('Cevabınız alındı ve moderasyon sonrasında yayınlanacak.');
       // Moderasyon arka planda çalıştıktan sonra listeyi güncelle (reddedilirse cevap listeden gitsin)
       window.setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['answers', question?.id] });
         queryClient.invalidateQueries({ queryKey: questionKeys.detail(slug) });
       }, 5000);
     },
@@ -311,12 +306,7 @@ export default function QuestionDetailPage() {
           </div>
 
           <div id="cevaplar" className="border-t border-gray-200 dark:border-gray-700 p-4 sm:p-6">
-          {answersLoading ? (
-            <div className="space-y-4">
-              <div className="animate-pulse h-24 bg-gray-100 dark:bg-gray-800 rounded-lg" />
-              <div className="animate-pulse h-24 bg-gray-100 dark:bg-gray-800 rounded-lg" />
-            </div>
-          ) : answers.length === 0 ? (
+          {answers.length === 0 ? (
             <p className="text-gray-500 dark:text-gray-400 py-4">Henüz yorum yok. İlk yorumu siz yapın!</p>
           ) : (
             <div className="space-y-4">
