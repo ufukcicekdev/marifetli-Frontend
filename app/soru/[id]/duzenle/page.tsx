@@ -23,7 +23,7 @@ export default function QuestionEditPage() {
     mutationFn: (payload: QuestionFormPayload) =>
       api.updateQuestion(slug, { ...payload, status: (question?.status ?? 'open') as 'draft' | 'open' | 'closed' | 'archived' }),
     onSuccess: () => {
-      toast.success('Gönderi güncellendi');
+      toast.success('Düzenlemeniz kaydedildi, moderasyondan sonra yeniden yayınlanacak.');
       queryClient.invalidateQueries({ queryKey: questionKeys.all });
       router.push(`/soru/${slug}`);
     },
