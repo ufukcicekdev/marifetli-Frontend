@@ -12,7 +12,7 @@ firebase.initializeApp({
   projectId: 'marifetli-3d2d9',
   storageBucket: 'marifetli-3d2d9.firebasestorage.app',
   messagingSenderId: '1031342814672',
-  appId: '1:1031342814672:web:1f800659a3787aa5f075d5',
+  appId: '1:1031342814672:web:146cae484b6b6a4ef075d5',
 });
 
 const messaging = firebase.messaging();
