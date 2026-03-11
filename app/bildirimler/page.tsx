@@ -95,7 +95,7 @@ export default function BildirimlerPage() {
         <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Bildirimler</h1>
           <div className="flex flex-wrap items-center gap-2">
-            {canRequestPush() && (
+            {canRequestPush() ? (
               <button
                 type="button"
                 onClick={() => registerPushMutation.mutate()}
@@ -104,6 +104,10 @@ export default function BildirimlerPage() {
               >
                 {registerPushMutation.isPending ? 'Kaydediliyor…' : 'Bildirimleri aç'}
               </button>
+            ) : (
+              <span className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded">
+                Push bildirimleri bu ortamda yapılandırılmadı.
+              </span>
             )}
             {unreadCount > 0 && (
               <button
