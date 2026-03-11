@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, Suspense } from 'react';
+import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { PostFeedControls, type SortOption, type ViewMode } from '@/src/components/post-feed-controls';
 import { PostItem } from '@/src/components/post-item';
@@ -19,6 +20,7 @@ function QuestionsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const qFromUrl = searchParams.get('q') ?? '';
+  const communitySlug = searchParams.get('community') ?? null;
   // Liste açıldığında en son gelenler yukarıda olsun
   const [sort, setSort] = useState<SortOption>('new');
   const [viewMode, setViewMode] = useState<ViewMode>('compact');
@@ -31,8 +33,9 @@ function QuestionsContent() {
   const params = useMemo(() => {
     const p: Record<string, string> = { ordering: SORT_TO_ORDER[sort] };
     if (qFromUrl.trim()) p.search = qFromUrl.trim();
+    if (communitySlug) p.community = communitySlug;
     return p;
-  }, [sort, qFromUrl]);
+  }, [sort, qFromUrl, communitySlug]);
   const { data, isLoading, error } = useQuestions(params);
 
   useEffect(() => {
@@ -49,19 +52,28 @@ function QuestionsContent() {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const val = searchInput.trim();
-    const url = val ? `/sorular?q=${encodeURIComponent(val)}` : '/sorular';
-    router.push(url);
+    const params = new URLSearchParams();
+    if (val) params.set('q', val);
+    if (communitySlug) params.set('community', communitySlug);
+    const query = params.toString();
+    router.push(query ? `/sorular?${query}` : '/sorular');
   };
 
   const clearSearch = () => {
     setSearchInput('');
-    router.push('/sorular');
+    router.push(communitySlug ? `/sorular?community=${encodeURIComponent(communitySlug)}` : '/sorular');
   };
 
   return (
     <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 flex flex-col lg:flex-row gap-4 sm:gap-6 min-w-0">
       <div className="flex-1 min-w-0 overflow-hidden">
           <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
+            {communitySlug && (
+              <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex items-center gap-2 flex-wrap">
+                <span className="text-sm text-gray-600 dark:text-gray-400">r/{communitySlug} topluluğundaki gönderilerde arama</span>
+                <Link href="/sorular" className="text-sm text-orange-500 hover:text-orange-600">Tümüne dön</Link>
+              </div>
+            )}
             {/* Mobil: sayfa içi arama çubuğu */}
             <form onSubmit={handleSearchSubmit} className="md:hidden p-3 border-b border-gray-200 dark:border-gray-800">
               <div className="relative flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 focus-within:ring-1 focus-within:ring-orange-500">
@@ -114,6 +126,8 @@ function QuestionsContent() {
                   voteCount={q.like_count ?? 0}
                   viewCount={q.view_count ?? 0}
                   viewMode={viewMode}
+                  communitySlug={(q as { community_slug?: string })?.community_slug}
+                  communityName={(q as { community_name?: string })?.community_name}
                 />
               ))}
             </div>

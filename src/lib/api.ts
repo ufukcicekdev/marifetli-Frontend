@@ -162,7 +162,7 @@ class ApiService {
   createQuestion = (questionData: Omit<Question, 'id' | 'author' | 'created_at' | 'updated_at'>) => 
     this.axiosInstance.post('/questions/', questionData);
 
-  createQuestionRaw = (payload: { title: string; description: string; content: string; category?: number | null; tags?: number[]; tag_names?: string[]; status?: string }) =>
+  createQuestionRaw = (payload: { title: string; description: string; content: string; category?: number | null; community?: number | null; tags?: number[]; tag_names?: string[]; status?: string }) =>
     this.axiosInstance.post('/questions/', payload);
 
   updateQuestion = (slug: string, questionData: Partial<Omit<Question, 'id' | 'author' | 'created_at' | 'updated_at' | 'tags'>> & { tags?: number[]; tag_names?: string[] }) =>
@@ -194,17 +194,103 @@ class ApiService {
   getCommunities = (params?: { category?: string }) =>
     this.axiosInstance.get<CommunityListItem[]>('/communities/', { params });
 
-  createCommunity = (data: { name: string; slug?: string; description?: string; category: number }) =>
-    this.axiosInstance.post<CommunityListItem>('/communities/create/', data);
+  getMyManagedCommunities = () =>
+    this.axiosInstance.get<CommunityListItem[]>('/communities/my-managed/');
+
+  getMyJoinedCommunities = () =>
+    this.axiosInstance.get<CommunityListItem[]>('/communities/my-joined/');
+
+  createCommunity = (data: {
+    name: string;
+    slug?: string;
+    description?: string;
+    category: number;
+    rules?: string[];
+    join_type?: 'open' | 'approval';
+    avatar?: File;
+    cover_image?: File;
+  }) => {
+    const hasFiles = data.avatar != null || data.cover_image != null;
+    if (hasFiles) {
+      const form = new FormData();
+      form.append('name', data.name.trim());
+      form.append('category', String(data.category));
+      if (data.description?.trim()) form.append('description', data.description.trim());
+      if (data.join_type) form.append('join_type', data.join_type);
+      if (data.rules?.length) form.append('rules', JSON.stringify(data.rules));
+      if (data.avatar) form.append('avatar', data.avatar);
+      if (data.cover_image) form.append('cover_image', data.cover_image);
+      return this.axiosInstance.post<CommunityListItem>('/communities/create/', form);
+    }
+    const payload: Record<string, unknown> = {
+      name: data.name.trim(),
+      category: data.category,
+      description: data.description?.trim() || undefined,
+      join_type: data.join_type ?? 'open',
+      rules: data.rules ?? [],
+    };
+    return this.axiosInstance.post<CommunityListItem>('/communities/create/', payload);
+  };
+
+  updateCommunity = (slug: string, data: {
+    name?: string;
+    description?: string;
+    rules?: string[];
+    join_type?: 'open' | 'approval';
+    avatar?: File;
+    cover_image?: File;
+  }) => {
+    const hasFiles = data.avatar != null || data.cover_image != null;
+    if (hasFiles) {
+      const form = new FormData();
+      if (data.name != null) form.append('name', data.name.trim());
+      if (data.description != null) form.append('description', data.description.trim());
+      if (data.join_type != null) form.append('join_type', data.join_type);
+      if (data.rules != null) form.append('rules', JSON.stringify(data.rules));
+      if (data.avatar) form.append('avatar', data.avatar);
+      if (data.cover_image) form.append('cover_image', data.cover_image);
+      return this.axiosInstance.patch<CommunityListItem>(`/communities/${slug}/update/`, form);
+    }
+    const payload: Record<string, unknown> = {};
+    if (data.name != null) payload.name = data.name.trim();
+    if (data.description != null) payload.description = data.description.trim();
+    if (data.join_type != null) payload.join_type = data.join_type;
+    if (data.rules != null) payload.rules = data.rules;
+    return this.axiosInstance.patch<CommunityListItem>(`/communities/${slug}/update/`, payload);
+  };
 
   joinCommunity = (slug: string) =>
-    this.axiosInstance.post<{ joined: boolean; member_count: number }>(`/communities/${slug}/join/`);
+    this.axiosInstance.post<{ joined: boolean; member_count?: number; request_sent?: boolean }>(`/communities/${slug}/join/`);
 
   leaveCommunity = (slug: string) =>
     this.axiosInstance.post<{ member_count: number }>(`/communities/${slug}/leave/`);
 
   getCommunity = (slug: string) =>
     this.axiosInstance.get<CommunityListItem>(`/communities/${slug}/`);
+
+  getCommunityQuestions = (slug: string) =>
+    this.axiosInstance.get<Question[]>(`/communities/${slug}/questions/`);
+
+  getCommunityJoinRequests = (slug: string) =>
+    this.axiosInstance.get<{ id: number; user_id: number; username: string; created_at: string }[]>(`/communities/${slug}/join-requests/`);
+
+  approveCommunityJoinRequest = (slug: string, requestId: number) =>
+    this.axiosInstance.post<{ approved: boolean; member_count: number }>(`/communities/${slug}/join-requests/${requestId}/approve/`);
+
+  rejectCommunityJoinRequest = (slug: string, requestId: number) =>
+    this.axiosInstance.post<{ rejected: boolean }>(`/communities/${slug}/join-requests/${requestId}/reject/`);
+
+  banCommunityUser = (slug: string, userId: number, reason?: string) =>
+    this.axiosInstance.post<{ banned: boolean; member_count: number }>(`/communities/${slug}/ban/`, { user_id: userId, reason: reason ?? '' });
+
+  unbanCommunityUser = (slug: string, userId: number) =>
+    this.axiosInstance.post<{ unbanned: boolean }>(`/communities/${slug}/unban/${userId}/`);
+
+  getCommunityBannedList = (slug: string) =>
+    this.axiosInstance.get<{ id: number; user_id: number; username: string; reason: string; banned_at: string }[]>(`/communities/${slug}/banned/`);
+
+  removeQuestionFromCommunity = (slug: string, questionId: number, reason?: string) =>
+    this.axiosInstance.post<{ detail: string }>(`/communities/${slug}/questions/remove/`, { question_id: questionId, reason: reason ?? '' });
 
   /** İletişim, sosyal medya, GA/GSC - admin panelden yönetilir */
   getSiteSettings = () => this.axiosInstance.get<SiteSettings>('/settings/public/');
@@ -358,6 +444,13 @@ export interface CommunityListItem {
   owner_username: string;
   member_count: number;
   is_member: boolean;
+  rules?: string[];
+  join_type?: 'open' | 'approval';
+  avatar_url?: string | null;
+  cover_image_url?: string | null;
+  join_request_pending?: boolean;
+  is_banned?: boolean;
+  is_mod_or_owner?: boolean;
   created_at: string;
 }
 

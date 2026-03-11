@@ -1,9 +1,9 @@
 'use client';
 
+import { use } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState, useEffect } from 'react';
 import { useQuestion, questionKeys } from '@/src/hooks/use-questions';
 import { addRecentQuestion } from '@/src/lib/recent-activity';
@@ -20,12 +20,39 @@ import { OptimizedAvatar } from '@/src/components/optimized-avatar';
 import { ShareButton } from '@/src/components/share-button';
 
 const SaveModal = dynamic(() => import('@/src/components/save-modal').then((m) => ({ default: m.SaveModal })), { ssr: false });
+const RemoveFromCommunityModal = dynamic(
+  () => import('@/src/components/remove-from-community-modal').then((m) => ({ default: m.RemoveFromCommunityModal })),
+  { ssr: false }
+);
 
-export default function QuestionDetailPage() {
-  const params = useParams();
-  const slug = params?.id as string;
+export default function QuestionDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id: slug } = use(params);
   const { user: currentUser } = useAuthStore();
   const { data: question, isLoading, error } = useQuestion(slug ?? '');
+  const communitySlug = (question as { community_slug?: string } | undefined)?.community_slug;
+  const { data: community } = useQuery({
+    queryKey: ['community', communitySlug],
+    queryFn: () => api.getCommunity(communitySlug!).then((r) => r.data),
+    enabled: !!communitySlug,
+  });
+  const isCommunityModOrOwner = !!(community as { is_mod_or_owner?: boolean } | undefined)?.is_mod_or_owner;
+
+  const [removeFromCommunityOpen, setRemoveFromCommunityOpen] = useState(false);
+  const removeFromCommunityMutation = useMutation({
+    mutationFn: ({ reason }: { reason?: string }) =>
+      api.removeQuestionFromCommunity(communitySlug!, question!.id, reason),
+    onSuccess: () => {
+      toast.success('Gönderi topluluktan kaldırıldı.');
+      queryClient.invalidateQueries({ queryKey: questionKeys.all });
+      queryClient.invalidateQueries({ queryKey: questionKeys.detail(slug) });
+      queryClient.invalidateQueries({ queryKey: ['community', communitySlug] });
+      setRemoveFromCommunityOpen(false);
+    },
+    onError: (err: { response?: { data?: { detail?: string } } }) => {
+      toast.error(err?.response?.data?.detail ?? 'Kaldırılamadı.');
+    },
+  });
+
   const rawAnswers: Answer[] = Array.isArray((question as any)?.answers)
     ? ((question as any).answers as Answer[])
     : [];
@@ -167,9 +194,15 @@ export default function QuestionDetailPage() {
   const isAuthor = currentUser && author && (currentUser.id === author.id || currentUser.username === authorName);
   const hasHtml = contentWithoutMedia && /<[a-z][\s\S]*>/i.test(contentWithoutMedia);
 
+  const communityData = community as { name?: string; description?: string; member_count?: number; avatar_url?: string } | undefined;
+  const communityName = communityData?.name;
+  const communityDescription = communityData?.description;
+  const communityMemberCount = communityData?.member_count ?? 0;
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 overflow-x-hidden">
-      <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-4xl min-w-0">
+      <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 min-w-0 flex flex-col lg:flex-row gap-6 max-w-6xl">
+        <div className="flex-1 min-w-0">
         <div className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-800 overflow-hidden mb-6">
           <div className="min-w-0 p-4 sm:p-6">
               <div className="flex items-center gap-3 mb-4">
@@ -195,6 +228,15 @@ export default function QuestionDetailPage() {
                     >
                       Düzenle
                     </Link>
+                  )}
+                  {isCommunityModOrOwner && communitySlug && (
+                    <button
+                      type="button"
+                      onClick={() => setRemoveFromCommunityOpen(true)}
+                      className="text-sm font-medium text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 shrink-0"
+                    >
+                      Topluluktan kaldır
+                    </button>
                   )}
                 </div>
               </div>
@@ -328,6 +370,49 @@ export default function QuestionDetailPage() {
           </div>
         </div>
         <SaveModal questionId={question.id} isOpen={saveModalOpen} onClose={() => setSaveModalOpen(false)} />
+        {communitySlug && (
+          <RemoveFromCommunityModal
+            isOpen={removeFromCommunityOpen}
+            onClose={() => setRemoveFromCommunityOpen(false)}
+            onConfirm={(reason) => removeFromCommunityMutation.mutate({ reason: reason || undefined })}
+            isLoading={removeFromCommunityMutation.isPending}
+          />
+        )}
+        </div>
+
+        {communitySlug && community && (
+          <aside className="w-full lg:w-80 shrink-0 lg:self-start lg:sticky lg:top-[calc(52px+1.5rem)] lg:max-h-[calc(100vh-52px-3rem)] overflow-y-auto">
+            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <div className="p-4">
+                <div className="flex items-center gap-3 mb-3">
+                  {communityData?.avatar_url ? (
+                    <img src={communityData.avatar_url} alt="" className="w-12 h-12 rounded-full object-cover shrink-0" />
+                  ) : (
+                    <div className="w-12 h-12 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-lg shrink-0">
+                      {(communityName || communitySlug).charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-100 truncate">{communityName || communitySlug}</h3>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">r/{communitySlug}</p>
+                  </div>
+                </div>
+                {communityDescription ? (
+                  <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-3 mb-3">{communityDescription}</p>
+                ) : null}
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                  {communityMemberCount} üye
+                </p>
+                <Link
+                  href={`/topluluk/${communitySlug}`}
+                  className="block w-full text-center py-2.5 rounded-lg text-sm font-medium bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+                >
+                  Topluluğa git
+                </Link>
+              </div>
+            </div>
+          </aside>
+        )}
       </main>
     </div>
   );

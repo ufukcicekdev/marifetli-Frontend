@@ -1,7 +1,7 @@
 'use client';
 
+import { use } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
 import { useMemo, useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/src/lib/api';
@@ -12,6 +12,7 @@ import { SavedCollectionsTab } from '@/src/components/saved-collections-tab';
 import { FollowingModal } from '@/src/components/following-modal';
 import { OptimizedAvatar } from '@/src/components/optimized-avatar';
 import { formatTimeAgo } from '@/src/lib/format-time';
+import toast from 'react-hot-toast';
 import type { Answer } from '@/src/types';
 
 type ProfileTab = 'gonderiler' | 'yorumlar' | 'kaydettiklerim' | 'gecmis';
@@ -23,13 +24,13 @@ const TAB_LABELS: Record<ProfileTab, string> = {
   gecmis: 'Geçmiş',
 };
 
-export default function ProfilePage() {
-  const params = useParams();
-  const username = params?.username as string;
+export default function ProfilePage({ params }: { params: Promise<{ username: string }> }) {
+  const { username } = use(params);
   const queryClient = useQueryClient();
   const { user: currentUser, isAuthenticated } = useAuthStore();
   const [activeTab, setActiveTab] = useState<ProfileTab>('gonderiler');
   const [followingModalOpen, setFollowingModalOpen] = useState(false);
+  const [deleteConfirmQuestion, setDeleteConfirmQuestion] = useState<{ slug: string; title?: string } | null>(null);
   const isOwnProfile = isAuthenticated && !!currentUser?.username && !!username &&
     currentUser.username.toLowerCase() === username.toLowerCase();
 
@@ -75,6 +76,15 @@ export default function ProfilePage() {
     enabled: !!profile?.id && activeTab === 'yorumlar',
   });
 
+  const { data: myManagedCommunitiesRaw } = useQuery({
+    queryKey: ['communities', 'my-managed'],
+    queryFn: () => api.getMyManagedCommunities().then((r) => r.data),
+    enabled: isOwnProfile && isAuthenticated,
+  });
+  const managedList = Array.isArray(myManagedCommunitiesRaw)
+    ? myManagedCommunitiesRaw
+    : (myManagedCommunitiesRaw as { results?: unknown[] } | undefined)?.results ?? [];
+
   const userAnswers: Answer[] = useMemo(
     () =>
       Array.isArray(userAnswersData)
@@ -113,6 +123,19 @@ export default function ProfilePage() {
       queryClient.setQueryData(['user', username], (old: typeof profile) =>
         old ? { ...old, is_following: false, followers_count: Math.max(0, (old.followers_count || 0) - 1) } : old
       );
+    },
+  });
+
+  const deleteQuestionMutation = useMutation({
+    mutationFn: (slug: string) => api.deleteQuestion(slug),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['questions', 'user', profile?.id] });
+      queryClient.invalidateQueries({ queryKey: ['questions'] });
+      toast.success('Gönderi silindi.');
+      setDeleteConfirmQuestion(null);
+    },
+    onError: (err: { response?: { data?: { detail?: string } } }) => {
+      toast.error(err?.response?.data?.detail ?? 'Gönderi silinemedi.');
     },
   });
 
@@ -279,6 +302,8 @@ const tabs: ProfileTab[] = isOwnProfile
                           viewCount={q.view_count ?? 0}
                           viewMode="compact"
                           showEditButton={isOwnProfile}
+                          showDeleteButton={isOwnProfile}
+                          onDeleteClick={() => setDeleteConfirmQuestion({ slug: q.slug ?? String(q.id), title: q.title })}
                         />
                       ))}
                     </div>
@@ -421,6 +446,47 @@ const tabs: ProfileTab[] = isOwnProfile
               )}
             </div>
 
+            {/* Oluşturduğum / yönettiğim topluluklar (sadece kendi profil – her zaman göster) */}
+            {isOwnProfile && (
+              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+                <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-3">Oluşturduğum topluluklar</h3>
+                {managedList.length === 0 ? (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">Henüz topluluk oluşturmadınız.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {(managedList as { id: number; name: string; slug: string; member_count: number }[]).map((c) => (
+                      <li key={c.id} className="flex items-center justify-between gap-2">
+                        <Link href={`/topluluk/${c.slug}`} className="text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-orange-600 truncate min-w-0" title={`r/${c.slug}`}>
+                          {c.name || `r/${c.slug}`}
+                        </Link>
+                        <div className="flex gap-1 shrink-0">
+                          <Link
+                            href={`/topluluk/${c.slug}?modal=manage`}
+                            className="text-xs text-orange-500 hover:text-orange-600"
+                          >
+                            Yönet
+                          </Link>
+                          <span className="text-gray-400">·</span>
+                          <Link
+                            href={`/topluluk/${c.slug}?modal=edit`}
+                            className="text-xs text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                          >
+                            Düzenle
+                          </Link>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                <Link
+                  href="/topluluklar/olustur"
+                  className="mt-3 inline-block text-sm font-medium text-orange-500 hover:text-orange-600"
+                >
+                  {managedList.length === 0 ? 'Topluluk oluştur →' : '+ Yeni topluluk'}
+                </Link>
+              </div>
+            )}
+
             {/* Başarılar */}
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
               <div className="flex items-center justify-between mb-3">
@@ -464,6 +530,43 @@ const tabs: ProfileTab[] = isOwnProfile
       </main>
       {isOwnProfile && (
         <FollowingModal isOpen={followingModalOpen} onClose={() => setFollowingModalOpen(false)} />
+      )}
+
+      {/* Gönderi silme onayı */}
+      {deleteConfirmQuestion && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setDeleteConfirmQuestion(null)}>
+          <div
+            className="bg-white dark:bg-gray-900 rounded-xl shadow-xl max-w-sm w-full p-6 border border-gray-200 dark:border-gray-700"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Gönderiyi sil</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Bu gönderiyi silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+            </p>
+            {deleteConfirmQuestion.title && (
+              <p className="text-sm text-gray-500 dark:text-gray-500 truncate mb-4" title={deleteConfirmQuestion.title}>
+                &ldquo;{deleteConfirmQuestion.title}&rdquo;
+              </p>
+            )}
+            <div className="flex gap-3 justify-end">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmQuestion(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
+                İptal
+              </button>
+              <button
+                type="button"
+                onClick={() => deleteQuestionMutation.mutate(deleteConfirmQuestion.slug)}
+                disabled={deleteQuestionMutation.isPending}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleteQuestionMutation.isPending ? 'Siliniyor…' : 'Sil'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

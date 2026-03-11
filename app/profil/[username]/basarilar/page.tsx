@@ -1,13 +1,12 @@
 'use client';
 
+import { use } from 'react';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import api, { type AchievementItem } from '@/src/lib/api';
 
-export default function AchievementsPage() {
-  const params = useParams();
-  const username = params?.username as string;
+export default function AchievementsPage({ params }: { params: Promise<{ username: string }> }) {
+  const { username } = use(params);
 
   const { data: categories, isLoading, error } = useQuery({
     queryKey: ['achievements', username],

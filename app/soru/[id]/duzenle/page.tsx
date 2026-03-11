@@ -1,7 +1,8 @@
 'use client';
 
+import { use } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/src/lib/api';
@@ -11,11 +12,10 @@ import { useQuestion } from '@/src/hooks/use-questions';
 import { QuestionForm, type QuestionFormPayload, type QuestionFormInitial } from '@/src/components/question-form';
 import { questionKeys } from '@/src/hooks/use-questions';
 
-export default function QuestionEditPage() {
-  const params = useParams();
+export default function QuestionEditPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id: slug } = use(params);
   const router = useRouter();
   const queryClient = useQueryClient();
-  const slug = params?.id as string;
   const { user: currentUser } = useAuthStore();
   const { data: question, isLoading, error } = useQuestion(slug ?? '');
 

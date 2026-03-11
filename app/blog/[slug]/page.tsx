@@ -1,8 +1,8 @@
 'use client';
 
+import { use } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useParams } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
@@ -22,9 +22,8 @@ function formatDate(s: string | null) {
   return new Date(s).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-export default function BlogPostPage() {
-  const params = useParams();
-  const slug = params?.slug as string;
+export default function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = use(params);
   const queryClient = useQueryClient();
   const { user: currentUser, isAuthenticated } = useAuthStore();
   const [commentText, setCommentText] = useState('');

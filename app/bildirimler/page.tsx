@@ -95,11 +95,13 @@ export default function BildirimlerPage() {
         ) : (
           <ul className="space-y-2">
             {notifications.map((n) => {
-              const href = n.question_slug
-                ? `/soru/${n.question_slug}${n.answer ? `#comment-${n.answer}` : ''}`
-                : n.sender?.username
-                  ? `/profil/${n.sender.username}`
-                  : '#';
+              const href = n.notification_type === 'community_join_request' && (n as { community_slug?: string }).community_slug
+                ? `/topluluk/${(n as { community_slug: string }).community_slug}/yonet`
+                : n.question_slug
+                  ? `/soru/${n.question_slug}${n.answer ? `#comment-${n.answer}` : ''}`
+                  : n.sender?.username
+                    ? `/profil/${n.sender.username}`
+                    : '#';
               return (
                 <li key={n.id}>
                   <Link

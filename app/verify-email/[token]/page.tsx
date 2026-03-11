@@ -1,16 +1,15 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { use, useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/src/lib/api';
 import { useAuthStore } from '@/src/stores/auth-store';
 
-export default function VerifyEmailPage() {
-  const params = useParams();
+export default function VerifyEmailPage({ params }: { params: Promise<{ token: string }> }) {
+  const { token } = use(params);
   const router = useRouter();
   const setUser = useAuthStore((s) => s.setUser);
-  const token = params?.token as string;
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
 

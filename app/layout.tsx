@@ -1,5 +1,6 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
+import { Suspense } from 'react';
 import { Inter } from 'next/font/google';
 import { Toaster } from 'react-hot-toast';
 import { QueryProvider } from '@/src/providers/query-provider';
@@ -84,7 +85,9 @@ export default function RootLayout({
           <QueryProvider>
             <SiteAnalytics />
             <OnboardingGuard>
-              <Header />
+              <Suspense fallback={<header className="fixed top-0 left-0 right-0 z-40 h-[52px] bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800" />}>
+                <Header />
+              </Suspense>
               <div className="flex min-h-[calc(100vh-52px)] pt-[52px]">
                 <AppSidebar />
                 <MainContentWrapper>

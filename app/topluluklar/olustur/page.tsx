@@ -2,10 +2,69 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/src/lib/api';
 import { useAuthStore } from '@/src/stores/auth-store';
+
+function CategoryDropdown({
+  categories,
+  value,
+  onChange,
+  placeholder,
+}: {
+  categories: { id: number; name: string }[];
+  value: number | null;
+  onChange: (id: number | null) => void;
+  placeholder: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const selected = categories.find((c) => c.id === value);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-left text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        <span className={selected ? '' : 'text-gray-500 dark:text-gray-400'}>{selected ? selected.name : placeholder}</span>
+        <svg className={`w-5 h-5 shrink-0 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {open && (
+        <ul
+          className="absolute top-full left-0 right-0 mt-1 max-h-56 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg z-20 py-1"
+          role="listbox"
+        >
+          {categories.map((c) => (
+            <li key={c.id} role="option" aria-selected={value === c.id}>
+              <button
+                type="button"
+                onClick={() => { onChange(c.id); setOpen(false); }}
+                className={`block w-full text-left px-3 py-2.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${value === c.id ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 font-medium' : 'text-gray-900 dark:text-gray-100'}`}
+              >
+                {c.name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 export interface CategoryItem {
   id: number;
@@ -20,7 +79,11 @@ export default function ToplulukOlusturPage() {
   const { isAuthenticated } = useAuthStore();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [categoryId, setCategoryId] = useState<number | ''>('');
+  const [categoryId, setCategoryId] = useState<number | null>(null);
+  const [rules, setRules] = useState<string[]>(['']);
+  const [joinType, setJoinType] = useState<'open' | 'approval'>('open');
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
 
   const { data: categoriesData } = useQuery({
     queryKey: ['categories'],
@@ -37,16 +100,32 @@ export default function ToplulukOlusturPage() {
       api.createCommunity({
         name: name.trim(),
         description: description.trim() || undefined,
-        category: Number(categoryId),
+        category: categoryId!,
+        rules: rules.filter((r) => r.trim()).length ? rules.filter((r) => r.trim()) : undefined,
+        join_type: joinType,
+        avatar: avatarFile ?? undefined,
+        cover_image: coverFile ?? undefined,
       }),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['communities'] });
-      router.push(`/topluluk/${data.data.slug}`);
+      const slug = (data as { data?: { slug?: string } }).data?.slug;
+      if (slug) router.push(`/topluluk/${slug}`);
+      else router.push('/topluluklar');
     },
   });
 
   const categories = categoriesData ?? [];
-  const canSubmit = name.trim().length >= 2 && categoryId !== '';
+  const canSubmit = name.trim().length >= 2 && categoryId != null;
+
+  const addRule = () => setRules((prev) => [...prev, '']);
+  const updateRule = (i: number, v: string) =>
+    setRules((prev) => {
+      const next = [...prev];
+      next[i] = v;
+      return next;
+    });
+  const removeRule = (i: number) =>
+    setRules((prev) => (prev.length > 1 ? prev.filter((_, j) => j !== i) : prev));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,20 +162,12 @@ export default function ToplulukOlusturPage() {
             <label htmlFor="category" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Kategori <span className="text-red-500">*</span>
             </label>
-            <select
-              id="category"
+            <CategoryDropdown
+              categories={categories}
               value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value === '' ? '' : Number(e.target.value))}
-              required
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2"
-            >
-              <option value="">Kategori seçin</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+              onChange={setCategoryId}
+              placeholder="Kategori seçin"
+            />
           </div>
 
           <div>
@@ -129,6 +200,91 @@ export default function ToplulukOlusturPage() {
               rows={3}
               className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 resize-none"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Katılım türü
+            </label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="joinType"
+                  checked={joinType === 'open'}
+                  onChange={() => setJoinType('open')}
+                  className="text-orange-500"
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-300">Herkes doğrudan katılabilir</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="joinType"
+                  checked={joinType === 'approval'}
+                  onChange={() => setJoinType('approval')}
+                  className="text-orange-500"
+                />
+                <span className="text-sm text-gray-700 dark:text-gray-300">Yönetici onayı gerekir</span>
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+              Topluluk kuralları (isteğe bağlı)
+            </label>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">1, 2, 3... şeklinde kurallar ekleyin.</p>
+            <div className="space-y-2">
+              {rules.map((rule, i) => (
+                <div key={i} className="flex gap-2">
+                  <span className="flex items-center text-sm text-gray-500 w-6">{i + 1}.</span>
+                  <input
+                    type="text"
+                    value={rule}
+                    onChange={(e) => updateRule(i, e.target.value)}
+                    placeholder={`Kural ${i + 1}`}
+                    className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeRule(i)}
+                    className="text-gray-400 hover:text-red-500 px-1"
+                    aria-label="Kuralı kaldır"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+              <button type="button" onClick={addRule} className="text-sm text-orange-500 hover:text-orange-600">
+                + Kural ekle
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Profil resmi (isteğe bağlı)
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setAvatarFile(e.target.files?.[0] ?? null)}
+                className="w-full text-sm text-gray-600 dark:text-gray-400 file:mr-2 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-orange-50 file:text-orange-700 dark:file:bg-orange-900/30 dark:file:text-orange-300"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Kapak resmi (isteğe bağlı)
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setCoverFile(e.target.files?.[0] ?? null)}
+                className="w-full text-sm text-gray-600 dark:text-gray-400 file:mr-2 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-orange-50 file:text-orange-700 dark:file:bg-orange-900/30 dark:file:text-orange-300"
+              />
+            </div>
           </div>
 
           {createMutation.isError && (

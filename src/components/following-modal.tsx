@@ -14,6 +14,13 @@ type FollowingUser = {
   profile_picture?: string;
 };
 
+type FollowingCommunity = {
+  id: number;
+  name: string;
+  slug: string;
+  avatar_url?: string | null;
+};
+
 interface FollowingModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -22,14 +29,26 @@ interface FollowingModalProps {
 export function FollowingModal({ isOpen, onClose }: FollowingModalProps) {
   const [search, setSearch] = useState('');
 
-  const { data: response, isLoading } = useQuery({
+  const { data: usersResponse, isLoading: usersLoading } = useQuery({
     queryKey: ['userFollowing'],
     queryFn: () => api.getUserFollowing().then((r) => r.data),
     enabled: isOpen,
   });
 
-  const list: FollowingUser[] = useMemo(() => {
-    const raw = Array.isArray(response) ? response : (response as unknown as { results?: FollowingUser[] })?.results ?? [];
+  const { data: joinedResponse, isLoading: joinedLoading } = useQuery({
+    queryKey: ['communities', 'my-joined'],
+    queryFn: () => api.getMyJoinedCommunities().then((r) => r.data),
+    enabled: isOpen,
+  });
+
+  const { data: managedResponse } = useQuery({
+    queryKey: ['communities', 'my-managed'],
+    queryFn: () => api.getMyManagedCommunities().then((r) => r.data),
+    enabled: isOpen,
+  });
+
+  const users: FollowingUser[] = useMemo(() => {
+    const raw = Array.isArray(usersResponse) ? usersResponse : (usersResponse as unknown as { results?: FollowingUser[] })?.results ?? [];
     if (!search.trim()) return raw;
     const q = search.trim().toLowerCase();
     return raw.filter(
@@ -39,7 +58,25 @@ export function FollowingModal({ isOpen, onClose }: FollowingModalProps) {
         (u.last_name?.toLowerCase().includes(q)) ||
         [u.first_name, u.last_name].filter(Boolean).join(' ').toLowerCase().includes(q)
     );
-  }, [response, search]);
+  }, [usersResponse, search]);
+
+  const managedSlugs = useMemo(() => {
+    const raw = Array.isArray(managedResponse) ? managedResponse : (managedResponse as unknown as { results?: { slug?: string }[] })?.results ?? [];
+    return new Set(raw.map((m) => m.slug).filter(Boolean));
+  }, [managedResponse]);
+
+  const communities: FollowingCommunity[] = useMemo(() => {
+    const raw = Array.isArray(joinedResponse) ? joinedResponse : (joinedResponse as unknown as { results?: FollowingCommunity[] })?.results ?? [];
+    const onlyFollowed = raw.filter((c) => !managedSlugs.has(c.slug));
+    if (!search.trim()) return onlyFollowed;
+    const q = search.trim().toLowerCase();
+    return onlyFollowed.filter((c) => c.name.toLowerCase().includes(q) || c.slug.toLowerCase().includes(q));
+  }, [joinedResponse, managedSlugs, search]);
+
+  const isLoading = usersLoading || joinedLoading;
+  const hasUsers = users.length > 0;
+  const hasCommunities = communities.length > 0;
+  const isEmpty = !hasUsers && !hasCommunities;
 
   if (!isOpen) return null;
 
@@ -63,7 +100,7 @@ export function FollowingModal({ isOpen, onClose }: FollowingModalProps) {
           </div>
           <input
             type="text"
-            placeholder="İsim veya kullanıcı adıyla ara..."
+            placeholder="İsim, kullanıcı adı veya topluluk adıyla ara..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500"
@@ -72,14 +109,14 @@ export function FollowingModal({ isOpen, onClose }: FollowingModalProps) {
         <div className="overflow-y-auto flex-1 min-h-0 p-2">
           {isLoading ? (
             <p className="py-6 text-center text-sm text-gray-500 dark:text-gray-400">Yükleniyor...</p>
-          ) : list.length === 0 ? (
+          ) : isEmpty ? (
             <p className="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
-              {search.trim() ? 'Arama sonucu bulunamadı.' : 'Henüz kimseyi takip etmiyorsunuz.'}
+              {search.trim() ? 'Arama sonucu bulunamadı.' : 'Henüz kimseyi veya topluluğu takip etmiyorsunuz.'}
             </p>
           ) : (
             <ul className="space-y-1">
-              {list.map((u) => (
-                <li key={u.id}>
+              {users.map((u) => (
+                <li key={`user-${u.id}`}>
                   <Link
                     href={`/profil/${u.username}`}
                     onClick={onClose}
@@ -94,11 +131,32 @@ export function FollowingModal({ isOpen, onClose }: FollowingModalProps) {
                         </span>
                       )}
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="font-medium text-gray-900 dark:text-gray-100 truncate">
                         {[u.first_name, u.last_name].filter(Boolean).join(' ') || u.username}
                       </p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">u/{u.username}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Kullanıcı · u/{u.username}</p>
+                    </div>
+                  </Link>
+                </li>
+              ))}
+              {communities.map((c) => (
+                <li key={`community-${c.id}`}>
+                  <Link
+                    href={`/topluluk/${c.slug}`}
+                    onClick={onClose}
+                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden shrink-0">
+                      {c.avatar_url ? (
+                        <OptimizedAvatar src={c.avatar_url} size={40} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="w-full h-full flex items-center justify-center text-sm font-medium text-gray-500">r</span>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-gray-900 dark:text-gray-100 truncate">{c.name}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Topluluk · r/{c.slug}</p>
                     </div>
                   </Link>
                 </li>

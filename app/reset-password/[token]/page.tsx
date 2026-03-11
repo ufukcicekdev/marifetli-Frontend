@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { use, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import api from '@/src/lib/api';
 import { useAuthModalStore } from '@/src/stores/auth-modal-store';
@@ -9,11 +9,10 @@ import { useAuthModalStore } from '@/src/stores/auth-modal-store';
 const inputClass =
   'w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500 sm:text-sm';
 
-export default function ResetPasswordPage() {
-  const params = useParams();
+export default function ResetPasswordPage({ params }: { params: Promise<{ token: string }> }) {
+  const { token } = use(params);
   const router = useRouter();
   const openAuth = useAuthModalStore((s) => s.open);
-  const token = params?.token as string;
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');

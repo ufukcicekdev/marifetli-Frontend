@@ -72,6 +72,8 @@ export default function HomePage() {
                   voteCount={q.like_count ?? 0}
                   viewCount={q.view_count ?? 0}
                   viewMode={viewMode}
+                  communitySlug={(q as { community_slug?: string })?.community_slug}
+                  communityName={(q as { community_name?: string })?.community_name}
                 />
               ))}
             </div>

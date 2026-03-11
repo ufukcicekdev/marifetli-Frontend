@@ -2,8 +2,8 @@
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
-import { useState, useRef, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { useQuery } from '@tanstack/react-query';
 import { useAuthModalStore } from '../stores/auth-modal-store';
@@ -15,8 +15,22 @@ import api from '@/src/lib/api';
 
 const AuthModal = dynamic(() => import('./auth-modal').then((m) => ({ default: m.AuthModal })), { ssr: false });
 
+/** pathname veya searchParams'tan topluluk slug'ı: /topluluk/[slug] veya /sorular?community=slug */
+function useSearchCommunitySlug(): string | null {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  return useMemo(() => {
+    const match = pathname?.match(/^\/topluluk\/([^/]+)/);
+    if (match?.[1]) return match[1];
+    if (pathname === '/sorular') return searchParams?.get('community') ?? null;
+    return null;
+  }, [pathname, searchParams]);
+}
+
 export function Header() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const openAuth = useAuthModalStore((s) => s.open);
   const { isAuthenticated, user, logout } = useAuthStore();
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -24,6 +38,13 @@ export function Header() {
   const dropdownRefDesktop = useRef<HTMLDivElement>(null);
   const dropdownRefMobile = useRef<HTMLDivElement>(null);
   const sidebarToggle = useSidebarStore((s) => s.toggle);
+
+  const searchCommunitySlug = useSearchCommunitySlug();
+  const { data: searchCommunity } = useQuery({
+    queryKey: ['community', searchCommunitySlug],
+    queryFn: () => api.getCommunity(searchCommunitySlug!).then((r) => r.data),
+    enabled: !!searchCommunitySlug,
+  });
 
   const { data: unreadData } = useQuery({
     queryKey: ['notification-unread-count'],
@@ -50,13 +71,25 @@ export function Header() {
     return () => document.removeEventListener('click', handleClickOutside);
   }, []);
 
+  useEffect(() => {
+    if (pathname === '/sorular') setSearchQuery(searchParams?.get('q') ?? '');
+  }, [pathname, searchParams]);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(`/sorular?q=${encodeURIComponent(searchQuery.trim())}`);
-    } else {
-      router.push('/sorular');
-    }
+    const q = searchQuery.trim();
+    const params = new URLSearchParams();
+    if (q) params.set('q', q);
+    if (searchCommunitySlug) params.set('community', searchCommunitySlug);
+    const query = params.toString();
+    router.push(query ? `/sorular?${query}` : '/sorular');
+  };
+
+  const clearSearchCommunity = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const q = searchParams?.get('q')?.trim();
+    if (q) router.push(`/sorular?q=${encodeURIComponent(q)}`);
+    else router.push('/sorular');
   };
 
   return (
@@ -89,21 +122,41 @@ export function Header() {
             </Link>
           </div>
 
-          {/* Orta: Arama - viewport ortasında (absolute) */}
+          {/* Orta: Arama - topluluk sayfasındayken r/slug pill + topluluk içi arama */}
           <form
             onSubmit={handleSearch}
-            className="hidden md:block absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md px-2 pointer-events-none"
+            className="hidden md:block absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20 w-[min(100%,28rem)] max-w-md px-2"
           >
-            <div className="pointer-events-auto relative w-full flex items-center bg-gray-100 dark:bg-gray-800 rounded-full border border-gray-200 dark:border-gray-700 focus-within:ring-1 focus-within:ring-orange-500">
-              <svg className="w-4 h-4 text-gray-400 dark:text-gray-500 ml-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="relative w-full flex items-center gap-2 bg-gray-100 dark:bg-gray-800 rounded-full border border-gray-200 dark:border-gray-700 focus-within:ring-1 focus-within:ring-orange-500 pl-3 pr-2 py-1.5">
+              <svg className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
+              {searchCommunitySlug && (
+                <div className="flex items-center gap-1.5 shrink-0 rounded-full bg-gray-200 dark:bg-gray-700 pl-2 pr-1.5 py-0.5">
+                  {searchCommunity?.avatar_url ? (
+                    <img src={searchCommunity.avatar_url} alt="" className="w-5 h-5 rounded-full object-cover" />
+                  ) : (
+                    <span className="w-5 h-5 rounded-full bg-orange-500 text-white flex items-center justify-center text-xs font-bold">
+                      {(searchCommunity?.name || searchCommunitySlug).charAt(0).toUpperCase()}
+                    </span>
+                  )}
+                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">r/{searchCommunitySlug}</span>
+                  <button
+                    type="button"
+                    onClick={clearSearchCommunity}
+                    className="p-0.5 rounded hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                    aria-label="Topluluk filtresini kaldır"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                </div>
+              )}
               <input
                 type="search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Bir şey ara..."
-                className="flex-1 bg-transparent px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 outline-none min-w-0"
+                placeholder={searchCommunitySlug ? `r/${searchCommunitySlug}'de arama yapın` : 'Bir şey ara...'}
+                className="flex-1 bg-transparent px-2 py-1 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 outline-none min-w-0"
               />
             </div>
           </form>

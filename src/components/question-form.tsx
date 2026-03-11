@@ -5,12 +5,74 @@ import { useQuery } from '@tanstack/react-query';
 import api from '@/src/lib/api';
 import { RichTextEditor } from '@/src/components/rich-text-editor';
 
+/** Custom kategori dropdown: tıklanınca liste açılır, dışarı tıklanınca kapanır */
+function CategoryDropdown({
+  categories,
+  value,
+  onChange,
+  placeholder,
+  disabled,
+}: {
+  categories: { id: number; name: string }[];
+  value: number | null;
+  onChange: (id: number | null) => void;
+  placeholder: string;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const selected = categories.find((c) => c.id === value);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => !disabled && setOpen((o) => !o)}
+        disabled={disabled}
+        className="w-full flex items-center justify-between gap-2 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-left text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        <span className={selected ? '' : 'text-gray-500 dark:text-gray-400'}>{selected ? selected.name : placeholder}</span>
+        <svg className={`w-5 h-5 shrink-0 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      {open && (
+        <ul
+          className="absolute top-full left-0 right-0 mt-1 max-h-56 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg z-20 py-1"
+          role="listbox"
+        >
+          {categories.map((c) => (
+            <li key={c.id} role="option" aria-selected={value === c.id}>
+              <button
+                type="button"
+                onClick={() => { onChange(c.id); setOpen(false); }}
+                className={`block w-full text-left px-4 py-2.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${value === c.id ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 font-medium' : 'text-gray-900 dark:text-gray-100'}`}
+              >
+                {c.name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 const TITLE_MAX = 300;
 const POST_TYPES = [
   { id: 'text', label: 'Metin', icon: '📝', disabled: false },
   { id: 'media', label: 'Görsel & Video', icon: '🖼️', disabled: false },
   { id: 'link', label: 'Link', icon: '🔗', disabled: false },
-  { id: 'poll', label: 'Anket', icon: '📊', disabled: false },
 ];
 
 export type QuestionFormPayload = {
@@ -18,8 +80,9 @@ export type QuestionFormPayload = {
   description: string;
   content: string;
   category?: number | null;
+  /** Topluluk sayfasından soru sorulduğunda doldurulur */
+  community?: number | null;
   tags?: number[];
-  /** Yeni oluşturulacak etiket isimleri (API'de yoksa) */
   tag_names?: string[];
   status?: string;
 };
@@ -39,6 +102,8 @@ export type QuestionFormInitial = {
 type QuestionFormProps = {
   mode: 'create' | 'edit';
   initialValues?: QuestionFormInitial;
+  /** Topluluk sayfasından soru sorulurken topluluk id (soru bu toplulukta yayınlanır) */
+  communityId?: number | null;
   onSubmit: (data: QuestionFormPayload, asDraft?: boolean) => void;
   isSubmitting?: boolean;
   showDraftButton?: boolean;
@@ -92,6 +157,7 @@ function parseContentForEdit(content: string): {
 export function QuestionForm({
   mode,
   initialValues,
+  communityId,
   onSubmit,
   isSubmitting = false,
   showDraftButton = true,
@@ -107,7 +173,6 @@ export function QuestionForm({
   const [mediaFilesDataUrls, setMediaFilesDataUrls] = useState<string[]>([]);
   const [mediaUrls, setMediaUrls] = useState<string[]>([]);
   const [mediaSlideIndex, setMediaSlideIndex] = useState(0);
-  const [pollOptions, setPollOptions] = useState<string[]>(initialValues?.pollOptions ?? ['', '']);
   const [tagInput, setTagInput] = useState('');
   const [tagIds, setTagIds] = useState<number[]>(initialValues?.tagIds ?? []);
   const [customTagNames, setCustomTagNames] = useState<string[]>([]);
@@ -122,12 +187,17 @@ export function QuestionForm({
       setTagIds(initialValues.tagIds);
       setCustomTagNames([]);
       if (parsed.linkUrl) setLinkUrl(parsed.linkUrl);
-      if (parsed.pollOptions.length) setPollOptions(parsed.pollOptions);
-      if (parsed.postType) setPostType(parsed.postType);
+      // Anket şimdilik kaldırıldı; eski anket gönderileri metin olarak açılır
+      if (parsed.postType === 'poll') {
+        setPostType('text');
+        setContent(initialValues.content);
+      } else if (parsed.postType) {
+        setPostType(parsed.postType);
+      }
       if (parsed.imageUrls.length > 0) {
         setMediaUrls(parsed.imageUrls);
         setContent(parsed.contentWithoutImages);
-      } else {
+      } else if (parsed.postType !== 'poll') {
         setContent(initialValues.content);
       }
       setInitialized(true);
@@ -193,30 +263,10 @@ export function QuestionForm({
     setMediaSlideIndex((prev) => (prev === index ? Math.max(0, index - 1) : prev > index ? prev - 1 : prev));
   };
 
-  const addPollOption = () => {
-    if (pollOptions.length < 10) setPollOptions((prev) => [...prev, '']);
-  };
-
-  const updatePollOption = (index: number, value: string) => {
-    setPollOptions((prev) => {
-      const next = [...prev];
-      next[index] = value;
-      return next;
-    });
-  };
-
-  const removePollOption = (index: number) => {
-    if (pollOptions.length > 2) setPollOptions((prev) => prev.filter((_, i) => i !== index));
-  };
-
   const getSubmitContent = () => {
     if (postType === 'link' && linkUrl.trim()) {
       const trimmed = linkUrl.trim();
       return content ? `${content}<p><a href="${trimmed}" target="_blank" rel="noopener">${trimmed}</a></p>` : `<p><a href="${trimmed}" target="_blank" rel="noopener">${trimmed}</a></p>`;
-    }
-    if (postType === 'poll' && pollOptions.some((o) => o.trim())) {
-      const list = pollOptions.filter((o) => o.trim()).map((o) => `<li>${o.trim()}</li>`).join('');
-      return content ? `${content}<ul>${list}</ul>` : `<ul>${list}</ul>`;
     }
     if (postType === 'media') {
       const loadedDataUrls = mediaFilesDataUrls.filter(Boolean);
@@ -230,6 +280,7 @@ export function QuestionForm({
 
   const canSubmit = () => {
     if (!title.trim()) return false;
+    if (!categoryId) return false;
     if (postType === 'link' && !linkUrl.trim()) return false;
     return true;
   };
@@ -304,6 +355,7 @@ export function QuestionForm({
 
   const handleSubmit = (asDraft: boolean) => (e: React.FormEvent) => {
     e.preventDefault();
+    if (!categoryId) return;
     if (!canSubmit() && !asDraft) return;
     const finalContent = getSubmitContent();
     onSubmit({
@@ -311,6 +363,7 @@ export function QuestionForm({
       description: finalContent.replace(/<[^>]*>/g, '').slice(0, 500),
       content: finalContent,
       category: categoryId || undefined,
+      ...(communityId != null && { community: communityId }),
       tags: tagIds,
       ...(customTagNames.length > 0 && { tag_names: customTagNames }),
       status: asDraft ? 'draft' : 'open',
@@ -329,17 +382,13 @@ export function QuestionForm({
   return (
     <form className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
       <div className="p-4 border-b border-gray-200 dark:border-gray-800">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Topluluk / Kategori</label>
-        <select
-          value={categoryId ?? ''}
-          onChange={(e) => setCategoryId(e.target.value ? Number(e.target.value) : null)}
-          className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-        >
-          <option value="">Kategori seçin</option>
-          {(categories as { id: number; name: string }[]).map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Topluluk / Kategori *</label>
+        <CategoryDropdown
+          categories={categories as { id: number; name: string }[]}
+          value={categoryId}
+          onChange={setCategoryId}
+          placeholder="Kategori seçin"
+        />
       </div>
 
       <div className="flex flex-wrap border-b border-gray-200 dark:border-gray-800 overflow-x-auto">
@@ -533,23 +582,6 @@ export function QuestionForm({
           </div>
         )}
 
-        {postType === 'poll' && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Anket seçenekleri</label>
-            <div className="space-y-2">
-              {pollOptions.map((opt, i) => (
-                <div key={i} className="flex gap-2">
-                  <input type="text" value={opt} onChange={(e) => updatePollOption(i, e.target.value)} placeholder={`Seçenek ${i + 1}`} className="flex-1 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
-                  <button type="button" onClick={() => removePollOption(i)} disabled={pollOptions.length <= 2} className="px-2 text-gray-500 hover:text-red-500 disabled:opacity-40 disabled:cursor-not-allowed">×</button>
-                </div>
-              ))}
-              {pollOptions.length < 10 && (
-                <button type="button" onClick={addPollOption} className="text-sm text-orange-500 hover:text-orange-600">+ Seçenek ekle</button>
-              )}
-            </div>
-          </div>
-        )}
-
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
             {postType === 'text' ? 'İçerik (isteğe bağlı)' : 'Açıklama (isteğe bağlı)'}
@@ -559,11 +591,11 @@ export function QuestionForm({
 
         <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4">
           {showDraftButton && (
-            <button type="button" onClick={handleSubmit(true)} disabled={isSubmitting || !title.trim()} className="px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50">
+            <button type="button" onClick={handleSubmit(true)} disabled={isSubmitting || !title.trim() || !categoryId} className="px-5 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50" title={!categoryId ? 'Kategori seçmeniz gerekir' : undefined}>
               Taslak Kaydet
             </button>
           )}
-          <button type="button" onClick={handleSubmit(false)} disabled={isSubmitting || !canSubmit()} className="px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-lg disabled:opacity-50">
+          <button type="button" onClick={handleSubmit(false)} disabled={isSubmitting || !canSubmit()} className="px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-lg disabled:opacity-50" title={!categoryId ? 'Kategori seçmeniz gerekir' : undefined}>
             {isSubmitting ? (mode === 'edit' ? 'Kaydediliyor...' : 'Yayınlanıyor...') : (mode === 'edit' ? 'Kaydet' : 'Yayınla')}
           </button>
         </div>

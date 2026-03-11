@@ -29,9 +29,15 @@ interface PostItemProps {
   viewCount?: number;
   viewMode: ViewMode;
   showEditButton?: boolean;
+  /** Profil sayfasında gönderiyi silmek için (tıklanınca onay istenir) */
+  showDeleteButton?: boolean;
+  onDeleteClick?: (e: React.MouseEvent) => void;
+  /** Topluluk: varsa listede topluluk adı gösterilir, tıklanınca topluluğa gider */
+  communitySlug?: string | null;
+  communityName?: string | null;
 }
 
-export function PostItem({ id, slug, title, content, category, author, authorAvatar, timeAgo, commentCount, voteCount, viewCount, viewMode, showEditButton }: PostItemProps) {
+export function PostItem({ id, slug, title, content, category, author, authorAvatar, timeAgo, commentCount, voteCount, viewCount, viewMode, showEditButton, showDeleteButton, onDeleteClick, communitySlug, communityName }: PostItemProps) {
   const mediaItems = useMemo(() => extractMediaFromHtml(content), [content]);
   const firstMedia = mediaItems[0];
   const href = `/soru/${slug ?? id}`;
@@ -139,6 +145,14 @@ export function PostItem({ id, slug, title, content, category, author, authorAva
 
   const AuthorMeta = () => (
     <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 flex-wrap gap-x-1 gap-y-0.5">
+      {communitySlug && (
+        <>
+          <Link href={`/topluluk/${communitySlug}`} className="shrink-0 font-medium text-gray-700 dark:text-gray-300 hover:text-orange-500" title={communityName || `r/${communitySlug}`}>
+            r/{communitySlug}
+          </Link>
+          <span className="shrink-0">·</span>
+        </>
+      )}
       <Link href={`/profil/${author}`} className="min-w-0 truncate hover:text-orange-500" title={`u/${author}`}>u/{author}</Link>
       <span className="shrink-0">·</span>
       <span className="shrink-0">{timeAgo}</span>
@@ -148,6 +162,14 @@ export function PostItem({ id, slug, title, content, category, author, authorAva
           <Link href={`/soru/${slug}/duzenle`} className="shrink-0 text-orange-500 hover:text-orange-600">
             Düzenle
           </Link>
+        </>
+      )}
+      {showDeleteButton && onDeleteClick && (
+        <>
+          <span className="shrink-0">·</span>
+          <button type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDeleteClick(e); }} className="shrink-0 text-red-500 hover:text-red-600">
+            Sil
+          </button>
         </>
       )}
     </div>
