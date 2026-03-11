@@ -22,6 +22,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: 'https', hostname: 'web-production-5404d.up.railway.app', pathname: '/**' },
       { protocol: 'https', hostname: '*.up.railway.app', pathname: '/**' },
+      { protocol: 'https', hostname: 'cekfisi.fra1.digitaloceanspaces.com', pathname: '/**' },
       { protocol: 'https', hostname: 'fra1.digitaloceanspaces.com', pathname: '/**' },
       { protocol: 'https', hostname: '*.digitaloceanspaces.com', pathname: '/**' },
       { protocol: 'http', hostname: 'localhost', pathname: '/**', port: '8000' },

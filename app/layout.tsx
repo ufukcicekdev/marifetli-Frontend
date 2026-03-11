@@ -79,6 +79,13 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href={API_ORIGIN} crossOrigin="" />
         <link rel="dns-prefetch" href={API_ORIGIN} />
+        {/* LCP / third-party: CDN (medya), GTM, GA - kritik yolu kısaltır */}
+        <link rel="preconnect" href="https://www.googletagmanager.com" />
+        <link rel="preconnect" href="https://www.google-analytics.com" />
+        <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
+        <link rel="dns-prefetch" href="https://www.google-analytics.com" />
+        <link rel="preconnect" href="https://cekfisi.fra1.digitaloceanspaces.com" crossOrigin="" />
+        <link rel="dns-prefetch" href="https://cekfisi.fra1.digitaloceanspaces.com" />
       </head>
       <body className={inter.className}>
         <ThemeProvider>

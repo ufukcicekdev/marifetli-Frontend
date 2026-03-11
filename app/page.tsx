@@ -58,7 +58,7 @@ export default function HomePage() {
               {!isLoading && !error && questions.length === 0 && (
                 <div className="p-8 text-center text-gray-500 dark:text-gray-400">Henüz gönderi yok.</div>
               )}
-              {!isLoading && questions.map((q) => (
+              {!isLoading && questions.map((q, index) => (
                 <PostItem
                   key={q.id}
                   id={q.id}
@@ -74,6 +74,7 @@ export default function HomePage() {
                   viewMode={viewMode}
                   communitySlug={(q as { community_slug?: string })?.community_slug}
                   communityName={(q as { community_name?: string })?.community_name}
+                  priorityImage={index < 2}
                 />
               ))}
             </div>

@@ -50,8 +50,9 @@ export function OptimizedAvatar({ src, alt = '', size = 40, className = '', prio
       width={s}
       height={s}
       className={`rounded-full object-cover shrink-0 ${className}`}
-      loading="lazy"
+      loading={priority ? 'eager' : 'lazy'}
       decoding="async"
+      fetchPriority={priority ? 'high' : undefined}
     />
   );
 }

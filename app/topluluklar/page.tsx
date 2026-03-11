@@ -36,7 +36,7 @@ function CommunityCard({
         <div className="flex items-center gap-3 mb-3">
           <div className="w-12 h-12 shrink-0 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-lg overflow-hidden">
             {community.avatar_url ? (
-              <img src={community.avatar_url} alt="" className="w-full h-full object-cover" />
+              <img src={community.avatar_url} alt={`${community.name || community.slug} topluluk logosu`} className="w-full h-full object-cover" />
             ) : (
               letter
             )}

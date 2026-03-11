@@ -344,6 +344,8 @@ class ApiService {
   // Onboarding
   getOnboardingSteps = () => this.axiosInstance.get<{ id: number; title: string; description: string; step_type: string; order: number; max_selections: number; choices: { id: number; label: string; value: string; order: number }[] }[]>('/onboarding/steps/');
   getOnboardingStatus = () => this.axiosInstance.get<{ completed: boolean; completed_at: string | null }>('/onboarding/status/');
+  getOnboardingMySelections = () =>
+    this.axiosInstance.get<{ steps: { step_id: number; step_type: string; choice_ids: number[]; category_ids: number[]; tag_ids: number[] }[] }>('/onboarding/my-selections/');
   submitOnboarding = (data: { step_id: number; category_ids?: number[]; tag_ids?: number[]; choice_ids?: number[] }) =>
     this.axiosInstance.post('/onboarding/submit/', data);
   completeOnboarding = () => this.axiosInstance.post('/onboarding/complete/');

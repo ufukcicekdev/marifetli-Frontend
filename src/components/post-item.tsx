@@ -35,9 +35,11 @@ interface PostItemProps {
   /** Topluluk: varsa listede topluluk adı gösterilir, tıklanınca topluluğa gider */
   communitySlug?: string | null;
   communityName?: string | null;
+  /** LCP için: ilk görünen gönderide avatar/thumbnail öncelikli yüklensin */
+  priorityImage?: boolean;
 }
 
-export function PostItem({ id, slug, title, content, category, author, authorAvatar, timeAgo, commentCount, voteCount, viewCount, viewMode, showEditButton, showDeleteButton, onDeleteClick, communitySlug, communityName }: PostItemProps) {
+export function PostItem({ id, slug, title, content, category, author, authorAvatar, timeAgo, commentCount, voteCount, viewCount, viewMode, showEditButton, showDeleteButton, onDeleteClick, communitySlug, communityName, priorityImage = false }: PostItemProps) {
   const mediaItems = useMemo(() => extractMediaFromHtml(content), [content]);
   const firstMedia = mediaItems[0];
   const href = `/soru/${slug ?? id}`;
@@ -196,7 +198,7 @@ export function PostItem({ id, slug, title, content, category, author, authorAva
           </h2>
           <div className="flex items-center gap-2 mb-3">
             {authorAvatar ? (
-              <OptimizedAvatar src={authorAvatar} size={24} alt="" className="w-6 h-6" />
+              <OptimizedAvatar src={authorAvatar} size={24} alt="" className="w-6 h-6" priority={priorityImage} />
             ) : (
               <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[10px] font-bold text-gray-500 shrink-0">
                 {author?.charAt(0)?.toUpperCase() ?? '?'}
@@ -205,7 +207,7 @@ export function PostItem({ id, slug, title, content, category, author, authorAva
             <AuthorMeta />
           </div>
           {mediaItems.length > 0 ? (
-            <Link href={href} className="block mb-3">
+            <Link href={href} className="block mb-3" aria-label={`Soruyu aç: ${title}`}>
               <MediaSlider items={mediaItems} className="border-0 rounded-lg overflow-hidden" />
             </Link>
           ) : null}
@@ -219,7 +221,7 @@ export function PostItem({ id, slug, title, content, category, author, authorAva
     <div className="p-3 sm:p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-b border-gray-200 dark:border-gray-800 last:border-b-0">
       <div className="flex gap-2 sm:gap-3">
         {authorAvatar ? (
-          <OptimizedAvatar src={authorAvatar} size={32} alt="" className="w-8 h-8" />
+          <OptimizedAvatar src={authorAvatar} size={32} alt="" className="w-8 h-8" priority={priorityImage} />
         ) : (
           <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-500 shrink-0">
             {author?.charAt(0)?.toUpperCase() ?? '?'}
@@ -239,11 +241,11 @@ export function PostItem({ id, slug, title, content, category, author, authorAva
             )}
           </div>
           {firstMedia && (
-            <Link href={href} className="mt-1 block w-20 h-20 rounded overflow-hidden bg-gray-100 dark:bg-gray-800 self-start">
+            <Link href={href} className="mt-1 block w-20 h-20 rounded overflow-hidden bg-gray-100 dark:bg-gray-800 self-start" aria-label={`Soruyu aç: ${title}`}>
               {firstMedia.type === 'image' ? (
-                <OptimizedAvatar src={firstMedia.url} size={80} alt="" className="w-full h-full rounded-none object-cover" />
+                <OptimizedAvatar src={firstMedia.url} size={80} alt="" className="w-full h-full rounded-none object-cover" priority={priorityImage} />
               ) : (
-                <video src={firstMedia.url} className="w-full h-full object-cover" muted playsInline />
+                <video src={firstMedia.url} className="w-full h-full object-cover" muted playsInline aria-hidden />
               )}
             </Link>
           )}

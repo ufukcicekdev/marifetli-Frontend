@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { Suspense, useEffect, useState, useMemo } from 'react';
+import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import api from '@/src/lib/api';
@@ -18,10 +19,14 @@ interface OnboardingStep {
   choices: { id: number; label: string; value: string; order: number }[];
 }
 
-export default function OnboardingPage() {
+function OnboardingContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
+  const fromProfile = searchParams.get('from') === 'profile';
+  const usernameFromQuery = searchParams.get('user') || user?.username;
+
   const [stepIndex, setStepIndex] = useState(0);
   const [selections, setSelections] = useState<Record<number, number[]>>({});
   const [categories, setCategories] = useState<{ id: number; name: string; slug: string }[]>([]);
@@ -33,12 +38,41 @@ export default function OnboardingPage() {
     }
   }, [isAuthenticated, router]);
 
+  const { data: onboardingStatus } = useQuery({
+    queryKey: ['onboardingStatus'],
+    queryFn: () => api.getOnboardingStatus().then((r) => r.data),
+    enabled: isAuthenticated,
+  });
+
   const { data: stepsRaw, isLoading } = useQuery({
     queryKey: ['onboardingSteps'],
     queryFn: () => api.getOnboardingSteps().then((r) => r.data),
   });
 
   const steps = Array.isArray(stepsRaw) ? stepsRaw : ((stepsRaw as unknown as { results?: OnboardingStep[] })?.results ?? []);
+
+  const shouldPreFill = (onboardingStatus?.completed === true || fromProfile) && isAuthenticated;
+  const { data: mySelectionsRaw } = useQuery({
+    queryKey: ['onboardingMySelections'],
+    queryFn: () => api.getOnboardingMySelections().then((r) => r.data),
+    enabled: shouldPreFill && steps.length > 0,
+  });
+
+  const mySelections = useMemo(() => {
+    const raw = mySelectionsRaw as { steps?: { step_id: number; step_type: string; choice_ids: number[]; category_ids: number[]; tag_ids: number[] }[] } | undefined;
+    return raw?.steps ?? [];
+  }, [mySelectionsRaw]);
+
+  useEffect(() => {
+    if (mySelections.length === 0) return;
+    const next: Record<number, number[]> = {};
+    for (const s of mySelections) {
+      if (s.step_type === 'custom') next[s.step_id] = s.choice_ids ?? [];
+      else if (s.step_type === 'category') next[s.step_id] = s.category_ids ?? [];
+      else if (s.step_type === 'tag') next[s.step_id] = s.tag_ids ?? [];
+    }
+    setSelections((prev) => ({ ...prev, ...next }));
+  }, [mySelections]);
 
   const cinsiyetStep = steps.find((s: OnboardingStep) => s.title === 'Cinsiyet' || (s.step_type === 'custom' && s.order === 0));
   const selectedGender = (() => {
@@ -79,7 +113,11 @@ export default function OnboardingPage() {
       const completedAt = res?.data?.completed_at ?? new Date().toISOString();
       queryClient.setQueryData(['onboardingStatus'], { completed: true, completed_at: completedAt });
       queryClient.invalidateQueries({ queryKey: ['onboardingStatus'] });
-      router.push('/sorular');
+      if (fromProfile && usernameFromQuery) {
+        router.push(`/profil/${usernameFromQuery}`);
+      } else {
+        router.push('/sorular');
+      }
     },
     onError: () => {
       toast.error('Tamamlanamadı. Lütfen tekrar deneyin.');
@@ -158,6 +196,14 @@ export default function OnboardingPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center py-12 px-4">
       <div className="w-full max-w-lg">
+        {fromProfile && usernameFromQuery && (
+          <Link
+            href={`/profil/${usernameFromQuery}`}
+            className="mb-4 inline-block text-sm text-orange-600 dark:text-orange-400 hover:underline"
+          >
+            ← Profile dön
+          </Link>
+        )}
         <div className="mb-6">
           <div className="flex gap-1 mb-2">
             {steps.map((_, i) => (
@@ -275,5 +321,13 @@ export default function OnboardingPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function OnboardingPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center"><p className="text-gray-500">Yükleniyor...</p></div>}>
+      <OnboardingContent />
+    </Suspense>
   );
 }

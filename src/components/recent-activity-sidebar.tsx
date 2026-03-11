@@ -157,10 +157,10 @@ export function RecentActivitySidebar() {
                   )}
                 </div>
                 {hasRightThumb && entry.type === 'question' && entry.imageUrl && (
-                  <Thumbnail src={entry.imageUrl} alt="" className="mt-0.5" />
+                  <Thumbnail src={entry.imageUrl} alt={entry.title || 'Gönderi görseli'} className="mt-0.5" />
                 )}
                 {hasRightThumb && entry.type === 'blog' && entry.imageUrl && (
-                  <Thumbnail src={entry.imageUrl} alt="" className="mt-0.5" />
+                  <Thumbnail src={entry.imageUrl} alt={entry.title || 'Blog görseli'} className="mt-0.5" />
                 )}
               </Link>
             </li>

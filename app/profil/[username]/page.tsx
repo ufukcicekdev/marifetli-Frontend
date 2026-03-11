@@ -419,27 +419,27 @@ const tabs: ProfileTab[] = isOwnProfile
                   <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Bağlantılar</p>
                   <div className="flex flex-wrap gap-2">
                     {profile.website && (
-                      <a href={profile.website} target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:text-orange-600 text-sm truncate max-w-full" title="Web sitesi">
+                      <a href={profile.website} target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:text-orange-600 text-sm truncate max-w-full" title="Web sitesi" aria-label="Web sitesi">
                         🌐
                       </a>
                     )}
                     {profile.instagram_url && (
-                      <a href={profile.instagram_url} target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:text-orange-600" title="Instagram">📷</a>
+                      <a href={profile.instagram_url} target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:text-orange-600" title="Instagram" aria-label="Instagram">📷</a>
                     )}
                     {profile.twitter_url && (
-                      <a href={profile.twitter_url} target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:text-orange-600" title="X">𝕏</a>
+                      <a href={profile.twitter_url} target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:text-orange-600" title="X" aria-label="X (Twitter)">𝕏</a>
                     )}
                     {profile.facebook_url && (
-                      <a href={profile.facebook_url} target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:text-orange-600" title="Facebook">f</a>
+                      <a href={profile.facebook_url} target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:text-orange-600" title="Facebook" aria-label="Facebook">f</a>
                     )}
                     {profile.linkedin_url && (
-                      <a href={profile.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:text-orange-600" title="LinkedIn">in</a>
+                      <a href={profile.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:text-orange-600" title="LinkedIn" aria-label="LinkedIn">in</a>
                     )}
                     {profile.youtube_url && (
-                      <a href={profile.youtube_url} target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:text-orange-600" title="YouTube">▶</a>
+                      <a href={profile.youtube_url} target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:text-orange-600" title="YouTube" aria-label="YouTube">▶</a>
                     )}
                     {profile.pinterest_url && (
-                      <a href={profile.pinterest_url} target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:text-orange-600" title="Pinterest">P</a>
+                      <a href={profile.pinterest_url} target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:text-orange-600" title="Pinterest" aria-label="Pinterest">P</a>
                     )}
                   </div>
                 </div>
@@ -522,6 +522,18 @@ const tabs: ProfileTab[] = isOwnProfile
                       Güncelle →
                     </Link>
                   </div>
+                  {onboardingStatus?.completed && (
+                    <div>
+                      <p className="text-sm text-gray-700 dark:text-gray-300">İlgi alanları</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Kategoriler, cinsiyet ve tercihlerinizi güncelleyin</p>
+                      <Link
+                        href="/onboarding?from=profile"
+                        className="mt-1 inline-block text-sm font-medium text-orange-500 hover:text-orange-600"
+                      >
+                        İlgi alanlarını güncelle →
+                      </Link>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
