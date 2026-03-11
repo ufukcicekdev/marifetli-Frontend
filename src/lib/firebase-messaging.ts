@@ -49,6 +49,39 @@ export function canRequestPush(): boolean {
 }
 
 /**
+ * İzin zaten "granted" ise token alıp kaydeder; istemez, sadece kayıt yapar.
+ * Her cihazda (telefon, PC) token'ın kayıtlı olması için uygulama açıldığında çağrılabilir.
+ */
+export async function getFCMTokenIfGranted(
+  registerToken: (token: string, deviceName?: string) => Promise<unknown>,
+): Promise<{ ok: true; token: string } | { ok: false; reason: string }> {
+  if (typeof window === 'undefined') return { ok: false, reason: 'SSR' };
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return { ok: false, reason: 'İzin yok' };
+  const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY?.trim();
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim();
+  const appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID?.trim();
+  if (!vapidKey || !projectId || !appId) return { ok: false, reason: 'Firebase config yok' };
+  try {
+    const { getApps, getApp, initializeApp } = await import('firebase/app');
+    const { getMessaging, getToken } = await import('firebase/messaging');
+    const app = getApps().length > 0 ? getApp() : initializeApp({
+      apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
+      projectId,
+      appId,
+      messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
+    });
+    const messaging = getMessaging(app);
+    const token = await getToken(messaging, { vapidKey });
+    if (!token) return { ok: false, reason: 'Token alınamadı' };
+    await registerToken(token, 'Web');
+    return { ok: true, token };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { ok: false, reason: msg };
+  }
+}
+
+/**
  * FCM foreground handler'ı her sayfada çalışsın diye Firebase app'i izin/token olmadan başlatır.
  * Token kaydı hâlâ Bildirimler sayfasında "Bildirimleri aç" ile yapılır.
  */
