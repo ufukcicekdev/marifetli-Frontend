@@ -12,6 +12,7 @@ import { AppSidebar } from '@/src/components/app-sidebar';
 import { MainContentWrapper } from '@/src/components/main-content-wrapper';
 import { OnboardingGuard } from '@/src/components/onboarding-guard';
 import { SiteAnalytics } from '@/src/components/site-analytics';
+import { FirebasePushHandler } from '@/src/components/firebase-push-handler';
 
 // Canlıda NEXT_PUBLIC_SITE_URL deploy ortamında tanımlı olsun; yoksa production URL fallback
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.marifetli.com.tr';
@@ -67,6 +68,7 @@ export const metadata: Metadata = {
     description: 'Örgü, dikiş, nakış, takı tasarımı ve el sanatları tutkunlarının buluşma noktası.',
   },
   alternates: { canonical: SITE_URL },
+  manifest: '/manifest.json',
 };
 
 export default function RootLayout({
@@ -91,6 +93,7 @@ export default function RootLayout({
         <ThemeProvider>
           <QueryProvider>
             <SiteAnalytics />
+            <FirebasePushHandler />
             <OnboardingGuard>
               <Suspense fallback={<header className="fixed top-0 left-0 right-0 z-40 h-[52px] bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800" />}>
                 <Header />

@@ -2,15 +2,35 @@
 
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef } from 'react';
+import toast from 'react-hot-toast';
 import api from '@/src/lib/api';
 import type { Notification as NotificationType } from '@/src/types';
 import { useAuthStore } from '@/src/stores/auth-store';
 import { OptimizedAvatar } from '@/src/components/optimized-avatar';
 import { formatTimeAgo } from '@/src/lib/format-time';
+import { getFCMTokenAndRegister, canRequestPush } from '@/src/lib/firebase-messaging';
+
+// Normal bildirimler (beğeni, takip, cevap vb.) backend'de create_notification ile kaydedilir ve
+// push_notifications açıksa Firebase (FCM) ile cihaza push gönderilir.
 
 export default function BildirimlerPage() {
   const queryClient = useQueryClient();
   const { isAuthenticated } = useAuthStore();
+  const pushRegisterAttempted = useRef(false);
+
+  // Giriş yapmış kullanıcı için push token kaydı (bir kez dene). Toast handler layout'taki FirebasePushHandler'da global.
+  useEffect(() => {
+    if (!isAuthenticated || pushRegisterAttempted.current || !canRequestPush()) return;
+    pushRegisterAttempted.current = true;
+    getFCMTokenAndRegister((token, deviceName) => api.registerFCMToken(token, deviceName)).then((result) => {
+      if (result.ok) {
+        toast.success('Tarayıcı bildirimleri açıldı.');
+      } else if (result.reason !== 'Bildirim izni verilmedi') {
+        toast.error(`Bildirim kaydı: ${result.reason}`);
+      }
+    });
+  }, [isAuthenticated]);
 
   const { data: list, isLoading, error } = useQuery({
     queryKey: ['notifications'],
@@ -64,7 +84,7 @@ export default function BildirimlerPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <main className="container mx-auto px-4 py-8 max-w-2xl">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Bildirimler</h1>
           {unreadCount > 0 && (
             <button

@@ -336,6 +336,9 @@ class ApiService {
 
   markAllNotificationsAsRead = () => this.axiosInstance.post('/notifications/mark-all-read/');
 
+  sendTestPush = () =>
+    this.axiosInstance.post<{ sent: boolean; devices?: number; message: string }>('/notifications/send-test-push/');
+
   getNotificationSettings = () => this.axiosInstance.get('/notifications/settings/');
 
   updateNotificationSettings = (settingsData: Partial<Record<string, unknown>>) =>
