@@ -129,7 +129,7 @@ function QuestionsContent() {
                   viewMode={viewMode}
                   communitySlug={(q as { community_slug?: string })?.community_slug}
                   communityName={(q as { community_name?: string })?.community_name}
-                  priorityImage={index < 2}
+                  priorityImage={index < 4}
                 />
               ))}
             </div>

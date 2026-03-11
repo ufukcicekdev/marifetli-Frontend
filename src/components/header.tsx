@@ -114,10 +114,10 @@ export function Header() {
                 <Image
                   src={logoUrl}
                   alt="Marifetli"
-                  width={220}
+                  width={110}
                   height={44}
                   className="h-10 w-auto max-w-[180px] sm:h-11 sm:max-w-[220px] object-contain object-left"
-                  sizes="(max-width: 640px) 180px, 220px"
+                  sizes="(max-width: 640px) 90px, 110px"
                   priority
                 />
               ) : (
@@ -152,6 +152,7 @@ export function Header() {
                     onClick={clearSearchCommunity}
                     className="p-0.5 rounded hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
                     aria-label="Topluluk filtresini kaldır"
+                    title="Topluluk filtresini kaldır"
                   >
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                   </button>
@@ -189,6 +190,7 @@ export function Header() {
                     onClick={() => toast.error('Gönderi paylaşmak için önce e-posta adresinizi doğrulayın.')}
                     className="flex items-center gap-1 sm:gap-1.5 bg-orange-500 hover:bg-orange-600 text-white px-2 sm:px-3 py-1.5 rounded-full text-sm font-medium transition-colors shrink-0"
                     title="Gönderi Oluştur (e-posta doğrulama gerekli)"
+                    aria-label="Gönderi oluştur (e-posta doğrulama gerekli)"
                   >
                     <span className="text-base leading-none">+</span>
                     <span className="hidden sm:inline">Gönderi Oluştur</span>
@@ -214,6 +216,9 @@ export function Header() {
                     type="button"
                     onClick={() => setDropdownOpen((o) => !o)}
                     className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                    aria-label="Profil menüsünü aç"
+                    aria-haspopup="menu"
+                    aria-expanded={dropdownOpen}
                   >
                     <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-sm overflow-hidden shrink-0">
                       {user.profile_picture ? (
@@ -314,6 +319,9 @@ export function Header() {
                     type="button"
                     onClick={() => setDropdownOpen((o) => !o)}
                     className="flex items-center gap-1 px-1.5 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                    aria-label="Profil menüsünü aç"
+                    aria-haspopup="menu"
+                    aria-expanded={dropdownOpen}
                   >
                     <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-white font-bold text-sm overflow-hidden shrink-0">
                       {user.profile_picture ? (

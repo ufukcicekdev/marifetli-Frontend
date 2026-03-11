@@ -6,6 +6,15 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve(__dirname),
   },
+  // Uzun önbellek: static chunk'lar (Lighthouse – verimli önbellek)
+  async headers() {
+    return [
+      {
+        source: '/_next/static/:path*',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000, immutable' }],
+      },
+    ];
+  },
   // marifetli.com.tr → www.marifetli.com.tr (301 kalıcı yönlendirme)
   async redirects() {
     return [
