@@ -1,8 +1,7 @@
 /* eslint-disable no-restricted-globals */
 /**
  * Firebase Cloud Messaging - Service Worker
- * Bu dosya public/ içinde olmalı; tarayıcı /firebase-messaging-sw.js olarak isteyecek.
- * Config, frontend .env.local ile aynı projeye ait olmalı.
+ * Bu dosya .env.local'den generate edilir (npm run dev / npm run build öncesi).
  */
 importScripts('https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.11.1/firebase-messaging-compat.js');
