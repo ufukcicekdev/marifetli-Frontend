@@ -41,12 +41,18 @@ self.addEventListener('push', (event) => {
     
     const notificationTitle = payload.notification?.title || payload.data?.title || 'New Notification';
     const notificationBody = payload.notification?.body || payload.data?.body || 'You have a new notification';
-    
+    const iconType = payload.data?.icon_type || 'default';
+    const iconPath = iconType === 'default'
+      ? '/android-chrome-192x192.png'
+      : '/icons/notification-' + iconType + '.png';
+    const imageUrl = payload.notification?.image || payload.data?.image || null;
+
     const notificationOptions = {
       body: notificationBody,
-      icon: '/notification-icon.png',
+      icon: iconPath,
       badge: '/badge-icon.png',
-      tag: payload.data?.bookingId || 'default',
+      image: imageUrl || undefined,
+      tag: payload.data?.tag || payload.data?.type || 'default',
       data: payload.data || {},
       requireInteraction: true,
       vibrate: [200, 100, 200],
@@ -64,37 +70,35 @@ self.addEventListener('push', (event) => {
   }
 });
 
-// Handle notification click
+// Handle notification click — her zaman tam URL ile aç (PWA kapalı veya açık)
 self.addEventListener('notificationclick', (event) => {
   console.log('🖱️ Notification clicked:', event.action);
-  
+
   event.notification.close();
 
   if (event.action === 'close') {
     return;
   }
 
-  const dataUrl = event.notification.data?.url || '';
-  const fullUrl = dataUrl.startsWith('http') ? dataUrl : (self.location.origin + (dataUrl || '/bildirimler'));
-  const urlToOpen = dataUrl.startsWith('http') ? new URL(dataUrl).pathname + (new URL(dataUrl).hash || '') : (dataUrl || '/bildirimler');
-  
+  const dataUrl = (event.notification.data && event.notification.data.url) || '';
+  const fullUrl = dataUrl.startsWith('http')
+    ? dataUrl
+    : (self.location.origin + (dataUrl || '/bildirimler'));
+  const urlToOpen = fullUrl;
+
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true })
-      .then((clientList) => {
-        for (const client of clientList) {
-          if ('focus' in client) {
-            return client.focus().then(() => {
-              client.postMessage({
-                type: 'NAVIGATE',
-                url: urlToOpen
-              });
-            });
-          }
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Önce mevcut pencerede navigate dene (PWA açıksa aynı pencerede ilgili sayfaya git)
+      for (const client of clientList) {
+        if (typeof client.navigate === 'function') {
+          return client.navigate(urlToOpen).then(() => client.focus());
         }
-        if (clients.openWindow) {
-          return clients.openWindow(fullUrl);
-        }
-      })
+      }
+      // Pencere yoksa veya navigate yoksa yeni aç (PWA kapalıyken)
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+    })
   );
 });
 
