@@ -1,0 +1,49 @@
+{
+  "name": "Marifetli - El İşi & El Sanatları Topluluğu",
+  "short_name": "Marifetli",
+  "id": "/",
+  "icons": [
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Marifetli masaüstü"
+    },
+    {
+      "src": "/screenshot-narrow.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Marifetli mobil"
+    }
+  ],
+  "theme_color": "#3F51B5",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "start_url": "/",
+  "description": "Örgü, dikiş, nakış, takı tasarımı ve el sanatları tutkunlarının buluşma noktası.",
+  "protocol_handlers": [
+    {
+      "protocol": "web+marifetli",
+      "url": "/?url=%s"
+    }
+  ]
+}

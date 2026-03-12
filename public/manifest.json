@@ -9,6 +9,12 @@
     "window-controls-overlay",
     "standalone"
   ],
+  "protocol_handlers": [
+  {
+    "protocol": "web+marifetli",
+    "url": "/?url=%s"
+  }
+],
   "background_color": "#ffffff",
   "theme_color": "#ea580c",
   "orientation": "portrait-primary",

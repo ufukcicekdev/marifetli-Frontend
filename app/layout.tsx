@@ -70,7 +70,6 @@ export const metadata: Metadata = {
     description: 'Örgü, dikiş, nakış, takı tasarımı ve el sanatları tutkunlarının buluşma noktası.',
   },
   alternates: { canonical: SITE_URL },
-  manifest: '/manifest.json',
 };
 
 export default function RootLayout({
@@ -81,6 +80,8 @@ export default function RootLayout({
   return (
     <html lang="tr" suppressHydrationWarning>
       <head>
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.svg" type="image/svg+xml" />
         <link rel="preconnect" href={API_ORIGIN} crossOrigin="" />
         <link rel="dns-prefetch" href={API_ORIGIN} />
         {/* LCP / third-party: CDN (medya), GTM, GA - kritik yolu kısaltır */}
