@@ -9,9 +9,9 @@
     "last 2 Edge versions"
   ],
   "scripts": {
-    "predev": "node scripts/generate-firebase-sw.js",
+    "predev": "node scripts/generate-firebase-sw.js && node scripts/generate-manifest.js",
     "dev": "next dev",
-    "prebuild": "node scripts/generate-firebase-sw.js",
+    "prebuild": "node scripts/generate-firebase-sw.js && node scripts/generate-manifest.js",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
