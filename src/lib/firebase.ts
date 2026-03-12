@@ -11,13 +11,21 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
 };
 
-// Debug: Log config on load
+// .env.local sadece "next dev" / "next build" başlarken okunur. Değiştirdiysen sunucuyu yeniden başlat.
 if (typeof window !== 'undefined') {
+  const hasApiKey = Boolean(firebaseConfig.apiKey);
+  const hasProjectId = Boolean(firebaseConfig.projectId);
+  const hasVapid = Boolean(process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY);
   console.log('Firebase Config loaded:', {
-    apiKey: firebaseConfig.apiKey ? '✓ Set' : '✗ Missing',
-    projectId: firebaseConfig.projectId || '✗ Missing',
-    vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY ? '✓ Set' : '✗ Missing',
+    apiKey: hasApiKey ? '✓ Set' : '✗ Missing',
+    projectId: hasProjectId ? '✓ Set' : '✗ Missing',
+    vapidKey: hasVapid ? '✓ Set' : '✗ Missing',
   });
+  if (!hasApiKey || !hasProjectId || !hasVapid) {
+    console.warn(
+      '[Marifetli] .env.local okunmamış olabilir. NEXT_PUBLIC_FIREBASE_* değişkenlerini kontrol edin ve "npm run dev"i yeniden başlatın.'
+    );
+  }
 }
 
 // Initialize Firebase

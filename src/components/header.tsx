@@ -116,7 +116,8 @@ export function Header() {
                   alt="Marifetli"
                   width={110}
                   height={44}
-                  className="h-10 w-auto max-w-[180px] sm:h-11 sm:max-w-[220px] object-contain object-left"
+                  className="max-h-10 w-auto max-w-[180px] sm:max-h-11 sm:max-w-[220px] object-contain object-left"
+                  style={{ width: 'auto', height: 'auto' }}
                   sizes="(max-width: 640px) 90px, 110px"
                   priority
                 />

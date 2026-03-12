@@ -120,9 +120,6 @@ export default function BildirimlerPage() {
             )}
           </div>
         </div>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-          Telefonda push almak için &quot;Bildirimleri aç&quot;e dokunup izin verin. Her cihazda (telefon, bilgisayar) bir kez yapmanız yeterli.
-        </p>
 
         {isLoading ? (
           <div className="space-y-3">

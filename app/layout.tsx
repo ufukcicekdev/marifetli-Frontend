@@ -13,7 +13,6 @@ import { MainContentWrapper } from '@/src/components/main-content-wrapper';
 import { OnboardingGuard } from '@/src/components/onboarding-guard';
 import { SiteAnalytics } from '@/src/components/site-analytics';
 import { FirebasePushHandler } from '@/src/components/firebase-push-handler';
-import { PwaRegister } from '@/src/components/pwa-register';
 import { CookieConsentBanner } from '@/src/components/cookie-consent-banner';
 
 // Canlıda NEXT_PUBLIC_SITE_URL deploy ortamında tanımlı olsun; yoksa production URL fallback
@@ -96,7 +95,6 @@ export default function RootLayout({
         <ThemeProvider>
           <QueryProvider>
             <SiteAnalytics />
-            <PwaRegister />
             <FirebasePushHandler />
             <OnboardingGuard>
               <Suspense fallback={<header className="fixed top-0 left-0 right-0 z-40 h-[52px] bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800" />}>

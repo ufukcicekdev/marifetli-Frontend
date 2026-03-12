@@ -1,6 +1,21 @@
 import { app } from '@/src/lib/firebase';
 import { getMessaging, getToken, onMessage } from 'firebase/messaging';
 
+const FCM_401_MESSAGE =
+  "Google Cloud'da Web API anahtarı veya FCM API ayarı gerekli. API anahtarında HTTP referanslara localhost ekleyin, API kısıtlamalarına \"Firebase Cloud Messaging API\" ekleyin veya FCM API'yi etkinleştirin.";
+
+function normalizeFCMError(msg: string): string {
+  if (
+    msg.includes('401') ||
+    msg.includes('authentication credential') ||
+    msg.includes('token-subscribe-failed') ||
+    msg.includes('Unauthorized')
+  ) {
+    return FCM_401_MESSAGE;
+  }
+  return msg;
+}
+
 /**
  * Tarayıcıda FCM token alıp backend'e kaydetmek için.
  * firebase.ts ile tek app kullanılır; config SW'e oradan gönderilir.
@@ -29,7 +44,7 @@ export async function getFCMTokenAndRegister(
     return { ok: true, token };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    return { ok: false, reason: msg };
+    return { ok: false, reason: normalizeFCMError(msg) };
   }
 }
 
@@ -61,7 +76,7 @@ export async function getFCMTokenIfGranted(
     return { ok: true, token };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    return { ok: false, reason: msg };
+    return { ok: false, reason: normalizeFCMError(msg) };
   }
 }
 
