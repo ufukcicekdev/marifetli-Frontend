@@ -9,9 +9,9 @@
     "last 2 Edge versions"
   ],
   "scripts": {
-    "predev": "node scripts/generate-firebase-sw.js && node scripts/generate-manifest.js",
+    "predev": "node scripts/generate-firebase-sw.js && node scripts/resize-pwa-icons.js && node scripts/generate-manifest.js",
     "dev": "next dev",
-    "prebuild": "node scripts/generate-firebase-sw.js && node scripts/generate-manifest.js",
+    "prebuild": "node scripts/generate-firebase-sw.js && node scripts/resize-pwa-icons.js && node scripts/generate-manifest.js",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -49,6 +49,7 @@
     "eslint": "^8",
     "eslint-config-next": "14.2.15",
     "postcss": "^8",
+    "sharp": "^0.33.5",
     "tailwindcss": "^4.2.1",
     "typescript": "^5"
   }
