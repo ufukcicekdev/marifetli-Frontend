@@ -25,11 +25,12 @@ const manifest = {
     { src: '/screenshot-wide.png', sizes: '1376x768', type: 'image/png', form_factor: 'wide', label: 'Marifetli masaüstü' },
     { src: '/screenshot-narrow.png', sizes: '1376x768', type: 'image/png', form_factor: 'narrow', label: 'Marifetli mobil' },
   ],
-  // Sadece yüksek çözünürlüklü PNG; favicon.ico eklenmez (48px büyütülünce bulanık görünür).
+  // PNG (PWA) + SVG (ölçeklenebilir). Favicon: app/icon.png (Next.js) ve public/favicon-32x32.png.
   icons: [
     { src: '/android-chrome-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
     { src: '/android-chrome-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     { src: '/android-chrome-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+    { src: '/icon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
   ],
 };
 
