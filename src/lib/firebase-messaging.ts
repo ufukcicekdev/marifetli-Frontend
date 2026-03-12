@@ -1,6 +1,9 @@
+import { app } from '@/src/lib/firebase';
+import { getMessaging, getToken, onMessage } from 'firebase/messaging';
+
 /**
  * Tarayıcıda FCM token alıp backend'e kaydetmek için.
- * .env.local'de NEXT_PUBLIC_FIREBASE_* ve NEXT_PUBLIC_FIREBASE_VAPID_KEY gerekli.
+ * firebase.ts ile tek app kullanılır; config SW'e oradan gönderilir.
  */
 export async function getFCMTokenAndRegister(
   registerToken: (token: string, deviceName?: string) => Promise<unknown>,
@@ -19,17 +22,6 @@ export async function getFCMTokenAndRegister(
     if (typeof Notification !== 'undefined' && Notification.permission !== 'granted') {
       return { ok: false, reason: 'Bildirim izni verilmedi' };
     }
-    const { initializeApp, getApps, getApp } = await import('firebase/app');
-    const { getMessaging, getToken } = await import('firebase/messaging');
-
-    const app = getApps().length > 0
-      ? getApp()
-      : initializeApp({
-          apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
-          projectId,
-          appId,
-          messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
-        });
     const messaging = getMessaging(app);
     const token = await getToken(messaging, { vapidKey });
     if (!token) return { ok: false, reason: 'Token alınamadı' };
@@ -62,14 +54,6 @@ export async function getFCMTokenIfGranted(
   const appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID?.trim();
   if (!vapidKey || !projectId || !appId) return { ok: false, reason: 'Firebase config yok' };
   try {
-    const { getApps, getApp, initializeApp } = await import('firebase/app');
-    const { getMessaging, getToken } = await import('firebase/messaging');
-    const app = getApps().length > 0 ? getApp() : initializeApp({
-      apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
-      projectId,
-      appId,
-      messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
-    });
     const messaging = getMessaging(app);
     const token = await getToken(messaging, { vapidKey });
     if (!token) return { ok: false, reason: 'Token alınamadı' };
@@ -82,52 +66,32 @@ export async function getFCMTokenIfGranted(
 }
 
 /**
- * FCM foreground handler'ı her sayfada çalışsın diye Firebase app'i izin/token olmadan başlatır.
- * Token kaydı hâlâ Bildirimler sayfasında "Bildirimleri aç" ile yapılır.
+ * FCM foreground handler için app hazır mı? firebase.ts zaten app'i oluşturur.
  */
 export async function ensureFirebaseApp(): Promise<boolean> {
   if (typeof window === 'undefined' || !canRequestPush()) return false;
-  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim();
-  const appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID?.trim();
-  if (!projectId || !appId) return false;
-  try {
-    const { getApps, getApp, initializeApp } = await import('firebase/app');
-    if (getApps().length > 0) return true;
-    initializeApp({
-      apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
-      projectId,
-      appId,
-      messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
-    });
-    return true;
-  } catch {
-    return false;
-  }
+  return Boolean(app);
 }
 
 /**
  * Sekme açıkken gelen push'u göstermek için (ön planda FCM sistem bildirimi çıkmaz, toast kullanıyoruz).
+ * firebase.ts'teki app ile messaging kullanılır.
  */
 export function setupForegroundMessageHandler(
-  onMessage: (title: string, body: string) => void,
+  onMessageCb: (title: string, body: string) => void,
 ): () => void {
-  if (typeof window === 'undefined' || !canRequestPush()) return () => {};
+  if (typeof window === 'undefined' || !canRequestPush() || !app) return () => {};
   let cancelled = false;
-  (async () => {
-    try {
-      const { getApps, getApp } = await import('firebase/app');
-      const { getMessaging, onMessage: onMessageFn } = await import('firebase/messaging');
-      if (getApps().length === 0 || cancelled) return;
-      const messaging = getMessaging(getApp());
-      onMessageFn(messaging, (payload) => {
-        if (cancelled) return;
-        const title = payload.notification?.title ?? 'Marifetli';
-        const body = payload.notification?.body ?? '';
-        onMessage(title, body);
-      });
-    } catch {
-      // Firebase henüz başlatılmamış veya izin yok
-    }
-  })();
+  try {
+    const messaging = getMessaging(app);
+    onMessage(messaging, (payload) => {
+      if (cancelled) return;
+      const title = payload.notification?.title ?? 'Marifetli';
+      const body = payload.notification?.body ?? '';
+      onMessageCb(title, body);
+    });
+  } catch {
+    // Messaging henüz hazır olmayabilir
+  }
   return () => { cancelled = true; };
 }

@@ -1,31 +1,109 @@
-/* eslint-disable no-restricted-globals */
-/**
- * Firebase Cloud Messaging - Service Worker
- * Bu dosya .env.local'den generate edilir (npm run dev / npm run build öncesi).
- */
-importScripts('https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.11.1/firebase-messaging-compat.js');
+// Firebase Cloud Messaging Service Worker
+// This file is loaded from the public folder and runs in the browser
 
-firebase.initializeApp({
-  apiKey: 'AIzaSyDfmF6g2v7vhVZfj7Vx82UsWZkvu_ZvANE',
-  authDomain: 'marifetli-3d2d9.firebaseapp.com',
-  projectId: 'marifetli-3d2d9',
-  storageBucket: 'marifetli-3d2d9.firebasestorage.app',
-  messagingSenderId: '1031342814672',
-  appId: '1:1031342814672:web:146cae484b6b6a4ef075d5',
+importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js');
+
+// Firebase config will be set from the main app via postMessage
+let firebaseConfig = null;
+
+// Listen for config from main app
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'FIREBASE_CONFIG') {
+    firebaseConfig = event.data.config;
+    if (firebaseConfig && !firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+      console.log('✅ Firebase initialized in service worker');
+    }
+  }
 });
 
-const messaging = firebase.messaging();
+// Get messaging instance
+const getMessagingInstance = () => {
+  if (!firebase.apps.length && firebaseConfig) {
+    firebase.initializeApp(firebaseConfig);
+  }
+  return firebase.messaging();
+};
 
-messaging.onBackgroundMessage(function (payload) {
-  const title = payload.notification && payload.notification.title ? payload.notification.title : 'Marifetli';
-  const body = payload.notification && payload.notification.body ? payload.notification.body : '';
-  const options = {
-    body: body,
-    icon: (payload.notification && payload.notification.icon) ? payload.notification.icon : '/favicon.ico',
-    tag: 'marifetli-push',
-    renotify: true,
-    requireInteraction: false,
-  };
-  return self.registration.showNotification(title, options);
+// Handle background messages
+self.addEventListener('push', (event) => {
+  console.log('📨 Push event received');
+  
+  if (!event.data) {
+    console.log('No data in push event');
+    return;
+  }
+
+  try {
+    const payload = event.data.json();
+    console.log('Push payload:', payload);
+    
+    const notificationTitle = payload.notification?.title || payload.data?.title || 'New Notification';
+    const notificationBody = payload.notification?.body || payload.data?.body || 'You have a new notification';
+    
+    const notificationOptions = {
+      body: notificationBody,
+      icon: '/notification-icon.png',
+      badge: '/badge-icon.png',
+      tag: payload.data?.bookingId || 'default',
+      data: payload.data || {},
+      requireInteraction: true,
+      vibrate: [200, 100, 200],
+      actions: [
+        { action: 'view', title: 'Görüntüle' },
+        { action: 'close', title: 'Kapat' }
+      ]
+    };
+    
+    event.waitUntil(
+      self.registration.showNotification(notificationTitle, notificationOptions)
+    );
+  } catch (error) {
+    console.error('Error handling push:', error);
+  }
+});
+
+// Handle notification click
+self.addEventListener('notificationclick', (event) => {
+  console.log('🖱️ Notification clicked:', event.action);
+  
+  event.notification.close();
+
+  if (event.action === 'close') {
+    return;
+  }
+
+  const dataUrl = event.notification.data?.url || '';
+  const fullUrl = dataUrl.startsWith('http') ? dataUrl : (self.location.origin + (dataUrl || '/bildirimler'));
+  const urlToOpen = dataUrl.startsWith('http') ? new URL(dataUrl).pathname + (new URL(dataUrl).hash || '') : (dataUrl || '/bildirimler');
+  
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then((clientList) => {
+        for (const client of clientList) {
+          if ('focus' in client) {
+            return client.focus().then(() => {
+              client.postMessage({
+                type: 'NAVIGATE',
+                url: urlToOpen
+              });
+            });
+          }
+        }
+        if (clients.openWindow) {
+          return clients.openWindow(fullUrl);
+        }
+      })
+  );
+});
+
+self.addEventListener('install', (event) => {
+  console.log('🔧 Service Worker installing...');
+  self.skipWaiting();
+});
+
+self.addEventListener('activate', (event) => {
+  console.log('✅ Service Worker activated');
+  event.waitUntil(clients.claim());
 });
