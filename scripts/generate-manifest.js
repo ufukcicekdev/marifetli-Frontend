@@ -26,10 +26,10 @@ const manifest = {
     { src: '/screenshot-narrow.png', sizes: '1376x768', type: 'image/png', form_factor: 'narrow', label: 'Marifetli mobil' },
   ],
   icons: [
-    { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-    { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-    { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-    { src: '/favicon.ico', sizes: '256x256', type: 'image/x-icon', purpose: 'any' },
+    { src: '/android-chrome-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+    { src: '/android-chrome-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+    { src: '/android-chrome-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+    { src: '/favicon.ico', sizes: '48x48', type: 'image/x-icon', purpose: 'any' },
   ],
 };
 
