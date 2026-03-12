@@ -9,6 +9,7 @@ import { extractMediaFromHtml } from '@/src/lib/extract-media';
 import { MediaSlider } from './media-slider';
 import { OptimizedAvatar } from './optimized-avatar';
 import api from '@/src/lib/api';
+import { questionKeys } from '@/src/hooks/use-questions';
 
 const SaveModal = dynamic(() => import('./save-modal').then((m) => ({ default: m.SaveModal })), { ssr: false });
 import { ShareButton } from '@/src/components/share-button';
@@ -53,9 +54,12 @@ export function PostItem({ id, slug, title, content, category, author, authorAva
   const likeMutation = useMutation({
     mutationFn: () => api.likeQuestion(id),
     onMutate: () => setOptimisticVote('up'),
-    onSuccess: () => {
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: questionKeys.all }),
+        queryClient.refetchQueries({ queryKey: ['community'] }),
+      ]);
       setOptimisticVote(null);
-      queryClient.invalidateQueries({ queryKey: ['questions'] });
     },
     onError: () => {
       setOptimisticVote(null);
@@ -66,9 +70,12 @@ export function PostItem({ id, slug, title, content, category, author, authorAva
   const unlikeMutation = useMutation({
     mutationFn: () => api.unlikeQuestion(id),
     onMutate: () => setOptimisticVote('down'),
-    onSuccess: () => {
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.refetchQueries({ queryKey: questionKeys.all }),
+        queryClient.refetchQueries({ queryKey: ['community'] }),
+      ]);
       setOptimisticVote(null);
-      queryClient.invalidateQueries({ queryKey: ['questions'] });
     },
     onError: () => {
       setOptimisticVote(null);
