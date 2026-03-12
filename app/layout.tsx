@@ -14,6 +14,7 @@ import { OnboardingGuard } from '@/src/components/onboarding-guard';
 import { SiteAnalytics } from '@/src/components/site-analytics';
 import { FirebasePushHandler } from '@/src/components/firebase-push-handler';
 import { PwaRegister } from '@/src/components/pwa-register';
+import { CookieConsentBanner } from '@/src/components/cookie-consent-banner';
 
 // Canlıda NEXT_PUBLIC_SITE_URL deploy ortamında tanımlı olsun; yoksa production URL fallback
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.marifetli.com.tr';
@@ -112,6 +113,7 @@ export default function RootLayout({
           </QueryProvider>
         </ThemeProvider>
         <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
+        <CookieConsentBanner />
       </body>
     </html>
   );

@@ -38,7 +38,9 @@ export default function PrivacyPolicyPage() {
         <h2 className="font-semibold text-base mt-4">Çerezler ve izleme teknolojileri</h2>
         <p>
           Oturumunuzu sürdürmek, istatistik tutmak ve deneyimi kişiselleştirmek için çerezler ve benzeri teknolojiler
-          kullanabiliriz. Tarayıcınızın ayarlarından çerez tercihlerinizi yönetebilirsiniz.
+          kullanabiliriz. Siteye ilk girdiğinizde çerez tercihlerinizi (gerekli çerezler, analitik çerezler) seçmeniz
+          için bir bilgilendirme gösteriyoruz; tercihleriniz cihazınızda saklanır ve tarayıcı ayarlarınızdan da
+          çerezleri yönetebilirsiniz.
         </p>
 
         <h2 className="font-semibold text-base mt-4">Verilerin paylaşımı</h2>

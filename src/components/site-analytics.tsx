@@ -2,14 +2,23 @@
 
 import Script from 'next/script';
 import { useQuery } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import api from '@/src/lib/api';
+import { hasAnalyticsConsent } from '@/src/lib/cookie-consent';
 
 /**
  * Admin panelden ayarlanan Google Analytics (GA4) ve Google Search Console
- * doğrulama meta etiketini sayfaya ekler.
+ * doğrulama meta etiketini sayfaya ekler. GA yalnızca çerez onayında analitiğe izin verildiyse yüklenir.
  */
 export function SiteAnalytics() {
+  const [analyticsOk, setAnalyticsOk] = useState(false);
+  useEffect(() => {
+    setAnalyticsOk(hasAnalyticsConsent());
+    const onUpdate = () => setAnalyticsOk(hasAnalyticsConsent());
+    window.addEventListener('cookie-consent-update', onUpdate);
+    return () => window.removeEventListener('cookie-consent-update', onUpdate);
+  }, []);
+
   const { data: settings } = useQuery({
     queryKey: ['site-settings'],
     queryFn: async () => {
@@ -49,6 +58,7 @@ export function SiteAnalytics() {
   }, [gscMeta]);
 
   if (!gaId) return null;
+  if (!analyticsOk) return null;
 
   return (
     <>
