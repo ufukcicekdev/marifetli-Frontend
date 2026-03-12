@@ -19,24 +19,13 @@ export default function BildirimlerPage() {
   const { isAuthenticated } = useAuthStore();
   const pushRegisterAttempted = useRef(false);
 
-  const registerPushMutation = useMutation({
-    mutationFn: async () => {
-      const result = await getFCMTokenAndRegister((token, deviceName) => api.registerFCMToken(token, deviceName));
-      if (!result.ok) throw new Error(result.reason);
-      return result;
-    },
-    onSuccess: () => toast.success('Cihaz kaydedildi. Beğeni, cevap vb. bildirimler artık bu cihaza push olarak gelecek.'),
-    onError: (e: Error) => toast.error(e.message || 'Kayıt başarısız.'),
-  });
-
-  // Sayfa ilk açıldığında izin verilmişse token kaydını dene (sessiz).
+  // Sayfa açıldığında izin verilmişse token kaydını sessizce dene; toast gösterme (her girişte tekrarlanmasın).
   useEffect(() => {
     if (!isAuthenticated || pushRegisterAttempted.current || !canRequestPush()) return;
     if (typeof Notification !== 'undefined' && Notification.permission !== 'granted') return;
     pushRegisterAttempted.current = true;
     getFCMTokenAndRegister((token, deviceName) => api.registerFCMToken(token, deviceName)).then((result) => {
-      if (result.ok) toast.success('Tarayıcı bildirimleri açıldı.');
-      else if (result.reason !== 'Bildirim izni verilmedi') toast.error(`Bildirim kaydı: ${result.reason}`);
+      if (!result.ok && result.reason !== 'Bildirim izni verilmedi') toast.error(`Bildirim kaydı: ${result.reason}`);
     });
   }, [isAuthenticated]);
 
@@ -95,20 +84,6 @@ export default function BildirimlerPage() {
         <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Bildirimler</h1>
           <div className="flex flex-wrap items-center gap-2">
-            {canRequestPush() ? (
-              <button
-                type="button"
-                onClick={() => registerPushMutation.mutate()}
-                disabled={registerPushMutation.isPending}
-                className="text-sm px-3 py-1.5 rounded-lg bg-orange-500 text-white hover:bg-orange-600 disabled:opacity-70"
-              >
-                {registerPushMutation.isPending ? 'Kaydediliyor…' : 'Bildirimleri aç'}
-              </button>
-            ) : (
-              <span className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded" title="Vercel/Railway vb. ortam değişkenlerine NEXT_PUBLIC_FIREBASE_PROJECT_ID ve NEXT_PUBLIC_FIREBASE_VAPID_KEY ekleyip yeniden deploy edin.">
-                Push bildirimleri bu ortamda yapılandırılmadı.
-              </span>
-            )}
             {unreadCount > 0 && (
               <button
                 onClick={() => markAllReadMutation.mutate()}
