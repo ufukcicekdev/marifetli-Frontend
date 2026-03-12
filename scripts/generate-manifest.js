@@ -30,7 +30,13 @@ function loadEnv(file) {
 
 const envLocal = loadEnv('.env.local');
 const envProd = loadEnv('.env.production');
-const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || envProd.NEXT_PUBLIC_SITE_URL || envLocal.NEXT_PUBLIC_SITE_URL || 'https://www.marifetli.com.tr').replace(/\/$/, '');
+const isProduction = process.env.NODE_ENV === 'production';
+// Production build'de (Vercel vb.) her zaman canlı URL; localhost sadece dev'de.
+const siteUrl = (
+  isProduction
+    ? (process.env.NEXT_PUBLIC_SITE_URL || envProd.NEXT_PUBLIC_SITE_URL || 'https://www.marifetli.com.tr')
+    : (envLocal.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_SITE_URL || envProd.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000')
+).replace(/\/$/, '');
 
 const manifest = {
   id: `${siteUrl}/`,
@@ -53,7 +59,7 @@ const manifest = {
     { src: `${siteUrl}/icon-192.png`, sizes: '192x192', type: 'image/png', purpose: 'any' },
     { src: `${siteUrl}/icon-512.png`, sizes: '512x512', type: 'image/png', purpose: 'any' },
     { src: `${siteUrl}/icon-512.png`, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
-    { src: `${siteUrl}/favicon.ico`, sizes: '48x48', type: 'image/x-icon', purpose: 'any' },
+    { src: `${siteUrl}/favicon.ico`, sizes: '256x256', type: 'image/x-icon', purpose: 'any' },
   ],
 };
 
