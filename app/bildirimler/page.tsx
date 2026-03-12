@@ -105,7 +105,7 @@ export default function BildirimlerPage() {
                 {registerPushMutation.isPending ? 'Kaydediliyor…' : 'Bildirimleri aç'}
               </button>
             ) : (
-              <span className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded">
+              <span className="text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-1 rounded" title="Vercel/Railway vb. ortam değişkenlerine NEXT_PUBLIC_FIREBASE_PROJECT_ID ve NEXT_PUBLIC_FIREBASE_VAPID_KEY ekleyip yeniden deploy edin.">
                 Push bildirimleri bu ortamda yapılandırılmadı.
               </span>
             )}
