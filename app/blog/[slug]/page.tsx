@@ -13,6 +13,7 @@ import { OptimizedAvatar } from '@/src/components/optimized-avatar';
 import dynamic from 'next/dynamic';
 import { ShareButton } from '@/src/components/share-button';
 import { useAuthStore } from '@/src/stores/auth-store';
+import { BlogSidebar } from '@/src/components/blog-sidebar';
 
 const SaveModal = dynamic(() => import('@/src/components/save-modal').then((m) => ({ default: m.SaveModal })), { ssr: false });
 import { formatTimeAgo } from '@/src/lib/format-time';
@@ -134,13 +135,16 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-        <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-10 max-w-4xl">
-          <div className="animate-pulse bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
-            <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-4" />
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full mb-2" />
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3" />
-          </div>
-        </main>
+        <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-10 flex flex-col lg:flex-row gap-8 max-w-6xl">
+          <main className="min-w-0 flex-1 max-w-4xl">
+            <div className="animate-pulse bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
+              <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-4" />
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-full mb-2" />
+              <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3" />
+            </div>
+          </main>
+          <BlogSidebar />
+        </div>
       </div>
     );
   }
@@ -148,14 +152,17 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
   if (error || !post) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-        <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-10 max-w-4xl">
-          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-8 text-center">
-            <p className="text-gray-500 dark:text-gray-400">Yazı bulunamadı</p>
-            <Link href="/blog" className="mt-4 inline-block text-orange-500 hover:text-orange-600">
-              Bloga dön →
-            </Link>
-          </div>
-        </main>
+        <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-10 flex flex-col lg:flex-row gap-8 max-w-6xl">
+          <main className="min-w-0 flex-1 max-w-4xl">
+            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-8 text-center">
+              <p className="text-gray-500 dark:text-gray-400">Yazı bulunamadı</p>
+              <Link href="/blog" className="mt-4 inline-block text-orange-500 hover:text-orange-600">
+                Bloga dön →
+              </Link>
+            </div>
+          </main>
+          <BlogSidebar />
+        </div>
       </div>
     );
   }
@@ -168,14 +175,15 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-10 max-w-4xl">
-        <div className="mb-4">
-          <Link href="/blog" className="text-sm text-orange-500 hover:text-orange-600 dark:text-orange-400">
-            ← Bloga dön
-          </Link>
-        </div>
+      <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-10 flex flex-col lg:flex-row gap-8 max-w-6xl">
+        <main className="min-w-0 flex-1 max-w-4xl">
+          <div className="mb-4">
+            <Link href="/blog" className="text-sm text-orange-500 hover:text-orange-600 dark:text-orange-400">
+              ← Bloga dön
+            </Link>
+          </div>
 
-        <article className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden mb-8 min-w-0">
+          <article className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden mb-8 min-w-0">
           {post.featured_image && (
             <div className="relative w-full aspect-video bg-gray-100 dark:bg-gray-800 shrink-0">
               <Image
@@ -331,7 +339,10 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
             </div>
           )}
         </article>
-      </main>
+        </main>
+
+        <BlogSidebar />
+      </div>
     </div>
   );
 }

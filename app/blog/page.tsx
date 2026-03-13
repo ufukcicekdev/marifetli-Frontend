@@ -9,6 +9,8 @@ import api, { type BlogPostListItem } from '@/src/lib/api';
 import { OptimizedAvatar } from '@/src/components/optimized-avatar';
 import { useAuthStore } from '@/src/stores/auth-store';
 import { formatTimeAgo } from '@/src/lib/format-time';
+import { BlogHero } from '@/src/components/blog-hero';
+import { BlogSidebar } from '@/src/components/blog-sidebar';
 
 const SaveModal = dynamic(() => import('@/src/components/save-modal').then((m) => ({ default: m.SaveModal })), { ssr: false });
 
@@ -41,54 +43,15 @@ export default function BlogPage() {
     },
   });
 
-  const { data: popularData } = useQuery({
-    queryKey: ['blog-popular'],
-    queryFn: async () => {
-      const res = await api.getBlogPopularPosts();
-      const list = Array.isArray(res.data) ? res.data : (res.data as { results?: BlogPostListItem[] })?.results ?? [];
-      return list;
-    },
-  });
-
   const posts = data?.results ?? [];
-  const popularPosts = popularData ?? [];
+  const featuredPost = posts.length > 0 ? posts[0] : null;
+  const restPosts = featuredPost ? posts.slice(1) : posts;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-10 flex flex-col lg:flex-row gap-8 max-w-6xl">
         <main className="min-w-0 flex-1 max-w-4xl">
-        <header className="mb-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">Blog</h1>
-              <p className="mt-2 text-gray-600 dark:text-gray-400">
-                Marifetli ekibinden makaleler ve güncellemeler.
-              </p>
-            </div>
-            {!isLoading && posts.length > 0 && (
-              <div className="flex items-center border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden shrink-0">
-                <button
-                  onClick={() => setViewMode('card')}
-                  title="Kart görünümü"
-                  className={`p-1.5 ${viewMode === 'card' ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
-                >
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-                  </svg>
-                </button>
-                <button
-                  onClick={() => setViewMode('compact')}
-                  title="Kompakt görünüm"
-                  className={`p-1.5 ${viewMode === 'compact' ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
-                >
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path d="M2 6a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H3a1 1 0 01-1-1V6zM2 12a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H3a1 1 0 01-1-1v-2z" />
-                  </svg>
-                </button>
-              </div>
-            )}
-          </div>
-        </header>
+          <BlogHero />
 
         {isLoading && (
           <div className="space-y-6">
@@ -114,9 +77,97 @@ export default function BlogPage() {
           </div>
         )}
 
-        {!isLoading && posts.length > 0 && (
-          <ul className={viewMode === 'compact' ? 'space-y-1' : 'space-y-6'}>
-            {posts.map((post) => {
+        {!isLoading && featuredPost && (
+          <article className="mb-8">
+            <Link
+              href={`/blog/${featuredPost.slug}`}
+              className="block bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden hover:border-orange-300 dark:hover:border-orange-700 transition-colors shadow-sm hover:shadow-md"
+            >
+              {featuredPost.featured_image ? (
+                <div className="relative w-full aspect-[21/9] sm:aspect-video bg-gray-100 dark:bg-gray-800">
+                  <Image
+                    src={featuredPost.featured_image}
+                    alt=""
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 896px"
+                    priority
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                  <span className="absolute bottom-3 left-4 text-xs font-medium uppercase tracking-wider text-white/90">
+                    Öne çıkan
+                  </span>
+                </div>
+              ) : (
+                <div className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-gray-800 dark:to-gray-800/80 px-5 py-3 border-b border-gray-200 dark:border-gray-700">
+                  <span className="text-xs font-medium uppercase tracking-wider text-orange-600 dark:text-orange-400">Öne çıkan</span>
+                </div>
+              )}
+              <div className="p-5 sm:p-6">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2 line-clamp-2">
+                  {featuredPost.title}
+                </h2>
+                {featuredPost.excerpt && (
+                  <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base mb-4 line-clamp-2">
+                    {featuredPost.excerpt}
+                  </p>
+                )}
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
+                  {(featuredPost.author as { username?: string; profile_picture?: string })?.profile_picture ? (
+                    <OptimizedAvatar src={(featuredPost.author as { profile_picture?: string }).profile_picture} size={24} alt="" className="w-6 h-6 shrink-0" />
+                  ) : (
+                    <span className="w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center text-xs font-medium text-orange-600 dark:text-orange-400 shrink-0">
+                      {(featuredPost.author as { username?: string })?.username?.charAt(0)?.toUpperCase() ?? '?'}
+                    </span>
+                  )}
+                  <span>{(featuredPost.author as { username?: string })?.username ?? 'Marifetli'}</span>
+                  <span>·</span>
+                  <time dateTime={featuredPost.published_at ?? featuredPost.created_at}>
+                    {featuredPost.published_at ? formatDate(featuredPost.published_at) : formatTimeAgo(featuredPost.created_at)}
+                  </time>
+                  <span>·</span>
+                  <span>{featuredPost.like_count} beğeni · {featuredPost.comment_count} yorum</span>
+                </div>
+                <span className="inline-flex items-center gap-1 mt-4 text-orange-600 dark:text-orange-400 font-medium text-sm">
+                  Yazıyı oku
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
+                </span>
+              </div>
+            </Link>
+          </article>
+        )}
+
+        {!isLoading && restPosts.length > 0 && (
+          <>
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                Son yazılar
+              </h2>
+              <div className="flex items-center border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('card')}
+                  title="Kart görünümü"
+                  className={`p-1.5 ${viewMode === 'card' ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('compact')}
+                  title="Kompakt görünüm"
+                  className={`p-1.5 ${viewMode === 'compact' ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100' : 'text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'}`}
+                >
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M2 6a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H3a1 1 0 01-1-1V6zM2 12a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H3a1 1 0 01-1-1v-2z" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <ul className={viewMode === 'compact' ? 'space-y-1' : 'space-y-6'} key={viewMode}>
+            {restPosts.map((post) => {
               const author = post.author as { username?: string; profile_picture?: string };
               if (viewMode === 'compact') {
                 return (
@@ -247,46 +298,12 @@ export default function BlogPage() {
               );
             })}
           </ul>
+          </>
         )}
 
         </main>
 
-        {popularPosts.length > 0 && (
-          <aside className="w-full lg:w-72 shrink-0">
-            <div className="lg:sticky lg:top-24">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">En çok okunanlar</h2>
-              <ul className="space-y-4">
-                {popularPosts.map((post, index) => {
-                  const author = post.author as { username?: string };
-                  return (
-                    <li key={post.id}>
-                      <Link
-                        href={`/blog/${post.slug}`}
-                        className="flex gap-3 rounded-lg p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:border-orange-300 dark:hover:border-orange-700 transition-colors min-w-0"
-                      >
-                        <span className="flex items-center justify-center w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400 text-sm font-bold shrink-0">
-                          {index + 1}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <h3 className="font-medium text-gray-900 dark:text-gray-100 line-clamp-2 text-sm">
-                            {post.title}
-                          </h3>
-                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                            {post.view_count} görüntülenme
-                            {author?.username && ` · ${author.username}`}
-                          </p>
-                        </div>
-                        <svg className="w-4 h-4 text-gray-400 dark:text-gray-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          </aside>
-        )}
+        <BlogSidebar />
       </div>
       {saveModalPostId != null && (
         <SaveModal

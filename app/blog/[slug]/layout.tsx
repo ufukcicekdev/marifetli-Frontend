@@ -10,20 +10,50 @@ function toAbsoluteImageUrl(url: string | null | undefined): string | undefined 
   return url.startsWith('/') ? `${origin}${url}` : `${origin}/${url}`;
 }
 
-async function getBlogPost(slug: string) {
+type BlogPostMeta = {
+  title: string;
+  excerpt?: string;
+  meta_title?: string;
+  meta_description?: string;
+  featured_image?: string | null;
+  published_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  author?: { username?: string };
+};
+
+async function getBlogPost(slug: string): Promise<BlogPostMeta | null> {
   try {
     const res = await fetch(`${API_BASE}/blog/${slug}/`, { next: { revalidate: 60 } });
     if (!res.ok) return null;
-    return res.json() as Promise<{
-      title: string;
-      excerpt?: string;
-      meta_title?: string;
-      meta_description?: string;
-      featured_image?: string | null;
-    }>;
+    return res.json();
   } catch {
     return null;
   }
+}
+
+function buildArticleSchema(post: BlogPostMeta, slug: string) {
+  const url = `${SITE_URL}/blog/${slug}`;
+  const imageUrl = toAbsoluteImageUrl(post.featured_image);
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: post.meta_title || post.title,
+    description: (post.meta_description || post.excerpt || post.title).slice(0, 160),
+    url,
+    ...(imageUrl && { image: imageUrl }),
+    datePublished: post.published_at || post.created_at,
+    dateModified: post.updated_at || post.published_at || post.created_at,
+    author: {
+      '@type': 'Person',
+      name: (post.author as { username?: string })?.username || 'Marifetli',
+    },
+    publisher: {
+      '@type': 'Organization',
+      '@id': `${SITE_URL}/#organization`,
+      name: 'Marifetli',
+    },
+  };
 }
 
 type Props = { params: Promise<{ slug: string }>; children: React.ReactNode };
@@ -61,6 +91,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default function BlogSlugLayout({ children }: Props) {
-  return children;
+export default async function BlogSlugLayout({ children, params }: Props) {
+  const { slug } = await params;
+  const post = await getBlogPost(slug);
+  const articleSchema = post ? buildArticleSchema(post, slug) : null;
+  return (
+    <>
+      {articleSchema && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
+        />
+      )}
+      {children}
+    </>
+  );
 }

@@ -6,11 +6,24 @@
 :root {
   --background: #f3f4f6;
   --foreground: #171717;
+  /* Blog hero - aynı class ile hydration uyumu */
+  --blog-hero-from: rgb(255 247 237 / 0.9);
+  --blog-hero-via: rgb(255 251 235 / 0.8);
+  --blog-hero-to: #ffffff;
+  --blog-hero-border: rgb(255 237 213 / 0.6);
+  --blog-hero-title: #171717;
+  --blog-hero-text: #4b5563;
 }
 
 .dark {
   --background: #111827;
   --foreground: #f3f4f6;
+  --blog-hero-from: #111827;
+  --blog-hero-via: #1f2937;
+  --blog-hero-to: #111827;
+  --blog-hero-border: #374151;
+  --blog-hero-title: #ffffff;
+  --blog-hero-text: #e5e7eb;
 }
 
 @theme inline {
@@ -23,6 +36,18 @@
 /* Logo metni için modern font (Outfit, layout'ta --font-logo ile yüklenir) */
 .font-logo {
   font-family: var(--font-logo), system-ui, sans-serif;
+}
+
+/* Blog hero: tema CSS değişkenleriyle, dark: sınıfı yok → hydration uyumu */
+.blog-hero {
+  background: linear-gradient(to bottom right, var(--blog-hero-from), var(--blog-hero-via), var(--blog-hero-to));
+  border-color: var(--blog-hero-border);
+}
+.blog-hero-title {
+  color: var(--blog-hero-title);
+}
+.blog-hero-text {
+  color: var(--blog-hero-text);
 }
 
 html {
