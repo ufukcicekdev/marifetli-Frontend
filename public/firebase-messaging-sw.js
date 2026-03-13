@@ -42,6 +42,7 @@ self.addEventListener('push', (event) => {
     const notificationTitle = payload.notification?.title || payload.data?.title || 'New Notification';
     const notificationBody = payload.notification?.body || payload.data?.body || 'You have a new notification';
     const iconType = payload.data?.icon_type || 'default';
+    // İkonlar public/icons/ altında: notification-like.png, notification-comment.png vb.
     const iconPath = iconType === 'default'
       ? '/android-chrome-192x192.png'
       : '/icons/notification-' + iconType + '.png';
@@ -50,7 +51,7 @@ self.addEventListener('push', (event) => {
     const notificationOptions = {
       body: notificationBody,
       icon: iconPath,
-      badge: '/badge-icon.png',
+      badge: '/icons/badge-icon.png',
       image: imageUrl || undefined,
       tag: payload.data?.tag || payload.data?.type || 'default',
       data: payload.data || {},
