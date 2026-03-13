@@ -18,6 +18,8 @@ const nextConfig: NextConfig = {
   // marifetli.com.tr → www.marifetli.com.tr (301 kalıcı yönlendirme)
   async redirects() {
     return [
+      // Eski SW veya tarayıcı /badge-icon.png isterse /icons/badge-icon.png'e yönlendir (404 önleme)
+      { source: '/badge-icon.png', destination: '/icons/badge-icon.png', permanent: false },
       {
         source: '/:path*',
         has: [{ type: 'host', value: 'marifetli.com.tr' }],
