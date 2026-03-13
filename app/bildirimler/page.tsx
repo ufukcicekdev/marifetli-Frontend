@@ -19,10 +19,11 @@ export default function BildirimlerPage() {
   const { isAuthenticated } = useAuthStore();
   const pushRegisterAttempted = useRef(false);
 
-  // Sayfa açıldığında izin verilmişse token kaydını sessizce dene; toast gösterme (her girişte tekrarlanmasın).
+  // Sayfa açıldığında: izin henüz sorulmadıysa (default) tarayıcı izin penceresini aç, verildiyse token kaydet.
+  // Sadece "denied" ise hiçbir şey yapma.
   useEffect(() => {
     if (!isAuthenticated || pushRegisterAttempted.current || !canRequestPush()) return;
-    if (typeof Notification !== 'undefined' && Notification.permission !== 'granted') return;
+    if (typeof Notification !== 'undefined' && Notification.permission === 'denied') return;
     pushRegisterAttempted.current = true;
     getFCMTokenAndRegister((token, deviceName) => api.registerFCMToken(token, deviceName)).then((result) => {
       if (!result.ok && result.reason !== 'Bildirim izni verilmedi') toast.error(`Bildirim kaydı: ${result.reason}`);
