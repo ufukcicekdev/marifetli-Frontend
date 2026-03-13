@@ -20,6 +20,11 @@
   --font-mono: var(--font-geist-mono);
 }
 
+/* Logo metni için modern font (Outfit, layout'ta --font-logo ile yüklenir) */
+.font-logo {
+  font-family: var(--font-logo), system-ui, sans-serif;
+}
+
 html {
   overflow-x: hidden;
 }

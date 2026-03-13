@@ -1,7 +1,6 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
@@ -55,12 +54,6 @@ export function Header() {
   });
   const unreadCount = unreadData?.unread_count ?? 0;
 
-  const { data: siteSettings } = useQuery({
-    queryKey: ['site-settings'],
-    queryFn: () => api.getSiteSettings().then((r) => r.data),
-  });
-  const logoUrl = siteSettings?.logo_url ?? null;
-
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       const target = e.target as Node;
@@ -110,22 +103,9 @@ export function Header() {
               </svg>
             </button>
             <Link href="/" className="flex items-center gap-2 min-w-0 shrink-0">
-              {logoUrl ? (
-                <Image
-                  src={logoUrl}
-                  alt="Marifetli"
-                  width={110}
-                  height={44}
-                  className="max-h-10 w-auto max-w-[180px] sm:max-h-11 sm:max-w-[220px] object-contain object-left"
-                  style={{ width: 'auto', height: 'auto' }}
-                  sizes="(max-width: 640px) 90px, 110px"
-                  priority
-                />
-              ) : (
-                <span className="text-lg sm:text-xl font-bold text-orange-500 hover:text-orange-600 truncate">
-                  Marifetli
-                </span>
-              )}
+              <span className="font-logo text-xl sm:text-2xl font-semibold text-gray-900 dark:text-gray-100 hover:text-orange-500 dark:hover:text-orange-400 transition-colors tracking-tight truncate">
+                Marifetli
+              </span>
             </Link>
           </div>
 

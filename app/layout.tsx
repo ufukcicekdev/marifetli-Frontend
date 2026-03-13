@@ -1,7 +1,7 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import { Suspense } from 'react';
-import { Inter } from 'next/font/google';
+import { Inter, Outfit } from 'next/font/google';
 import { Toaster } from 'react-hot-toast';
 import { QueryProvider } from '@/src/providers/query-provider';
 import { ThemeProvider } from '@/src/components/theme-provider';
@@ -59,6 +59,12 @@ const inter = Inter({
   display: 'optional',
   adjustFontFallback: true,
   preload: true,
+});
+
+const outfit = Outfit({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-logo',
 });
 
 export const viewport: Viewport = {
@@ -124,7 +130,7 @@ export default function RootLayout({
         <link rel="preconnect" href="https://cekfisi.fra1.digitaloceanspaces.com" crossOrigin="" />
         <link rel="dns-prefetch" href="https://cekfisi.fra1.digitaloceanspaces.com" />
       </head>
-      <body className={inter.className}>
+      <body className={`${inter.className} ${outfit.variable}`}>
         <ThemeProvider>
           <QueryProvider>
             <SiteAnalytics />
