@@ -2,11 +2,15 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useSidebarStore } from '../stores/sidebar-store';
 import { useAuthStore } from '../stores/auth-store';
 import { useAuthModalStore } from '../stores/auth-modal-store';
 import { ThemeToggle } from './theme-toggle';
+import api from '../lib/api';
+
+type CategoryItem = { id: number; name: string; slug: string; subcategories?: CategoryItem[] };
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -14,6 +18,28 @@ export function AppSidebar() {
   const toggle = useSidebarStore((s) => s.toggle);
   const { isAuthenticated } = useAuthStore();
   const openAuth = useAuthModalStore((s) => s.open);
+
+  const { data: categoriesData, isLoading: categoriesLoading } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => api.getCategories().then((r) => r.data),
+  });
+
+  const categories = useMemo(() => {
+    const raw = categoriesData as { results?: CategoryItem[] } | CategoryItem[] | undefined;
+    const list = Array.isArray(raw)
+      ? raw
+      : (raw && typeof raw === 'object' && Array.isArray((raw as { results?: CategoryItem[] }).results)
+          ? (raw as { results: CategoryItem[] }).results
+          : []);
+    const flat: { href: string; label: string }[] = [];
+    for (const c of list as CategoryItem[]) {
+      flat.push({ href: `/t/${c.slug}`, label: c.name });
+      for (const sub of c.subcategories || []) {
+        flat.push({ href: `/t/${sub.slug}`, label: sub.name });
+      }
+    }
+    return flat;
+  }, [categoriesData]);
 
   useEffect(() => {
     const closeOnMobile = () => {
@@ -31,15 +57,6 @@ export function AppSidebar() {
     { href: '/t/populer', label: 'Popüler', icon: '🔥' },
     { href: '/t/tum', label: 'Tümü', icon: '📋' },
     { href: '/iletisim', label: 'İletişim', icon: '✉️' },
-  ];
-
-  const communities = [
-    { href: '/t/orgu', label: 'Örgü' },
-    { href: '/t/dikis', label: 'Dikiş' },
-    { href: '/t/nakis', label: 'Nakış' },
-    { href: '/t/taki-tasarim', label: 'Takı Tasarımı' },
-    { href: '/t/el-sanatlari', label: 'El Sanatları' },
-    { href: '/t/dekorasyon', label: 'Dekorasyon' },
   ];
 
   return (
@@ -137,7 +154,7 @@ export function AppSidebar() {
           <>
             <div className="mt-6">
               <h3 className="px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                Topluluklar
+                Kategoriler
               </h3>
               <Link
                 href="/topluluklar"
@@ -146,16 +163,29 @@ export function AppSidebar() {
                 🔍 Tümünü keşfet
               </Link>
               <ul className="space-y-1">
-                {communities.map((c) => (
-                  <li key={c.href}>
-                    <Link
-                      href={c.href}
-                      className="block px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-orange-500"
-                    >
-                      {c.label}
-                    </Link>
-                  </li>
-                ))}
+                {categoriesLoading && categories.length === 0 && (
+                  <li className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">Yükleniyor…</li>
+                )}
+                {!categoriesLoading && categories.length === 0 && (
+                  <li className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">Kategori yok</li>
+                )}
+                {categories.map((c) => {
+                  const active = pathname === c.href || pathname?.startsWith(c.href + '/');
+                  return (
+                    <li key={c.href}>
+                      <Link
+                        href={c.href}
+                        className={`block px-3 py-2 rounded-lg text-sm transition-colors ${
+                          active
+                            ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400'
+                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-orange-500'
+                        }`}
+                      >
+                        {c.label}
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
 

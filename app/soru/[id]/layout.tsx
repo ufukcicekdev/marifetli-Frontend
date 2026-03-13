@@ -16,22 +16,58 @@ function firstImageFromHtml(html: string | null | undefined): string | undefined
   return m?.[1]?.trim();
 }
 
-async function getQuestion(slugOrId: string) {
+type QuestionForMeta = {
+  title: string;
+  description?: string;
+  content?: string;
+  meta_title?: string;
+  meta_description?: string;
+  created_at?: string;
+  answers?: Array<{ content?: string; author?: { username?: string; first_name?: string }; moderation_status?: number }>;
+  author?: { username?: string; first_name?: string };
+};
+
+async function getQuestion(slugOrId: string): Promise<QuestionForMeta | null> {
   try {
     const res = await fetch(`${API_BASE}/questions/${encodeURIComponent(slugOrId)}/`, {
       next: { revalidate: 60 },
     });
     if (!res.ok) return null;
-    return res.json() as Promise<{
-      title: string;
-      description?: string;
-      content?: string;
-      meta_title?: string;
-      meta_description?: string;
-    }>;
+    return res.json();
   } catch {
     return null;
   }
+}
+
+function stripHtmlForSchema(html: string | null | undefined): string {
+  if (!html || typeof html !== 'string') return '';
+  return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 500);
+}
+
+function buildQAPageStructuredData(question: QuestionForMeta, id: string) {
+  const text = stripHtmlForSchema(question.content || question.description || '');
+  const authorName =
+    question.author?.username || question.author?.first_name || 'Marifetli topluluk üyesi';
+  const answers = (question.answers || []).filter((a) => a?.moderation_status !== 2); // reddedilenleri atla
+  const suggestedAnswer = answers.slice(0, 8).map((a) => ({
+    '@type': 'Answer',
+    text: stripHtmlForSchema(a.content),
+    author: { '@type': 'Person', name: a.author?.username || a.author?.first_name || 'Anonim' },
+  }));
+
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'QAPage',
+    mainEntity: {
+      '@type': 'Question',
+      name: question.title,
+      text: text || question.title,
+      author: { '@type': 'Person', name: authorName },
+      ...(question.created_at && { dateCreated: question.created_at }),
+      answerCount: answers.length,
+      ...(suggestedAnswer.length > 0 && { suggestedAnswer }),
+    },
+  };
 }
 
 type Props = { params: Promise<{ id: string }>; children: React.ReactNode };
@@ -69,6 +105,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default function SoruIdLayout({ children }: Props) {
-  return children;
+export default async function SoruIdLayout({ children, params }: Props) {
+  const { id } = await params;
+  const question = await getQuestion(id);
+  const qaSchema = question ? buildQAPageStructuredData(question, id) : null;
+  return (
+    <>
+      {qaSchema && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(qaSchema) }}
+        />
+      )}
+      {children}
+    </>
+  );
 }

@@ -30,6 +30,30 @@ function getApiOrigin(): string {
 
 const API_ORIGIN = getApiOrigin();
 
+/** Site-wide structured data: Google ve AI arama motorları için Organization + WebSite */
+function getSiteStructuredData() {
+  return [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Organization',
+      '@id': `${SITE_URL}/#organization`,
+      name: 'Marifetli',
+      url: SITE_URL,
+      description: 'Örgü, dikiş, nakış, takı tasarımı ve el sanatları tutkunlarının buluşma noktası. Sorular sor, deneyimlerini paylaş, el emeğini keşfet.',
+      sameAs: [],
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'WebSite',
+      name: 'Marifetli',
+      url: SITE_URL,
+      description: 'El işi ve el sanatları topluluğu. Soru sor, cevapla, paylaş.',
+      inLanguage: 'tr-TR',
+      publisher: { '@id': `${SITE_URL}/#organization` },
+    },
+  ];
+}
+
 const inter = Inter({
   subsets: ['latin'],
   display: 'optional',
@@ -69,6 +93,10 @@ export const metadata: Metadata = {
     description: 'Örgü, dikiş, nakış, takı tasarımı ve el sanatları tutkunlarının buluşma noktası.',
   },
   alternates: { canonical: SITE_URL },
+  icons: {
+    icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
+    apple: [{ url: '/apple-touch-icon.svg', type: 'image/svg+xml' }],
+  },
 };
 
 export default function RootLayout({
@@ -79,6 +107,11 @@ export default function RootLayout({
   return (
     <html lang="tr" suppressHydrationWarning>
       <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(getSiteStructuredData()) }}
+        />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="manifest" href="/manifest.json" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.svg" type="image/svg+xml" />
         <link rel="preconnect" href={API_ORIGIN} crossOrigin="" />
