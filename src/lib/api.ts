@@ -34,7 +34,7 @@ class ApiService {
     );
 
     // Public endpoints: 401'de token olmadan tekrar dene, /giris'e yönlendirme
-    const PUBLIC_PATHS = ['/questions/', '/categories/', '/questions/tags', '/settings/public', '/contact/', '/blog/'];
+    const PUBLIC_PATHS = ['/questions/', '/categories/', '/questions/tags', '/settings/public', '/settings/stats', '/contact/', '/blog/'];
     const isPublicPath = (url: string) => PUBLIC_PATHS.some((p) => url?.includes(p));
 
     // Response interceptor: token refresh; public path'te 401'de girişe yönlendirme
@@ -294,6 +294,12 @@ class ApiService {
 
   /** İletişim, sosyal medya, GA/GSC - admin panelden yönetilir */
   getSiteSettings = () => this.axiosInstance.get<SiteSettings>('/settings/public/');
+
+  /** Anasayfa sidebar: toplam soru, cevap, kullanıcı sayısı */
+  getSiteStats = () =>
+    this.axiosInstance
+      .get<{ question_count: number; answer_count: number; user_count: number }>('/settings/stats/')
+      .then((r) => r.data);
 
   /** İletişim formu gönderimi (giriş gerekmez) */
   submitContactForm = (data: { name: string; email: string; subject: string; message: string }) =>

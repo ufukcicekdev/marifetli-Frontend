@@ -1,12 +1,14 @@
 'use client';
 
-import Link from 'next/link';
 import { useState, useEffect, useMemo } from 'react';
 import { PostFeedControls, type SortOption, type ViewMode } from '@/src/components/post-feed-controls';
 import { PostItem } from '@/src/components/post-item';
 import { useQuestions } from '@/src/hooks/use-questions';
 import { formatTimeAgo } from '@/src/lib/format-time';
 import { RecentActivitySidebar } from '@/src/components/recent-activity-sidebar';
+import { HomeHero } from '@/src/components/home-hero';
+import { PopularQuestionsSidebar } from '@/src/components/popular-questions-sidebar';
+import { SiteStatsSidebar } from '@/src/components/site-stats-sidebar';
 
 const SORT_TO_ORDER: Record<SortOption, string> = {
   hot: '-hot_score',
@@ -39,6 +41,7 @@ export default function HomePage() {
   return (
     <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 flex flex-col lg:flex-row lg:items-start gap-4 sm:gap-6 min-w-0">
       <div className="flex-1 min-w-0 overflow-hidden">
+          <HomeHero />
           <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
             <PostFeedControls
               sort={sort}
@@ -81,37 +84,10 @@ export default function HomePage() {
           </div>
       </div>
 
-      <div className="w-80 flex-shrink-0 hidden lg:block self-start sticky top-[52px] max-h-[calc(100vh-52px)] overflow-y-auto">
+      <div className="w-80 shrink-0 hidden lg:block self-start sticky top-[52px] max-h-[calc(100vh-52px)] overflow-y-auto">
           <RecentActivitySidebar />
-          <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4">
-            <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-3">Hakkımızda</h3>
-            <p className="text-sm text-gray-700 dark:text-gray-300">
-              Marifetli, el işi ve el sanatları tutkunlarının buluşma noktası. Örgü, dikiş, nakış, takı tasarımı ve daha fazlası hakkında sorular sor, deneyimlerini paylaş.
-            </p>
-            <div className="mt-4 space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Toplam Soru</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">12,458</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Toplam Cevap</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">89,234</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">Aktif Kullanıcı</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">3,241</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4 mt-4">
-            <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-3">Popüler Bu Hafta</h3>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="/soru/123" className="text-gray-700 dark:text-gray-300 hover:text-orange-500 line-clamp-2">Bebek yeleği örmek için hangi ip kalınlığını kullanmalıyım?</Link></li>
-              <li><Link href="/soru/124" className="text-gray-700 dark:text-gray-300 hover:text-orange-500 line-clamp-2">Dantel masa örtüsü deseni önerebilir misiniz?</Link></li>
-              <li><Link href="/soru/125" className="text-gray-700 dark:text-gray-300 hover:text-orange-500 line-clamp-2">Makrome duvar süsü yapımında ip uzunluğu nasıl hesaplanır?</Link></li>
-            </ul>
-          </div>
+          <SiteStatsSidebar />
+          <PopularQuestionsSidebar />
         </div>
     </div>
   );
