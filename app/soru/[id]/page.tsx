@@ -13,6 +13,7 @@ import type { Answer } from '@/src/types';
 import { useAuthStore } from '@/src/stores/auth-store';
 import { formatTimeAgo } from '@/src/lib/format-time';
 import { extractMediaFromHtml, stripMediaFromHtml } from '@/src/lib/extract-media';
+import { sanitizeHtml } from '@/src/lib/sanitize-html';
 import { MediaSlider } from '@/src/components/media-slider';
 import { CommentItem } from '@/src/components/comment-item';
 import { CommentEditor } from '@/src/components/comment-editor';
@@ -245,7 +246,7 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
               {hasHtml ? (
                 <div
                   className="prose max-w-none text-gray-700 dark:text-gray-300 mb-6 prose-invert:prose-p:text-gray-300"
-                  dangerouslySetInnerHTML={{ __html: contentWithoutMedia }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(contentWithoutMedia) }}
                 />
               ) : (
                 <p className="text-gray-700 dark:text-gray-300 mb-6 whitespace-pre-wrap">{contentWithoutMedia || question.description}</p>

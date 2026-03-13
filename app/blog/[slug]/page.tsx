@@ -16,6 +16,7 @@ import { useAuthStore } from '@/src/stores/auth-store';
 
 const SaveModal = dynamic(() => import('@/src/components/save-modal').then((m) => ({ default: m.SaveModal })), { ssr: false });
 import { formatTimeAgo } from '@/src/lib/format-time';
+import { sanitizeHtml } from '@/src/lib/sanitize-html';
 
 function formatDate(s: string | null) {
   if (!s) return '';
@@ -218,7 +219,7 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
 
             <div className="prose prose-gray dark:prose-invert max-w-none text-gray-700 dark:text-gray-300">
               {hasHtml ? (
-                <div dangerouslySetInnerHTML={{ __html: post.content }} />
+                <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(post.content ?? '') }} />
               ) : (
                 <p className="whitespace-pre-wrap">{post.content}</p>
               )}

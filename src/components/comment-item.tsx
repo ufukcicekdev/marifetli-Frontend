@@ -15,6 +15,7 @@ import toast from 'react-hot-toast';
 import api from '@/src/lib/api';
 import { questionKeys } from '@/src/hooks/use-questions';
 import { ShareButton } from '@/src/components/share-button';
+import { sanitizeHtml } from '@/src/lib/sanitize-html';
 
 type CommentItemProps = {
   answer: Answer;
@@ -111,7 +112,7 @@ export function CommentItem({
         {textHtml && (
           <div
             className="prose prose-sm max-w-none text-gray-700 dark:text-gray-300 [&_img]:max-w-[200px] [&_img]:max-h-[200px] [&_img]:rounded-lg [&_img]:object-cover"
-            dangerouslySetInnerHTML={{ __html: textHtml }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(textHtml) }}
           />
         )}
         {lightboxImages && (
