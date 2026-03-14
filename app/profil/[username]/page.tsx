@@ -202,7 +202,7 @@ const tabs: ProfileTab[] = isOwnProfile
             <div className="bg-white dark:bg-gray-900 rounded-xl shadow border border-gray-200 dark:border-gray-800 overflow-hidden">
               <div className="h-24 sm:h-32 bg-gradient-to-r from-orange-400 to-orange-600 dark:from-orange-600 dark:to-orange-800">
                 {profile.cover_image && (
-                  <img src={profile.cover_image} alt="" className="w-full h-full object-cover" />
+                  <img src={profile.cover_image} alt={`${profile.username} profil kapağı`} className="w-full h-full object-cover" />
                 )}
               </div>
               <div className="px-4 sm:px-6 pb-4 -mt-10 sm:-mt-12 relative">

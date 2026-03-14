@@ -84,10 +84,10 @@ export default function BlogPage() {
               className="block bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden hover:border-orange-300 dark:hover:border-orange-700 transition-colors shadow-sm hover:shadow-md"
             >
               {featuredPost.featured_image ? (
-                <div className="relative w-full aspect-[21/9] sm:aspect-video bg-gray-100 dark:bg-gray-800">
-                  <Image
-                    src={featuredPost.featured_image}
-                    alt=""
+                      <div className="relative w-full aspect-[21/9] sm:aspect-video bg-gray-100 dark:bg-gray-800">
+                          <Image
+                            src={featuredPost.featured_image}
+                            alt={featuredPost.title}
                     fill
                     className="object-cover"
                     sizes="(max-width: 768px) 100vw, 896px"
@@ -180,7 +180,7 @@ export default function BlogPage() {
                         <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-lg bg-gray-100 dark:bg-gray-800 shrink-0 overflow-hidden">
                           <Image
                             src={post.featured_image}
-                            alt=""
+                            alt={post.title}
                             fill
                             className="object-cover"
                             sizes="80px"
@@ -240,7 +240,7 @@ export default function BlogPage() {
                       <div className="relative w-full aspect-video bg-gray-100 dark:bg-gray-800 shrink-0">
                         <Image
                           src={post.featured_image}
-                          alt=""
+                          alt={post.title}
                           fill
                           className="object-cover"
                           sizes="(max-width: 768px) 100vw, 896px"

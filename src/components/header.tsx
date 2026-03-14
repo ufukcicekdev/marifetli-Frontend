@@ -121,7 +121,7 @@ export function Header() {
               {searchCommunitySlug && (
                 <div className="flex items-center gap-1.5 shrink-0 rounded-full bg-gray-200 dark:bg-gray-700 pl-2 pr-1.5 py-0.5">
                   {searchCommunity?.avatar_url ? (
-                    <img src={searchCommunity.avatar_url} alt="" className="w-5 h-5 rounded-full object-cover" />
+                    <img src={searchCommunity.avatar_url} alt={`${searchCommunity.name || searchCommunity.slug} topluluk`} className="w-5 h-5 rounded-full object-cover" />
                   ) : (
                     <span className="w-5 h-5 rounded-full bg-orange-500 text-white flex items-center justify-center text-xs font-bold">
                       {(searchCommunity?.name || searchCommunitySlug).charAt(0).toUpperCase()}

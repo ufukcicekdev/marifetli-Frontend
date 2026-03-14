@@ -161,7 +161,7 @@ function CommunityDetailContent({ params }: { params: Promise<{ slug: string }> 
           {/* Reddit tarzı banner: arka plan resmi varsa göster, yoksa boş/minimal */}
           {hasCover ? (
             <div className="w-full h-32 sm:h-40 md:h-52 bg-gray-200 dark:bg-gray-800">
-              <img src={community.cover_image_url!} alt="" className="w-full h-full object-cover" />
+              <img src={community.cover_image_url!} alt={`${community.name || community.slug} kapak görseli`} className="w-full h-full object-cover" />
             </div>
           ) : (
             <div className="w-full h-12 sm:h-16 bg-gray-100 dark:bg-gray-800/50" aria-hidden />
@@ -174,7 +174,7 @@ function CommunityDetailContent({ params }: { params: Promise<{ slug: string }> 
             <div className="flex flex-col sm:flex-row sm:items-start gap-4">
               <div className="w-20 h-20 shrink-0 rounded-full border-4 border-white dark:border-gray-900 bg-orange-500 text-white flex items-center justify-center font-bold text-2xl overflow-hidden">
                 {community.avatar_url ? (
-                  <img src={community.avatar_url} alt="" className="w-full h-full object-cover" />
+                  <img src={community.avatar_url} alt={`${community.name || community.slug} topluluk logosu`} className="w-full h-full object-cover" />
                 ) : (
                   letter
                 )}

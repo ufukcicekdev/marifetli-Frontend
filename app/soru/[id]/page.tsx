@@ -387,7 +387,7 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
               <div className="p-4">
                 <div className="flex items-center gap-3 mb-3">
                   {communityData?.avatar_url ? (
-                    <img src={communityData.avatar_url} alt="" className="w-12 h-12 rounded-full object-cover shrink-0" />
+                    <img src={communityData.avatar_url} alt={`${communityName || communitySlug} topluluk logosu`} className="w-12 h-12 rounded-full object-cover shrink-0" />
                   ) : (
                     <div className="w-12 h-12 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-lg shrink-0">
                       {(communityName || communitySlug).charAt(0).toUpperCase()}

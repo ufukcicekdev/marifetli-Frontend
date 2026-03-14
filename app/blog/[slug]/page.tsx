@@ -188,7 +188,7 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
             <div className="relative w-full aspect-video bg-gray-100 dark:bg-gray-800 shrink-0">
               <Image
                 src={post.featured_image}
-                alt=""
+                alt={post.title}
                 fill
                 className="object-cover"
                 sizes="(max-width: 896px) 100vw, 896px"

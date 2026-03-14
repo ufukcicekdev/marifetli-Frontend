@@ -9,9 +9,11 @@ const MediaLightbox = dynamic(() => import('@/src/components/media-lightbox').th
 interface MediaSliderProps {
   items: MediaItem[];
   className?: string;
+  /** SEO/erişilebilirlik: görsel açıklaması (örn. gönderi başlığı) */
+  alt?: string;
 }
 
-export function MediaSlider({ items, className = '' }: MediaSliderProps) {
+export function MediaSlider({ items, className = '', alt }: MediaSliderProps) {
   const [index, setIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
@@ -37,7 +39,7 @@ export function MediaSlider({ items, className = '' }: MediaSliderProps) {
           onClick={() => setLightboxOpen(true)}
         >
           {current.type === 'image' ? (
-            <img src={current.url} alt="" className="w-full h-full object-contain" />
+            <img src={current.url} alt={alt ?? 'Gönderi görseli'} className="w-full h-full object-contain" />
         ) : (
           <video src={current.url} controls className="w-full h-full object-contain" playsInline onClick={(e) => e.stopPropagation()} />
         )}

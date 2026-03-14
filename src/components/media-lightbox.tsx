@@ -88,7 +88,7 @@ export function MediaLightbox({ items, currentIndex = 0, onClose }: MediaLightbo
         onClick={(e) => e.stopPropagation()}
       >
         {item.type === 'image' ? (
-          <img src={item.url} alt="" className="max-w-full max-h-[95vh] object-contain rounded" />
+          <img src={item.url} alt="Gönderi görseli" className="max-w-full max-h-[95vh] object-contain rounded" />
         ) : (
           <video
             src={item.url}

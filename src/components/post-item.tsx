@@ -215,7 +215,7 @@ export function PostItem({ id, slug, title, content, category, author, authorAva
           </div>
           {mediaItems.length > 0 ? (
             <Link href={href} className="block mb-3" aria-label={`Soruyu aç: ${title}`}>
-              <MediaSlider items={mediaItems} className="border-0 rounded-lg overflow-hidden" />
+              <MediaSlider items={mediaItems} alt={title} className="border-0 rounded-lg overflow-hidden" />
             </Link>
           ) : null}
           <ActionBar />
@@ -250,7 +250,7 @@ export function PostItem({ id, slug, title, content, category, author, authorAva
           {firstMedia && (
             <Link href={href} className="mt-1 block w-20 h-20 rounded overflow-hidden bg-gray-100 dark:bg-gray-800 self-start" aria-label={`Soruyu aç: ${title}`}>
               {firstMedia.type === 'image' ? (
-                <OptimizedAvatar src={firstMedia.url} size={80} alt="" className="w-full h-full rounded-none object-cover" priority={priorityImage} />
+                <OptimizedAvatar src={firstMedia.url} size={80} alt={title} className="w-full h-full rounded-none object-cover" priority={priorityImage} />
               ) : (
                 <video src={firstMedia.url} className="w-full h-full object-cover" muted playsInline aria-hidden />
               )}
