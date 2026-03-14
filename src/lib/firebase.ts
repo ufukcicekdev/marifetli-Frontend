@@ -12,7 +12,7 @@ const firebaseConfig = {
 };
 
 // .env.local sadece "next dev" / "next build" başlarken okunur. Değiştirdiysen sunucuyu yeniden başlat.
-if (typeof window !== 'undefined') {
+if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
   const hasApiKey = Boolean(firebaseConfig.apiKey);
   const hasProjectId = Boolean(firebaseConfig.projectId);
   const hasVapid = Boolean(process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY);
@@ -55,57 +55,59 @@ if (typeof window !== 'undefined') {
 /**
  * Request notification permission and get FCM token
  */
+const isDev = process.env.NODE_ENV === 'development';
+
 export const requestNotificationPermission = async (): Promise<string | null> => {
   try {
-    console.log('Starting notification permission request...');
-    
+    if (isDev) console.log('Starting notification permission request...');
+
     // Check if notifications are supported
     if (!('Notification' in window)) {
-      console.error('This browser does not support notifications');
+      if (isDev) console.error('This browser does not support notifications');
       return null;
     }
 
     // Check if messaging is supported
     const supported = await isSupported();
-    console.log('Firebase messaging supported:', supported);
-    
+    if (isDev) console.log('Firebase messaging supported:', supported);
+
     if (!supported) {
-      console.error('Firebase messaging is not supported');
+      if (isDev) console.error('Firebase messaging is not supported');
       return null;
     }
 
     // Initialize messaging
     const messagingInstance = getMessaging(app);
-    console.log('Messaging instance created');
+    if (isDev) console.log('Messaging instance created');
 
     // Request permission
     const permission = await Notification.requestPermission();
-    console.log('Notification permission:', permission);
-    
+    if (isDev) console.log('Notification permission:', permission);
+
     if (permission === 'granted') {
-      console.log('Notification permission granted, getting token...');
-      
+      if (isDev) console.log('Notification permission granted, getting token...');
+
       const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY;
-      console.log('VAPID key:', vapidKey ? '✓ Present' : '✗ Missing');
-      
+      if (isDev) console.log('VAPID key:', vapidKey ? '✓ Present' : '✗ Missing');
+
       if (!vapidKey) {
-        console.error('VAPID key is missing! Add NEXT_PUBLIC_FIREBASE_VAPID_KEY to .env.local');
+        if (isDev) console.error('VAPID key is missing! Add NEXT_PUBLIC_FIREBASE_VAPID_KEY to .env.local');
         return null;
       }
-      
+
       // Get FCM token
       const token = await getToken(messagingInstance, {
         vapidKey: vapidKey,
       });
-      
-      console.log('FCM Token generated:', token ? `${token.substring(0, 20)}...` : 'null');
+
+      if (isDev) console.log('FCM Token generated:', token ? `${token.substring(0, 20)}...` : 'null');
       return token;
     } else {
-      console.log('Notification permission denied');
+      if (isDev) console.log('Notification permission denied');
       return null;
     }
   } catch (error) {
-    console.error('Error getting notification permission:', error);
+    if (isDev) console.error('Error getting notification permission:', error);
     return null;
   }
 };
@@ -117,7 +119,7 @@ export const onMessageListener = () =>
   new Promise((resolve) => {
     if (messaging) {
       onMessage(messaging, (payload) => {
-        console.log('Message received in foreground:', payload);
+        if (isDev) console.log('Message received in foreground:', payload);
         resolve(payload);
       });
     }
