@@ -10,6 +10,7 @@ import { addRecentProfile } from '@/src/lib/recent-activity';
 import { PostItem } from '@/src/components/post-item';
 import { SavedCollectionsTab } from '@/src/components/saved-collections-tab';
 import { FollowingModal } from '@/src/components/following-modal';
+import { DesignUploadModal, type DesignUploadFormData } from '@/src/components/design-upload-modal';
 import { OptimizedAvatar } from '@/src/components/optimized-avatar';
 import { formatTimeAgo } from '@/src/lib/format-time';
 import toast from 'react-hot-toast';
@@ -33,6 +34,8 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
   const [followingModalOpen, setFollowingModalOpen] = useState(false);
   const [deleteConfirmQuestion, setDeleteConfirmQuestion] = useState<{ slug: string; title?: string } | null>(null);
   const [deleteConfirmDesign, setDeleteConfirmDesign] = useState<{ id: number } | null>(null);
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const isOwnProfile = isAuthenticated && !!currentUser?.username && !!username &&
     currentUser.username.toLowerCase() === username.toLowerCase();
 
@@ -168,6 +171,35 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
       toast.error(err?.response?.data?.detail ?? 'Tasarım silinemedi.');
     },
   });
+
+  const handleUploadDesign = async (data: DesignUploadFormData) => {
+    if (!data.file || !isAuthenticated) {
+      toast.error('Tasarım yüklemek için giriş yapın.');
+      return;
+    }
+    setUploading(true);
+    try {
+      await api.uploadDesign({
+        file: data.file,
+        license: data.license,
+        addWatermark: data.addWatermark,
+        tags: data.tags,
+        copyrightConfirmed: data.copyrightConfirmed,
+      });
+      toast.success('Tasarımınız yüklendi.');
+      setUploadModalOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['designs', 'my'] });
+      queryClient.invalidateQueries({ queryKey: ['designs', 'list'] });
+      queryClient.invalidateQueries({ queryKey: ['designs', isOwnProfile ? 'my' : username, username] });
+    } catch (err: unknown) {
+      const msg = err && typeof err === 'object' && 'response' in err && typeof (err as { response?: { data?: { detail?: string } } }).response?.data?.detail === 'string'
+        ? (err as { response: { data: { detail: string } } }).response.data.detail
+        : 'Yükleme başarısız.';
+      toast.error(msg);
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const unlockedCount = achievementsData?.reduce((s, c) => s + c.unlocked_count, 0) ?? 0;
 
@@ -411,14 +443,38 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
               )}
               {activeTab === 'tasarimlarim' && (
                 <div className="p-4 sm:p-6">
+                  {isOwnProfile && (
+                    <div className="mb-4 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setUploadModalOpen(true)}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 transition-colors"
+                      >
+                        <span className="text-lg leading-none">+</span>
+                        Tasarım ekle
+                      </button>
+                    </div>
+                  )}
                   {designsLoading ? (
                     <div className="p-6 text-center text-gray-500 dark:text-gray-400 text-sm">Yükleniyor...</div>
                   ) : designsList.length === 0 ? (
-                    <p className="text-gray-500 dark:text-gray-400 text-sm">
-                      {isOwnProfile
-                        ? 'Henüz tasarım yüklemediniz. Tasarım Yükle ile paylaşabilirsiniz.'
-                        : 'Bu kullanıcının henüz tasarımı yok.'}
-                    </p>
+                    <div className="text-center">
+                      <p className="text-gray-500 dark:text-gray-400 text-sm mb-4">
+                        {isOwnProfile
+                          ? 'Henüz tasarım yüklemediniz.'
+                          : 'Bu kullanıcının henüz tasarımı yok.'}
+                      </p>
+                      {isOwnProfile && (
+                        <button
+                          type="button"
+                          onClick={() => setUploadModalOpen(true)}
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-orange-500 hover:text-orange-600 border border-orange-500 transition-colors"
+                        >
+                          <span className="text-lg leading-none">+</span>
+                          Tasarım ekle
+                        </button>
+                      )}
+                    </div>
                   ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       {designsList.map((d) => (
@@ -639,6 +695,15 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
       </main>
       {isOwnProfile && (
         <FollowingModal isOpen={followingModalOpen} onClose={() => setFollowingModalOpen(false)} />
+      )}
+
+      {isOwnProfile && (
+        <DesignUploadModal
+          isOpen={uploadModalOpen}
+          onClose={() => setUploadModalOpen(false)}
+          onSubmit={handleUploadDesign}
+          isSubmitting={uploading}
+        />
       )}
 
       {/* Tasarım silme onayı */}
