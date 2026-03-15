@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSidebarStore } from '../stores/sidebar-store';
 import { useAuthStore } from '../stores/auth-store';
@@ -12,7 +12,7 @@ import api from '../lib/api';
 
 type CategoryItem = { id: number; name: string; slug: string; subcategories?: CategoryItem[] };
 
-// Sol menü: Tasarım Yükle kaldırıldı, tasarım yükleme sadece /tasarimlar sayfasındaki butondan
+// Sol menü: Tasarım Yükle yok; tasarım yükleme sadece /tasarimlar sayfasındaki butondan.
 const SIDEBAR_NAV_ITEMS = [
   { href: '/sorular', label: 'Anasayfa', icon: '🏠' },
   { href: '/blog', label: 'Blog', icon: '📝' },
@@ -23,12 +23,24 @@ const SIDEBAR_NAV_ITEMS = [
   { href: '/iletisim', label: 'İletişim', icon: '✉️' },
 ] as const;
 
+// dynamic() loading ile birebir aynı placeholder; hydration uyumu için
+const SIDEBAR_PLACEHOLDER = (
+  <aside
+    className="fixed left-0 z-30 top-[52px] bottom-0 w-16 shrink-0 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
+    aria-label="Navigasyon"
+    aria-hidden="true"
+  />
+);
+
 export function AppSidebar() {
+  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const isOpen = useSidebarStore((s) => s.isOpen);
   const toggle = useSidebarStore((s) => s.toggle);
   const { isAuthenticated } = useAuthStore();
   const openAuth = useAuthModalStore((s) => s.open);
+
+  useEffect(() => setMounted(true), []);
 
   const { data: categoriesData, isLoading: categoriesLoading } = useQuery({
     queryKey: ['categories'],
@@ -60,6 +72,9 @@ export function AppSidebar() {
     };
     closeOnMobile();
   }, [pathname]);
+
+  // Chunk yüklendikten sonra ilk render = placeholder (sunucu ile aynı); mount sonrası tam menü (hydration hatası olmasın)
+  if (!mounted) return SIDEBAR_PLACEHOLDER;
 
   return (
     <>
