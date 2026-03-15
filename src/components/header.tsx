@@ -67,11 +67,16 @@ export function Header() {
 
   useEffect(() => {
     if (pathname === '/sorular') setSearchQuery(searchParams?.get('q') ?? '');
+    if (pathname === '/tasarimlar') setSearchQuery(searchParams?.get('q') ?? '');
   }, [pathname, searchParams]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     const q = searchQuery.trim();
+    if (pathname === '/tasarimlar') {
+      router.push(q ? `/tasarimlar?q=${encodeURIComponent(q)}` : '/tasarimlar');
+      return;
+    }
     const params = new URLSearchParams();
     if (q) params.set('q', q);
     if (searchCommunitySlug) params.set('community', searchCommunitySlug);
@@ -84,6 +89,11 @@ export function Header() {
     const q = searchParams?.get('q')?.trim();
     if (q) router.push(`/sorular?q=${encodeURIComponent(q)}`);
     else router.push('/sorular');
+  };
+
+  const clearTasarimlarContext = (e: React.MouseEvent) => {
+    e.preventDefault();
+    router.push('/sorular');
   };
 
   return (
@@ -139,11 +149,34 @@ export function Header() {
                   </button>
                 </div>
               )}
+              {pathname === '/tasarimlar' && !searchCommunitySlug && (
+                <div className="flex items-center gap-1.5 shrink-0 rounded-full bg-gray-200 dark:bg-gray-700 pl-2 pr-1.5 py-0.5">
+                  <span className="w-5 h-5 rounded-full bg-orange-500 text-white flex items-center justify-center text-xs" aria-hidden>
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                  </span>
+                  <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Tasarımlar</span>
+                  <button
+                    type="button"
+                    onClick={clearTasarimlarContext}
+                    className="p-0.5 rounded hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
+                    aria-label="Tasarımlar bağlamını kaldır"
+                    title="Tasarımlar bağlamını kaldır"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                </div>
+              )}
               <input
                 type="search"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={searchCommunitySlug ? `r/${searchCommunitySlug}'de arama yapın` : 'Bir şey ara...'}
+                placeholder={
+                  searchCommunitySlug
+                    ? `r/${searchCommunitySlug}'de arama yapın`
+                    : pathname === '/tasarimlar'
+                      ? 'Tasarımlarda ara'
+                      : 'Bir şey ara...'
+                }
                 className="flex-1 bg-transparent px-2 py-1 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-500 outline-none min-w-0"
               />
             </div>

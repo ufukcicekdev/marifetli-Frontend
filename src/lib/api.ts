@@ -425,38 +425,40 @@ class ApiService {
   removeBlogFromSaved = (blogPostId: number) =>
     this.axiosInstance.delete(`/favorites/remove-blog/${blogPostId}/`);
 
-  // Tasarım yükleme (Pinterest tarzı)
+  // Tasarım yükleme (Pinterest tarzı, çoklu görsel)
   uploadDesign = (data: {
-    file: File;
+    files: File[];
     license: string;
     addWatermark: boolean;
     tags: string;
+    description?: string;
     copyrightConfirmed: boolean;
   }) => {
     const form = new FormData();
-    form.append('file', data.file);
+    data.files.forEach((f) => form.append('files', f));
     form.append('license', data.license);
     form.append('add_watermark', data.addWatermark ? 'true' : 'false');
     form.append('tags', data.tags);
+    if (data.description != null) form.append('description', data.description);
     form.append('copyright_confirmed', data.copyrightConfirmed ? 'true' : 'false');
-    return this.axiosInstance.post<{ id: number; image_url: string; license: string; add_watermark: boolean; tags: string; created_at: string }>(
+    return this.axiosInstance.post<DesignResponse>(
       '/designs/upload/',
       form,
-      { timeout: 60000 }
+      { timeout: 120000 }
     );
   };
 
   getMyDesigns = () =>
-    this.axiosInstance.get<{ results: { id: number; image_url: string; license: string; add_watermark: boolean; tags: string; created_at: string; author_username: string }[] }>('/designs/my/');
+    this.axiosInstance.get<{ results: DesignListItem[] }>('/designs/my/');
 
   getDesigns = (params?: { author?: string; page?: number }) =>
-    this.axiosInstance.get<{ results: { id: number; image_url: string; license: string; add_watermark: boolean; tags: string; created_at: string; author_username: string }[]; count?: number }>('/designs/', { params });
+    this.axiosInstance.get<{ results: DesignListItem[]; count?: number }>('/designs/', { params });
 
   getDesign = (id: number) =>
-    this.axiosInstance.get<{ id: number; image_url: string; license: string; add_watermark: boolean; tags: string; created_at: string; author_username: string }>(`/designs/${id}/`);
+    this.axiosInstance.get<DesignResponse>(`/designs/${id}/`);
 
-  updateDesign = (id: number, data: { license: string; tags: string }) =>
-    this.axiosInstance.patch<{ id: number; license: string; tags: string }>(`/designs/${id}/`, data);
+  updateDesign = (id: number, data: { license: string; tags: string; description?: string }) =>
+    this.axiosInstance.patch<DesignResponse>(`/designs/${id}/`, data);
 
   deleteDesign = (id: number) =>
     this.axiosInstance.delete(`/designs/${id}/`);
@@ -547,6 +549,20 @@ export interface AchievementCategoryResponse {
   unlocked_count: number;
   achievements: AchievementItem[];
 }
+
+// Tasarım (çoklu görsel, slider)
+export interface DesignListItem {
+  id: number;
+  image_url: string | null;
+  image_urls: string[];
+  license: string;
+  add_watermark: boolean;
+  tags: string;
+  description: string;
+  created_at: string;
+  author_username: string;
+}
+export type DesignResponse = DesignListItem;
 
 // Blog types
 export interface BlogPostListItem {

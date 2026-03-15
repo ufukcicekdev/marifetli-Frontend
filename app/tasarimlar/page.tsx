@@ -1,6 +1,7 @@
 'use client';
 
-import dynamic from 'next/dynamic';
+import { useState, useEffect } from 'react';
+import TasarimlarContentClient from './tasarimlar-content-client';
 
 function TasarimlarFallback() {
   return (
@@ -16,11 +17,10 @@ function TasarimlarFallback() {
   );
 }
 
-const TasarimlarContentClient = dynamic(
-  () => import('./tasarimlar-content-client').then((m) => m.default),
-  { ssr: false, loading: () => <TasarimlarFallback /> }
-);
-
 export default function TasarimlarPage() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  if (!mounted) return <TasarimlarFallback />;
   return <TasarimlarContentClient />;
 }

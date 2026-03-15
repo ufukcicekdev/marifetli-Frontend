@@ -11,6 +11,7 @@ import { PostItem } from '@/src/components/post-item';
 import { SavedCollectionsTab } from '@/src/components/saved-collections-tab';
 import { FollowingModal } from '@/src/components/following-modal';
 import { DesignUploadModal, type DesignUploadFormData } from '@/src/components/design-upload-modal';
+import { MediaSlider } from '@/src/components/media-slider';
 import { OptimizedAvatar } from '@/src/components/optimized-avatar';
 import { formatTimeAgo } from '@/src/lib/format-time';
 import toast from 'react-hot-toast';
@@ -173,17 +174,18 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
   });
 
   const handleUploadDesign = async (data: DesignUploadFormData) => {
-    if (!data.file || !isAuthenticated) {
-      toast.error('Tasarım yüklemek için giriş yapın.');
+    if (!data.files?.length || !isAuthenticated) {
+      toast.error('Tasarım yüklemek için giriş yapın ve en az bir görsel seçin.');
       return;
     }
     setUploading(true);
     try {
       await api.uploadDesign({
-        file: data.file,
+        files: data.files,
         license: data.license,
         addWatermark: data.addWatermark,
         tags: data.tags,
+        description: data.description ?? '',
         copyrightConfirmed: data.copyrightConfirmed,
       });
       toast.success('Tasarımınız yüklendi.');
@@ -482,11 +484,11 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
                           key={d.id}
                           className="group rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 hover:border-orange-400 dark:hover:border-orange-600 transition-colors bg-white dark:bg-gray-900"
                         >
-                          <Link href={`/tasarim/${d.id}`} className="block aspect-square relative">
-                            <img
-                              src={d.image_url}
+                          <Link href={`/tasarim/${d.id}`} className="block aspect-square relative" onClick={(e) => e.stopPropagation()}>
+                            <MediaSlider
+                              items={((d as { image_urls?: string[] }).image_urls ?? (d.image_url ? [d.image_url] : [])).map((url) => ({ url, type: 'image' as const }))}
+                              className="aspect-square"
                               alt={d.tags || 'Tasarım'}
-                              className="w-full h-full object-cover"
                             />
                           </Link>
                           <div className="p-2 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between gap-2">

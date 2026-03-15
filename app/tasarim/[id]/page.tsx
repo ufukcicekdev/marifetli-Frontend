@@ -7,6 +7,7 @@ import api from '@/src/lib/api';
 import { useAuthStore } from '@/src/stores/auth-store';
 import toast from 'react-hot-toast';
 import { formatTimeAgo } from '@/src/lib/format-time';
+import { MediaSlider } from '@/src/components/media-slider';
 
 const LICENSE_OPTIONS = [
   { value: 'commercial', label: 'Ticari Kullanıma İzin Ver' },
@@ -22,6 +23,7 @@ export default function TasarimDetailPage({ params }: { params: Promise<{ id: st
   const [editing, setEditing] = useState(false);
   const [editLicense, setEditLicense] = useState('');
   const [editTags, setEditTags] = useState('');
+  const [editDescription, setEditDescription] = useState('');
 
   const { data: design, isLoading, error } = useQuery({
     queryKey: ['design', designId],
@@ -30,7 +32,7 @@ export default function TasarimDetailPage({ params }: { params: Promise<{ id: st
   });
 
   const updateMutation = useMutation({
-    mutationFn: (payload: { license: string; tags: string }) =>
+    mutationFn: (payload: { license: string; tags: string; description?: string }) =>
       api.updateDesign(designId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['design', designId] });
@@ -52,12 +54,13 @@ export default function TasarimDetailPage({ params }: { params: Promise<{ id: st
     if (design) {
       setEditLicense(design.license);
       setEditTags(design.tags || '');
+      setEditDescription(design.description || '');
       setEditing(true);
     }
   };
 
   const saveEdit = () => {
-    updateMutation.mutate({ license: editLicense, tags: editTags });
+    updateMutation.mutate({ license: editLicense, tags: editTags, description: editDescription });
   };
 
   if (isLoading || !design) {
@@ -84,11 +87,15 @@ export default function TasarimDetailPage({ params }: { params: Promise<{ id: st
       </div>
 
       <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden">
-        <div className="relative aspect-square max-h-[70vh] bg-gray-100 dark:bg-gray-800">
-          <img
-            src={design.image_url}
-            alt={design.tags || 'Tasarım'}
-            className="w-full h-full object-contain"
+        <div className="relative bg-gray-100 dark:bg-gray-800 min-h-[200px]">
+          <MediaSlider
+            items={(design.image_urls && design.image_urls.length > 0)
+              ? design.image_urls.map((url) => ({ url, type: 'image' as const }))
+              : design.image_url
+                ? [{ url: design.image_url, type: 'image' as const }]
+                : []}
+            className="aspect-video max-h-[70vh]"
+            alt={design.description?.slice(0, 100) || design.tags || 'Tasarım'}
           />
         </div>
         <div className="p-4 sm:p-6 border-t border-gray-200 dark:border-gray-800">
@@ -109,6 +116,11 @@ export default function TasarimDetailPage({ params }: { params: Promise<{ id: st
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Lisans: {LICENSE_OPTIONS.find((o) => o.value === design.license)?.label ?? design.license}
               </p>
+              {design.description && (
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 whitespace-pre-wrap">
+                  {design.description}
+                </p>
+              )}
               {design.tags && (
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                   Etiketler: {design.tags}
@@ -139,6 +151,19 @@ export default function TasarimDetailPage({ params }: { params: Promise<{ id: st
                     <option key={o.value} value={o.value}>{o.label}</option>
                   ))}
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Açıklama
+                </label>
+                <textarea
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  placeholder="Tasarım açıklaması (isteğe bağlı)"
+                  rows={3}
+                  maxLength={2000}
+                  className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-y"
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
