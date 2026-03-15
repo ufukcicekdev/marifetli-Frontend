@@ -425,6 +425,42 @@ class ApiService {
   removeBlogFromSaved = (blogPostId: number) =>
     this.axiosInstance.delete(`/favorites/remove-blog/${blogPostId}/`);
 
+  // Tasarım yükleme (Pinterest tarzı)
+  uploadDesign = (data: {
+    file: File;
+    license: string;
+    addWatermark: boolean;
+    tags: string;
+    copyrightConfirmed: boolean;
+  }) => {
+    const form = new FormData();
+    form.append('file', data.file);
+    form.append('license', data.license);
+    form.append('add_watermark', data.addWatermark ? 'true' : 'false');
+    form.append('tags', data.tags);
+    form.append('copyright_confirmed', data.copyrightConfirmed ? 'true' : 'false');
+    return this.axiosInstance.post<{ id: number; image_url: string; license: string; add_watermark: boolean; tags: string; created_at: string }>(
+      '/designs/upload/',
+      form,
+      { timeout: 60000 }
+    );
+  };
+
+  getMyDesigns = () =>
+    this.axiosInstance.get<{ results: { id: number; image_url: string; license: string; add_watermark: boolean; tags: string; created_at: string; author_username: string }[] }>('/designs/my/');
+
+  getDesigns = (params?: { author?: string; page?: number }) =>
+    this.axiosInstance.get<{ results: { id: number; image_url: string; license: string; add_watermark: boolean; tags: string; created_at: string; author_username: string }[]; count?: number }>('/designs/', { params });
+
+  getDesign = (id: number) =>
+    this.axiosInstance.get<{ id: number; image_url: string; license: string; add_watermark: boolean; tags: string; created_at: string; author_username: string }>(`/designs/${id}/`);
+
+  updateDesign = (id: number, data: { license: string; tags: string }) =>
+    this.axiosInstance.patch<{ id: number; license: string; tags: string }>(`/designs/${id}/`, data);
+
+  deleteDesign = (id: number) =>
+    this.axiosInstance.delete(`/designs/${id}/`);
+
   // Blog (sadece admin yazar; kullanıcılar okuyup yorum/beğeni yapabilir)
   getBlogPosts = (params?: { page?: number }) =>
     this.axiosInstance.get<{ results: BlogPostListItem[]; count?: number }>('/blog/', { params });

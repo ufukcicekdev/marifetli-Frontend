@@ -15,12 +15,13 @@ import { formatTimeAgo } from '@/src/lib/format-time';
 import toast from 'react-hot-toast';
 import type { Answer } from '@/src/types';
 
-type ProfileTab = 'gonderiler' | 'yorumlar' | 'kaydettiklerim' | 'gecmis';
+type ProfileTab = 'gonderiler' | 'yorumlar' | 'kaydettiklerim' | 'tasarimlarim' | 'gecmis';
 
 const TAB_LABELS: Record<ProfileTab, string> = {
   gonderiler: 'Gönderiler',
   yorumlar: 'Yorumlar',
   kaydettiklerim: 'Kaydettiklerim',
+  tasarimlarim: 'Tasarımlarım',
   gecmis: 'Geçmiş',
 };
 
@@ -31,6 +32,7 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
   const [activeTab, setActiveTab] = useState<ProfileTab>('gonderiler');
   const [followingModalOpen, setFollowingModalOpen] = useState(false);
   const [deleteConfirmQuestion, setDeleteConfirmQuestion] = useState<{ slug: string; title?: string } | null>(null);
+  const [deleteConfirmDesign, setDeleteConfirmDesign] = useState<{ id: number } | null>(null);
   const isOwnProfile = isAuthenticated && !!currentUser?.username && !!username &&
     currentUser.username.toLowerCase() === username.toLowerCase();
 
@@ -75,6 +77,19 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
     queryFn: () => api.getUserAnswers(profile!.id).then((r) => r.data),
     enabled: !!profile?.id && activeTab === 'yorumlar',
   });
+
+  const { data: designsData, isLoading: designsLoading } = useQuery({
+    queryKey: ['designs', isOwnProfile ? 'my' : username, username],
+    queryFn: () =>
+      isOwnProfile
+        ? api.getMyDesigns().then((r) => r.data)
+        : api.getDesigns({ author: username }).then((r) => r.data),
+    enabled: !!username && activeTab === 'tasarimlarim',
+  });
+  const designsList = useMemo(() => {
+    const raw = designsData as { results?: { id: number; image_url: string; license: string; tags: string; created_at: string; author_username: string }[] } | undefined;
+    return raw?.results ?? [];
+  }, [designsData]);
 
   const { data: myManagedCommunitiesRaw } = useQuery({
     queryKey: ['communities', 'my-managed'],
@@ -139,6 +154,21 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
     },
   });
 
+  const deleteDesignMutation = useMutation({
+    mutationFn: (id: number) => api.deleteDesign(id),
+    onSuccess: (_, id) => {
+      queryClient.invalidateQueries({ queryKey: ['designs', 'my'] });
+      queryClient.invalidateQueries({ queryKey: ['designs', 'list'] });
+      queryClient.invalidateQueries({ queryKey: ['design', id] });
+      queryClient.invalidateQueries({ queryKey: ['designs', isOwnProfile ? 'my' : username, username] });
+      toast.success('Tasarım silindi.');
+      setDeleteConfirmDesign(null);
+    },
+    onError: (err: { response?: { data?: { detail?: string } } }) => {
+      toast.error(err?.response?.data?.detail ?? 'Tasarım silinemedi.');
+    },
+  });
+
   const unlockedCount = achievementsData?.reduce((s, c) => s + c.unlocked_count, 0) ?? 0;
 
   if (isLoading) {
@@ -172,9 +202,8 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
   }
 
   // Başkasının profilinde yorumlar sekmesi gösterilmez; sadece kendi profilde kullanıcı kendi yorumlarını görsün
-const tabs: ProfileTab[] = isOwnProfile
-    ? ['gonderiler', 'yorumlar', 'kaydettiklerim', 'gecmis']
-    : ['gonderiler'];
+  // Sekmeleri auth'dan bağımsız hep aynı gösteriyoruz; yenilemede Tasarımlarım kaybolmasın diye
+  const tabs: ProfileTab[] = ['gonderiler', 'tasarimlarim', 'yorumlar', 'kaydettiklerim', 'gecmis'];
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -264,7 +293,7 @@ const tabs: ProfileTab[] = isOwnProfile
                           : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
                       }`}
                     >
-                      {TAB_LABELS[tab]}
+                      {tab === 'tasarimlarim' && !isOwnProfile ? 'Tasarımları' : TAB_LABELS[tab]}
                     </button>
                   ))}
                 </div>
@@ -312,7 +341,9 @@ const tabs: ProfileTab[] = isOwnProfile
               )}
               {activeTab === 'yorumlar' && (
                 <div className="p-4 sm:p-6">
-                  {commentsLoading ? (
+                  {!isOwnProfile ? (
+                    <p className="text-gray-500 dark:text-gray-400 text-sm">Bu içerik sadece profil sahibi tarafından görüntülenebilir.</p>
+                  ) : commentsLoading ? (
                     <div className="p-4 text-center text-gray-500 dark:text-gray-400 text-sm">Yükleniyor...</div>
                   ) : userAnswers.length === 0 ? (
                     <p className="text-gray-500 dark:text-gray-400 text-sm">
@@ -372,13 +403,79 @@ const tabs: ProfileTab[] = isOwnProfile
                 </div>
               )}
               {activeTab === 'kaydettiklerim' && (
-                <SavedCollectionsTab isOwnProfile={isOwnProfile} />
+                isOwnProfile ? <SavedCollectionsTab isOwnProfile={isOwnProfile} /> : (
+                  <div className="p-4 sm:p-6">
+                    <p className="text-gray-500 dark:text-gray-400 text-sm">Bu içerik sadece profil sahibi tarafından görüntülenebilir.</p>
+                  </div>
+                )
+              )}
+              {activeTab === 'tasarimlarim' && (
+                <div className="p-4 sm:p-6">
+                  {designsLoading ? (
+                    <div className="p-6 text-center text-gray-500 dark:text-gray-400 text-sm">Yükleniyor...</div>
+                  ) : designsList.length === 0 ? (
+                    <p className="text-gray-500 dark:text-gray-400 text-sm">
+                      {isOwnProfile
+                        ? 'Henüz tasarım yüklemediniz. Tasarım Yükle ile paylaşabilirsiniz.'
+                        : 'Bu kullanıcının henüz tasarımı yok.'}
+                    </p>
+                  ) : (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {designsList.map((d) => (
+                        <div
+                          key={d.id}
+                          className="group rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 hover:border-orange-400 dark:hover:border-orange-600 transition-colors bg-white dark:bg-gray-900"
+                        >
+                          <Link href={`/tasarim/${d.id}`} className="block aspect-square relative">
+                            <img
+                              src={d.image_url}
+                              alt={d.tags || 'Tasarım'}
+                              className="w-full h-full object-cover"
+                            />
+                          </Link>
+                          <div className="p-2 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between gap-2">
+                            {d.tags && (
+                              <p className="text-xs text-gray-500 dark:text-gray-400 truncate flex-1 min-w-0">
+                                {d.tags.split(',').map((t) => t.trim()).filter(Boolean).slice(0, 2).join(', ')}
+                              </p>
+                            )}
+                            {isOwnProfile && (
+                              <div className="flex items-center gap-1 shrink-0">
+                                <Link
+                                  href={`/tasarim/${d.id}`}
+                                  className="px-2 py-1 text-xs font-medium text-orange-600 dark:text-orange-400 hover:underline"
+                                >
+                                  Düzenle
+                                </Link>
+                                <span className="text-gray-300 dark:text-gray-600">·</span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    setDeleteConfirmDesign({ id: d.id });
+                                  }}
+                                  className="px-2 py-1 text-xs font-medium text-red-600 dark:text-red-400 hover:underline"
+                                >
+                                  Sil
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
               {activeTab === 'gecmis' && (
                 <div className="p-6 sm:p-8">
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">
-                    Görüntüleme geçmişiniz burada listelenecek.
-                  </p>
+                  {isOwnProfile ? (
+                    <p className="text-gray-500 dark:text-gray-400 text-sm">
+                      Görüntüleme geçmişiniz burada listelenecek.
+                    </p>
+                  ) : (
+                    <p className="text-gray-500 dark:text-gray-400 text-sm">Bu içerik sadece profil sahibi tarafından görüntülenebilir.</p>
+                  )}
                 </div>
               )}
             </div>
@@ -542,6 +639,38 @@ const tabs: ProfileTab[] = isOwnProfile
       </main>
       {isOwnProfile && (
         <FollowingModal isOpen={followingModalOpen} onClose={() => setFollowingModalOpen(false)} />
+      )}
+
+      {/* Tasarım silme onayı */}
+      {deleteConfirmDesign && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setDeleteConfirmDesign(null)}>
+          <div
+            className="bg-white dark:bg-gray-900 rounded-xl shadow-xl max-w-sm w-full p-6 border border-gray-200 dark:border-gray-700"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Tasarımı sil</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+              Bu tasarımı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmDesign(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
+                İptal
+              </button>
+              <button
+                type="button"
+                onClick={() => deleteDesignMutation.mutate(deleteConfirmDesign.id)}
+                disabled={deleteDesignMutation.isPending}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleteDesignMutation.isPending ? 'Siliniyor…' : 'Sil'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Gönderi silme onayı */}

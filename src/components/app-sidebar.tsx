@@ -12,6 +12,17 @@ import api from '../lib/api';
 
 type CategoryItem = { id: number; name: string; slug: string; subcategories?: CategoryItem[] };
 
+// Sol menü: Tasarım Yükle kaldırıldı, tasarım yükleme sadece /tasarimlar sayfasındaki butondan
+const SIDEBAR_NAV_ITEMS = [
+  { href: '/sorular', label: 'Anasayfa', icon: '🏠' },
+  { href: '/blog', label: 'Blog', icon: '📝' },
+  { href: '/tasarimlar', label: 'Tasarımlar', icon: '🎨' },
+  { href: '/topluluklar', label: 'Toplulukları Keşfet', icon: '🔍' },
+  { href: '/t/populer', label: 'Popüler', icon: '🔥' },
+  { href: '/t/tum', label: 'Tümü', icon: '📋' },
+  { href: '/iletisim', label: 'İletişim', icon: '✉️' },
+] as const;
+
 export function AppSidebar() {
   const pathname = usePathname();
   const isOpen = useSidebarStore((s) => s.isOpen);
@@ -49,15 +60,6 @@ export function AppSidebar() {
     };
     closeOnMobile();
   }, [pathname]);
-
-  const navItems = [
-    { href: '/sorular', label: 'Anasayfa', icon: '🏠' },
-    { href: '/blog', label: 'Blog', icon: '📝' },
-    { href: '/topluluklar', label: 'Toplulukları Keşfet', icon: '🔍' },
-    { href: '/t/populer', label: 'Popüler', icon: '🔥' },
-    { href: '/t/tum', label: 'Tümü', icon: '📋' },
-    { href: '/iletisim', label: 'İletişim', icon: '✉️' },
-  ];
 
   return (
     <>
@@ -128,7 +130,7 @@ export function AppSidebar() {
           </div>
         )}
         <div className="space-y-1">
-          {navItems.map((item) => {
+          {SIDEBAR_NAV_ITEMS.map((item) => {
             const active = pathname === item.href || (item.href !== '/sorular' && pathname?.startsWith(item.href));
             return (
               <Link

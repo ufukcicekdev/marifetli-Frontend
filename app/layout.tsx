@@ -8,8 +8,8 @@ import { ThemeProvider } from '@/src/components/theme-provider';
 import { Header } from '@/src/components/header';
 import { VerifyEmailBanner } from '@/src/components/verify-email-banner';
 import { OnboardingBanner } from '@/src/components/onboarding-banner';
-import { AppSidebar } from '@/src/components/app-sidebar';
 import { MainContentWrapper } from '@/src/components/main-content-wrapper';
+import { AppSidebarClient } from '@/src/components/app-sidebar-client';
 import { OnboardingGuard } from '@/src/components/onboarding-guard';
 import { SiteAnalytics } from '@/src/components/site-analytics';
 import { FirebasePushHandler } from '@/src/components/firebase-push-handler';
@@ -144,7 +144,7 @@ export default function RootLayout({
                 <Header />
               </Suspense>
               <div className="flex min-h-[calc(100vh-52px)] pt-[52px]">
-                <AppSidebar />
+                <AppSidebarClient />
                 <MainContentWrapper>
                   <VerifyEmailBanner />
                   <OnboardingBanner />
