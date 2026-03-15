@@ -20,39 +20,11 @@ const SORT_TO_ORDER: Record<SortOption, string> = {
   best: '-hot_score',
 };
 
-/** Slug → breadcrumb/başlık. Saf fonksiyon: sunucu ve istemcide aynı çıktı (hydration uyumu). */
-function getTopicDisplayLabel(slug: string): string {
-  switch (slug) {
-    case 'populer':
-      return 'Popüler';
-    case 'tum':
-      return 'Tümü';
-    case 'orgu':
-      return 'Örgü';
-    case 'dikis':
-      return 'Dikiş';
-    case 'nakis':
-      return 'Nakış';
-    case 'taki-tasarim':
-      return 'Takı Tasarımı';
-    case 'el-sanatlari':
-      return 'El Sanatları';
-    case 'dekorasyon':
-      return 'Dekorasyon';
-    case 'tig-isi':
-      return 'Tığ İşi';
-    case 'amigurumi':
-      return 'Amigurumi';
-    case 'dantel':
-      return 'Dantel';
-    case 'makrome':
-      return 'Makrome';
-    case 'kece':
-      return 'Keçe';
-    default:
-      return slug;
-  }
-}
+/** Sadece özel sayfa slug'ları (backend'de kategori yok). Geri kalanı backend category.name ile gelir. */
+const SPECIAL_LABELS: Record<string, string> = {
+  populer: 'Popüler',
+  tum: 'Tümü',
+};
 
 export function TopicPageContent({ slug }: { slug: string }) {
   const isSpecial = slug === 'populer' || slug === 'tum';
@@ -89,7 +61,7 @@ export function TopicPageContent({ slug }: { slug: string }) {
 
   const questions = data?.results ?? [];
   const totalCount = typeof data?.count === 'number' ? data.count : questions.length;
-  const label = getTopicDisplayLabel(slug);
+  const label = isSpecial ? (SPECIAL_LABELS[slug] ?? slug) : (category?.name ?? slug);
   const showFeed = isSpecial || (category != null && !categoryError);
 
   return (
