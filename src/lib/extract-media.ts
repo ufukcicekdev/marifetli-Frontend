@@ -48,3 +48,9 @@ export function stripMediaFromHtml(html: string | null | undefined): string {
     .replace(/<source[^>]*\/?>/gi, '')
     .replace(/<img[^>]*\/?>/gi, '');
 }
+
+/** HTML etiketlerini kaldırır; excerpt/özet gibi alanlarda <strong> vb. literal görünmesini önler. */
+export function stripHtml(html: string | null | undefined): string {
+  if (!html || typeof html !== 'string') return '';
+  return html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+}

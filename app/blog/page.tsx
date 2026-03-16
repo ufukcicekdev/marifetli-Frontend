@@ -11,6 +11,7 @@ import { useAuthStore } from '@/src/stores/auth-store';
 import { formatTimeAgo } from '@/src/lib/format-time';
 import { BlogHero } from '@/src/components/blog-hero';
 import { BlogSidebar } from '@/src/components/blog-sidebar';
+import { stripHtml } from '@/src/lib/extract-media';
 
 const SaveModal = dynamic(() => import('@/src/components/save-modal').then((m) => ({ default: m.SaveModal })), { ssr: false });
 
@@ -109,7 +110,7 @@ export default function BlogPage() {
                 </h2>
                 {featuredPost.excerpt && (
                   <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base mb-4 line-clamp-2">
-                    {featuredPost.excerpt}
+                    {stripHtml(featuredPost.excerpt)}
                   </p>
                 )}
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
@@ -253,7 +254,7 @@ export default function BlogPage() {
                       </h2>
                       {post.excerpt && (
                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 line-clamp-2">
-                          {post.excerpt}
+                          {stripHtml(post.excerpt)}
                         </p>
                       )}
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-gray-500 dark:text-gray-400 min-w-0">

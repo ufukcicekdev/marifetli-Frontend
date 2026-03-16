@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { stripHtml } from '@/src/lib/extract-media';
 
 const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.marifetli.com.tr').replace(/\/$/, '');
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || 'https://web-production-5404d.up.railway.app/api').replace(/\/$/, '');
@@ -35,11 +36,12 @@ async function getBlogPost(slug: string): Promise<BlogPostMeta | null> {
 function buildArticleSchema(post: BlogPostMeta, slug: string) {
   const url = `${SITE_URL}/blog/${slug}`;
   const imageUrl = toAbsoluteImageUrl(post.featured_image);
+  const rawDesc = post.meta_description || post.excerpt || post.title;
   return {
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline: post.meta_title || post.title,
-    description: (post.meta_description || post.excerpt || post.title).slice(0, 160),
+    description: stripHtml(rawDesc).slice(0, 160),
     url,
     ...(imageUrl && { image: imageUrl }),
     datePublished: post.published_at || post.created_at,
@@ -65,18 +67,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: 'Yazı Bulunamadı' };
   }
   const title = post.meta_title || post.title;
-  const description = post.meta_description || post.excerpt || post.title;
+  const description = stripHtml(post.meta_description || post.excerpt || post.title).slice(0, 160);
   const url = `${SITE_URL}/blog/${slug}`;
   const imageUrl = toAbsoluteImageUrl(post.featured_image);
 
   return {
     title,
-    description: description.slice(0, 160),
+    description,
     openGraph: {
       type: 'article',
       url,
       title,
-      description: description.slice(0, 160),
+      description,
       siteName: 'Marifetli',
       locale: 'tr_TR',
       ...(imageUrl && { images: [{ url: imageUrl, width: 1200, height: 630, alt: title }] }),
@@ -84,7 +86,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     twitter: {
       card: imageUrl ? 'summary_large_image' : 'summary',
       title,
-      description: description.slice(0, 160),
+      description,
       ...(imageUrl && { images: [imageUrl] }),
     },
     alternates: { canonical: url },

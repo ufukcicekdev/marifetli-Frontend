@@ -9,6 +9,7 @@ import api, { type SavedCollection, type SavedItem } from '@/src/lib/api';
 import { PostItem } from './post-item';
 import { OptimizedAvatar } from './optimized-avatar';
 import { formatTimeAgo } from '@/src/lib/format-time';
+import { stripHtml } from '@/src/lib/extract-media';
 
 interface SavedCollectionsTabProps {
   isOwnProfile: boolean;
@@ -256,7 +257,7 @@ export function SavedCollectionsTab({ isOwnProfile }: SavedCollectionsTabProps) 
                                 </h3>
                                 {blog.excerpt && (
                                   <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-400 line-clamp-1">
-                                    {blog.excerpt}
+                                    {stripHtml(blog.excerpt)}
                                   </p>
                                 )}
                                 <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
