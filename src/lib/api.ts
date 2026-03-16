@@ -155,7 +155,7 @@ class ApiService {
 
   // Question methods
   getQuestions = (params?: Record<string, unknown>) =>
-    this.axiosInstance.get<{ results: Question[]; count?: number }>('/questions/', { params });
+    this.axiosInstance.get<{ results: Question[]; count: number; next: string | null; previous: string | null }>('/questions/', { params });
 
   getQuestion = (slug: string) => this.axiosInstance.get<Question>(`/questions/${slug}/`);
 

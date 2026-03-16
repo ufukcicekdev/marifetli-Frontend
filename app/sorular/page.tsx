@@ -11,6 +11,7 @@ import { RecentActivitySidebar } from '@/src/components/recent-activity-sidebar'
 import { HomeHero } from '@/src/components/home-hero';
 import { PopularQuestionsSidebar } from '@/src/components/popular-questions-sidebar';
 import { SiteStatsSidebar } from '@/src/components/site-stats-sidebar';
+import { QuestionsPagination } from '@/src/components/questions-pagination';
 
 const SORT_TO_ORDER: Record<SortOption, string> = {
   hot: '-hot_score',
@@ -33,12 +34,13 @@ function QuestionsContent() {
     setSearchInput(qFromUrl);
   }, [qFromUrl]);
 
+  const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10) || 1);
   const params = useMemo(() => {
-    const p: Record<string, string> = { ordering: SORT_TO_ORDER[sort] };
+    const p: Record<string, string | number> = { ordering: SORT_TO_ORDER[sort], page };
     if (qFromUrl.trim()) p.search = qFromUrl.trim();
     if (communitySlug) p.community = communitySlug;
     return p;
-  }, [sort, qFromUrl, communitySlug]);
+  }, [sort, qFromUrl, communitySlug, page]);
   const { data, isLoading, error } = useQuestions(params);
 
   useEffect(() => {
@@ -50,7 +52,10 @@ function QuestionsContent() {
   }, [viewMode]);
 
   const questions = data?.results ?? [];
-  const totalCount = typeof data?.count === 'number' ? data.count : questions.length;
+  const totalCount = typeof data?.count === 'number' ? data.count : 0;
+  const paginationQueryParams: Record<string, string> = {};
+  if (qFromUrl.trim()) paginationQueryParams.q = qFromUrl.trim();
+  if (communitySlug) paginationQueryParams.community = communitySlug;
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,18 +142,12 @@ function QuestionsContent() {
                 />
               ))}
             </div>
-          </div>
-
-          <div className="mt-4 flex justify-center">
-            <nav className="flex items-center space-x-1">
-              <button className="px-3 py-1 rounded text-sm text-gray-500 hover:bg-gray-200">Önceki</button>
-              <button className="px-3 py-1 rounded bg-orange-500 text-white text-sm">1</button>
-              <button className="px-3 py-1 rounded text-sm text-gray-500 hover:bg-gray-200">2</button>
-              <button className="px-3 py-1 rounded text-sm text-gray-500 hover:bg-gray-200">3</button>
-              <span className="px-2 text-gray-400">...</span>
-              <button className="px-3 py-1 rounded text-sm text-gray-500 hover:bg-gray-200">10</button>
-              <button className="px-3 py-1 rounded text-sm text-gray-500 hover:bg-gray-200">Sonraki</button>
-            </nav>
+            <QuestionsPagination
+              currentPage={page}
+              totalCount={totalCount}
+              basePath="/sorular"
+              queryParams={paginationQueryParams}
+            />
           </div>
       </div>
 

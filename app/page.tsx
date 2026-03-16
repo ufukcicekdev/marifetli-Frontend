@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { PostFeedControls, type SortOption, type ViewMode } from '@/src/components/post-feed-controls';
 import { PostItem } from '@/src/components/post-item';
 import { useQuestions } from '@/src/hooks/use-questions';
@@ -9,6 +10,7 @@ import { RecentActivitySidebar } from '@/src/components/recent-activity-sidebar'
 import { HomeHero } from '@/src/components/home-hero';
 import { PopularQuestionsSidebar } from '@/src/components/popular-questions-sidebar';
 import { SiteStatsSidebar } from '@/src/components/site-stats-sidebar';
+import { QuestionsPagination } from '@/src/components/questions-pagination';
 
 const SORT_TO_ORDER: Record<SortOption, string> = {
   hot: '-hot_score',
@@ -17,11 +19,12 @@ const SORT_TO_ORDER: Record<SortOption, string> = {
   best: '-hot_score',
 };
 
-export default function HomePage() {
-  // Varsayılan olarak en son gelenler yukarıda görünsün diye 'new'
+function HomePageContent() {
+  const searchParams = useSearchParams();
+  const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10) || 1);
   const [sort, setSort] = useState<SortOption>('new');
   const [viewMode, setViewMode] = useState<ViewMode>('compact');
-  const params = useMemo(() => ({ ordering: SORT_TO_ORDER[sort] }), [sort]);
+  const params = useMemo(() => ({ ordering: SORT_TO_ORDER[sort], page }), [sort, page]);
   const { data, isLoading, error } = useQuestions(params);
 
   useEffect(() => {
@@ -36,7 +39,7 @@ export default function HomePage() {
   const totalCount =
     typeof (data as { count?: number })?.count === 'number'
       ? (data as { count: number }).count
-      : questions.length;
+      : 0;
 
   return (
     <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 flex flex-col lg:flex-row lg:items-start gap-4 sm:gap-6 min-w-0">
@@ -81,6 +84,12 @@ export default function HomePage() {
                 />
               ))}
             </div>
+            <QuestionsPagination
+              currentPage={page}
+              totalCount={totalCount}
+              basePath="/"
+              queryParams={{}}
+            />
           </div>
       </div>
 
@@ -90,5 +99,13 @@ export default function HomePage() {
           <PopularQuestionsSidebar />
         </div>
     </div>
+  );
+}
+
+export default function HomePage() {
+  return (
+    <Suspense fallback={<div className="container mx-auto px-4 py-8 text-center text-gray-500 dark:text-gray-400">Yükleniyor...</div>}>
+      <HomePageContent />
+    </Suspense>
   );
 }
