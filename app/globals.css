@@ -11,11 +11,11 @@ html {
 :root {
   --background: #f3f4f6;
   --foreground: #171717;
-  /* Baloncuk arka plan - light */
-  --bubble-1: rgb(251 146 60 / 0.07);
-  --bubble-2: rgb(253 186 116 / 0.06);
-  --bubble-3: rgb(254 215 170 / 0.08);
-  --bubble-4: rgb(251 146 60 / 0.04);
+  /* Baloncuk arka plan - light (iyice belli) */
+  --bubble-1: rgb(251 146 60 / 0.32);
+  --bubble-2: rgb(253 186 116 / 0.26);
+  --bubble-3: rgb(254 215 170 / 0.34);
+  --bubble-4: rgb(251 146 60 / 0.22);
   /* Blog hero - aynı class ile hydration uyumu */
   --blog-hero-from: rgb(255 247 237 / 0.9);
   --blog-hero-via: rgb(255 251 235 / 0.8);
@@ -29,10 +29,10 @@ html {
   --background: #111827;
   --foreground: #f3f4f6;
   /* Baloncuk arka plan - dark */
-  --bubble-1: rgb(251 146 60 / 0.06);
-  --bubble-2: rgb(253 186 116 / 0.04);
-  --bubble-3: rgb(254 215 170 / 0.03);
-  --bubble-4: rgb(251 146 60 / 0.03);
+  --bubble-1: rgb(251 146 60 / 0.24);
+  --bubble-2: rgb(253 186 116 / 0.18);
+  --bubble-3: rgb(254 215 170 / 0.16);
+  --bubble-4: rgb(251 146 60 / 0.12);
   --blog-hero-from: #111827;
   --blog-hero-via: #1f2937;
   --blog-hero-to: #111827;
