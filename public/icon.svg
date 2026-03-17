@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none" aria-hidden="true">
-  <!-- Turuncu yuvarlatılmış kare arka plan -->
-  <rect width="512" height="512" rx="108" fill="#ea580c"/>
-  <!-- Stilize M harfi - Marifetli -->
-  <path d="M128 160v192l128-140 128 140V160h-52v150l-76-84-76 84V160H128z" fill="white"/>
-  <!-- Alt çizgi / el işi vurgusu -->
-  <rect x="156" y="320" width="200" height="24" rx="12" fill="white" fill-opacity="0.9"/>
-</svg>
