@@ -71,6 +71,17 @@ Xcode açıldığında “çalıştırılacak bir şey yok” gibi görünüyors
 
 Eğer Xcode klasör açıyorsa, workspace’i doğrudan aç: `npm run cap:open:ios:workspace` (veya Terminal’de: `open ios/App/App.xcworkspace`).
 
+**Xcode'da dosyaları göremiyorsan:**
+
+- **Dosyalar Xcode uygulamasında görünür** (Cursor/VS Code değil). `open ios/App/App.xcworkspace` ile açılan **ayrı Xcode penceresine** bak; sol taraftaki dosya listesi oradadır.
+
+1. **Sol panel (Project Navigator) kapalı olabilir** → Üst menüden **View → Navigators → Show Project Navigator** (veya kısayol **Cmd + 1**).
+2. Sol listede **App** (mavi proje ikonu) görünmeli; tıkla. Altında şunlar olur: **App** (sarı klasör), **Products**, **Pods**, **Frameworks**.
+3. **App** (sarı klasörünü) aç: **AppDelegate.swift**, **Main.storyboard**, **Assets.xcassets**, **LaunchScreen.storyboard**, **public** (web build), **capacitor.config.json** görünür.
+4. Sol panel hiç yoksa: **View → Navigators → Show Navigator** (Cmd + 0) ile navigator’ı aç, sonra en üstteki **proje** ikonuna (📄) tıkla.
+5. **Finder'dan aç:** Finder'da `frontend → ios → App` klasörüne gir, **App.xcworkspace** dosyasına çift tıkla. Xcode'da **Cmd + 1** yapıp **App** üçgenini aç.
+6. Dosya isimleri **kırmızı** görünüyorsa klasör yolundaki **İ** sorun çıkarıyor olabilir; projeyi İ içermeyen bir yola kopyalayıp oradan workspace aç.
+
 ## Script özeti
 
 | Komut | Açıklama |

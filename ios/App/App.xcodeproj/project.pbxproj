@@ -83,7 +83,7 @@
 				50B271D01FEDC1A000F3C39B /* public */,
 			);
 			path = App;
-			sourceTree = "<group>";
+			sourceTree = SOURCE_ROOT;
 		};
 		7F8756D8B27F46E3366F6CEA /* Pods */ = {
 			isa = PBXGroup;
@@ -145,7 +145,7 @@
 			);
 			productRefGroup = 504EC3051FED79650016851F /* Products */;
 			projectDirPath = "";
-			projectRoot = "";
+			projectRoot = ".";
 			targets = (
 				504EC3031FED79650016851F /* App */,
 			);
