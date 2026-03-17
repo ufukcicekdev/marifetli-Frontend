@@ -75,9 +75,9 @@ export function NavMegaMenu() {
         role="dialog"
         aria-label="Menü"
       >
-        <div className="flex flex-1 min-h-0 overflow-hidden flex-col">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
           {/* Mobil: tek sütun (önce linkler, sonra kategoriler). Masaüstü: yan yana */}
-          <div className="flex-1 min-h-0 overflow-hidden flex flex-col md:flex-row">
+          <div className="min-h-0 flex flex-col md:flex-row">
             {/* Ana sayfalar linkleri */}
             <div
               className="p-4 md:p-6 border-b border-gray-100 dark:border-gray-800 md:border-b-0 md:border-r shrink-0 md:shrink md:flex-1 md:min-w-0 overflow-y-auto"
@@ -223,7 +223,7 @@ export function NavMegaMenu() {
         </div>
 
         {/* Alt: Footer linkleri */}
-        <div className="px-4 md:px-6 py-3 border-t border-gray-100 dark:border-gray-800 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400 shrink-0">
+        <div className="bg-white dark:bg-gray-900 px-4 md:px-6 py-3 border-t border-gray-100 dark:border-gray-800 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400 shrink-0">
             <Link href="/iletisim" onClick={close} className="hover:text-orange-600 dark:hover:text-orange-400">İletişim</Link>
             <Link href="/hakkimizda" onClick={close} className="hover:text-orange-600 dark:hover:text-orange-400">Hakkımızda</Link>
             <Link href="/gizlilik-politikasi" onClick={close} className="hover:text-orange-600 dark:hover:text-orange-400">Gizlilik Politikası</Link>
