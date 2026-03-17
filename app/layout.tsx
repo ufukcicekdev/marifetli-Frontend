@@ -100,13 +100,15 @@ export const metadata: Metadata = {
     description: 'Örgü, dikiş, nakış, takı tasarımı ve el sanatları tutkunlarının buluşma noktası.',
   },
   alternates: { canonical: SITE_URL },
+  // Mutlak URL kullan ki Google/Vercel kendi favicon'unu göstermesin (site:marifetli.com.tr aramasında)
   icons: {
     icon: [
-      { url: '/favicon.svg', type: 'image/svg+xml' },
-      { url: '/favicon.ico', sizes: 'any' },
-      { url: '/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: `${SITE_URL}/favicon.ico`, sizes: 'any' },
+      { url: `${SITE_URL}/favicon-32x32.png`, sizes: '32x32', type: 'image/png' },
+      { url: `${SITE_URL}/favicon-16x16.png`, sizes: '16x16', type: 'image/png' },
+      { url: `${SITE_URL}/favicon.svg`, type: 'image/svg+xml' },
     ],
-    apple: [{ url: '/apple-touch-icon.svg', type: 'image/svg+xml' }],
+    apple: [{ url: `${SITE_URL}/apple-touch-icon.png`, sizes: '180x180', type: 'image/png' }],
   },
 };
 
@@ -122,10 +124,11 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(getSiteStructuredData()) }}
         />
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-        <link rel="shortcut icon" href="/favicon.ico" />
+        <link rel="icon" href={`${SITE_URL}/favicon.ico`} sizes="any" />
+        <link rel="icon" href={`${SITE_URL}/favicon-32x32.png`} sizes="32x32" type="image/png" />
+        <link rel="shortcut icon" href={`${SITE_URL}/favicon.ico`} />
         <link rel="manifest" href="/manifest.json" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.svg" type="image/svg+xml" />
+        <link rel="apple-touch-icon" href={`${SITE_URL}/apple-touch-icon.png`} sizes="180x180" type="image/png" />
         <link rel="preconnect" href={API_ORIGIN} crossOrigin="" />
         <link rel="dns-prefetch" href={API_ORIGIN} />
         {/* LCP / third-party: CDN (medya), GTM, GA - kritik yolu kısaltır */}
