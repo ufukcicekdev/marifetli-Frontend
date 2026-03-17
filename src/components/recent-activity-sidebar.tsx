@@ -2,13 +2,37 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   getRecentActivityList,
   clearRecentActivity,
   type RecentItem,
 } from '@/src/lib/recent-activity';
 import { formatTimeAgo } from '@/src/lib/format-time';
+import api from '@/src/lib/api';
+
+type CategoryNode = { id: number; name: string; slug: string; subcategories?: { id: number; name: string; slug: string }[] };
+
+/** Slug → okunabilir isim map (ana + alt kategoriler). Son gezilenlerde her zaman isim gösterilsin. */
+function useSlugToNameMap(): Record<string, string> {
+  const { data: raw } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => api.getCategories().then((r) => r.data),
+  });
+  return useMemo(() => {
+    const list = Array.isArray(raw) ? raw : (raw && typeof raw === 'object' && Array.isArray((raw as { results?: CategoryNode[] }).results) ? (raw as { results: CategoryNode[] }).results : []);
+    const mains = (list as CategoryNode[]).filter((c) => !(c as { parent?: number }).parent);
+    const map: Record<string, string> = {};
+    for (const main of mains) {
+      map[main.slug] = main.name;
+      for (const sub of main.subcategories ?? []) {
+        map[sub.slug] = sub.name;
+      }
+    }
+    return map;
+  }, [raw]);
+}
 
 function CommunityIcon({ className }: { className?: string }) {
   return (
@@ -72,6 +96,7 @@ function Thumbnail({ src, alt, className }: { src: string; alt: string; classNam
 export function RecentActivitySidebar() {
   const pathname = usePathname();
   const [items, setItems] = useState<RecentItem[]>([]);
+  const slugToName = useSlugToNameMap();
 
   const refresh = useCallback(() => {
     setItems(getRecentActivityList());
@@ -80,6 +105,11 @@ export function RecentActivitySidebar() {
   useEffect(() => {
     refresh();
   }, [pathname, refresh]);
+
+  const getCommunityDisplayName = useCallback(
+    (slug: string, fallbackLabel: string) => slugToName[slug] ?? fallbackLabel,
+    [slugToName]
+  );
 
   const handleClear = () => {
     clearRecentActivity();
@@ -147,7 +177,9 @@ export function RecentActivitySidebar() {
                         ? (entry.displayName || entry.username)
                         : entry.type === 'blog'
                           ? entry.title
-                          : entry.label}
+                          : entry.type === 'community'
+                            ? getCommunityDisplayName(entry.slug, entry.label)
+                            : (entry as { label?: string }).label ?? ''}
                   </p>
                   {entry.type === 'question' && (entry.likeCount != null || entry.commentCount != null) && (
                     <div className="flex gap-3 mt-1 text-xs text-gray-500 dark:text-gray-400">

@@ -186,10 +186,10 @@ class ApiService {
 
   getCategories = () => this.axiosInstance.get<{ id: number; name: string; slug: string; parent: number | null; subcategories?: unknown[]; is_following?: boolean }[]>('/categories/');
 
-  /** Kategori detayı (slug ile); /t/[slug] ve SEO için */
+  /** Kategori detayı (slug ile); /t/[slug] ve SEO için. Alt kategoride parent_name, parent_slug dolu gelir. */
   getCategoryBySlug = (slug: string) =>
     this.axiosInstance
-      .get<{ id: number; name: string; slug: string; description?: string; question_count?: number }>('/categories/' + encodeURIComponent(slug) + '/')
+      .get<{ id: number; name: string; slug: string; description?: string; question_count?: number; parent_name?: string | null; parent_slug?: string | null }>('/categories/' + encodeURIComponent(slug) + '/')
       .then((r) => r.data);
 
   followCategory = (categoryId: number) => this.axiosInstance.post<{ followed: boolean }>(`/categories/${categoryId}/follow/`);

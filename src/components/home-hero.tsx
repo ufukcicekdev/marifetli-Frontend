@@ -3,7 +3,7 @@
 import Link from 'next/link';
 
 /**
- * Anasayfa üstünde forum kimliği ve CTA — modern, sade hero.
+ * Anasayfa / Sorular: hoş geldin kutusu + Soru sor + Toplulukları keşfet.
  */
 export function HomeHero() {
   return (
@@ -11,10 +11,10 @@ export function HomeHero() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100 mb-1">
-            El işi & el sanatları topluluğu
+            Marifetliler Topluluğu
           </h1>
           <p className="text-sm text-gray-600 dark:text-gray-400 max-w-xl">
-            Örgü, dikiş, nakış, takı tasarımı ve daha fazlası — sorular sor, deneyimlerini paylaş, el emeğini keşfet.
+            Bildiğini paylaş, bilmediğini öğren, marifetlilerle birlikte geliş.
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">

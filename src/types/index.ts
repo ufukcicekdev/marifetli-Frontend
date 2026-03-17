@@ -42,7 +42,7 @@ export interface Tag {
   created_at: string;
 }
 
-/** Admin panelden yönetilen site ayarları (iletişim, sosyal medya, logo, favicon, GA, GSC) */
+/** Admin panelden yönetilen site ayarları (iletişim, sosyal medya, logo, favicon, GA, GSC, hakkımızda) */
 export interface SiteSettings {
   contact: {
     email: string;
@@ -55,6 +55,9 @@ export interface SiteSettings {
   google_search_console_meta: string;
   logo_url?: string | null;
   favicon_url?: string | null;
+  primary_color?: string | null;
+  about_summary?: string;
+  about_content?: string;
 }
 
 export interface Question {

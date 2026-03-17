@@ -7,8 +7,8 @@ import { PostFeedControls, type SortOption, type ViewMode } from '@/src/componen
 import { PostItem } from '@/src/components/post-item';
 import { useQuestions } from '@/src/hooks/use-questions';
 import { formatTimeAgo } from '@/src/lib/format-time';
-import { RecentActivitySidebar } from '@/src/components/recent-activity-sidebar';
 import { HomeHero } from '@/src/components/home-hero';
+import { RecentActivitySidebar } from '@/src/components/recent-activity-sidebar';
 import { PopularQuestionsSidebar } from '@/src/components/popular-questions-sidebar';
 import { SiteStatsSidebar } from '@/src/components/site-stats-sidebar';
 import { QuestionsPagination } from '@/src/components/questions-pagination';
@@ -83,8 +83,8 @@ function QuestionsContent() {
                 <Link href="/sorular" className="text-sm text-orange-500 hover:text-orange-600">Tümüne dön</Link>
               </div>
             )}
-            {/* Mobil: sayfa içi arama çubuğu */}
-            <form onSubmit={handleSearchSubmit} className="md:hidden p-3 border-b border-gray-200 dark:border-gray-800">
+            {/* Sayfa içi arama (navbar artık sadece "Ara" linki; arama burada) */}
+            <form onSubmit={handleSearchSubmit} className="p-3 border-b border-gray-200 dark:border-gray-800">
               <div className="relative flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 focus-within:ring-1 focus-within:ring-orange-500">
                 <svg className="w-4 h-4 text-gray-400 dark:text-gray-500 ml-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -151,7 +151,7 @@ function QuestionsContent() {
           </div>
       </div>
 
-      <div className="w-80 shrink-0 hidden lg:block self-start sticky top-[52px] max-h-[calc(100vh-52px)] overflow-y-auto">
+      <div className="w-80 shrink-0 hidden lg:block self-start sticky top-[104px] max-h-[calc(100vh-104px)] overflow-y-auto">
         <RecentActivitySidebar />
         <SiteStatsSidebar />
         <PopularQuestionsSidebar />

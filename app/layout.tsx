@@ -9,9 +9,10 @@ import { Header } from '@/src/components/header';
 import { VerifyEmailBanner } from '@/src/components/verify-email-banner';
 import { OnboardingBanner } from '@/src/components/onboarding-banner';
 import { MainContentWrapper } from '@/src/components/main-content-wrapper';
-import { AppSidebarClient } from '@/src/components/app-sidebar-client';
+import { NavMegaMenu } from '@/src/components/nav-mega-menu';
 import { OnboardingGuard } from '@/src/components/onboarding-guard';
 import { SiteAnalytics } from '@/src/components/site-analytics';
+import { CategoriesPrefetcher } from '@/src/components/categories-prefetcher';
 import { FirebasePushHandler } from '@/src/components/firebase-push-handler';
 import { CookieConsentBanner } from '@/src/components/cookie-consent-banner';
 
@@ -138,13 +139,14 @@ export default function RootLayout({
         <ThemeProvider>
           <QueryProvider>
             <SiteAnalytics />
+            <CategoriesPrefetcher />
             <FirebasePushHandler />
             <OnboardingGuard>
-              <Suspense fallback={<header className="fixed top-0 left-0 right-0 z-40 h-[52px] bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800" />}>
+              <Suspense fallback={<header className="fixed top-0 left-0 right-0 z-40 h-[104px] bg-orange-500 border-b border-orange-600" />}>
                 <Header />
               </Suspense>
-              <div className="flex min-h-[calc(100vh-52px)] pt-[52px]">
-                <AppSidebarClient />
+              <NavMegaMenu />
+              <div className="flex min-h-screen pt-[104px]">
                 <MainContentWrapper>
                   <VerifyEmailBanner />
                   <OnboardingBanner />

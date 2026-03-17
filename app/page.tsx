@@ -6,8 +6,8 @@ import { PostFeedControls, type SortOption, type ViewMode } from '@/src/componen
 import { PostItem } from '@/src/components/post-item';
 import { useQuestions } from '@/src/hooks/use-questions';
 import { formatTimeAgo } from '@/src/lib/format-time';
-import { RecentActivitySidebar } from '@/src/components/recent-activity-sidebar';
 import { HomeHero } from '@/src/components/home-hero';
+import { RecentActivitySidebar } from '@/src/components/recent-activity-sidebar';
 import { PopularQuestionsSidebar } from '@/src/components/popular-questions-sidebar';
 import { SiteStatsSidebar } from '@/src/components/site-stats-sidebar';
 import { QuestionsPagination } from '@/src/components/questions-pagination';
@@ -93,7 +93,7 @@ function HomePageContent() {
           </div>
       </div>
 
-      <div className="w-80 shrink-0 hidden lg:block self-start sticky top-[52px] max-h-[calc(100vh-52px)] overflow-y-auto">
+      <div className="w-80 shrink-0 hidden lg:block self-start sticky top-[104px] max-h-[calc(100vh-104px)] overflow-y-auto">
           <RecentActivitySidebar />
           <SiteStatsSidebar />
           <PopularQuestionsSidebar />

@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import { TopicPageContent } from './topic-page-content';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.marifetli.com.tr';
@@ -64,17 +65,23 @@ export async function generateMetadata({
   }
 }
 
-/** Kategori/konu sayfası için BreadcrumbList + WebPage JSON-LD (Google & AI SEO). */
-function buildTopicPageStructuredData(slug: string, name: string, description: string) {
+/** Kategori/konu sayfası için BreadcrumbList + WebPage JSON-LD (Google & AI SEO). Alt kategoride parent_slug/parent_name ile ana kategori eklenir. */
+function buildTopicPageStructuredData(slug: string, name: string, description: string, parentSlug?: string | null, parentName?: string | null) {
   const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.marifetli.com.tr';
+  const items: { '@type': string; position: number; name: string; item: string }[] = [
+    { '@type': 'ListItem', position: 1, name: 'Marifetli', item: SITE_URL },
+    { '@type': 'ListItem', position: 2, name: 'Konular', item: `${SITE_URL}/sorular` },
+  ];
+  if (parentSlug && parentName) {
+    items.push({ '@type': 'ListItem', position: 3, name: parentName, item: `${SITE_URL}/t/${parentSlug}` });
+    items.push({ '@type': 'ListItem', position: 4, name, item: `${SITE_URL}/t/${slug}` });
+  } else {
+    items.push({ '@type': 'ListItem', position: 3, name, item: `${SITE_URL}/t/${slug}` });
+  }
   const breadcrumb = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
-    itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Marifetli', item: SITE_URL },
-      { '@type': 'ListItem', position: 2, name: 'Konular', item: `${SITE_URL}/sorular` },
-      { '@type': 'ListItem', position: 3, name, item: `${SITE_URL}/t/${slug}` },
-    ],
+    itemListElement: items,
   };
   const webPage = {
     '@context': 'https://schema.org',
@@ -110,7 +117,7 @@ export default async function TopicPage({
           cat.meta_description?.trim() ||
           cat.description?.trim() ||
           `${name} kategorisindeki el işi ve el sanatları soruları. Marifetli topluluğunda soru sor, cevapla, paylaş.`;
-        structuredData = buildTopicPageStructuredData(slug, name, description);
+        structuredData = buildTopicPageStructuredData(slug, name, description, cat.parent_slug, cat.parent_name);
       }
     } catch {
       // ignore
@@ -124,7 +131,9 @@ export default async function TopicPage({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
       )}
-      <TopicPageContent slug={slug} />
+      <Suspense fallback={<div className="min-h-screen bg-gray-50 dark:bg-gray-950 animate-pulse" />}>
+        <TopicPageContent slug={slug} />
+      </Suspense>
     </>
   );
 }

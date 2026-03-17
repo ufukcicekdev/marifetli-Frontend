@@ -10,3 +10,9 @@ export const queryClient = new QueryClient({
     },
   },
 });
+
+// Kategoriler nadiren değişir; uzun cache ile tekrar istek azalır
+queryClient.setQueryDefaults(['categories'], {
+  staleTime: 15 * 60 * 1000, // 15 dakika taze kabul et
+  gcTime: 60 * 60 * 1000,    // 1 saat cache'te tut
+});

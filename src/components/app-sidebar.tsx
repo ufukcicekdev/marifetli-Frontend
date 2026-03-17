@@ -10,7 +10,7 @@ import { useAuthModalStore } from '../stores/auth-modal-store';
 import { ThemeToggle } from './theme-toggle';
 import api from '../lib/api';
 
-type CategoryItem = { id: number; name: string; slug: string; subcategories?: CategoryItem[] };
+type CategoryItem = { id: number; name: string; slug: string; parent?: number | null; subcategories?: CategoryItem[] };
 
 // Sol menü: Tasarım Yükle yok; tasarım yükleme sadece /tasarimlar sayfasındaki butondan.
 const SIDEBAR_NAV_ITEMS = [
@@ -26,7 +26,7 @@ const SIDEBAR_NAV_ITEMS = [
 // dynamic() loading ile birebir aynı placeholder; hydration uyumu için
 const SIDEBAR_PLACEHOLDER = (
   <aside
-    className="fixed left-0 z-30 top-[52px] bottom-0 w-16 shrink-0 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
+    className="fixed left-0 z-30 top-[104px] bottom-0 w-16 shrink-0 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
     aria-label="Navigasyon"
     aria-hidden="true"
   />
@@ -47,21 +47,14 @@ export function AppSidebar() {
     queryFn: () => api.getCategories().then((r) => r.data),
   });
 
-  const categories = useMemo(() => {
+  const categoriesTree = useMemo(() => {
     const raw = categoriesData as { results?: CategoryItem[] } | CategoryItem[] | undefined;
     const list = Array.isArray(raw)
       ? raw
       : (raw && typeof raw === 'object' && Array.isArray((raw as { results?: CategoryItem[] }).results)
           ? (raw as { results: CategoryItem[] }).results
           : []);
-    const flat: { href: string; label: string }[] = [];
-    for (const c of list as CategoryItem[]) {
-      flat.push({ href: `/t/${c.slug}`, label: c.name });
-      for (const sub of c.subcategories || []) {
-        flat.push({ href: `/t/${sub.slug}`, label: sub.name });
-      }
-    }
-    return flat;
+    return (list as CategoryItem[]).filter((c) => !c.parent);
   }, [categoriesData]);
 
   useEffect(() => {
@@ -89,7 +82,7 @@ export function AppSidebar() {
       <aside
         className={`
           fixed left-0 z-40 lg:z-30
-          top-[52px] bottom-0
+          top-[104px] bottom-0
           pt-0
           ${isOpen ? 'w-64 translate-x-0' : 'w-16 -translate-x-full lg:translate-x-0'}
           shrink-0 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900
@@ -175,31 +168,53 @@ export function AppSidebar() {
               </h3>
               <Link
                 href="/topluluklar"
-                className="mb-2 flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                className="mb-3 flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
               >
                 🔍 Tümünü keşfet
               </Link>
-              <ul className="space-y-1">
-                {categoriesLoading && categories.length === 0 && (
+              <ul className="space-y-3">
+                {categoriesLoading && categoriesTree.length === 0 && (
                   <li className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">Yükleniyor…</li>
                 )}
-                {!categoriesLoading && categories.length === 0 && (
+                {!categoriesLoading && categoriesTree.length === 0 && (
                   <li className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">Kategori yok</li>
                 )}
-                {categories.map((c) => {
-                  const active = pathname === c.href || pathname?.startsWith(c.href + '/');
+                {categoriesTree.map((main) => {
+                  const mainActive = pathname === `/t/${main.slug}` || pathname?.startsWith(`/t/${main.slug}/`);
+                  const subs = main.subcategories || [];
                   return (
-                    <li key={c.href}>
+                    <li key={main.id} className="space-y-0.5">
                       <Link
-                        href={c.href}
-                        className={`block px-3 py-2 rounded-lg text-sm transition-colors ${
-                          active
+                        href={`/t/${main.slug}`}
+                        className={`block px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          mainActive
                             ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400'
-                            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-orange-500'
+                            : 'text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'
                         }`}
                       >
-                        {c.label}
+                        {main.name}
                       </Link>
+                      {subs.length > 0 && (
+                        <ul className="space-y-0.5 pl-4">
+                          {subs.map((sub) => {
+                            const subActive = pathname === `/t/${sub.slug}` || pathname?.startsWith(`/t/${sub.slug}/`);
+                            return (
+                              <li key={sub.id}>
+                                <Link
+                                  href={`/t/${sub.slug}`}
+                                  className={`block px-3 py-1.5 rounded-md text-sm transition-colors ${
+                                    subActive
+                                      ? 'text-orange-600 dark:text-orange-400 font-medium'
+                                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800/50'
+                                  }`}
+                                >
+                                  {sub.name}
+                                </Link>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
                     </li>
                   );
                 })}

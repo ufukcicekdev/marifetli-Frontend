@@ -1,27 +1,61 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/src/lib/api';
 import { RichTextEditor } from '@/src/components/rich-text-editor';
 
-/** Custom kategori dropdown: tıklanınca liste açılır, dışarı tıklanınca kapanır */
+type CategoryWithSubs = { id: number; name: string; slug: string; subcategories?: { id: number; name: string; slug: string }[] };
+
+/** Seçili kategori adını ağaçtan bulur */
+function findCategoryName(tree: CategoryWithSubs[], id: number | null): string | null {
+  if (id == null) return null;
+  for (const main of tree) {
+    if (main.id === id) return main.name;
+    for (const sub of main.subcategories || []) {
+      if (sub.id === id) return `${main.name} › ${sub.name}`;
+    }
+  }
+  return null;
+}
+
+/** Arama metnine göre kategori listesini filtreler (ana + alt adı) */
+function filterCategoriesBySearch(tree: CategoryWithSubs[], q: string): CategoryWithSubs[] {
+  const term = q.trim().toLowerCase();
+  if (!term) return tree;
+  const result: CategoryWithSubs[] = [];
+  for (const main of tree) {
+    const mainMatch = main.name.toLowerCase().includes(term);
+    const subs = (main.subcategories ?? []).filter((sub) => mainMatch || sub.name.toLowerCase().includes(term));
+    if (mainMatch) {
+      result.push({ ...main, subcategories: main.subcategories ?? [] });
+    } else if (subs.length > 0) {
+      result.push({ ...main, subcategories: subs });
+    }
+  }
+  return result;
+}
+
+/** Ana kategori / alt kategori gruplu dropdown + arama */
 function CategoryDropdown({
-  categories,
+  categoriesTree,
   value,
   onChange,
   placeholder,
   disabled,
 }: {
-  categories: { id: number; name: string }[];
+  categoriesTree: CategoryWithSubs[];
   value: number | null;
   onChange: (id: number | null) => void;
   placeholder: string;
   disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const ref = useRef<HTMLDivElement>(null);
-  const selected = categories.find((c) => c.id === value);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const selectedName = findCategoryName(categoriesTree, value);
+  const filteredTree = useMemo(() => filterCategoriesBySearch(categoriesTree, searchQuery), [categoriesTree, searchQuery]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -30,6 +64,13 @@ function CategoryDropdown({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  useEffect(() => {
+    if (open) {
+      setSearchQuery('');
+      setTimeout(() => inputRef.current?.focus(), 0);
+    }
+  }, [open]);
 
   return (
     <div ref={ref} className="relative">
@@ -41,28 +82,64 @@ function CategoryDropdown({
         aria-haspopup="listbox"
         aria-expanded={open}
       >
-        <span className={selected ? '' : 'text-gray-500 dark:text-gray-400'}>{selected ? selected.name : placeholder}</span>
+        <span className={selectedName ? '' : 'text-gray-500 dark:text-gray-400'}>{selectedName ?? placeholder}</span>
         <svg className={`w-5 h-5 shrink-0 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
       {open && (
-        <ul
-          className="absolute top-full left-0 right-0 mt-1 max-h-56 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg z-20 py-1"
-          role="listbox"
-        >
-          {categories.map((c) => (
-            <li key={c.id} role="option" aria-selected={value === c.id}>
-              <button
-                type="button"
-                onClick={() => { onChange(c.id); setOpen(false); }}
-                className={`block w-full text-left px-4 py-2.5 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${value === c.id ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 font-medium' : 'text-gray-900 dark:text-gray-100'}`}
-              >
-                {c.name}
-              </button>
-            </li>
-          ))}
-        </ul>
+        <div className="absolute top-full left-0 right-0 mt-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg z-20 overflow-hidden">
+          <div className="p-2 border-b border-gray-100 dark:border-gray-700">
+            <input
+              ref={inputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => e.stopPropagation()}
+              placeholder="Kategori ara..."
+              className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              aria-label="Kategori ara"
+            />
+          </div>
+          <ul className="max-h-56 overflow-y-auto py-1" role="listbox">
+          {filteredTree.map((main) => {
+            const subs = main.subcategories ?? [];
+            const hasSubs = subs.length > 0;
+            return (
+              <li key={main.id}>
+                <div className="px-4 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider border-b border-gray-100 dark:border-gray-700">
+                  {main.name}
+                </div>
+                <ul className="py-0.5">
+                  {hasSubs ? (
+                    subs.map((sub) => (
+                      <li key={sub.id} role="option" aria-selected={value === sub.id}>
+                        <button
+                          type="button"
+                          onClick={() => { onChange(sub.id); setOpen(false); }}
+                          className={`block w-full text-left pl-6 pr-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${value === sub.id ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 font-medium' : 'text-gray-900 dark:text-gray-100'}`}
+                        >
+                          {sub.name}
+                        </button>
+                      </li>
+                    ))
+                  ) : (
+                    <li role="option" aria-selected={value === main.id}>
+                      <button
+                        type="button"
+                        onClick={() => { onChange(main.id); setOpen(false); }}
+                        className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${value === main.id ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 font-medium' : 'text-gray-900 dark:text-gray-100'}`}
+                      >
+                        {main.name}
+                      </button>
+                    </li>
+                  )}
+                </ul>
+              </li>
+            );
+          })}
+          </ul>
+        </div>
       )}
     </div>
   );
@@ -208,7 +285,11 @@ export function QuestionForm({
     queryKey: ['categories'],
     queryFn: () => api.getCategories().then((r) => r.data),
   });
-  const categories = Array.isArray(categoriesRaw) ? categoriesRaw : (categoriesRaw as unknown as { results?: unknown[] })?.results ?? [];
+  const categoriesTree = useMemo(() => {
+    const raw = categoriesRaw;
+    const list = Array.isArray(raw) ? raw : (raw && typeof raw === 'object' && Array.isArray((raw as { results?: unknown[] }).results) ? (raw as { results: unknown[] }).results : []);
+    return (list as CategoryWithSubs[]).filter((c) => !(c as { parent?: number }).parent);
+  }, [categoriesRaw]);
 
   const { data: tagsData = [] } = useQuery({
     queryKey: ['tags'],
@@ -384,7 +465,7 @@ export function QuestionForm({
       <div className="p-4 border-b border-gray-200 dark:border-gray-800">
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Topluluk / Kategori *</label>
         <CategoryDropdown
-          categories={categories as { id: number; name: string }[]}
+          categoriesTree={categoriesTree}
           value={categoryId}
           onChange={setCategoryId}
           placeholder="Kategori seçin"

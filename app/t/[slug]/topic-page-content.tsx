@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import { useState, useEffect, useMemo } from 'react';
 import api from '@/src/lib/api';
@@ -26,11 +27,40 @@ const SPECIAL_LABELS: Record<string, string> = {
   tum: 'Tümü',
 };
 
+type CategoryMain = { id: number; name: string; slug: string; subcategories?: { id: number; name: string; slug: string }[] };
+
+/**
+ * Alt kategoride breadcrumb "Ana kategori / Alt kategori" (örn. El işleri / Dantel, Dikiş & Moda / Dikiş teknikleri).
+ * Slug ağaçta bir alt kategoriye aitse ana + alt bilgisini döner; ana kategori veya bulunamazsa null.
+ */
+function findParentFromTree(tree: CategoryMain[], childSlug: string): { parentName: string; parentSlug: string; currentName: string } | null {
+  for (const main of tree) {
+    if (main.slug === childSlug) return null;
+    for (const sub of main.subcategories || []) {
+      if (sub.slug === childSlug) return { parentName: main.name, parentSlug: main.slug, currentName: sub.name };
+    }
+  }
+  return null;
+}
+
 export function TopicPageContent({ slug }: { slug: string }) {
+  const searchParams = useSearchParams();
+  const searchQ = searchParams.get('q') ?? '';
   const isSpecial = slug === 'populer' || slug === 'tum';
   const [sort, setSort] = useState<SortOption>(slug === 'populer' ? 'hot' : 'new');
   const [viewMode, setViewMode] = useState<ViewMode>('compact');
 
+  const { data: categoriesRaw } = useQuery({
+    queryKey: ['categories'],
+    queryFn: () => api.getCategories().then((r) => r.data),
+    enabled: !isSpecial,
+  });
+
+  const categoriesTree = useMemo(() => {
+    const raw = categoriesRaw;
+    const list = Array.isArray(raw) ? raw : (raw && typeof raw === 'object' && Array.isArray((raw as { results?: CategoryMain[] }).results) ? (raw as { results: CategoryMain[] }).results : []);
+    return (list as CategoryMain[]).filter((c) => !(c as { parent?: number }).parent);
+  }, [categoriesRaw]);
 
   const { data: category, isLoading: categoryLoading, isError: categoryError } = useQuery({
     queryKey: ['category', slug],
@@ -38,12 +68,46 @@ export function TopicPageContent({ slug }: { slug: string }) {
     enabled: !isSpecial,
   });
 
+  const parentCategory = useMemo(() => findParentFromTree(categoriesTree, slug), [categoriesTree, slug]);
+
+  /** Alt kategoriler: önce ağaçtan (liste API), yoksa detay API'deki category.subcategories kullan. */
+  const subcategoriesToShow = useMemo(() => {
+    const normalize = (arr: { id?: number; name?: string; slug?: string }[] | undefined) =>
+      (arr ?? []).map((s) => ({ id: s.id!, name: s.name ?? '', slug: s.slug ?? '' }));
+
+    const fromTree = (): { id: number; name: string; slug: string }[] => {
+      const main = categoriesTree.find((c) => c.slug === slug);
+      if (main?.subcategories?.length) return normalize(main.subcategories as { id?: number; name?: string; slug?: string }[]);
+      if (parentCategory) {
+        const parentMain = categoriesTree.find((c) => c.slug === parentCategory.parentSlug);
+        return normalize(parentMain?.subcategories as { id?: number; name?: string; slug?: string }[] | undefined);
+      }
+      return [];
+    };
+
+    const fromTreeList = fromTree();
+    if (fromTreeList.length > 0) return fromTreeList;
+
+    const cat = category as { slug?: string; subcategories?: { id?: number; name?: string; slug?: string }[] } | undefined;
+    if (cat?.slug === slug && cat?.subcategories?.length) return normalize(cat.subcategories);
+    if (parentCategory && cat && (cat as { parent_slug?: string }).parent_slug === parentCategory.parentSlug) {
+      const parentMain = categoriesTree.find((c) => c.slug === parentCategory.parentSlug);
+      return normalize(parentMain?.subcategories as { id?: number; name?: string; slug?: string }[] | undefined);
+    }
+    return [];
+  }, [categoriesTree, slug, parentCategory, category]);
+
   const listParams = useMemo(() => {
     const ord = SORT_TO_ORDER[sort];
-    if (isSpecial) return { ordering: ord };
-    if (category?.id != null) return { category: String(category.id), ordering: ord };
+    const base: Record<string, string> = { ordering: ord };
+    if (searchQ.trim()) base.search = searchQ.trim();
+    if (isSpecial) return base;
+    if (category?.id != null) {
+      base.category = String(category.id);
+      return base;
+    }
     return null;
-  }, [isSpecial, category?.id, sort]);
+  }, [isSpecial, category?.id, sort, searchQ]);
 
   const { data, isLoading: questionsLoading, error: questionsError } = useQuery({
     queryKey: questionKeys.list(listParams ?? {}),
@@ -69,13 +133,42 @@ export function TopicPageContent({ slug }: { slug: string }) {
       <RecordCommunityVisit slug={slug} label={label} />
       <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 flex flex-col lg:flex-row lg:items-start gap-4 sm:gap-6 min-w-0">
         <div className="flex-1 min-w-0 overflow-hidden">
-          <div className="mb-4 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+          <nav className="mb-4 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400" aria-label="Breadcrumb">
             <Link href="/" className="hover:text-orange-500">Marifetli</Link>
             <span>/</span>
             <Link href="/sorular" className="hover:text-orange-500">Sorular</Link>
             <span>/</span>
-            <span className="text-gray-900 dark:text-gray-100 font-medium" suppressHydrationWarning>{label}</span>
-          </div>
+            {!isSpecial && parentCategory ? (
+              <>
+                <Link href={`/t/${parentCategory.parentSlug}`} className="hover:text-orange-500">{parentCategory.parentName}</Link>
+                <span>/</span>
+                <span className="text-gray-900 dark:text-gray-100 font-medium" suppressHydrationWarning>{parentCategory.currentName}</span>
+              </>
+            ) : (
+              <span className="text-gray-900 dark:text-gray-100 font-medium" suppressHydrationWarning>{label}</span>
+            )}
+          </nav>
+
+          {!isSpecial && subcategoriesToShow.length > 0 && (
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              {subcategoriesToShow.map((sub) => {
+                const isCurrent = sub.slug === slug;
+                return (
+                  <Link
+                    key={sub.id}
+                    href={`/t/${sub.slug}`}
+                    className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                      isCurrent
+                        ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 font-medium'
+                        : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:text-orange-600 dark:hover:text-orange-400'
+                    }`}
+                  >
+                    {sub.name}
+                  </Link>
+                );
+              })}
+            </div>
+          )}
 
           {!isSpecial && categoryLoading && (
             <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-8 text-center text-gray-500 dark:text-gray-400">
@@ -151,7 +244,7 @@ export function TopicPageContent({ slug }: { slug: string }) {
           )}
         </div>
 
-        <div className="w-80 shrink-0 hidden lg:block self-start sticky top-[52px] max-h-[calc(100vh-52px)] overflow-y-auto">
+        <div className="w-80 shrink-0 hidden lg:block self-start sticky top-[104px] max-h-[calc(100vh-104px)] overflow-y-auto">
           <RecentActivitySidebar />
           <SiteStatsSidebar />
           <PopularQuestionsSidebar />

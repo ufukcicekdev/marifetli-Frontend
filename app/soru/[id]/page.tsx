@@ -382,7 +382,7 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
         </div>
 
         {communitySlug && community && (
-          <aside className="w-full lg:w-80 shrink-0 lg:self-start lg:sticky lg:top-[calc(52px+1.5rem)] lg:max-h-[calc(100vh-52px-3rem)] overflow-y-auto">
+          <aside className="w-full lg:w-80 shrink-0 lg:self-start lg:sticky lg:top-[calc(104px+1.5rem)] lg:max-h-[calc(100vh-104px-3rem)] overflow-y-auto">
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
               <div className="p-4">
                 <div className="flex items-center gap-3 mb-3">

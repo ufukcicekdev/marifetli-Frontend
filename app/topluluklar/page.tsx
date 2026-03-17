@@ -1,18 +1,20 @@
 'use client';
 
 import Link from 'next/link';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api, { type CommunityListItem } from '@/src/lib/api';
 import { useAuthStore } from '@/src/stores/auth-store';
 import { useAuthModalStore } from '@/src/stores/auth-modal-store';
+import { useUIStore } from '@/src/stores/ui-store';
 
 export interface CategoryItem {
   id: number;
   name: string;
   slug: string;
-  parent: number | null;
+  parent?: number | null;
   order?: number;
+  subcategories?: { id: number; name: string; slug: string }[];
 }
 
 const INITIAL_SHOW = 12;
@@ -83,9 +85,19 @@ export default function TopluluklarPage() {
   const queryClient = useQueryClient();
   const { isAuthenticated } = useAuthStore();
   const openAuth = useAuthModalStore((s) => s.open);
+  const setPageSearchScope = useUIStore((s) => s.setPageSearchScope);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [searchInput, setSearchInput] = useState('');
   const [showCount, setShowCount] = useState(INITIAL_SHOW);
+
+  const setCategory = (slug: string | null) => {
+    setActiveCategory(slug);
+    setShowCount(INITIAL_SHOW);
+    setPageSearchScope(slug ? { type: 'category', slug } : null);
+  };
+
+  useEffect(() => {
+    return () => setPageSearchScope(null);
+  }, [setPageSearchScope]);
 
   const { data: categoriesData } = useQuery({
     queryKey: ['categories'],
@@ -93,7 +105,7 @@ export default function TopluluklarPage() {
       const res = await api.getCategories();
       const raw = res.data;
       const list = Array.isArray(raw) ? raw : (raw as { results?: CategoryItem[] })?.results ?? [];
-      return (list as CategoryItem[]).filter((c) => !c.parent);
+      return (list as CategoryItem[]).filter((c) => !c.parent) as CategoryItem[];
     },
   });
 
@@ -119,25 +131,23 @@ export default function TopluluklarPage() {
     },
   });
 
-  const categories = categoriesData ?? [];
+  const categoriesTree = categoriesData ?? [];
   const allCommunities = (communitiesData ?? []) as CommunityListItem[];
 
-  const filteredCommunities = useMemo(() => {
-    if (!searchInput.trim()) return allCommunities;
-    const q = searchInput.trim().toLowerCase();
-    return allCommunities.filter(
-      (c) =>
-        c.name?.toLowerCase().includes(q) ||
-        c.slug?.toLowerCase().includes(q) ||
-        c.description?.toLowerCase().includes(q)
-    );
-  }, [allCommunities, searchInput]);
+  const getCategoryDisplayName = (slug: string) => {
+    for (const main of categoriesTree) {
+      if (main.slug === slug) return main.name;
+      const sub = main.subcategories?.find((s) => s.slug === slug);
+      if (sub) return `${main.name} › ${sub.name}`;
+    }
+    return slug;
+  };
 
   const displayedCommunities = useMemo(
-    () => filteredCommunities.slice(0, showCount),
-    [filteredCommunities, showCount]
+    () => allCommunities.slice(0, showCount),
+    [allCommunities, showCount]
   );
-  const hasMore = filteredCommunities.length > showCount;
+  const hasMore = allCommunities.length > showCount;
 
   const handleJoinClick = (e: React.MouseEvent, c: CommunityListItem) => {
     e.preventDefault();
@@ -154,13 +164,12 @@ export default function TopluluklarPage() {
   };
 
   const sectionTitle = activeCategory
-    ? categories.find((c) => c.slug === activeCategory)?.name ?? activeCategory
+    ? getCategoryDisplayName(activeCategory)
     : 'Sizin için önerilenler';
 
   return (
     <div className="min-h-screen bg-white dark:bg-gray-900 w-full">
-      {/* Reddit gibi tam genişlik: ortalı değil, sol sidebar'dan sağ kenara kadar */}
-      <main className="w-full min-h-screen px-3 sm:px-4 py-6 sm:py-8">
+      <main className="w-full min-h-screen px-3 sm:px-4 py-6 sm:py-8 max-w-5xl mx-auto">
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-100">
@@ -180,31 +189,32 @@ export default function TopluluklarPage() {
           )}
         </div>
 
-        {/* Arama - Reddit tarzı geniş arama çubuğu (z-index ile tıklanabilir) */}
-        <div className="mb-6 relative z-10">
-          <div className="relative w-full max-w-2xl">
-            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 dark:text-gray-500 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input
-              type="search"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Herhangi bir şey bulun"
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              autoComplete="off"
-              aria-label="Topluluk ara"
-            />
+        {/* Boş durum: topluluk yoksa hemen başlık altında göster */}
+        {!isLoading && !error && allCommunities.length === 0 && (
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-8 sm:p-12 text-center mb-8">
+            <p className="text-gray-600 dark:text-gray-300 mb-4">
+              {activeCategory
+                ? 'Bu kategoride henüz topluluk yok.'
+                : 'Henüz topluluk oluşturulmamış.'}
+            </p>
+            {isAuthenticated && (
+              <Link
+                href="/topluluklar/olustur"
+                className="inline-block rounded-full bg-orange-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-orange-600"
+              >
+                İlk topluluğu oluştur
+              </Link>
+            )}
           </div>
-        </div>
+        )}
 
-        {/* Kategori sekmeleri - yatay kaydırılabilir */}
-        {categories.length > 0 && (
-          <div className="mb-8 overflow-x-auto pb-2 -mx-1 scrollbar-thin">
-            <div className="flex gap-2 min-w-max">
+        {/* Kategori sekmeleri - ana kategori altında alt kategoriler */}
+        {categoriesTree.length > 0 && (
+          <div className="mb-8 space-y-4">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                onClick={() => { setActiveCategory(null); setShowCount(INITIAL_SHOW); }}
+                onClick={() => setCategory(null)}
                 className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
                   activeCategory === null
                     ? 'bg-orange-500 text-white'
@@ -213,19 +223,41 @@ export default function TopluluklarPage() {
               >
                 Tümü
               </button>
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => { setActiveCategory(cat.slug); setShowCount(INITIAL_SHOW); }}
-                  className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
-                    activeCategory === cat.slug
-                      ? 'bg-orange-500 text-white'
-                      : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  {cat.name}
-                </button>
+            </div>
+            <div className="flex flex-col gap-4 sm:gap-3">
+              {categoriesTree.map((main) => (
+                <div key={main.id}>
+                  <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
+                    {main.name}
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCategory(main.slug)}
+                      className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium transition-colors whitespace-nowrap ${
+                        activeCategory === main.slug
+                          ? 'bg-orange-500 text-white'
+                          : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      {main.name}
+                    </button>
+                    {(main.subcategories || []).map((sub) => (
+                      <button
+                        key={sub.id}
+                        type="button"
+                        onClick={() => setCategory(sub.slug)}
+                        className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium transition-colors whitespace-nowrap ${
+                          activeCategory === sub.slug
+                            ? 'bg-orange-500 text-white'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        {sub.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           </div>
@@ -243,27 +275,7 @@ export default function TopluluklarPage() {
           </div>
         )}
 
-        {!isLoading && !error && filteredCommunities.length === 0 && (
-          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-12 text-center">
-            <p className="text-gray-500 dark:text-gray-400 mb-4">
-              {searchInput.trim()
-                ? 'Aramanızla eşleşen topluluk bulunamadı.'
-                : activeCategory
-                  ? 'Bu kategoride henüz topluluk yok.'
-                  : 'Henüz topluluk oluşturulmamış.'}
-            </p>
-            {isAuthenticated && !searchInput.trim() && (
-              <Link
-                href="/topluluklar/olustur"
-                className="inline-block rounded-full bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600"
-              >
-                İlk topluluğu oluştur
-              </Link>
-            )}
-          </div>
-        )}
-
-        {!isLoading && !error && filteredCommunities.length > 0 && (
+        {!isLoading && !error && allCommunities.length > 0 && (
           <section>
             <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
               {sectionTitle}

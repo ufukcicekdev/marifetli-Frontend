@@ -9,6 +9,7 @@ const fixedRoutes: { path: string; changefreq: string; priority: string }[] = [
   { path: '/sorular', changefreq: 'daily', priority: '0.9' },
   { path: '/blog', changefreq: 'daily', priority: '0.9' },
   { path: '/tasarimlar', changefreq: 'daily', priority: '0.8' },
+  { path: '/kategoriler', changefreq: 'weekly', priority: '0.8' },
   { path: '/topluluklar', changefreq: 'weekly', priority: '0.8' },
   { path: '/iletisim', changefreq: 'monthly', priority: '0.5' },
   { path: '/hakkimizda', changefreq: 'monthly', priority: '0.5' },
