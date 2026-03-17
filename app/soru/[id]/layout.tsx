@@ -72,6 +72,11 @@ function buildQAPageStructuredData(question: QuestionForMeta, id: string) {
 
 type Props = { params: Promise<{ id: string }>; children: React.ReactNode };
 
+/** Static export (Capacitor) için gerekli; en az bir path üretilmeli. */
+export function generateStaticParams() {
+  return [{ id: '_' }];
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const question = await getQuestion(id);

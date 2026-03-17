@@ -60,6 +60,11 @@ function buildArticleSchema(post: BlogPostMeta, slug: string) {
 
 type Props = { params: Promise<{ slug: string }>; children: React.ReactNode };
 
+/** Static export (Capacitor) için gerekli; en az bir path üretilmeli. */
+export function generateStaticParams() {
+  return [{ slug: '_' }];
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const post = await getBlogPost(slug);

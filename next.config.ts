@@ -1,8 +1,17 @@
 import type { NextConfig } from "next";
 import path from "path";
 
+const isMobileBuild = process.env.BUILD_MOBILE === "1";
+
 const nextConfig: NextConfig = {
-  output: 'standalone',
+  ...(isMobileBuild
+    ? {
+        output: "export" as const,
+        trailingSlash: true,
+        distDir: ".next-mobile",
+        images: { unoptimized: true },
+      }
+    : { output: "standalone" }),
   turbopack: {
     root: path.resolve(__dirname),
   },
@@ -28,8 +37,9 @@ const nextConfig: NextConfig = {
       },
     ];
   },
-  // Görsel optimizasyonu (Lighthouse – LCP, mobil)
+  // Görsel optimizasyonu (Lighthouse – LCP, mobil). Capacitor build'de unoptimized: true
   images: {
+    ...(isMobileBuild ? { unoptimized: true } : {}),
     remotePatterns: [
       { protocol: 'https', hostname: 'web-production-5404d.up.railway.app', pathname: '/**' },
       { protocol: 'https', hostname: '*.up.railway.app', pathname: '/**' },

@@ -58,6 +58,11 @@ function buildDesignStructuredData(design: DesignForMeta, id: string) {
 
 type Props = { params: Promise<{ id: string }>; children: React.ReactNode };
 
+/** Static export (Capacitor) için gerekli; en az bir path üretilmeli. */
+export function generateStaticParams() {
+  return [{ id: '0' }];
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const design = await getDesign(id);
