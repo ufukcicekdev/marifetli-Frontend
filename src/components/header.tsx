@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useState, useRef, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
@@ -138,9 +139,10 @@ export function Header() {
               <span className="hidden sm:inline text-sm font-medium">Menü</span>
             </button>
           </div>
-          {/* Orta: logo — mobilde küçük, taşmayı önlemek için pointer-events ile tıklanabilir alan */}
-          <Link href="/" className="font-logo text-lg sm:text-xl md:text-2xl font-semibold text-white tracking-tight hover:opacity-95 transition-opacity shrink-0 absolute left-1/2 -translate-x-1/2 whitespace-nowrap" tabIndex={0}>
-            Marifetli
+          {/* Orta: logo (M yerine) + arifetli */}
+          <Link href="/" className="font-logo flex items-center justify-center gap-0.5 text-lg sm:text-xl md:text-2xl font-semibold text-white tracking-tight hover:opacity-95 transition-opacity shrink-0 absolute left-1/2 -translate-x-1/2 whitespace-nowrap" tabIndex={0}>
+            <Image src="/favicon-32x32.png" alt="" width={28} height={28} className="shrink-0 w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 object-contain -mr-0.5" priority />
+            <span className="leading-none">arifetli</span>
           </Link>
           {/* Sağ: mobilde sadece bildirim + profil (tema ve gönderi oluştur menüde); md+ tema + gönderi + bildirim + profil */}
           <div className="flex items-center gap-0.5 sm:gap-2 shrink-0 min-w-0 justify-end">

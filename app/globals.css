@@ -11,6 +11,11 @@ html {
 :root {
   --background: #f3f4f6;
   --foreground: #171717;
+  /* Baloncuk arka plan - light */
+  --bubble-1: rgb(251 146 60 / 0.07);
+  --bubble-2: rgb(253 186 116 / 0.06);
+  --bubble-3: rgb(254 215 170 / 0.08);
+  --bubble-4: rgb(251 146 60 / 0.04);
   /* Blog hero - aynı class ile hydration uyumu */
   --blog-hero-from: rgb(255 247 237 / 0.9);
   --blog-hero-via: rgb(255 251 235 / 0.8);
@@ -23,6 +28,11 @@ html {
 .dark {
   --background: #111827;
   --foreground: #f3f4f6;
+  /* Baloncuk arka plan - dark */
+  --bubble-1: rgb(251 146 60 / 0.06);
+  --bubble-2: rgb(253 186 116 / 0.04);
+  --bubble-3: rgb(254 215 170 / 0.03);
+  --bubble-4: rgb(251 146 60 / 0.03);
   --blog-hero-from: #111827;
   --blog-hero-via: #1f2937;
   --blog-hero-to: #111827;
@@ -60,12 +70,37 @@ html {
 }
 
 body {
+  position: relative;
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
   transition: background-color 0.2s, color 0.2s;
   overflow-x: hidden;
   min-width: 0;
+}
+
+/* Soluk baloncuklu arka plan + hafif hareket */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    radial-gradient(ellipse 70% 60% at 15% 30%, var(--bubble-1) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 70% at 85% 15%, var(--bubble-2) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 50% at 50% 70%, var(--bubble-3) 0%, transparent 50%),
+    radial-gradient(ellipse 45% 45% at 75% 55%, var(--bubble-4) 0%, transparent 45%),
+    radial-gradient(ellipse 55% 55% at 25% 75%, var(--bubble-2) 0%, transparent 50%);
+  background-size: 100% 100%;
+  animation: bubble-float 25s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes bubble-float {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 1; }
+  25% { transform: translate(1.5%, -0.8%) scale(1.02); opacity: 0.98; }
+  50% { transform: translate(-1%, 1.2%) scale(0.99); opacity: 1; }
+  75% { transform: translate(0.8%, 0.5%) scale(1.01); opacity: 0.99; }
 }
 
 /* Header nav: satır tam 52px, hücreler stretch → içerik dikey ortada */

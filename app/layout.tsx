@@ -15,6 +15,7 @@ import { SiteAnalytics } from '@/src/components/site-analytics';
 import { CategoriesPrefetcher } from '@/src/components/categories-prefetcher';
 import { FirebasePushHandler } from '@/src/components/firebase-push-handler';
 import { CookieConsentBanner } from '@/src/components/cookie-consent-banner';
+import { SiteFooter } from '@/src/components/site-footer';
 
 // Canlıda NEXT_PUBLIC_SITE_URL deploy ortamında tanımlı olsun; yoksa production URL fallback
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.marifetli.com.tr';
@@ -150,12 +151,13 @@ export default function RootLayout({
                 <Header />
               </Suspense>
               <NavMegaMenu />
-              <div className="flex min-h-screen pt-[104px]">
+              <div className="flex min-h-screen pt-[104px] flex-col">
                 <MainContentWrapper>
                   <VerifyEmailBanner />
                   <OnboardingBanner />
                   {children}
                 </MainContentWrapper>
+                <SiteFooter />
               </div>
             </OnboardingGuard>
           </QueryProvider>
