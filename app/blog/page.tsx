@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useQuery } from '@tanstack/react-query';
 import dynamic from 'next/dynamic';
 import api, { type BlogPostListItem } from '@/src/lib/api';
@@ -22,7 +23,7 @@ function formatDate(s: string | null) {
   return new Date(s).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-export default function BlogPage() {
+function BlogPageContent() {
   const [viewMode, setViewMode] = useState<ViewMode>('card');
   const [saveModalPostId, setSaveModalPostId] = useState<number | null>(null);
   const { isAuthenticated } = useAuthStore();
@@ -35,6 +36,9 @@ export default function BlogPage() {
     localStorage.setItem('blogViewMode', viewMode);
   }, [viewMode]);
 
+  const searchParams = useSearchParams();
+  const searchQ = searchParams.get('q')?.trim() ?? '';
+
   const { data, isLoading, error } = useQuery({
     queryKey: ['blog-posts'],
     queryFn: async () => {
@@ -44,7 +48,16 @@ export default function BlogPage() {
     },
   });
 
-  const posts = data?.results ?? [];
+  const allPosts = data?.results ?? [];
+  const posts = useMemo(() => {
+    if (!searchQ) return allPosts;
+    const lower = searchQ.toLowerCase();
+    return allPosts.filter(
+      (p) =>
+        p.title.toLowerCase().includes(lower) ||
+        (p.excerpt && stripHtml(p.excerpt).toLowerCase().includes(lower))
+    );
+  }, [allPosts, searchQ]);
   const featuredPost = posts.length > 0 ? posts[0] : null;
   const restPosts = featuredPost ? posts.slice(1) : posts;
 
@@ -74,68 +87,74 @@ export default function BlogPage() {
 
         {!isLoading && !error && posts.length === 0 && (
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-12 text-center text-gray-500 dark:text-gray-400">
-            Henüz blog yazısı yok.
+            {searchQ ? `"${searchQ}" aramasına uygun yazı bulunamadı.` : 'Henüz blog yazısı yok.'}
           </div>
         )}
 
+        {/* Öne çıkan — anasayfadaki gibi kart, Son yazıların üstünde */}
         {!isLoading && featuredPost && (
-          <article className="mb-8">
-            <Link
-              href={`/blog/${featuredPost.slug}`}
-              className="block bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden hover:border-brand/40 transition-colors shadow-sm hover:shadow-md"
-            >
-              {featuredPost.featured_image ? (
-                      <div className="relative w-full aspect-[21/9] sm:aspect-video bg-gray-100 dark:bg-gray-800">
-                          <Image
-                            src={featuredPost.featured_image}
-                            alt={featuredPost.title}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 768px) 100vw, 896px"
-                    priority
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                  <span className="absolute bottom-3 left-4 text-xs font-medium uppercase tracking-wider text-white/90">
-                    Öne çıkan
+          <div className="mb-8">
+            <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
+              Öne çıkan
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              <Link
+                href={`/blog/${featuredPost.slug}`}
+                className="group rounded-xl border border-gray-200/80 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden hover:border-brand/40 hover:shadow-md transition-all sm:col-span-2 lg:col-span-3"
+              >
+                {featuredPost.featured_image ? (
+                  <div className="relative w-full aspect-[21/9] sm:aspect-video bg-gray-100 dark:bg-gray-800">
+                    <Image
+                      src={featuredPost.featured_image}
+                      alt={featuredPost.title}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 768px) 100vw, 896px"
+                      priority
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                    <span className="absolute bottom-3 left-4 text-xs font-medium uppercase tracking-wider text-white/90">
+                      Öne çıkan
+                    </span>
+                  </div>
+                ) : (
+                  <div className="bg-gradient-to-r from-brand-pink to-brand-sky/10 dark:from-gray-800 dark:to-gray-800/80 px-5 py-3 border-b border-gray-200/80 dark:border-gray-700">
+                    <span className="text-xs font-medium uppercase tracking-wider text-brand">Öne çıkan</span>
+                  </div>
+                )}
+                <div className="p-4 sm:p-5">
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100 mb-2 line-clamp-2 group-hover:text-brand transition-colors">
+                    {featuredPost.title}
+                  </h3>
+                  {featuredPost.excerpt && (
+                    <p className="text-gray-600 dark:text-gray-400 text-sm mb-3 line-clamp-2">
+                      {stripHtml(featuredPost.excerpt)}
+                    </p>
+                  )}
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                    {(featuredPost.author as { username?: string; profile_picture?: string })?.profile_picture ? (
+                      <OptimizedAvatar src={(featuredPost.author as { profile_picture?: string }).profile_picture} size={24} alt="" className="w-5 h-5 shrink-0" />
+                    ) : (
+                      <span className="w-5 h-5 rounded-full bg-brand-pink dark:bg-brand/20 flex items-center justify-center text-[10px] font-medium text-brand shrink-0">
+                        {(featuredPost.author as { username?: string })?.username?.charAt(0)?.toUpperCase() ?? '?'}
+                      </span>
+                    )}
+                    <span>{(featuredPost.author as { username?: string })?.username ?? 'Marifetli'}</span>
+                    <span>·</span>
+                    <time dateTime={featuredPost.published_at ?? featuredPost.created_at}>
+                      {featuredPost.published_at ? formatDate(featuredPost.published_at) : formatTimeAgo(featuredPost.created_at)}
+                    </time>
+                    <span>·</span>
+                    <span>{featuredPost.like_count} beğeni · {featuredPost.comment_count} yorum</span>
+                  </div>
+                  <span className="inline-flex items-center gap-1 mt-3 text-brand font-medium text-sm">
+                    Yazıyı oku
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                   </span>
                 </div>
-              ) : (
-                <div className="bg-gradient-to-r from-brand-pink to-brand-sky/10 dark:from-gray-800 dark:to-gray-800/80 px-5 py-3 border-b border-gray-200 dark:border-gray-700">
-                  <span className="text-xs font-medium uppercase tracking-wider text-brand">Öne çıkan</span>
-                </div>
-              )}
-              <div className="p-5 sm:p-6">
-                <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2 line-clamp-2">
-                  {featuredPost.title}
-                </h2>
-                {featuredPost.excerpt && (
-                  <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base mb-4 line-clamp-2">
-                    {stripHtml(featuredPost.excerpt)}
-                  </p>
-                )}
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
-                  {(featuredPost.author as { username?: string; profile_picture?: string })?.profile_picture ? (
-                    <OptimizedAvatar src={(featuredPost.author as { profile_picture?: string }).profile_picture} size={24} alt="" className="w-6 h-6 shrink-0" />
-                  ) : (
-                    <span className="w-6 h-6 rounded-full bg-brand-pink dark:bg-brand/20 flex items-center justify-center text-xs font-medium text-brand shrink-0">
-                      {(featuredPost.author as { username?: string })?.username?.charAt(0)?.toUpperCase() ?? '?'}
-                    </span>
-                  )}
-                  <span>{(featuredPost.author as { username?: string })?.username ?? 'Marifetli'}</span>
-                  <span>·</span>
-                  <time dateTime={featuredPost.published_at ?? featuredPost.created_at}>
-                    {featuredPost.published_at ? formatDate(featuredPost.published_at) : formatTimeAgo(featuredPost.created_at)}
-                  </time>
-                  <span>·</span>
-                  <span>{featuredPost.like_count} beğeni · {featuredPost.comment_count} yorum</span>
-                </div>
-                <span className="inline-flex items-center gap-1 mt-4 text-brand font-medium text-sm">
-                  Yazıyı oku
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                </span>
-              </div>
-            </Link>
-          </article>
+              </Link>
+            </div>
+          </div>
         )}
 
         {!isLoading && restPosts.length > 0 && (
@@ -314,5 +333,27 @@ export default function BlogPage() {
         />
       )}
     </div>
+  );
+}
+
+function BlogPageFallback() {
+  return (
+    <div className="min-h-screen">
+      <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-10 flex flex-col lg:flex-row gap-8 max-w-6xl">
+        <main className="min-w-0 flex-1 max-w-4xl space-y-6">
+          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-48 animate-pulse" />
+          <div className="h-40 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse" />
+          <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse" />
+        </main>
+      </div>
+    </div>
+  );
+}
+
+export default function BlogPage() {
+  return (
+    <Suspense fallback={<BlogPageFallback />}>
+      <BlogPageContent />
+    </Suspense>
   );
 }

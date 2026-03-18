@@ -10,6 +10,7 @@ import { VerifyEmailBanner } from '@/src/components/verify-email-banner';
 import { OnboardingBanner } from '@/src/components/onboarding-banner';
 import { MainContentWrapper } from '@/src/components/main-content-wrapper';
 import { NavMegaMenu } from '@/src/components/nav-mega-menu';
+import { SidebarLayout } from '@/src/components/sidebar-layout';
 import { OnboardingGuard } from '@/src/components/onboarding-guard';
 import { SiteAnalytics } from '@/src/components/site-analytics';
 import { SiteFonts } from '@/src/components/site-fonts';
@@ -21,6 +22,9 @@ import { AchievementUnlockedModal } from '@/src/components/achievement-unlocked-
 
 // Canlıda NEXT_PUBLIC_SITE_URL deploy ortamında tanımlı olsun; yoksa production URL fallback
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.marifetli.com.tr';
+
+/** true ise sol sidebar (menü sürekli solda), false ise menü butonuyla açılan mega menü */
+const USE_SIDEBAR = process.env.NEXT_PUBLIC_USE_SIDEBAR === 'true';
 
 function getApiOrigin(): string {
   try {
@@ -165,18 +169,24 @@ export default function RootLayout({
               <Suspense fallback={<header className="fixed top-0 left-0 right-0 z-40 h-[104px] bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700" />}>
                 <Header />
               </Suspense>
-              <NavMegaMenu />
-              {/* İçerik + footer: footer her zaman en sonda render edilir; kısa içerikte sayfa altında, uzun içerikte scroll ile görünür */}
-              <div className="flex min-h-screen pt-[104px] flex-col">
-                <MainContentWrapper>
-                  <VerifyEmailBanner />
-                  <OnboardingBanner />
-                  {children}
-                </MainContentWrapper>
-                <div className="mt-auto shrink-0 relative z-10">
-                  <SiteFooter />
-                </div>
-              </div>
+              {USE_SIDEBAR ? (
+                <SidebarLayout>{children}</SidebarLayout>
+              ) : (
+                <>
+                  <NavMegaMenu />
+                  {/* İçerik + footer: footer her zaman en sonda render edilir */}
+                  <div className="flex min-h-screen pt-[104px] flex-col">
+                    <MainContentWrapper>
+                      <VerifyEmailBanner />
+                      <OnboardingBanner />
+                      {children}
+                    </MainContentWrapper>
+                    <div className="mt-auto shrink-0 relative z-10">
+                      <SiteFooter />
+                    </div>
+                  </div>
+                </>
+              )}
             </OnboardingGuard>
           </QueryProvider>
         </ThemeProvider>

@@ -20,7 +20,7 @@ const VALUE_ITEMS = [
   },
   {
     title: 'Topluluklara katıl',
-    description: 'Örgü, dikiş, nakış… İlgi alanına göre keşfet.',
+    description: 'El işleri, yemek, müzik, sanat… İlgi alanına göre keşfet.',
     href: '/topluluklar',
     icon: '👥',
   },
@@ -31,6 +31,22 @@ const VALUE_ITEMS = [
     icon: '🎨',
   },
 ];
+
+const CATEGORY_ACCENT: Record<string, { icon: string; bg: string; border: string }> = {
+  'el-isleri': { icon: '🧵', bg: 'bg-rose-50 dark:bg-rose-950/30', border: 'border-rose-200 dark:border-rose-800' },
+  'dikis-moda': { icon: '👗', bg: 'bg-violet-50 dark:bg-violet-950/30', border: 'border-violet-200 dark:border-violet-800' },
+  'ev-dekorasyonu': { icon: '🏠', bg: 'bg-amber-50 dark:bg-amber-950/30', border: 'border-amber-200 dark:border-amber-800' },
+  'yemek-marifetleri': { icon: '🍳', bg: 'bg-orange-50 dark:bg-orange-950/30', border: 'border-orange-200 dark:border-orange-800' },
+  'muzik': { icon: '🎵', bg: 'bg-blue-50 dark:bg-blue-950/30', border: 'border-blue-200 dark:border-blue-800' },
+  'sanat': { icon: '🎨', bg: 'bg-pink-50 dark:bg-pink-950/30', border: 'border-pink-200 dark:border-pink-800' },
+  'fotograf-video': { icon: '📷', bg: 'bg-slate-100 dark:bg-slate-800/50', border: 'border-slate-200 dark:border-slate-700' },
+  'hobiler': { icon: '🌱', bg: 'bg-emerald-50 dark:bg-emerald-950/30', border: 'border-emerald-200 dark:border-emerald-800' },
+  'dijital-beceriler': { icon: '💻', bg: 'bg-cyan-50 dark:bg-cyan-950/30', border: 'border-cyan-200 dark:border-cyan-800' },
+};
+const defaultAccent = { icon: '📁', bg: 'bg-gray-100 dark:bg-gray-800', border: 'border-gray-200 dark:border-gray-700' };
+function getCategoryAccent(slug: string) {
+  return CATEGORY_ACCENT[slug] ?? defaultAccent;
+}
 
 function scrollToFeed() {
   document.getElementById('sorular')?.scrollIntoView({ behavior: 'smooth' });
@@ -55,10 +71,10 @@ export function HomeHero() {
       <div className="rounded-2xl border border-gray-200/80 dark:border-gray-800 bg-gradient-to-br from-brand-pink via-white to-brand-sky/10 dark:from-gray-800/90 dark:via-gray-800/80 dark:to-gray-900/90 overflow-hidden shadow-sm">
         <div className="px-5 sm:px-8 py-8 sm:py-10">
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2 max-w-2xl">
-            El işi tutkunlarının buluşma noktası
+            İlgi alanlarının buluşma noktası
           </h1>
           <p className="text-base sm:text-lg text-gray-600 dark:text-gray-300 max-w-xl mb-6">
-            Örgü, dikiş, nakış, amigurumi, takı ve daha fazlası. Soru sor, cevapla, topluluklara katıl — birlikte öğreniyor ve üretiyoruz.
+            Örgü, dikiş, yemek, müzik, sanat, fotoğraf, hobiler ve daha fazlası. Soru sor, cevapla, topluluklara katıl — birlikte öğreniyor ve üretiyoruz.
           </p>
           <div className="flex flex-wrap items-center gap-3">
             <Link
@@ -109,28 +125,35 @@ export function HomeHero() {
 
       {/* Kategoriler önizleme */}
       {topCategories.length > 0 && (
-        <div className="mt-6 rounded-2xl border border-gray-200/80 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 sm:p-6 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-            <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              Kategorileri keşfet
-            </h2>
-            <Link
-              href="/kategoriler"
-              className="text-sm font-medium text-brand hover:text-brand-hover"
-            >
-              Tümü →
-            </Link>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {topCategories.map((c) => (
+        <div className="mt-6 rounded-2xl border border-gray-200/80 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden shadow-sm">
+          <div className="h-1 w-full bg-gradient-to-r from-brand via-brand-pink to-brand-sky" aria-hidden />
+          <div className="p-5 sm:p-6">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+              <h2 className="text-sm font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
+                Kategorileri keşfet
+              </h2>
               <Link
-                key={c.id}
-                href={`/t/${c.slug}`}
-                className="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-brand-pink/60 dark:hover:bg-brand/10 hover:text-brand border border-transparent hover:border-brand/30 transition-colors"
+                href="/kategoriler"
+                className="text-sm font-medium text-brand hover:text-brand-hover"
               >
-                {c.name}
+                Tümü →
               </Link>
-            ))}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {topCategories.map((c) => {
+                const style = getCategoryAccent(c.slug);
+                return (
+                  <Link
+                    key={c.id}
+                    href={`/t/${c.slug}`}
+                    className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border transition-all hover:shadow-md hover:scale-[1.02] ${style.bg} ${style.border} text-gray-800 dark:text-gray-200 hover:border-brand/50 dark:hover:border-brand/50`}
+                  >
+                    <span className="text-base leading-none" aria-hidden>{style.icon}</span>
+                    {c.name}
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}

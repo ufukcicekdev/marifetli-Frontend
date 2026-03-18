@@ -138,13 +138,13 @@ export function AuthModal() {
       >
         {/* Sol: Marka + görsel collage (masaüstü, Facebook tarzı) */}
         <div className="hidden md:flex md:flex-1 flex-col bg-gradient-to-br from-brand via-brand to-brand-hover p-8 min-h-[440px] overflow-hidden">
-          <Link href="/" className="font-logo flex items-center gap-1.5 text-white/95 hover:text-white shrink-0">
+          <Link href="/" className="font-logo flex items-center gap-0 text-white/95 hover:text-white shrink-0">
             {logoUrl ? (
-              <Image src={logoUrl} alt="" width={36} height={36} className="shrink-0 w-9 h-9 object-contain brightness-0 invert" />
+              <Image src={logoUrl} alt="" width={56} height={56} className="shrink-0 w-12 h-12 md:w-14 md:h-14 object-contain brightness-0 invert -mr-1" />
             ) : (
-              <Image src="/logo.png" alt="" width={36} height={36} className="shrink-0 w-9 h-9 object-contain brightness-0 invert" />
+              <Image src="/logo.png" alt="" width={56} height={56} className="shrink-0 w-12 h-12 md:w-14 md:h-14 object-contain brightness-0 invert -mr-1" />
             )}
-            <span className="text-xl font-semibold tracking-tight">arifetli</span>
+            <span className="text-2xl md:text-3xl font-semibold tracking-tight">arifetli</span>
           </Link>
           <div className="flex-1 flex flex-col justify-center min-h-0 relative mt-4">
             <h2 className="text-3xl font-bold text-white leading-tight max-w-[260px] shrink-0">

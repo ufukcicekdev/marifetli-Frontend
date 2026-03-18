@@ -2,19 +2,16 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import { useSidebarStore } from '../stores/sidebar-store';
 import { useAuthStore } from '../stores/auth-store';
 import { useAuthModalStore } from '../stores/auth-modal-store';
 import { ThemeToggle } from './theme-toggle';
-import api from '../lib/api';
-
-type CategoryItem = { id: number; name: string; slug: string; parent?: number | null; subcategories?: CategoryItem[] };
 
 // Sol menü: Tasarım Yükle yok; tasarım yükleme sadece /tasarimlar sayfasındaki butondan.
 const SIDEBAR_NAV_ITEMS = [
   { href: '/sorular', label: 'Anasayfa', icon: '🏠' },
+  { href: '/kategoriler', label: 'Kategoriler', icon: '📁' },
   { href: '/blog', label: 'Blog', icon: '📝' },
   { href: '/tasarimlar', label: 'Tasarımlar', icon: '🎨' },
   { href: '/topluluklar', label: 'Toplulukları Keşfet', icon: '🔍' },
@@ -41,21 +38,6 @@ export function AppSidebar() {
   const openAuth = useAuthModalStore((s) => s.open);
 
   useEffect(() => setMounted(true), []);
-
-  const { data: categoriesData, isLoading: categoriesLoading } = useQuery({
-    queryKey: ['categories'],
-    queryFn: () => api.getCategories().then((r) => r.data),
-  });
-
-  const categoriesTree = useMemo(() => {
-    const raw = categoriesData as { results?: CategoryItem[] } | CategoryItem[] | undefined;
-    const list = Array.isArray(raw)
-      ? raw
-      : (raw && typeof raw === 'object' && Array.isArray((raw as { results?: CategoryItem[] }).results)
-          ? (raw as { results: CategoryItem[] }).results
-          : []);
-    return (list as CategoryItem[]).filter((c) => !c.parent);
-  }, [categoriesData]);
 
   useEffect(() => {
     const closeOnMobile = () => {
@@ -162,65 +144,6 @@ export function AppSidebar() {
 
         {isOpen && (
           <>
-            <div className="mt-6">
-              <h3 className="px-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                Kategoriler
-              </h3>
-              <Link
-                href="/topluluklar"
-                className="mb-3 flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-brand hover:bg-brand-pink/80 dark:hover:bg-brand/10 transition-colors"
-              >
-                🔍 Tümünü keşfet
-              </Link>
-              <ul className="space-y-3">
-                {categoriesLoading && categoriesTree.length === 0 && (
-                  <li className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">Yükleniyor…</li>
-                )}
-                {!categoriesLoading && categoriesTree.length === 0 && (
-                  <li className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">Kategori yok</li>
-                )}
-                {categoriesTree.map((main) => {
-                  const mainActive = pathname === `/t/${main.slug}` || pathname?.startsWith(`/t/${main.slug}/`);
-                  const subs = main.subcategories || [];
-                  return (
-                    <li key={main.id} className="space-y-0.5">
-                      <Link
-                        href={`/t/${main.slug}`}
-                        className={`block px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                          mainActive
-                            ? 'bg-brand-pink/80 dark:bg-brand/10 text-brand'
-                            : 'text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'
-                        }`}
-                      >
-                        {main.name}
-                      </Link>
-                      {subs.length > 0 && (
-                        <ul className="space-y-0.5 pl-4">
-                          {subs.map((sub) => {
-                            const subActive = pathname === `/t/${sub.slug}` || pathname?.startsWith(`/t/${sub.slug}/`);
-                            return (
-                              <li key={sub.id}>
-                                <Link
-                                  href={`/t/${sub.slug}`}
-                                  className={`block px-3 py-1.5 rounded-md text-sm transition-colors ${
-                                    subActive
-                                      ? 'text-brand font-medium'
-                                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800/50'
-                                  }`}
-                                >
-                                  {sub.name}
-                                </Link>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-
             <div className="mt-8 border-t border-gray-200 dark:border-gray-800 pt-3 px-3 space-y-1 text-center">
               <Link
                 href="/gizlilik-politikasi"

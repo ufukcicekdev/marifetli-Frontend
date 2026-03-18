@@ -142,6 +142,20 @@ body::before {
   color: #111827;
 }
 
+/* Header üst satırı: sağ blok tam yükseklikte, içerik dikey ortalı (inline style ile desteklenir) */
+header .header-top-right {
+  height: 100% !important;
+  min-height: 52px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  box-sizing: border-box;
+}
+header .header-top-right > * {
+  align-self: center !important;
+  flex-shrink: 0;
+}
+
 /* Header nav: satır tam 52px, hücreler stretch → içerik dikey ortada */
 .header-nav-row {
   display: flex;
@@ -280,4 +294,18 @@ body::before {
   font-weight: 500;
   box-sizing: border-box;
   vertical-align: middle;
+}
+
+/* Kategoriler sayfası: puzzle grid — bazı kartlar 2 satır yüksekliğinde */
+.kategoriler-grid {
+  display: grid !important;
+  grid-auto-rows: minmax(200px, auto);
+  grid-auto-flow: dense;
+}
+.kategoriler-grid section[data-puzzle-tall="true"] {
+  grid-row: span 2 !important;
+  min-height: 420px !important;
+}
+.kategoriler-grid section:not([data-puzzle-tall="true"]) {
+  min-height: 200px;
 }

@@ -30,15 +30,18 @@ export function Header() {
   const dropdownRefMobile = useRef<HTMLDivElement>(null);
   const sidebarToggle = useSidebarStore((s) => s.toggle);
   const pageSearchScope = useUIStore((s) => s.pageSearchScope);
+  const useSidebar = process.env.NEXT_PUBLIC_USE_SIDEBAR === 'true';
 
-  /** Kategori/topluluk sayfasından scope. /topluluklar'da seçim yoksa "Tümü" scope'u gelir. */
+  /** Kategori/topluluk/blog sayfasından scope. /topluluklar'da seçim yoksa "Tümü", /blog'da "Blog" scope'u gelir. */
   type ScopeRaw =
     | { type: 'community'; slug: string }
     | { type: 'category'; slug: string }
-    | { type: 'topluluklar_tum' };
+    | { type: 'topluluklar_tum' }
+    | { type: 'blog' };
 
   const searchScopeRaw = ((): ScopeRaw | null => {
     if (searchScopeOverride === 'global') return null;
+    if (pathname === '/blog' || pathname?.startsWith('/blog/')) return { type: 'blog' };
     if (pathname === '/topluluklar') {
       if (pageSearchScope) return { type: pageSearchScope.type, slug: pageSearchScope.slug };
       return { type: 'topluluklar_tum' };
@@ -65,19 +68,21 @@ export function Header() {
     enabled: !!communitySlug,
   });
 
-  const searchScope: { type: 'community' | 'category' | 'topluluklar_tum'; slug: string; label: string } | null =
+  const searchScope: { type: 'community' | 'category' | 'topluluklar_tum' | 'blog'; slug: string; label: string } | null =
     !searchScopeRaw
       ? null
-      : searchScopeRaw.type === 'topluluklar_tum'
-        ? { type: 'topluluklar_tum', slug: '', label: 'Tümü' }
-        : {
-            type: searchScopeRaw.type,
-            slug: searchScopeRaw.slug,
-            label:
-              searchScopeRaw.type === 'category'
-                ? `t/${scopeCategory?.name ?? categorySlug}`
-                : `r/${scopeCommunity?.name ?? communitySlug}`,
-          };
+      : searchScopeRaw.type === 'blog'
+        ? { type: 'blog', slug: '', label: 'Blog' }
+        : searchScopeRaw.type === 'topluluklar_tum'
+          ? { type: 'topluluklar_tum', slug: '', label: 'Tümü' }
+          : {
+              type: searchScopeRaw.type,
+              slug: searchScopeRaw.slug,
+              label:
+                searchScopeRaw.type === 'category'
+                  ? `t/${scopeCategory?.name ?? categorySlug}`
+                  : `r/${scopeCommunity?.name ?? communitySlug}`,
+            };
 
   useEffect(() => {
     setSearchScopeOverride(null);
@@ -86,7 +91,10 @@ export function Header() {
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const term = searchQ.trim();
-    if (searchScope?.type === 'community') {
+    if (searchScope?.type === 'blog') {
+      if (term) router.push(`/blog?q=${encodeURIComponent(term)}`);
+      else router.push('/blog');
+    } else if (searchScope?.type === 'community') {
       const params = new URLSearchParams();
       if (term) params.set('q', term);
       params.set('community', searchScope.slug);
@@ -131,32 +139,35 @@ export function Header() {
     <>
       <header className="fixed top-0 left-0 right-0 z-50 h-[104px] flex flex-col bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm text-gray-900 dark:text-white" style={{ height: HEADER_HEIGHT_PX }}>
         {/* Üst satır: Menü | Marifetli (ortada) | Tema, Giriş/Üye — 52px, dikey ortada */}
-        <div className="relative h-[52px] flex items-center justify-between gap-1 sm:gap-2 px-2 sm:px-4 container mx-auto w-full min-w-0 shrink-0">
-          {/* Sol: Menü */}
+        <div className="relative h-[52px] min-h-[52px] flex items-stretch justify-between gap-1 sm:gap-2 px-2 sm:px-4 container mx-auto w-full min-w-0 shrink-0">
+          {/* Sol: Menü — sidebar modunda sadece mobilde hamburger görünür; masaüstünde div spacer kalır, sağ blok sağda */}
           <div className="flex items-center shrink-0 min-w-0 w-9 sm:w-auto sm:min-w-0">
             <button
               onClick={sidebarToggle}
-              className="header-nav-btn px-2 sm:px-2 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-white/15"
+              className={`header-nav-btn px-2 sm:px-2 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-white/15 ${useSidebar ? 'lg:!hidden' : ''}`}
               title="Menü"
               aria-label="Menüyü aç"
             >
               <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
-              <span className="hidden sm:inline text-sm font-medium">Menü</span>
+              <span className={`text-sm font-medium ${useSidebar ? 'hidden' : 'hidden sm:inline'}`}>Menü</span>
             </button>
           </div>
           {/* Orta: logo + arifetli — daha büyük, açık modda koyu renk */}
-          <Link href="/" className="font-logo flex items-center justify-center gap-1 text-xl sm:text-2xl md:text-3xl font-semibold text-gray-900 dark:text-white tracking-tight hover:opacity-90 transition-opacity shrink-0 absolute left-1/2 -translate-x-1/2 whitespace-nowrap" tabIndex={0}>
+          <Link href="/" className="font-logo flex items-center justify-center gap-0 text-xl sm:text-2xl md:text-3xl font-semibold text-gray-900 dark:text-white tracking-tight hover:opacity-90 transition-opacity shrink-0 absolute left-1/2 -translate-x-1/2 whitespace-nowrap" tabIndex={0}>
             {logoUrl ? (
-              <Image src={logoUrl} alt="" width={40} height={40} className="shrink-0 w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 object-contain -mr-0.5" priority />
+              <Image src={logoUrl} alt="" width={40} height={40} className="shrink-0 w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 object-contain -mr-1.5" priority />
             ) : (
-              <Image src="/logo.png" alt="" width={40} height={40} className="shrink-0 w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 object-contain -mr-0.5" priority />
+              <Image src="/logo.png" alt="" width={40} height={40} className="shrink-0 w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 object-contain -mr-1.5" priority />
             )}
             <span className="leading-none">arifetli</span>
           </Link>
-          {/* Sağ: mobilde sadece bildirim + profil (tema ve gönderi oluştur menüde); md+ tema + gönderi + bildirim + profil */}
-          <div className="flex items-center gap-0.5 sm:gap-2 shrink-0 min-w-0 justify-end">
+          {/* Sağ: header üst satırı (52px) içinde dikey ortalı */}
+          <div
+            className="header-top-right flex items-center justify-end gap-0.5 sm:gap-2 shrink-0 min-w-0 self-stretch"
+            style={{ minHeight: 52, display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}
+          >
             <span className="header-nav-theme-wrap hidden md:inline-flex">
               <ThemeToggle />
             </span>
@@ -237,7 +248,7 @@ export function Header() {
                 </div>
               </>
             ) : (
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="hidden sm:flex items-center gap-2 shrink-0">
                 <button
                   onClick={() => openAuth('login')}
                   className="header-nav-btn border border-gray-300 dark:border-white/60 text-gray-900 dark:text-white px-3 hover:bg-gray-100 dark:hover:bg-white/15"
@@ -246,7 +257,7 @@ export function Header() {
                 </button>
                 <button
                   onClick={() => openAuth('register')}
-                  className="header-nav-btn bg-brand hover:bg-brand-hover text-white px-3 hidden sm:inline-flex"
+                  className="header-nav-btn bg-brand hover:bg-brand-hover text-white px-3"
                 >
                   Üye Ol
                 </button>
