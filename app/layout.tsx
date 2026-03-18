@@ -47,11 +47,21 @@ function getSiteStructuredData() {
     {
       '@context': 'https://schema.org',
       '@type': 'WebSite',
+      '@id': `${SITE_URL}/#website`,
       name: 'Marifetli',
       url: SITE_URL,
       description: 'El işi ve el sanatları topluluğu. Soru sor, cevapla, paylaş.',
       inLanguage: 'tr-TR',
       publisher: { '@id': `${SITE_URL}/#organization` },
+      // Arama URL’si: sitelinks’te arama kutusu çıkma ihtimali + site yapısının anlaşılması
+      potentialAction: {
+        '@type': 'SearchAction',
+        target: {
+          '@type': 'EntryPoint',
+          urlTemplate: `${SITE_URL}/sorular?q={search_term_string}`,
+        },
+        'query-input': 'required name=search_term_string',
+      },
     },
   ];
 }
