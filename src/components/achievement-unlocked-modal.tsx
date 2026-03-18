@@ -27,9 +27,9 @@ export function AchievementUnlockedModal() {
         aria-labelledby="achievement-unlocked-title"
         aria-modal="true"
       >
-        <div className="rounded-2xl border-2 border-amber-400/50 bg-gradient-to-b from-amber-50 to-orange-50 dark:from-gray-900 dark:to-gray-800 dark:border-amber-500/40 shadow-2xl shadow-amber-900/20 overflow-hidden">
+        <div className="rounded-2xl border-2 border-amber-400/50 bg-gradient-to-b from-amber-50 to-brand-pink/80 dark:from-gray-900 dark:to-gray-800 dark:border-amber-500/40 shadow-2xl shadow-amber-900/20 overflow-hidden">
           {/* Üst şerit: Challenge / Başarı açıldı */}
-          <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-4 py-2 text-center">
+          <div className="bg-gradient-to-r from-amber-500 to-brand px-4 py-2 text-center">
             <p className="text-sm font-bold uppercase tracking-wider text-white/95">
               🎉 Başarı açıldı!
             </p>
@@ -37,7 +37,7 @@ export function AchievementUnlockedModal() {
           <div className="p-6 text-center">
             {/* Rozet */}
             <div
-              className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-amber-200 to-orange-300 dark:from-amber-600/40 dark:to-orange-600/40 text-4xl shadow-lg ring-4 ring-amber-400/30"
+              className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-amber-200 to-brand/80 dark:from-amber-600/40 dark:to-brand/40 text-4xl shadow-lg ring-4 ring-amber-400/30"
               aria-hidden
             >
               {pending.icon || '🏆'}

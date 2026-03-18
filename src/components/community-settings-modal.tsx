@@ -54,7 +54,7 @@ export function CommunitySettingsModal({
             onClick={() => setActiveTab('yonet')}
             className={`flex-1 py-3 text-sm font-medium transition-colors ${
               activeTab === 'yonet'
-                ? 'text-orange-600 dark:text-orange-400 border-b-2 border-orange-500'
+                ? 'text-brand border-b-2 border-brand'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
             }`}
           >
@@ -65,7 +65,7 @@ export function CommunitySettingsModal({
             onClick={() => setActiveTab('duzenle')}
             className={`flex-1 py-3 text-sm font-medium transition-colors ${
               activeTab === 'duzenle'
-                ? 'text-orange-600 dark:text-orange-400 border-b-2 border-orange-500'
+                ? 'text-brand border-b-2 border-brand'
                 : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
             }`}
           >
@@ -241,11 +241,11 @@ function EditTab({ slug, community, onClose }: { slug: string; community: Commun
         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Katılım türü</label>
         <div className="flex gap-4">
           <label className="flex items-center gap-2 cursor-pointer">
-            <input type="radio" name="joinType" checked={joinType === 'open'} onChange={() => setJoinType('open')} className="text-orange-500" />
+            <input type="radio" name="joinType" checked={joinType === 'open'} onChange={() => setJoinType('open')} className="text-brand" />
             <span className="text-sm text-gray-700 dark:text-gray-300">Herkes doğrudan katılabilir</span>
           </label>
           <label className="flex items-center gap-2 cursor-pointer">
-            <input type="radio" name="joinType" checked={joinType === 'approval'} onChange={() => setJoinType('approval')} className="text-orange-500" />
+            <input type="radio" name="joinType" checked={joinType === 'approval'} onChange={() => setJoinType('approval')} className="text-brand" />
             <span className="text-sm text-gray-700 dark:text-gray-300">Yönetici onayı gerekir</span>
           </label>
         </div>
@@ -260,23 +260,23 @@ function EditTab({ slug, community, onClose }: { slug: string; community: Commun
               <button type="button" onClick={() => removeRule(i)} className="text-gray-400 hover:text-red-500 px-1" aria-label="Kuralı kaldır">×</button>
             </div>
           ))}
-          <button type="button" onClick={addRule} className="text-sm text-orange-500 hover:text-orange-600">+ Kural ekle</button>
+          <button type="button" onClick={addRule} className="text-sm text-brand hover:text-brand-hover">+ Kural ekle</button>
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Profil resmi</label>
-          <input type="file" accept="image/*" onChange={(e) => setAvatarFile(e.target.files?.[0] ?? null)} className="w-full text-sm text-gray-600 dark:text-gray-400 file:mr-2 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-orange-50 file:text-orange-700 dark:file:bg-orange-900/30 dark:file:text-orange-300" />
+          <input type="file" accept="image/*" onChange={(e) => setAvatarFile(e.target.files?.[0] ?? null)} className="w-full text-sm text-gray-600 dark:text-gray-400 file:mr-2 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-brand-pink/80 file:text-brand-hover dark:file:bg-brand/10 dark:file:text-brand-hover" />
           {community?.avatar_url && !avatarFile && <p className="text-xs text-gray-500 mt-1">Mevcut resim var.</p>}
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Kapak resmi</label>
-          <input type="file" accept="image/*" onChange={(e) => setCoverFile(e.target.files?.[0] ?? null)} className="w-full text-sm text-gray-600 dark:text-gray-400 file:mr-2 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-orange-50 file:text-orange-700 dark:file:bg-orange-900/30 dark:file:text-orange-300" />
+          <input type="file" accept="image/*" onChange={(e) => setCoverFile(e.target.files?.[0] ?? null)} className="w-full text-sm text-gray-600 dark:text-gray-400 file:mr-2 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-brand-pink/80 file:text-brand-hover dark:file:bg-brand/10 dark:file:text-brand-hover" />
           {community?.cover_image_url && !coverFile && <p className="text-xs text-gray-500 mt-1">Mevcut kapak var.</p>}
         </div>
       </div>
       <div className="flex gap-3 pt-2">
-        <button type="submit" disabled={updateMutation.isPending} className="rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-50">{updateMutation.isPending ? 'Kaydediliyor…' : 'Kaydet'}</button>
+        <button type="submit" disabled={updateMutation.isPending} className="rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-hover disabled:opacity-50">{updateMutation.isPending ? 'Kaydediliyor…' : 'Kaydet'}</button>
         <button type="button" onClick={onClose} className="rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">İptal</button>
       </div>
     </form>

@@ -78,7 +78,7 @@ function CategoryDropdown({
         type="button"
         onClick={() => !disabled && setOpen((o) => !o)}
         disabled={disabled}
-        className="w-full flex items-center justify-between gap-2 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-left text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full flex items-center justify-between gap-2 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-left text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-brand focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
         aria-haspopup="listbox"
         aria-expanded={open}
       >
@@ -97,7 +97,7 @@ function CategoryDropdown({
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => e.stopPropagation()}
               placeholder="Kategori ara..."
-              className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-brand focus:border-transparent"
               aria-label="Kategori ara"
             />
           </div>
@@ -117,7 +117,7 @@ function CategoryDropdown({
                         <button
                           type="button"
                           onClick={() => { onChange(sub.id); setOpen(false); }}
-                          className={`block w-full text-left pl-6 pr-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${value === sub.id ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 font-medium' : 'text-gray-900 dark:text-gray-100'}`}
+                          className={`block w-full text-left pl-6 pr-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${value === sub.id ? 'bg-brand-pink/80 dark:bg-brand/10 text-brand font-medium' : 'text-gray-900 dark:text-gray-100'}`}
                         >
                           {sub.name}
                         </button>
@@ -128,7 +128,7 @@ function CategoryDropdown({
                       <button
                         type="button"
                         onClick={() => { onChange(main.id); setOpen(false); }}
-                        className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${value === main.id ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 font-medium' : 'text-gray-900 dark:text-gray-100'}`}
+                        className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${value === main.id ? 'bg-brand-pink/80 dark:bg-brand/10 text-brand font-medium' : 'text-gray-900 dark:text-gray-100'}`}
                       >
                         {main.name}
                       </button>
@@ -480,7 +480,7 @@ export function QuestionForm({
             disabled={t.disabled}
             onClick={() => !t.disabled && setPostType(t.id)}
             className={`flex-1 min-w-[80px] py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium transition-colors shrink-0 ${
-              postType === t.id ? 'text-orange-500 border-b-2 border-orange-500' : t.disabled ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-400'
+              postType === t.id ? 'text-brand border-b-2 border-brand' : t.disabled ? 'text-gray-400 dark:text-gray-500 cursor-not-allowed' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-400'
             }`}
           >
             {t.icon} {t.label}
@@ -501,7 +501,7 @@ export function QuestionForm({
             placeholder="Başlık yazın..."
             maxLength={TITLE_MAX}
             required
-            className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-orange-500"
+            className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-brand"
           />
         </div>
 
@@ -509,7 +509,7 @@ export function QuestionForm({
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Etiketler (isteğe bağlı)</label>
           <div className="relative">
             <div
-              className={`min-h-[42px] flex flex-wrap items-center gap-2 px-3 py-2 border rounded-lg bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus-within:ring-2 focus-within:ring-orange-500 focus-within:border-transparent`}
+              className={`min-h-[42px] flex flex-wrap items-center gap-2 px-3 py-2 border rounded-lg bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 focus-within:ring-2 focus-within:ring-brand focus-within:border-transparent`}
             >
               {tagIds.map((id) => {
                 const tag =
@@ -537,13 +537,13 @@ export function QuestionForm({
               {customTagNames.map((name) => (
                 <span
                   key={`custom-${name}`}
-                  className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-200 rounded text-sm"
+                  className="inline-flex items-center gap-1 px-2 py-1 bg-brand-pink dark:bg-brand/20 text-brand-hover rounded text-sm"
                 >
                   {name}
                   <button
                     type="button"
                     onClick={() => removeCustomTag(name)}
-                    className="w-4 h-4 rounded flex items-center justify-center hover:bg-orange-200 dark:hover:bg-orange-800 transition-colors"
+                    className="w-4 h-4 rounded flex items-center justify-center hover:bg-brand/20 transition-colors"
                     aria-label="Etiketi kaldır"
                   >
                     <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
@@ -602,7 +602,7 @@ export function QuestionForm({
               value={linkUrl}
               onChange={(e) => setLinkUrl(e.target.value)}
               placeholder="https://..."
-              className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-orange-500"
+              className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-brand"
             />
           </div>
         )}
@@ -611,7 +611,7 @@ export function QuestionForm({
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Görsel / Video</label>
             {mediaItemsCount === 0 ? (
-              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 sm:p-12 text-center hover:border-orange-500 transition-colors">
+              <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 sm:p-12 text-center hover:border-brand transition-colors">
                 <input type="file" accept="image/*" onChange={handleMediaChange} className="hidden" id="media-upload" />
                 <label htmlFor="media-upload" className="cursor-pointer block">
                   <span className="text-4xl mb-2 block">🖼️</span>
@@ -646,14 +646,14 @@ export function QuestionForm({
                 <div className="flex items-center justify-between px-3 py-2 border-t border-gray-200 dark:border-gray-700">
                   <div className="flex gap-1">
                     {Array.from({ length: mediaItemsCount }).map((_, i) => (
-                      <button key={i} type="button" onClick={() => setMediaSlideIndex(i)} className={`w-2 h-2 rounded-full transition-colors ${i === mediaSlideIndex ? 'bg-orange-500' : 'bg-gray-400 dark:bg-gray-600'}`} />
+                      <button key={i} type="button" onClick={() => setMediaSlideIndex(i)} className={`w-2 h-2 rounded-full transition-colors ${i === mediaSlideIndex ? 'bg-brand' : 'bg-gray-400 dark:bg-gray-600'}`} />
                     ))}
                   </div>
                   <span className="text-xs text-gray-500">{mediaSlideIndex + 1} / {mediaItemsCount}</span>
                   {mediaItemsCount < 5 && (
                     <>
                       <input type="file" accept="image/*" onChange={handleMediaChange} className="hidden" id="media-upload-more" />
-                      <label htmlFor="media-upload-more" className="text-xs text-orange-500 hover:text-orange-600 cursor-pointer">+ Görsel ekle</label>
+                      <label htmlFor="media-upload-more" className="text-xs text-brand hover:text-brand-hover cursor-pointer">+ Görsel ekle</label>
                     </>
                   )}
                 </div>
@@ -676,7 +676,7 @@ export function QuestionForm({
               Taslak Kaydet
             </button>
           )}
-          <button type="button" onClick={handleSubmit(false)} disabled={isSubmitting || !canSubmit()} className="px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-lg disabled:opacity-50" title={!categoryId ? 'Kategori seçmeniz gerekir' : undefined}>
+          <button type="button" onClick={handleSubmit(false)} disabled={isSubmitting || !canSubmit()} className="px-5 py-2.5 bg-brand hover:bg-brand-hover text-white font-medium rounded-lg disabled:opacity-50" title={!categoryId ? 'Kategori seçmeniz gerekir' : undefined}>
             {isSubmitting ? (mode === 'edit' ? 'Kaydediliyor...' : 'Yayınlanıyor...') : (mode === 'edit' ? 'Kaydet' : 'Yayınla')}
           </button>
         </div>

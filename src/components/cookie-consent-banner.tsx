@@ -60,7 +60,7 @@ export function CookieConsentBanner() {
               Deneyiminizi iyileştirmek ve siteyi nasıl kullandığınızı anlamak için çerezler kullanıyoruz.{' '}
               <Link
                 href="/gizlilik-politikasi"
-                className="text-orange-600 dark:text-orange-400 hover:underline font-medium"
+                className="text-brand hover:underline font-medium"
               >
                 Gizlilik politikası
               </Link>
@@ -69,7 +69,7 @@ export function CookieConsentBanner() {
               <button
                 type="button"
                 onClick={acceptAll}
-                className="px-4 py-2 rounded-xl bg-orange-500 text-white text-sm font-medium hover:bg-orange-600 transition-colors"
+                className="px-4 py-2 rounded-xl bg-brand text-white text-sm font-medium hover:bg-brand-hover transition-colors"
               >
                 Tümünü kabul et
               </button>
@@ -111,7 +111,7 @@ export function CookieConsentBanner() {
                   aria-checked={analytics}
                   onClick={() => setAnalytics((v) => !v)}
                   className={`w-10 h-5 rounded-full relative inline-block transition-colors ${
-                    analytics ? 'bg-orange-500' : 'bg-gray-200 dark:bg-gray-700'
+                    analytics ? 'bg-brand' : 'bg-gray-200 dark:bg-gray-700'
                   }`}
                 >
                   <span
@@ -126,7 +126,7 @@ export function CookieConsentBanner() {
             </div>
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
               Tercihleriniz cihazınızda saklanır. Detay için{' '}
-              <Link href="/gizlilik-politikasi" className="text-orange-600 dark:text-orange-400 hover:underline">
+              <Link href="/gizlilik-politikasi" className="text-brand hover:underline">
                 gizlilik politikamızı
               </Link>{' '}
               inceleyebilirsiniz.
@@ -135,7 +135,7 @@ export function CookieConsentBanner() {
               <button
                 type="button"
                 onClick={savePreferences}
-                className="px-4 py-2 rounded-xl bg-orange-500 text-white text-sm font-medium hover:bg-orange-600 transition-colors"
+                className="px-4 py-2 rounded-xl bg-brand text-white text-sm font-medium hover:bg-brand-hover transition-colors"
               >
                 Tercihleri kaydet
               </button>

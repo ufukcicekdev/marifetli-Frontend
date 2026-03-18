@@ -37,7 +37,7 @@ export function SiteStatsSidebar() {
       </p>
       <Link
         href="/hakkimizda"
-        className="mt-2 inline-block text-sm font-medium text-orange-600 dark:text-orange-400 hover:underline"
+        className="mt-2 inline-block text-sm font-medium text-brand hover:underline"
       >
         Devamını oku →
       </Link>

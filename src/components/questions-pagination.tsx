@@ -78,7 +78,7 @@ export function QuestionsPagination({
             href={buildHref(p)}
             className={`min-w-9 px-3 py-2 rounded-lg text-sm font-medium text-center transition-colors ${
               p === currentPage
-                ? 'bg-orange-500 text-white'
+                ? 'bg-brand text-white'
                 : 'text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700'
             }`}
             aria-label={p === currentPage ? `Sayfa ${p} (mevcut)` : `Sayfa ${p}`}

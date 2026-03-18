@@ -65,7 +65,7 @@ export default function AchievementsPage({ params }: { params: Promise<{ usernam
         <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-4xl min-w-0 overflow-x-hidden">
           <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-8 text-center shadow-sm">
             <p className="text-gray-500 dark:text-gray-400">Başarılar yüklenemedi</p>
-            <Link href={`/profil/${username}`} className="mt-4 inline-block text-orange-500 hover:text-orange-600 font-medium">
+            <Link href={`/profil/${username}`} className="mt-4 inline-block text-brand hover:text-brand-hover font-medium">
               Profile dön
             </Link>
           </div>
@@ -83,7 +83,7 @@ export default function AchievementsPage({ params }: { params: Promise<{ usernam
       <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-4xl min-w-0 overflow-x-hidden">
         <Link
           href={`/profil/${username}`}
-          className="inline-flex items-center gap-1 text-sm text-orange-600 dark:text-orange-400 hover:underline font-medium"
+          className="inline-flex items-center gap-1 text-sm text-brand hover:underline font-medium"
         >
           ← @{username} profiline dön
         </Link>
@@ -104,7 +104,7 @@ export default function AchievementsPage({ params }: { params: Promise<{ usernam
                 Başarılar
               </h1>
               <p className="mt-1 text-gray-600 dark:text-gray-400">
-                <span className="font-semibold text-orange-600 dark:text-orange-400">{totalUnlocked}</span>
+                <span className="font-semibold text-brand">{totalUnlocked}</span>
                 {' / '}
                 <span>{totalCount}</span> başarı tamamlandı
               </p>
@@ -138,12 +138,12 @@ export default function AchievementsPage({ params }: { params: Promise<{ usernam
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="inline-flex items-center rounded-full bg-orange-100 dark:bg-orange-900/30 px-3 py-1 text-sm font-medium text-orange-700 dark:text-orange-300">
+                    <span className="inline-flex items-center rounded-full bg-brand-pink dark:bg-brand/15 px-3 py-1 text-sm font-medium text-brand-hover">
                       {category.unlocked_count} / {category.total_count}
                     </span>
                     <div className="h-2 w-16 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-orange-500 dark:bg-orange-500 transition-all"
+                        className="h-full rounded-full bg-brand dark:bg-brand transition-all"
                         style={{ width: `${catPct}%` }}
                       />
                     </div>
@@ -196,7 +196,7 @@ export default function AchievementsPage({ params }: { params: Promise<{ usernam
                             <div className="mt-2 w-full">
                               <div className="h-1.5 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
                                 <div
-                                  className="h-full rounded-full bg-orange-500 dark:bg-orange-500 transition-all"
+                                  className="h-full rounded-full bg-brand dark:bg-brand transition-all"
                                   style={{ width: `${progressPct}%` }}
                                 />
                               </div>

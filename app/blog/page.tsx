@@ -82,7 +82,7 @@ export default function BlogPage() {
           <article className="mb-8">
             <Link
               href={`/blog/${featuredPost.slug}`}
-              className="block bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden hover:border-orange-300 dark:hover:border-orange-700 transition-colors shadow-sm hover:shadow-md"
+              className="block bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden hover:border-brand/40 transition-colors shadow-sm hover:shadow-md"
             >
               {featuredPost.featured_image ? (
                       <div className="relative w-full aspect-[21/9] sm:aspect-video bg-gray-100 dark:bg-gray-800">
@@ -100,8 +100,8 @@ export default function BlogPage() {
                   </span>
                 </div>
               ) : (
-                <div className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-gray-800 dark:to-gray-800/80 px-5 py-3 border-b border-gray-200 dark:border-gray-700">
-                  <span className="text-xs font-medium uppercase tracking-wider text-orange-600 dark:text-orange-400">Öne çıkan</span>
+                <div className="bg-gradient-to-r from-brand-pink to-brand-sky/10 dark:from-gray-800 dark:to-gray-800/80 px-5 py-3 border-b border-gray-200 dark:border-gray-700">
+                  <span className="text-xs font-medium uppercase tracking-wider text-brand">Öne çıkan</span>
                 </div>
               )}
               <div className="p-5 sm:p-6">
@@ -117,7 +117,7 @@ export default function BlogPage() {
                   {(featuredPost.author as { username?: string; profile_picture?: string })?.profile_picture ? (
                     <OptimizedAvatar src={(featuredPost.author as { profile_picture?: string }).profile_picture} size={24} alt="" className="w-6 h-6 shrink-0" />
                   ) : (
-                    <span className="w-6 h-6 rounded-full bg-orange-100 dark:bg-orange-900/40 flex items-center justify-center text-xs font-medium text-orange-600 dark:text-orange-400 shrink-0">
+                    <span className="w-6 h-6 rounded-full bg-brand-pink dark:bg-brand/20 flex items-center justify-center text-xs font-medium text-brand shrink-0">
                       {(featuredPost.author as { username?: string })?.username?.charAt(0)?.toUpperCase() ?? '?'}
                     </span>
                   )}
@@ -129,7 +129,7 @@ export default function BlogPage() {
                   <span>·</span>
                   <span>{featuredPost.like_count} beğeni · {featuredPost.comment_count} yorum</span>
                 </div>
-                <span className="inline-flex items-center gap-1 mt-4 text-orange-600 dark:text-orange-400 font-medium text-sm">
+                <span className="inline-flex items-center gap-1 mt-4 text-brand font-medium text-sm">
                   Yazıyı oku
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
                 </span>
@@ -175,7 +175,7 @@ export default function BlogPage() {
                   <li key={post.id}>
                     <Link
                       href={`/blog/${post.slug}`}
-                      className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:border-orange-300 dark:hover:border-orange-700 transition-colors min-w-0"
+                      className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:border-brand/40 transition-colors min-w-0"
                     >
                       {post.featured_image ? (
                         <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-lg bg-gray-100 dark:bg-gray-800 shrink-0 overflow-hidden">
@@ -212,7 +212,7 @@ export default function BlogPage() {
                             <button
                               type="button"
                               onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSaveModalPostId(post.id); }}
-                              className="shrink-0 flex items-center gap-1 text-orange-500 hover:text-orange-600 text-sm"
+                              className="shrink-0 flex items-center gap-1 text-brand hover:text-brand-hover text-sm"
                               title="Koleksiyona kaydet"
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -235,7 +235,7 @@ export default function BlogPage() {
                 <li key={post.id}>
                   <Link
                     href={`/blog/${post.slug}`}
-                    className="block bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden hover:border-orange-300 dark:hover:border-orange-700 transition-colors min-w-0"
+                    className="block bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden hover:border-brand/40 transition-colors min-w-0"
                   >
                     {post.featured_image && (
                       <div className="relative w-full aspect-video bg-gray-100 dark:bg-gray-800 shrink-0">
@@ -282,7 +282,7 @@ export default function BlogPage() {
                             <button
                               type="button"
                               onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSaveModalPostId(post.id); }}
-                              className="shrink-0 flex items-center gap-1 text-orange-500 hover:text-orange-600 text-sm"
+                              className="shrink-0 flex items-center gap-1 text-brand hover:text-brand-hover text-sm"
                               title="Koleksiyona kaydet"
                             >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

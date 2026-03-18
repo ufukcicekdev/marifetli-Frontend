@@ -101,7 +101,7 @@ export function ProfileEditModal({ open, onClose, onSuccess }: ProfileEditModalP
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 py-2 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-md disabled:opacity-50"
+              className="flex-1 py-2 bg-brand hover:bg-brand-hover text-white font-medium rounded-md disabled:opacity-50"
             >
               {loading ? 'Kaydediliyor...' : 'Kaydet'}
             </button>

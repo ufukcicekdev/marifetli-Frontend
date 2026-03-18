@@ -89,7 +89,7 @@ export function NavMegaMenu() {
                     <Link
                       href="/soru-sor"
                       onClick={close}
-                      className="flex items-center justify-center gap-2 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-medium text-sm"
+                      className="flex items-center justify-center gap-2 py-3 rounded-xl bg-brand hover:bg-brand-hover text-white font-medium text-sm"
                     >
                       <span className="text-lg">+</span>
                       <span>Gönderi Oluştur</span>
@@ -98,7 +98,7 @@ export function NavMegaMenu() {
                     <button
                       type="button"
                       onClick={() => { toast.error('Gönderi paylaşmak için önce e-posta adresinizi doğrulayın.'); close(); }}
-                      className="flex items-center justify-center gap-2 py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-medium text-sm"
+                      className="flex items-center justify-center gap-2 py-3 rounded-xl bg-brand hover:bg-brand-hover text-white font-medium text-sm"
                     >
                       <span className="text-lg">+</span>
                       <span>Gönderi Oluştur</span>
@@ -120,7 +120,7 @@ export function NavMegaMenu() {
                       onClick={close}
                       className={`flex gap-3 p-3 rounded-xl transition-colors ${
                         active
-                          ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400'
+                          ? 'bg-brand-pink/80 dark:bg-brand/10 text-brand'
                           : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-200'
                       }`}
                     >
@@ -137,13 +137,13 @@ export function NavMegaMenu() {
               <Link
                 href="/kategoriler"
                 onClick={close}
-                className="md:hidden flex items-center justify-between gap-3 p-4 rounded-xl bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 font-medium mt-2 border border-orange-100 dark:border-orange-800/50"
+                className="md:hidden flex items-center justify-between gap-3 p-4 rounded-xl bg-brand-pink/80 dark:bg-brand/10 text-brand-hover font-medium mt-2 border border-brand/10 dark:border-brand/30/50"
               >
                 <span className="flex items-center gap-2">
                   <span className="text-xl" aria-hidden>📁</span>
                   Kategoriler
                 </span>
-                <svg className="w-5 h-5 shrink-0 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 shrink-0 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
               </Link>
@@ -158,7 +158,7 @@ export function NavMegaMenu() {
                   </button>
                   <button
                     onClick={() => { openAuth('register'); close(); }}
-                    className="flex-1 py-2.5 rounded-lg text-sm font-medium bg-orange-500 text-white"
+                    className="flex-1 py-2.5 rounded-lg text-sm font-medium bg-brand text-white"
                   >
                     Üye Ol
                   </button>
@@ -172,7 +172,7 @@ export function NavMegaMenu() {
             >
               <div className="flex items-center justify-between mb-3 shrink-0">
                 <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Kategoriler</h3>
-                <Link href="/kategoriler" onClick={close} className="text-xs font-medium text-orange-600 dark:text-orange-400 hover:underline">
+                <Link href="/kategoriler" onClick={close} className="text-xs font-medium text-brand hover:underline">
                   Tümü
                 </Link>
               </div>
@@ -189,7 +189,7 @@ export function NavMegaMenu() {
                         href={`/t/${main.slug}`}
                         onClick={close}
                         className={`block px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                          mainActive ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400' : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200'
+                          mainActive ? 'bg-brand-pink/80 dark:bg-brand/10 text-brand' : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200'
                         }`}
                       >
                         {main.name}
@@ -204,7 +204,7 @@ export function NavMegaMenu() {
                                   href={`/t/${sub.slug}`}
                                   onClick={close}
                                   className={`block px-3 py-1.5 rounded-md text-sm ${
-                                    subActive ? 'text-orange-600 dark:text-orange-400 font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                                    subActive ? 'text-brand font-medium' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                                   }`}
                                 >
                                   {sub.name}
@@ -224,10 +224,10 @@ export function NavMegaMenu() {
 
         {/* Alt: Footer linkleri */}
         <div className="bg-white dark:bg-gray-900 px-4 md:px-6 py-3 border-t border-gray-100 dark:border-gray-800 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400 shrink-0">
-            <Link href="/iletisim" onClick={close} className="hover:text-orange-600 dark:hover:text-orange-400">İletişim</Link>
-            <Link href="/hakkimizda" onClick={close} className="hover:text-orange-600 dark:hover:text-orange-400">Hakkımızda</Link>
-            <Link href="/gizlilik-politikasi" onClick={close} className="hover:text-orange-600 dark:hover:text-orange-400">Gizlilik Politikası</Link>
-            <Link href="/kullanim-sartlari" onClick={close} className="hover:text-orange-600 dark:hover:text-orange-400">Kullanım Şartları</Link>
+            <Link href="/iletisim" onClick={close} className="hover:text-brand dark:hover:text-brand">İletişim</Link>
+            <Link href="/hakkimizda" onClick={close} className="hover:text-brand dark:hover:text-brand">Hakkımızda</Link>
+            <Link href="/gizlilik-politikasi" onClick={close} className="hover:text-brand dark:hover:text-brand">Gizlilik Politikası</Link>
+            <Link href="/kullanim-sartlari" onClick={close} className="hover:text-brand dark:hover:text-brand">Kullanım Şartları</Link>
             <span>© {new Date().getFullYear()} Marifetli</span>
         </div>
       </div>

@@ -61,7 +61,7 @@ export default function PrivacyPolicyPage() {
           Gizlilik politikamızla ilgili sorularınız veya talepleriniz için bize{' '}
           <a
             href="mailto:hello@marifetli.com.tr"
-            className="text-orange-600 dark:text-orange-400 hover:underline font-medium"
+            className="text-brand hover:underline font-medium"
           >
             hello@marifetli.com.tr
           </a>{' '}

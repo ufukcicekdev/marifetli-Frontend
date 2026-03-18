@@ -44,7 +44,7 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ token: s
       <div className="max-w-md w-full bg-white dark:bg-gray-900 p-8 rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 text-center">
         {status === 'loading' && (
           <>
-            <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+            <div className="w-12 h-12 border-4 border-brand border-t-transparent rounded-full animate-spin mx-auto mb-4" />
             <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">E-posta doğrulanıyor...</h1>
             <p className="text-gray-600 dark:text-gray-400 mt-2">Lütfen bekleyin.</p>
           </>
@@ -59,7 +59,7 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ token: s
             <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">E-posta doğrulandı</h1>
             <p className="text-gray-600 dark:text-gray-400 mt-2">{message}</p>
             <p className="text-sm text-gray-500 dark:text-gray-500 mt-4">Ana sayfaya yönlendiriliyorsunuz...</p>
-            <Link href="/sorular" className="mt-6 inline-block text-orange-500 hover:text-orange-600 font-medium">
+            <Link href="/sorular" className="mt-6 inline-block text-brand hover:text-brand-hover font-medium">
               Hemen git →
             </Link>
           </>
@@ -73,7 +73,7 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ token: s
             </div>
             <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Doğrulama başarısız</h1>
             <p className="text-gray-600 dark:text-gray-400 mt-2">{message}</p>
-            <Link href="/giris" className="mt-6 inline-block px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium">
+            <Link href="/giris" className="mt-6 inline-block px-4 py-2 bg-brand hover:bg-brand-hover text-white rounded-lg font-medium">
               Giriş sayfasına dön
             </Link>
           </>

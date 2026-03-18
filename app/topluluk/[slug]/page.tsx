@@ -126,7 +126,7 @@ function CommunityDetailContent({ params }: { params: Promise<{ slug: string }> 
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full" />
+        <div className="animate-spin w-8 h-8 border-2 border-brand border-t-transparent rounded-full" />
       </div>
     );
   }
@@ -136,7 +136,7 @@ function CommunityDetailContent({ params }: { params: Promise<{ slug: string }> 
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-600 dark:text-gray-400">Topluluk bulunamadı.</p>
-          <Link href="/topluluklar" className="mt-4 inline-block text-orange-500 hover:underline">
+          <Link href="/topluluklar" className="mt-4 inline-block text-brand hover:underline">
             Toplulukları keşfet →
           </Link>
         </div>
@@ -172,7 +172,7 @@ function CommunityDetailContent({ params }: { params: Promise<{ slug: string }> 
               <div className="flex-1 min-w-0">
             <div className={`rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden p-6 ${hasCover ? 'shadow-sm' : ''}`}>
             <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-              <div className="w-20 h-20 shrink-0 rounded-full border-4 border-white dark:border-gray-900 bg-orange-500 text-white flex items-center justify-center font-bold text-2xl overflow-hidden">
+              <div className="w-20 h-20 shrink-0 rounded-full border-4 border-white dark:border-gray-900 bg-brand text-white flex items-center justify-center font-bold text-2xl overflow-hidden">
                 {community.avatar_url ? (
                   <img src={community.avatar_url} alt={`${community.name || community.slug} topluluk logosu`} className="w-full h-full object-cover" />
                 ) : (
@@ -194,7 +194,7 @@ function CommunityDetailContent({ params }: { params: Promise<{ slug: string }> 
                       <>
                         <Link
                           href={`/soru-sor?community=${slug}`}
-                          className="rounded-full bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600"
+                          className="rounded-full bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-hover"
                         >
                           Soru sor
                         </Link>
@@ -218,7 +218,7 @@ function CommunityDetailContent({ params }: { params: Promise<{ slug: string }> 
                         type="button"
                         onClick={() => joinMutation.mutate()}
                         disabled={joinMutation.isPending}
-                        className="rounded-full bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-50"
+                        className="rounded-full bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-hover disabled:opacity-50"
                       >
                         {community.join_type === 'approval' ? 'Katılım talebi gönder' : 'Katıl'}
                       </button>
@@ -227,7 +227,7 @@ function CommunityDetailContent({ params }: { params: Promise<{ slug: string }> 
                     <button
                       type="button"
                       onClick={() => openAuth('login')}
-                      className="rounded-full bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600"
+                      className="rounded-full bg-brand px-4 py-2 text-sm font-medium text-white hover:bg-brand-hover"
                     >
                       Katılmak için giriş yapın
                     </button>
@@ -328,7 +328,7 @@ function CommunityDetailContent({ params }: { params: Promise<{ slug: string }> 
                     </>
                   )}
                   {isModOrOwner && (
-                    <button type="button" onClick={() => openSettingsModal('duzenle')} className="text-xs text-orange-500 hover:text-orange-600 hover:underline">
+                    <button type="button" onClick={() => openSettingsModal('duzenle')} className="text-xs text-brand hover:text-brand-hover hover:underline">
                       Topluluğu düzenle →
                     </button>
                   )}

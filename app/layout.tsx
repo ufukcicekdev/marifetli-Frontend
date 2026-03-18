@@ -12,6 +12,7 @@ import { MainContentWrapper } from '@/src/components/main-content-wrapper';
 import { NavMegaMenu } from '@/src/components/nav-mega-menu';
 import { OnboardingGuard } from '@/src/components/onboarding-guard';
 import { SiteAnalytics } from '@/src/components/site-analytics';
+import { SiteFonts } from '@/src/components/site-fonts';
 import { CategoriesPrefetcher } from '@/src/components/categories-prefetcher';
 import { FirebasePushHandler } from '@/src/components/firebase-push-handler';
 import { CookieConsentBanner } from '@/src/components/cookie-consent-banner';
@@ -85,8 +86,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
-    { media: '(prefers-color-scheme: dark)', color: '#0a0a0a' },
+    { media: '(prefers-color-scheme: light)', color: '#fe544e' },
+    { media: '(prefers-color-scheme: dark)', color: '#ea3750' },
   ],
 };
 
@@ -144,6 +145,8 @@ export default function RootLayout({
         <link rel="preconnect" href={API_ORIGIN} crossOrigin="" />
         <link rel="dns-prefetch" href={API_ORIGIN} />
         {/* LCP / third-party: CDN (medya), GTM, GA - kritik yolu kısaltır */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link rel="preconnect" href="https://www.googletagmanager.com" />
         <link rel="preconnect" href="https://www.google-analytics.com" />
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
@@ -155,10 +158,11 @@ export default function RootLayout({
         <ThemeProvider>
           <QueryProvider>
             <SiteAnalytics />
+            <SiteFonts />
             <CategoriesPrefetcher />
             <FirebasePushHandler />
             <OnboardingGuard>
-              <Suspense fallback={<header className="fixed top-0 left-0 right-0 z-40 h-[104px] bg-orange-500 border-b border-orange-600" />}>
+              <Suspense fallback={<header className="fixed top-0 left-0 right-0 z-40 h-[104px] bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700" />}>
                 <Header />
               </Suspense>
               <NavMegaMenu />

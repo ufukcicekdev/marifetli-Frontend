@@ -80,7 +80,7 @@ export default function TasarimDetailPage({ params }: { params: Promise<{ id: st
       <div className="mb-4">
         <Link
           href="/tasarimlar"
-          className="text-sm text-orange-500 hover:text-orange-600 dark:hover:text-orange-400"
+          className="text-sm text-brand hover:text-brand-hover dark:hover:text-brand"
         >
           ← Tasarımlara dön
         </Link>
@@ -102,7 +102,7 @@ export default function TasarimDetailPage({ params }: { params: Promise<{ id: st
           <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
             <Link
               href={`/profil/${design.author_username}`}
-              className="text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-orange-500"
+              className="text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-brand"
             >
               u/{design.author_username}
             </Link>
@@ -130,7 +130,7 @@ export default function TasarimDetailPage({ params }: { params: Promise<{ id: st
                 <button
                   type="button"
                   onClick={startEdit}
-                  className="mt-4 px-4 py-2 rounded-xl text-sm font-medium border border-orange-500 text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+                  className="mt-4 px-4 py-2 rounded-xl text-sm font-medium border border-brand text-brand hover:bg-brand-pink/80 dark:hover:bg-brand/10 transition-colors"
                 >
                   Düzenle
                 </button>
@@ -182,7 +182,7 @@ export default function TasarimDetailPage({ params }: { params: Promise<{ id: st
                   type="button"
                   onClick={saveEdit}
                   disabled={updateMutation.isPending}
-                  className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-50"
+                  className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-brand hover:bg-brand-hover disabled:opacity-50"
                 >
                   {updateMutation.isPending ? 'Kaydediliyor...' : 'Kaydet'}
                 </button>

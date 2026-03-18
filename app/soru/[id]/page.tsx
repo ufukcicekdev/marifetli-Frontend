@@ -183,7 +183,7 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
         <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-4xl min-w-0">
           <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-8 text-center">
             <p className="text-gray-500 dark:text-gray-400">Soru bulunamadı</p>
-            <Link href="/sorular" className="mt-4 inline-block text-orange-500 hover:text-orange-600">
+            <Link href="/sorular" className="mt-4 inline-block text-brand hover:text-brand-hover">
               Sorulara dön →
             </Link>
           </div>
@@ -217,7 +217,7 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
                   </div>
                 )}
                 <div className="flex items-center gap-2 flex-wrap min-w-0">
-                  <Link href={`/profil/${authorName}`} className="text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-orange-600 shrink-0">
+                  <Link href={`/profil/${authorName}`} className="text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-brand shrink-0">
                     u/{authorName}
                   </Link>
                   <span className="text-sm text-gray-500 dark:text-gray-400 shrink-0">
@@ -227,7 +227,7 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
                   {isAuthor && (
                     <Link
                       href={`/soru/${slug}/duzenle`}
-                      className="text-sm font-medium text-orange-500 hover:text-orange-600 shrink-0"
+                      className="text-sm font-medium text-brand hover:text-brand-hover shrink-0"
                     >
                       Düzenle
                     </Link>
@@ -257,7 +257,7 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
               <div className="flex items-center gap-4 py-3 border-t border-gray-200 dark:border-gray-700">
                 <button
                   onClick={() => currentUser ? likeMutation.mutate() : toast.error('Beğenmek için giriş yapın.')}
-                  className={`flex items-center gap-1.5 transition-colors ${optimisticVote === 'up' ? 'text-orange-500' : 'text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-500'}`}
+                  className={`flex items-center gap-1.5 transition-colors ${optimisticVote === 'up' ? 'text-brand' : 'text-gray-500 hover:text-brand dark:text-gray-400 dark:hover:text-brand'}`}
                   title="Beğen"
                 >
                   <svg className="w-5 h-5" fill={optimisticVote === 'up' ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
@@ -267,7 +267,7 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
                 </button>
                 <button
                   onClick={() => currentUser ? unlikeMutation.mutate() : toast.error('Giriş yapın.')}
-                  className={`transition-colors ${optimisticVote === 'down' ? 'text-orange-500' : 'text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-500'}`}
+                  className={`transition-colors ${optimisticVote === 'down' ? 'text-brand' : 'text-gray-500 hover:text-brand dark:text-gray-400 dark:hover:text-brand'}`}
                   title="Beğenme bırak"
                 >
                   <svg className="w-5 h-5" fill={optimisticVote === 'down' ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
@@ -276,7 +276,7 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
                 </button>
                 <a
                   href="#cevaplar"
-                  className="flex items-center gap-1.5 text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-500 transition-colors"
+                  className="flex items-center gap-1.5 text-gray-500 hover:text-brand dark:text-gray-400 dark:hover:text-brand transition-colors"
                   title="Yorumlar"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -284,11 +284,11 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
                   </svg>
                   <span className="text-sm">{Math.max(totalCommentCount, question.answer_count ?? 0)} yorum</span>
                 </a>
-                <ShareButton title={question.title} className="flex items-center gap-1.5 text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-500 transition-colors shrink-0" />
+                <ShareButton title={question.title} className="flex items-center gap-1.5 text-gray-500 hover:text-brand dark:text-gray-400 dark:hover:text-brand transition-colors shrink-0" />
                 {currentUser && (
                   <button
                     onClick={() => setSaveModalOpen(true)}
-                    className="flex items-center gap-1.5 text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-500 transition-colors ml-auto"
+                    className="flex items-center gap-1.5 text-gray-500 hover:text-brand dark:text-gray-400 dark:hover:text-brand transition-colors ml-auto"
                     title="Kaydet"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -339,7 +339,7 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
                         <button
                           type="submit"
                           disabled={createAnswerMutation.isPending || !hasContent(answerText)}
-                          className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed"
+                          className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-hover focus:outline-none focus:ring-2 focus:ring-brand focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed"
                         >
                           {createAnswerMutation.isPending ? 'Gönderiliyor...' : 'Yorum yap'}
                         </button>
@@ -391,7 +391,7 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
                   {communityData?.avatar_url ? (
                     <img src={communityData.avatar_url} alt={`${communityName || communitySlug} topluluk logosu`} className="w-12 h-12 rounded-full object-cover shrink-0" />
                   ) : (
-                    <div className="w-12 h-12 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-lg shrink-0">
+                    <div className="w-12 h-12 rounded-full bg-brand text-white flex items-center justify-center font-bold text-lg shrink-0">
                       {(communityName || communitySlug).charAt(0).toUpperCase()}
                     </div>
                   )}
@@ -408,7 +408,7 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
                 </p>
                 <Link
                   href={`/topluluk/${communitySlug}`}
-                  className="block w-full text-center py-2.5 rounded-lg text-sm font-medium bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+                  className="block w-full text-center py-2.5 rounded-lg text-sm font-medium bg-brand text-white hover:bg-brand-hover transition-colors"
                 >
                   Topluluğa git
                 </Link>

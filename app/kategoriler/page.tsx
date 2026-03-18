@@ -62,7 +62,7 @@ function KategorilerContent() {
                       <li key={sub.id}>
                         <Link
                           href={`/t/${sub.slug}`}
-                          className="block px-4 py-3 pl-8 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-orange-600 dark:hover:text-orange-400 transition-colors"
+                          className="block px-4 py-3 pl-8 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-brand dark:hover:text-brand transition-colors"
                         >
                           {sub.name}
                         </Link>
@@ -83,7 +83,7 @@ function KategorilerContent() {
       <div className="mt-8">
         <Link
           href="/topluluklar"
-          className="inline-flex items-center gap-2 text-sm font-medium text-orange-600 dark:text-orange-400 hover:underline"
+          className="inline-flex items-center gap-2 text-sm font-medium text-brand hover:underline"
         >
           Toplulukları keşfet
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

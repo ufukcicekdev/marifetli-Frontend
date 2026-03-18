@@ -33,10 +33,10 @@ function CommunityCard({
   const showLeaveButton = isMember && !isModOrOwner;
 
   return (
-    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 h-full flex flex-col hover:border-orange-200 dark:hover:border-orange-800/50 transition-colors">
+    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 h-full flex flex-col hover:border-brand/30/50 transition-colors">
       <Link href={`/topluluk/${community.slug}`} className="flex flex-col flex-1 min-w-0">
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-12 h-12 shrink-0 rounded-full bg-orange-500 text-white flex items-center justify-center font-bold text-lg overflow-hidden">
+          <div className="w-12 h-12 shrink-0 rounded-full bg-brand text-white flex items-center justify-center font-bold text-lg overflow-hidden">
             {community.avatar_url ? (
               <img src={community.avatar_url} alt={`${community.name || community.slug} topluluk logosu`} className="w-full h-full object-cover" />
             ) : (
@@ -72,7 +72,7 @@ function CommunityCard({
         <button
           type="button"
           onClick={(e) => onJoinClick(e, community)}
-          className="mt-auto w-full rounded-full px-4 py-2 text-sm font-medium bg-orange-500 text-white hover:bg-orange-600 transition-colors"
+          className="mt-auto w-full rounded-full px-4 py-2 text-sm font-medium bg-brand text-white hover:bg-brand-hover transition-colors"
         >
           Katılmak
         </button>
@@ -182,7 +182,7 @@ export default function TopluluklarPage() {
           {isAuthenticated && (
             <Link
               href="/topluluklar/olustur"
-              className="shrink-0 rounded-full bg-orange-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-orange-600"
+              className="shrink-0 rounded-full bg-brand px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-hover"
             >
               + Topluluk oluştur
             </Link>
@@ -200,7 +200,7 @@ export default function TopluluklarPage() {
             {isAuthenticated && (
               <Link
                 href="/topluluklar/olustur"
-                className="inline-block rounded-full bg-orange-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-orange-600"
+                className="inline-block rounded-full bg-brand px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-hover"
               >
                 İlk topluluğu oluştur
               </Link>
@@ -217,7 +217,7 @@ export default function TopluluklarPage() {
                 onClick={() => setCategory(null)}
                 className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap ${
                   activeCategory === null
-                    ? 'bg-orange-500 text-white'
+                    ? 'bg-brand text-white'
                     : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
                 }`}
               >
@@ -236,7 +236,7 @@ export default function TopluluklarPage() {
                       onClick={() => setCategory(main.slug)}
                       className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium transition-colors whitespace-nowrap ${
                         activeCategory === main.slug
-                          ? 'bg-orange-500 text-white'
+                          ? 'bg-brand text-white'
                           : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                       }`}
                     >
@@ -249,7 +249,7 @@ export default function TopluluklarPage() {
                         onClick={() => setCategory(sub.slug)}
                         className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium transition-colors whitespace-nowrap ${
                           activeCategory === sub.slug
-                            ? 'bg-orange-500 text-white'
+                            ? 'bg-brand text-white'
                             : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
                         }`}
                       >
@@ -265,7 +265,7 @@ export default function TopluluklarPage() {
 
         {isLoading && (
           <div className="flex justify-center py-16">
-            <div className="animate-spin w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full" />
+            <div className="animate-spin w-8 h-8 border-2 border-brand border-t-transparent rounded-full" />
           </div>
         )}
 

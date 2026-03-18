@@ -134,13 +134,13 @@ export function TopicPageContent({ slug }: { slug: string }) {
       <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 flex flex-col lg:flex-row lg:items-start gap-4 sm:gap-6 min-w-0 min-h-[calc(100vh-104px)]">
         <div className="flex-1 min-w-0 overflow-hidden">
           <nav className="mb-4 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400" aria-label="Breadcrumb">
-            <Link href="/" className="hover:text-orange-500">Marifetli</Link>
+            <Link href="/" className="hover:text-brand">Marifetli</Link>
             <span>/</span>
-            <Link href="/sorular" className="hover:text-orange-500">Sorular</Link>
+            <Link href="/sorular" className="hover:text-brand">Sorular</Link>
             <span>/</span>
             {!isSpecial && parentCategory ? (
               <>
-                <Link href={`/t/${parentCategory.parentSlug}`} className="hover:text-orange-500">{parentCategory.parentName}</Link>
+                <Link href={`/t/${parentCategory.parentSlug}`} className="hover:text-brand">{parentCategory.parentName}</Link>
                 <span>/</span>
                 <span className="text-gray-900 dark:text-gray-100 font-medium" suppressHydrationWarning>{parentCategory.currentName}</span>
               </>
@@ -159,8 +159,8 @@ export function TopicPageContent({ slug }: { slug: string }) {
                     href={`/t/${sub.slug}`}
                     className={`rounded-full border px-3 py-1.5 text-sm transition-colors ${
                       isCurrent
-                        ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 font-medium'
-                        : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:text-orange-600 dark:hover:text-orange-400'
+                        ? 'border-brand bg-brand-pink/80 dark:bg-brand/15 text-brand-hover font-medium'
+                        : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-brand hover:bg-brand-pink/80 dark:hover:bg-brand/10 hover:text-brand dark:hover:text-brand'
                     }`}
                   >
                     {sub.name}
@@ -178,7 +178,7 @@ export function TopicPageContent({ slug }: { slug: string }) {
           {!isSpecial && categoryError && (
             <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-8 text-center">
               <p className="text-gray-700 dark:text-gray-300 mb-4">Bu kategori bulunamadı.</p>
-              <Link href="/sorular" className="text-orange-500 hover:text-orange-600 font-medium">
+              <Link href="/sorular" className="text-brand hover:text-brand-hover font-medium">
                 Tüm sorulara git
               </Link>
             </div>

@@ -119,7 +119,7 @@ export function AppSidebar() {
                 </button>
                 <button
                   onClick={() => { openAuth('register'); toggle(); }}
-                  className="flex-1 min-h-[40px] px-3 rounded-lg text-sm font-medium bg-orange-500 hover:bg-orange-600 text-white"
+                  className="flex-1 min-h-[40px] px-3 rounded-lg text-sm font-medium bg-brand hover:bg-brand-hover text-white"
                 >
                   Üye Ol
                 </button>
@@ -128,7 +128,7 @@ export function AppSidebar() {
               <Link
                 href="/soru-sor"
                 onClick={() => toggle()}
-                className="flex items-center justify-center gap-2 min-h-[40px] px-3 rounded-lg text-sm font-medium bg-orange-500 hover:bg-orange-600 text-white"
+                className="flex items-center justify-center gap-2 min-h-[40px] px-3 rounded-lg text-sm font-medium bg-brand hover:bg-brand-hover text-white"
               >
                 <span className="text-lg leading-none">+</span>
                 Gönderi Oluştur
@@ -148,7 +148,7 @@ export function AppSidebar() {
                   isOpen ? 'gap-3 px-3 py-2' : 'justify-center p-2'
                 } ${
                   active
-                    ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400'
+                    ? 'bg-brand-pink/80 dark:bg-brand/10 text-brand'
                     : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
                 }`}
                 title={!isOpen ? item.label : undefined}
@@ -168,7 +168,7 @@ export function AppSidebar() {
               </h3>
               <Link
                 href="/topluluklar"
-                className="mb-3 flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+                className="mb-3 flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-brand hover:bg-brand-pink/80 dark:hover:bg-brand/10 transition-colors"
               >
                 🔍 Tümünü keşfet
               </Link>
@@ -188,7 +188,7 @@ export function AppSidebar() {
                         href={`/t/${main.slug}`}
                         className={`block px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                           mainActive
-                            ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400'
+                            ? 'bg-brand-pink/80 dark:bg-brand/10 text-brand'
                             : 'text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800'
                         }`}
                       >
@@ -204,7 +204,7 @@ export function AppSidebar() {
                                   href={`/t/${sub.slug}`}
                                   className={`block px-3 py-1.5 rounded-md text-sm transition-colors ${
                                     subActive
-                                      ? 'text-orange-600 dark:text-orange-400 font-medium'
+                                      ? 'text-brand font-medium'
                                       : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800/50'
                                   }`}
                                 >
@@ -224,13 +224,13 @@ export function AppSidebar() {
             <div className="mt-8 border-t border-gray-200 dark:border-gray-800 pt-3 px-3 space-y-1 text-center">
               <Link
                 href="/gizlilik-politikasi"
-                className="inline-block text-xs text-gray-500 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 hover:underline"
+                className="inline-block text-xs text-gray-500 dark:text-gray-400 hover:text-brand dark:hover:text-brand hover:underline"
               >
                 Gizlilik Politikası
               </Link>
               <Link
                 href="/kullanim-sartlari"
-                className="inline-block text-xs text-gray-500 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 hover:underline"
+                className="inline-block text-xs text-gray-500 dark:text-gray-400 hover:text-brand dark:hover:text-brand hover:underline"
               >
                 Kullanım Şartları
               </Link>

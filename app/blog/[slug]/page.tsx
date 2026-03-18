@@ -156,7 +156,7 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
           <main className="min-w-0 flex-1 max-w-4xl">
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-8 text-center">
               <p className="text-gray-500 dark:text-gray-400">Yazı bulunamadı</p>
-              <Link href="/blog" className="mt-4 inline-block text-orange-500 hover:text-orange-600">
+              <Link href="/blog" className="mt-4 inline-block text-brand hover:text-brand-hover">
                 Bloga dön →
               </Link>
             </div>
@@ -178,7 +178,7 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
       <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-10 flex flex-col lg:flex-row gap-8 max-w-6xl">
         <main className="min-w-0 flex-1 max-w-4xl">
           <div className="mb-4">
-            <Link href="/blog" className="text-sm text-orange-500 hover:text-orange-600 dark:text-orange-400">
+            <Link href="/blog" className="text-sm text-brand hover:text-brand">
               ← Bloga dön
             </Link>
           </div>
@@ -237,7 +237,7 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
               <button
                 type="button"
                 onClick={handleLike}
-                className={`flex items-center gap-1.5 transition-colors shrink-0 ${liked ? 'text-orange-500' : 'text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-500'}`}
+                className={`flex items-center gap-1.5 transition-colors shrink-0 ${liked ? 'text-brand' : 'text-gray-500 hover:text-brand dark:text-gray-400 dark:hover:text-brand'}`}
                 title={liked ? 'Beğeniyi kaldır' : 'Beğen'}
               >
                 <svg className="w-5 h-5 shrink-0" fill={liked ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
@@ -250,7 +250,7 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
                 <button
                   type="button"
                   onClick={() => setSaveModalOpen(true)}
-                  className="flex items-center gap-1.5 text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-500 transition-colors shrink-0"
+                  className="flex items-center gap-1.5 text-gray-500 hover:text-brand dark:text-gray-400 dark:hover:text-brand transition-colors shrink-0"
                   title="Koleksiyona kaydet"
                 >
                   <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -275,7 +275,7 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
                   onChange={(e) => setCommentText(e.target.value)}
                   placeholder="Düşüncenizi paylaşın..."
                   rows={3}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:ring-2 focus:ring-orange-500 focus:border-orange-500 resize-y min-h-[80px]"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:ring-2 focus:ring-brand focus:border-brand resize-y min-h-[80px]"
                 />
                 <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                   Gönderdiğiniz yorum önce moderasyondan geçer, onaylandıktan sonra herkes tarafından görülebilir.
@@ -284,7 +284,7 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
                   <button
                     type="submit"
                     disabled={commentMutation.isPending || !commentText.trim()}
-                    className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-70 disabled:cursor-not-allowed"
+                    className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-hover disabled:opacity-70 disabled:cursor-not-allowed"
                   >
                     {commentMutation.isPending ? 'Gönderiliyor...' : 'Gönder'}
                   </button>
@@ -294,7 +294,7 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
 
             {!isAuthenticated && (
               <p className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700 text-sm text-gray-500 dark:text-gray-400">
-                Yorum yapmak için <Link href="/giris" className="text-orange-500 hover:text-orange-600">giriş yapın</Link>.
+                Yorum yapmak için <Link href="/giris" className="text-brand hover:text-brand-hover">giriş yapın</Link>.
               </p>
             )}
           </div>

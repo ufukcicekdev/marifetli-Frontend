@@ -80,12 +80,12 @@ function QuestionsContent() {
             {communitySlug && (
               <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-800 flex items-center gap-2 flex-wrap">
                 <span className="text-sm text-gray-600 dark:text-gray-400">r/{communitySlug} topluluğundaki gönderilerde arama</span>
-                <Link href="/sorular" className="text-sm text-orange-500 hover:text-orange-600">Tümüne dön</Link>
+                <Link href="/sorular" className="text-sm text-brand hover:text-brand-hover">Tümüne dön</Link>
               </div>
             )}
             {/* Sayfa içi arama (navbar artık sadece "Ara" linki; arama burada) */}
             <form onSubmit={handleSearchSubmit} className="p-3 border-b border-gray-200 dark:border-gray-800">
-              <div className="relative flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 focus-within:ring-1 focus-within:ring-orange-500">
+              <div className="relative flex items-center bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 focus-within:ring-1 focus-within:ring-brand">
                 <svg className="w-4 h-4 text-gray-400 dark:text-gray-500 ml-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>

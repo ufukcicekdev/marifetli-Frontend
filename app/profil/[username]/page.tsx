@@ -246,15 +246,15 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
         {showOnboardingCard && (
           <Link
             href="/onboarding"
-            className="mb-4 flex items-center justify-between gap-4 p-4 rounded-xl border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-950/40 text-orange-900 dark:text-orange-100 hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-colors"
+            className="mb-4 flex items-center justify-between gap-4 p-4 rounded-xl border border-brand/30 dark:border-brand/40 bg-brand-pink/50 dark:bg-brand/10 text-gray-900 dark:text-gray-100 hover:bg-brand-pink/70 dark:hover:bg-brand/20 transition-colors"
           >
             <div className="min-w-0">
               <p className="font-medium">Profilini tamamla</p>
-              <p className="text-sm text-orange-700 dark:text-orange-300 mt-0.5">
+              <p className="text-sm text-brand-hover mt-0.5">
                 İlgi alanları, cinsiyet ve yaş gibi bilgileri ekleyerek toplulukta daha iyi tanın.
               </p>
             </div>
-            <span className="shrink-0 px-4 py-2 text-sm font-medium bg-orange-500 hover:bg-orange-600 text-white rounded-lg">
+            <span className="shrink-0 px-4 py-2 text-sm font-medium bg-brand hover:bg-brand-hover text-white rounded-lg">
               Tamamla
             </span>
           </Link>
@@ -264,7 +264,7 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
           <div className="flex-1 min-w-0">
             {/* Profil kartı — modern cover + avatar */}
             <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-lg shadow-gray-200/50 dark:shadow-none border border-gray-200/80 dark:border-gray-800 overflow-hidden">
-              <div className="h-28 sm:h-36 bg-gradient-to-br from-orange-400 via-orange-500 to-amber-500 dark:from-orange-700 dark:via-orange-800 dark:to-amber-800 relative">
+              <div className="h-28 sm:h-36 bg-gradient-to-br from-brand via-brand to-brand-hover dark:from-brand dark:via-brand-hover dark:to-brand-red-dark relative">
                 {profile.cover_image ? (
                   <img src={profile.cover_image} alt="" className="w-full h-full object-cover" />
                 ) : (
@@ -303,7 +303,7 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
                               type="button"
                               onClick={() => followMutation.mutate(profile.id)}
                               disabled={followMutation.isPending}
-                              className="px-4 py-2 text-sm font-medium bg-orange-500 hover:bg-orange-600 text-white rounded-xl disabled:opacity-50 transition-colors shadow-sm"
+                              className="px-4 py-2 text-sm font-medium bg-brand hover:bg-brand-hover text-white rounded-xl disabled:opacity-50 transition-colors shadow-sm"
                             >
                               {followMutation.isPending ? '...' : 'Takip Et'}
                             </button>
@@ -326,7 +326,7 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
                       onClick={() => setActiveTab(tab)}
                       className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap rounded-lg transition-all ${
                         activeTab === tab
-                          ? 'bg-white dark:bg-gray-700 text-orange-600 dark:text-orange-400 shadow-sm'
+                          ? 'bg-white dark:bg-gray-700 text-brand shadow-sm'
                           : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                       }`}
                     >
@@ -453,7 +453,7 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
                       <button
                         type="button"
                         onClick={() => setUploadModalOpen(true)}
-                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 transition-colors"
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white bg-brand hover:bg-brand-hover transition-colors"
                       >
                         <span className="text-lg leading-none">+</span>
                         Tasarım ekle
@@ -473,7 +473,7 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
                         <button
                           type="button"
                           onClick={() => setUploadModalOpen(true)}
-                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-orange-500 hover:text-orange-600 border border-orange-500 transition-colors"
+                          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-brand hover:text-brand-hover border border-brand transition-colors"
                         >
                           <span className="text-lg leading-none">+</span>
                           Tasarım ekle
@@ -485,7 +485,7 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
                       {designsList.map((d) => (
                         <div
                           key={d.id}
-                          className="group rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 hover:border-orange-400 dark:hover:border-orange-600 transition-colors bg-white dark:bg-gray-900"
+                          className="group rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 hover:border-brand transition-colors bg-white dark:bg-gray-900"
                         >
                           <Link href={`/tasarim/${d.id}`} className="block aspect-square relative" onClick={(e) => e.stopPropagation()}>
                             <MediaSlider
@@ -504,7 +504,7 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
                               <div className="flex items-center gap-1 shrink-0">
                                 <Link
                                   href={`/tasarim/${d.id}`}
-                                  className="px-2 py-1 text-xs font-medium text-orange-600 dark:text-orange-400 hover:underline"
+                                  className="px-2 py-1 text-xs font-medium text-brand hover:underline"
                                 >
                                   Düzenle
                                 </Link>
@@ -561,7 +561,7 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
                   className="w-full flex justify-between items-center text-sm rounded-lg py-2 -mx-1 px-1 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left border-b border-gray-100 dark:border-gray-800"
                 >
                   <span className="text-gray-600 dark:text-gray-400">Takip ettiklerim</span>
-                  <span className="font-semibold text-orange-600 dark:text-orange-400 tabular-nums">{profile.following_count ?? 0}</span>
+                  <span className="font-semibold text-brand tabular-nums">{profile.following_count ?? 0}</span>
                 </button>
               ) : (
                 <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-800">
@@ -579,27 +579,27 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
                   <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Bağlantılar</p>
                   <div className="flex flex-wrap gap-2">
                     {profile.website && (
-                      <a href={profile.website} target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:text-orange-600 text-sm truncate max-w-full" title="Web sitesi" aria-label="Web sitesi">
+                      <a href={profile.website} target="_blank" rel="noopener noreferrer" className="text-brand hover:text-brand-hover text-sm truncate max-w-full" title="Web sitesi" aria-label="Web sitesi">
                         🌐
                       </a>
                     )}
                     {profile.instagram_url && (
-                      <a href={profile.instagram_url} target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:text-orange-600" title="Instagram" aria-label="Instagram">📷</a>
+                      <a href={profile.instagram_url} target="_blank" rel="noopener noreferrer" className="text-brand hover:text-brand-hover" title="Instagram" aria-label="Instagram">📷</a>
                     )}
                     {profile.twitter_url && (
-                      <a href={profile.twitter_url} target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:text-orange-600" title="X" aria-label="X (Twitter)">𝕏</a>
+                      <a href={profile.twitter_url} target="_blank" rel="noopener noreferrer" className="text-brand hover:text-brand-hover" title="X" aria-label="X (Twitter)">𝕏</a>
                     )}
                     {profile.facebook_url && (
-                      <a href={profile.facebook_url} target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:text-orange-600" title="Facebook" aria-label="Facebook">f</a>
+                      <a href={profile.facebook_url} target="_blank" rel="noopener noreferrer" className="text-brand hover:text-brand-hover" title="Facebook" aria-label="Facebook">f</a>
                     )}
                     {profile.linkedin_url && (
-                      <a href={profile.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:text-orange-600" title="LinkedIn" aria-label="LinkedIn">in</a>
+                      <a href={profile.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-brand hover:text-brand-hover" title="LinkedIn" aria-label="LinkedIn">in</a>
                     )}
                     {profile.youtube_url && (
-                      <a href={profile.youtube_url} target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:text-orange-600" title="YouTube" aria-label="YouTube">▶</a>
+                      <a href={profile.youtube_url} target="_blank" rel="noopener noreferrer" className="text-brand hover:text-brand-hover" title="YouTube" aria-label="YouTube">▶</a>
                     )}
                     {profile.pinterest_url && (
-                      <a href={profile.pinterest_url} target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:text-orange-600" title="Pinterest" aria-label="Pinterest">P</a>
+                      <a href={profile.pinterest_url} target="_blank" rel="noopener noreferrer" className="text-brand hover:text-brand-hover" title="Pinterest" aria-label="Pinterest">P</a>
                     )}
                   </div>
                 </div>
@@ -619,13 +619,13 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
                   <ul className="space-y-2">
                     {(managedList as { id: number; name: string; slug: string; member_count: number }[]).map((c) => (
                       <li key={c.id} className="flex items-center justify-between gap-2">
-                        <Link href={`/topluluk/${c.slug}`} className="text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-orange-600 truncate min-w-0" title={`r/${c.slug}`}>
+                        <Link href={`/topluluk/${c.slug}`} className="text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-brand truncate min-w-0" title={`r/${c.slug}`}>
                           {c.name || `r/${c.slug}`}
                         </Link>
                         <div className="flex gap-1 shrink-0">
                           <Link
                             href={`/topluluk/${c.slug}?modal=manage`}
-                            className="text-xs text-orange-500 hover:text-orange-600"
+                            className="text-xs text-brand hover:text-brand-hover"
                           >
                             Yönet
                           </Link>
@@ -643,7 +643,7 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
                 )}
                 <Link
                   href="/topluluklar/olustur"
-                  className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300"
+                  className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-brand hover:text-brand-hover"
                 >
                   {managedList.length === 0 ? 'Topluluk oluştur' : '+ Yeni topluluk'}
                   <span aria-hidden>→</span>
@@ -658,7 +658,7 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
                 <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Başarılar</h3>
                 <Link
                   href={`/profil/${username}/basarilar`}
-                  className="text-sm font-medium text-orange-500 hover:text-orange-600 dark:text-orange-400"
+                  className="text-sm font-medium text-brand hover:text-brand hover:text-brand-hover"
                 >
                   Tümünü gör →
                 </Link>
@@ -667,7 +667,7 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
                 <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">{unlockedCount} rozet açıldı</p>
                 <Link
                   href={`/profil/${username}/basarilar`}
-                  className="block w-full py-2.5 text-center text-sm font-medium text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 border border-orange-200 dark:border-orange-800 rounded-xl transition-colors"
+                  className="block w-full py-2.5 text-center text-sm font-medium text-brand bg-brand-pink/50 dark:bg-brand/10 hover:bg-brand-pink/70 dark:hover:bg-brand/20 border border-brand/30 dark:border-brand/40 rounded-xl transition-colors"
                 >
                   Başarıları görüntüle
                 </Link>
@@ -686,7 +686,7 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Profil bilgilerinizi özelleştirin</p>
                     <Link
                       href="/ayarlar"
-                      className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300"
+                      className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-brand hover:text-brand-hover"
                     >
                       Güncelle
                       <span aria-hidden>→</span>
@@ -698,7 +698,7 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
                       <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Kategoriler, cinsiyet ve tercihlerinizi güncelleyin</p>
                       <Link
                         href="/onboarding?from=profile"
-                        className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300"
+                        className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-brand hover:text-brand-hover"
                       >
                         İlgi alanlarını güncelle
                         <span aria-hidden>→</span>

@@ -224,7 +224,7 @@ export default function AyarlarPage() {
             onClick={() => setTab('profil')}
             className={`px-5 py-2.5 font-medium rounded-lg transition-all ${
               tab === 'profil'
-                ? 'bg-white dark:bg-gray-700 text-orange-600 dark:text-orange-400 shadow-sm'
+                ? 'bg-white dark:bg-gray-700 text-brand shadow-sm'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
             }`}
           >
@@ -234,7 +234,7 @@ export default function AyarlarPage() {
             onClick={() => setTab('bildirimler')}
             className={`px-5 py-2.5 font-medium rounded-lg transition-all ${
               tab === 'bildirimler'
-                ? 'bg-white dark:bg-gray-700 text-orange-600 dark:text-orange-400 shadow-sm'
+                ? 'bg-white dark:bg-gray-700 text-brand shadow-sm'
                 : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
             }`}
           >
@@ -286,7 +286,7 @@ export default function AyarlarPage() {
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     disabled={uploadAvatar.isPending}
-                    className="px-4 py-2.5 text-sm font-medium text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 rounded-xl transition-colors"
+                    className="px-4 py-2.5 text-sm font-medium text-brand hover:bg-brand-pink/50 dark:hover:bg-brand/10 rounded-xl transition-colors"
                   >
                     {uploadAvatar.isPending ? 'Yükleniyor...' : 'Fotoğraf Seç'}
                   </button>
@@ -305,7 +305,7 @@ export default function AyarlarPage() {
                     type="text"
                     value={form.first_name}
                     onChange={(e) => setForm((f) => ({ ...f, first_name: e.target.value }))}
-                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-colors"
+                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-brand/30 focus:border-brand transition-colors"
                   />
                 </div>
                 <div>
@@ -314,7 +314,7 @@ export default function AyarlarPage() {
                     type="text"
                     value={form.last_name}
                     onChange={(e) => setForm((f) => ({ ...f, last_name: e.target.value }))}
-                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-colors"
+                    className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-brand/30 focus:border-brand transition-colors"
                   />
                 </div>
               </div>
@@ -323,7 +323,7 @@ export default function AyarlarPage() {
                 <select
                   value={form.gender}
                   onChange={(e) => setForm((f) => ({ ...f, gender: e.target.value }))}
-                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-colors"
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-brand/30 focus:border-brand transition-colors"
                 >
                   <option value="">Belirtmek istemiyorum</option>
                   <option value="male">Erkek</option>
@@ -338,7 +338,7 @@ export default function AyarlarPage() {
                   onChange={(e) => setForm((f) => ({ ...f, bio: e.target.value }))}
                   rows={3}
                   maxLength={500}
-                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-colors resize-none"
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-brand/30 focus:border-brand transition-colors resize-none"
                 />
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{form.bio.length}/500</p>
               </div>
@@ -355,7 +355,7 @@ export default function AyarlarPage() {
                   onChange={(e) => setForm((f) => ({ ...f, location: e.target.value }))}
                   placeholder="Örn: İstanbul"
                   maxLength={30}
-                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-colors"
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-brand/30 focus:border-brand transition-colors"
                 />
               </div>
               <div>
@@ -365,7 +365,7 @@ export default function AyarlarPage() {
                   value={form.website}
                   onChange={(e) => setForm((f) => ({ ...f, website: e.target.value }))}
                   placeholder="https://"
-                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-orange-500/30 focus:border-orange-500 transition-colors"
+                  className="w-full px-4 py-2.5 border border-gray-200 dark:border-gray-600 rounded-xl bg-gray-50 dark:bg-gray-800/50 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-brand/30 focus:border-brand transition-colors"
                 />
               </div>
             </div>
@@ -432,7 +432,7 @@ export default function AyarlarPage() {
                             )
                           }
                           placeholder="https://..."
-                          className="flex-1 min-w-0 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-orange-500/30"
+                          className="flex-1 min-w-0 px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-brand/30"
                         />
                       </div>
                       <button
@@ -453,7 +453,7 @@ export default function AyarlarPage() {
               <button
                 type="submit"
                 disabled={updateUser.isPending || updateProfile.isPending}
-                className="px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-xl disabled:opacity-50 transition-colors shadow-sm"
+                className="px-6 py-2.5 bg-brand hover:bg-brand-hover text-white font-medium rounded-xl disabled:opacity-50 transition-colors shadow-sm"
               >
                 {updateUser.isPending || updateProfile.isPending ? 'Kaydediliyor...' : 'Kaydet'}
               </button>
@@ -503,9 +503,9 @@ export default function AyarlarPage() {
                             !(notifSettings as Record<string, boolean>)?.[key]
                           )
                         }
-                        className={`relative shrink-0 w-12 h-7 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500/40 ${
+                        className={`relative shrink-0 w-12 h-7 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand/40 ${
                           (notifSettings as Record<string, boolean>)?.[key]
-                            ? 'bg-orange-500'
+                            ? 'bg-brand'
                             : 'bg-gray-300 dark:bg-gray-600'
                         }`}
                       >

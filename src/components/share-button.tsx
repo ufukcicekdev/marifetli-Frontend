@@ -69,7 +69,7 @@ export function ShareButton({ url: urlProp, title, text, children, className = '
         <button
           type="button"
           onClick={openModal}
-          className={`flex items-center gap-1.5 text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-500 transition-colors shrink-0 ${className}`}
+          className={`flex items-center gap-1.5 text-gray-500 hover:text-brand dark:text-gray-400 dark:hover:text-brand transition-colors shrink-0 ${className}`}
           title="Paylaş"
         >
           <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -74,7 +74,7 @@ function CategoryDropdown({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-left text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+        className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-left text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-brand focus:border-transparent"
         aria-haspopup="listbox"
         aria-expanded={open}
       >
@@ -93,7 +93,7 @@ function CategoryDropdown({
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => e.stopPropagation()}
               placeholder="Kategori ara..."
-              className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              className="w-full px-3 py-2 text-sm border border-gray-200 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-brand focus:border-transparent"
               aria-label="Kategori ara"
             />
           </div>
@@ -108,7 +108,7 @@ function CategoryDropdown({
                     <button
                       type="button"
                       onClick={() => { onChange(main.id); setOpen(false); }}
-                      className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${value === main.id ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 font-medium' : 'text-gray-900 dark:text-gray-100'}`}
+                      className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${value === main.id ? 'bg-brand-pink/80 dark:bg-brand/10 text-brand font-medium' : 'text-gray-900 dark:text-gray-100'}`}
                     >
                       {main.name}
                     </button>
@@ -118,7 +118,7 @@ function CategoryDropdown({
                       <button
                         type="button"
                         onClick={() => { onChange(sub.id); setOpen(false); }}
-                        className={`block w-full text-left pl-6 pr-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${value === sub.id ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 font-medium' : 'text-gray-900 dark:text-gray-100'}`}
+                        className={`block w-full text-left pl-6 pr-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${value === sub.id ? 'bg-brand-pink/80 dark:bg-brand/10 text-brand font-medium' : 'text-gray-900 dark:text-gray-100'}`}
                       >
                         {sub.name}
                       </button>
@@ -207,7 +207,7 @@ export default function ToplulukOlusturPage() {
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="text-center">
           <p className="text-gray-600 dark:text-gray-400">Topluluk oluşturmak için giriş yapmalısınız.</p>
-          <Link href="/topluluklar" className="mt-4 inline-block text-orange-500 hover:underline">
+          <Link href="/topluluklar" className="mt-4 inline-block text-brand hover:underline">
             ← Topluluklara dön
           </Link>
         </div>
@@ -218,7 +218,7 @@ export default function ToplulukOlusturPage() {
   return (
     <div className="min-h-screen">
       <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-xl">
-        <Link href="/topluluklar" className="text-sm text-orange-500 hover:underline mb-6 inline-block">
+        <Link href="/topluluklar" className="text-sm text-brand hover:underline mb-6 inline-block">
           ← Topluluklara dön
         </Link>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Topluluk oluştur</h1>
@@ -282,7 +282,7 @@ export default function ToplulukOlusturPage() {
                   name="joinType"
                   checked={joinType === 'open'}
                   onChange={() => setJoinType('open')}
-                  className="text-orange-500"
+                  className="text-brand"
                 />
                 <span className="text-sm text-gray-700 dark:text-gray-300">Herkes doğrudan katılabilir</span>
               </label>
@@ -292,7 +292,7 @@ export default function ToplulukOlusturPage() {
                   name="joinType"
                   checked={joinType === 'approval'}
                   onChange={() => setJoinType('approval')}
-                  className="text-orange-500"
+                  className="text-brand"
                 />
                 <span className="text-sm text-gray-700 dark:text-gray-300">Yönetici onayı gerekir</span>
               </label>
@@ -325,7 +325,7 @@ export default function ToplulukOlusturPage() {
                   </button>
                 </div>
               ))}
-              <button type="button" onClick={addRule} className="text-sm text-orange-500 hover:text-orange-600">
+              <button type="button" onClick={addRule} className="text-sm text-brand hover:text-brand-hover">
                 + Kural ekle
               </button>
             </div>
@@ -340,7 +340,7 @@ export default function ToplulukOlusturPage() {
                 type="file"
                 accept="image/*"
                 onChange={(e) => setAvatarFile(e.target.files?.[0] ?? null)}
-                className="w-full text-sm text-gray-600 dark:text-gray-400 file:mr-2 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-orange-50 file:text-orange-700 dark:file:bg-orange-900/30 dark:file:text-orange-300"
+                className="w-full text-sm text-gray-600 dark:text-gray-400 file:mr-2 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-brand-pink/80 file:text-brand-hover dark:file:bg-brand/10 dark:file:text-brand-hover"
               />
             </div>
             <div>
@@ -351,7 +351,7 @@ export default function ToplulukOlusturPage() {
                 type="file"
                 accept="image/*"
                 onChange={(e) => setCoverFile(e.target.files?.[0] ?? null)}
-                className="w-full text-sm text-gray-600 dark:text-gray-400 file:mr-2 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-orange-50 file:text-orange-700 dark:file:bg-orange-900/30 dark:file:text-orange-300"
+                className="w-full text-sm text-gray-600 dark:text-gray-400 file:mr-2 file:py-2 file:px-3 file:rounded-lg file:border-0 file:bg-brand-pink/80 file:text-brand-hover dark:file:bg-brand/10 dark:file:text-brand-hover"
               />
             </div>
           </div>
@@ -368,7 +368,7 @@ export default function ToplulukOlusturPage() {
             <button
               type="submit"
               disabled={!canSubmit || createMutation.isPending}
-              className="rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-50"
+              className="rounded-lg bg-brand px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-hover disabled:opacity-50"
             >
               {createMutation.isPending ? 'Oluşturuluyor…' : 'Oluştur'}
             </button>

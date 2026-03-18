@@ -13,22 +13,22 @@ export function SiteFooter() {
     <footer className="mt-auto border-t border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
       <div className="container mx-auto px-3 sm:px-4 py-6 flex flex-col items-center justify-center gap-3 text-sm text-gray-600 dark:text-gray-400 text-center">
         <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1" aria-label="Site sayfaları">
-          <Link href="/sorular" className="hover:text-orange-600 dark:hover:text-orange-400 transition-colors">
+          <Link href="/sorular" className="hover:text-brand dark:hover:text-brand transition-colors">
             Sorular
           </Link>
-          <Link href="/blog" className="hover:text-orange-600 dark:hover:text-orange-400 transition-colors">
+          <Link href="/blog" className="hover:text-brand dark:hover:text-brand transition-colors">
             Blog
           </Link>
-          <Link href="/hakkimizda" className="hover:text-orange-600 dark:hover:text-orange-400 transition-colors">
+          <Link href="/hakkimizda" className="hover:text-brand dark:hover:text-brand transition-colors">
             Hakkımızda
           </Link>
-          <Link href="/iletisim" className="hover:text-orange-600 dark:hover:text-orange-400 transition-colors">
+          <Link href="/iletisim" className="hover:text-brand dark:hover:text-brand transition-colors">
             İletişim
           </Link>
-          <Link href="/gizlilik-politikasi" className="hover:text-orange-600 dark:hover:text-orange-400 transition-colors">
+          <Link href="/gizlilik-politikasi" className="hover:text-brand dark:hover:text-brand transition-colors">
             Gizlilik
           </Link>
-          <Link href="/kullanim-sartlari" className="hover:text-orange-600 dark:hover:text-orange-400 transition-colors">
+          <Link href="/kullanim-sartlari" className="hover:text-brand dark:hover:text-brand transition-colors">
             Kullanım Şartları
           </Link>
         </nav>

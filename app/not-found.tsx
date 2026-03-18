@@ -4,7 +4,7 @@ export default function NotFound() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="max-w-md w-full text-center">
-        <p className="text-8xl font-bold text-orange-500/20 dark:text-orange-500/30">404</p>
+        <p className="text-8xl font-bold text-brand/20 dark:text-brand/30">404</p>
         <h1 className="mt-4 text-2xl font-bold text-gray-900 dark:text-gray-100">
           Sayfa bulunamadı
         </h1>
@@ -14,7 +14,7 @@ export default function NotFound() {
         <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
           <Link
             href="/"
-            className="inline-flex items-center justify-center px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-lg transition-colors"
+            className="inline-flex items-center justify-center px-5 py-2.5 bg-brand hover:bg-brand-hover text-white font-medium rounded-lg transition-colors"
           >
             Ana sayfaya dön
           </Link>

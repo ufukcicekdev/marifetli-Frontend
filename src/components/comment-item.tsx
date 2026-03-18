@@ -165,7 +165,7 @@ export function CommentItem({
               )}
               <Link
                 href={`/profil/${authorName}`}
-                className="text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-orange-600"
+                className="text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-brand"
               >
                 u/{authorName}
               </Link>
@@ -198,7 +198,7 @@ export function CommentItem({
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
               <button
                 onClick={() => currentUser ? likeMutation.mutate() : toast.error('Beğenmek için giriş yapın.')}
-                className="flex items-center gap-1 hover:text-orange-500 transition-colors"
+                className="flex items-center gap-1 hover:text-brand transition-colors"
                 title="Beğen"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -208,7 +208,7 @@ export function CommentItem({
               </button>
               <button
                 onClick={() => currentUser ? unlikeMutation.mutate() : toast.error('Giriş yapın.')}
-                className="flex items-center gap-1 hover:text-orange-500 transition-colors"
+                className="flex items-center gap-1 hover:text-brand transition-colors"
                 title="Beğenme"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -217,7 +217,7 @@ export function CommentItem({
               </button>
               <button
                 onClick={handleReplyClick}
-                className="flex items-center gap-1 hover:text-orange-500 transition-colors font-medium"
+                className="flex items-center gap-1 hover:text-brand transition-colors font-medium"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
@@ -227,7 +227,7 @@ export function CommentItem({
               <ShareButton
                 url={commentShareUrl}
                 title={questionTitle ?? 'Yorum'}
-                className="flex items-center gap-1 hover:text-orange-500 transition-colors"
+                className="flex items-center gap-1 hover:text-brand transition-colors"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
@@ -256,7 +256,7 @@ export function CommentItem({
                   <button
                     type="submit"
                     disabled={isSubmitting || !hasContent(replyText)}
-                    className="px-3 py-1.5 bg-orange-500 text-white rounded-md text-sm font-medium hover:bg-orange-600 disabled:opacity-70"
+                    className="px-3 py-1.5 bg-brand text-white rounded-md text-sm font-medium hover:bg-brand-hover disabled:opacity-70"
                   >
                     {isSubmitting ? 'Gönderiliyor...' : 'Yanıtla'}
                   </button>

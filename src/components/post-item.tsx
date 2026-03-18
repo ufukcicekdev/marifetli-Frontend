@@ -116,32 +116,32 @@ export function PostItem({ id, slug, title, content, category, author, authorAva
   const ActionBar = ({ compact = false }: { compact?: boolean }) => (
     <div className={`flex items-center gap-4 ${compact ? 'mt-1' : 'mt-3 pt-2 border-t border-gray-200 dark:border-gray-700'}`}>
       <div className="flex items-center gap-0.5">
-        <button onClick={handleLike} className={`p-0.5 -m-0.5 rounded transition-colors ${optimisticVote === 'up' ? 'text-orange-500' : 'text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-500'}`} title="Beğen" aria-label="Beğen">
+        <button onClick={handleLike} className={`p-0.5 -m-0.5 rounded transition-colors ${optimisticVote === 'up' ? 'text-brand' : 'text-gray-500 hover:text-brand dark:text-gray-400 dark:hover:text-brand'}`} title="Beğen" aria-label="Beğen">
           <svg className="w-4 h-4" fill={optimisticVote === 'up' ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
           </svg>
         </button>
         <span className="text-xs font-medium text-gray-700 dark:text-gray-300 min-w-[1.25rem] text-center">{displayCount}</span>
-        <button onClick={handleUnlike} className={`p-0.5 -m-0.5 rounded transition-colors ${optimisticVote === 'down' ? 'text-orange-500' : 'text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-500'}`} title="Beğenme bırak" aria-label="Beğenme bırak">
+        <button onClick={handleUnlike} className={`p-0.5 -m-0.5 rounded transition-colors ${optimisticVote === 'down' ? 'text-brand' : 'text-gray-500 hover:text-brand dark:text-gray-400 dark:hover:text-brand'}`} title="Beğenme bırak" aria-label="Beğenme bırak">
           <svg className="w-4 h-4" fill={optimisticVote === 'down' ? 'currentColor' : 'none'} stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </button>
       </div>
-      <Link href={href} className="flex items-center gap-1 text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-500 transition-colors" title="Yorumlar">
+      <Link href={href} className="flex items-center gap-1 text-gray-500 hover:text-brand dark:text-gray-400 dark:hover:text-brand transition-colors" title="Yorumlar">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
         </svg>
         <span className="text-xs">{commentCount} yorum</span>
       </Link>
-      <button onClick={handleSaveClick} className="flex items-center gap-1 text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-500 transition-colors" title="Kaydet" aria-label="Kaydet">
+      <button onClick={handleSaveClick} className="flex items-center gap-1 text-gray-500 hover:text-brand dark:text-gray-400 dark:hover:text-brand transition-colors" title="Kaydet" aria-label="Kaydet">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
         </svg>
         <span className="text-xs">Kaydet</span>
       </button>
       <span onClick={(e) => e.stopPropagation()}>
-        <ShareButton url={fullUrl} title={title} className="flex items-center gap-1 text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-500 transition-colors">
+        <ShareButton url={fullUrl} title={title} className="flex items-center gap-1 text-gray-500 hover:text-brand dark:text-gray-400 dark:hover:text-brand transition-colors">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
           </svg>
@@ -156,19 +156,19 @@ export function PostItem({ id, slug, title, content, category, author, authorAva
     <div className="flex items-center text-xs text-gray-500 dark:text-gray-400 flex-wrap gap-x-1 gap-y-0.5">
       {communitySlug && (
         <>
-          <Link href={`/topluluk/${communitySlug}`} className="shrink-0 font-medium text-gray-700 dark:text-gray-300 hover:text-orange-500" title={communityName || `r/${communitySlug}`}>
+          <Link href={`/topluluk/${communitySlug}`} className="shrink-0 font-medium text-gray-700 dark:text-gray-300 hover:text-brand" title={communityName || `r/${communitySlug}`}>
             r/{communitySlug}
           </Link>
           <span className="shrink-0">·</span>
         </>
       )}
-      <Link href={`/profil/${author}`} className="min-w-0 truncate hover:text-orange-500" title={`u/${author}`}>u/{author}</Link>
+      <Link href={`/profil/${author}`} className="min-w-0 truncate hover:text-brand" title={`u/${author}`}>u/{author}</Link>
       <span className="shrink-0">·</span>
       <span className="shrink-0">{timeAgo}</span>
       {showEditButton && slug && (
         <>
           <span className="shrink-0">·</span>
-          <Link href={`/soru/${slug}/duzenle`} className="shrink-0 text-orange-500 hover:text-orange-600">
+          <Link href={`/soru/${slug}/duzenle`} className="shrink-0 text-brand hover:text-brand-hover">
             Düzenle
           </Link>
         </>
@@ -200,7 +200,7 @@ export function PostItem({ id, slug, title, content, category, author, authorAva
     return (
       <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-800 last:border-b-0 hover:bg-gray-50 dark:hover:bg-gray-800/30 transition-colors">
         <div className="flex flex-col min-w-0">
-          <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 hover:text-orange-600 line-clamp-2 min-w-0 mb-2">
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-gray-100 hover:text-brand line-clamp-2 min-w-0 mb-2">
             <Link href={href} className="block break-words">{title}</Link>
           </h2>
           <div className="flex items-center gap-2 mb-3">
@@ -235,7 +235,7 @@ export function PostItem({ id, slug, title, content, category, author, authorAva
           </div>
         )}
         <div className="flex-1 w-0 flex flex-col gap-1">
-          <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-orange-600">
+          <h3 className="text-sm font-medium text-gray-900 dark:text-gray-100 hover:text-brand">
             <Link href={href} className="block break-words">{title}</Link>
           </h3>
           <Meta />

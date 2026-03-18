@@ -66,11 +66,11 @@ function SoruSorContent() {
           </h1>
           <div className="flex gap-3">
             {community && (
-              <Link href={`/topluluk/${communitySlug}`} className="text-sm text-orange-500 hover:text-orange-600">
+              <Link href={`/topluluk/${communitySlug}`} className="text-sm text-brand hover:text-brand-hover">
                 ← Topluluğa dön
               </Link>
             )}
-            <Link href="/sorular" className="text-sm text-orange-500 hover:text-orange-600">
+            <Link href="/sorular" className="text-sm text-brand hover:text-brand-hover">
               Taslaklar
             </Link>
           </div>

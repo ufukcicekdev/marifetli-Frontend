@@ -45,7 +45,7 @@ function HomePageContent() {
     <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 flex flex-col lg:flex-row lg:items-start gap-4 sm:gap-6 min-w-0 min-h-[calc(100vh-104px)]">
       <div className="flex-1 min-w-0 overflow-hidden">
           <HomeHero />
-          <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
+          <div id="sorular" className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/80 dark:border-gray-800 overflow-hidden shadow-sm scroll-mt-4">
             <PostFeedControls
               sort={sort}
               onSortChange={setSort}

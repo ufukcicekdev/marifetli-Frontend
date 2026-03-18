@@ -184,7 +184,7 @@ function OnboardingContent() {
           <button
             onClick={() => completeMutation.mutate()}
             disabled={completeMutation.isPending}
-            className="px-6 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg disabled:opacity-50"
+            className="px-6 py-2 bg-brand hover:bg-brand-hover text-white rounded-lg disabled:opacity-50"
           >
             {completeMutation.isPending ? 'Yönlendiriliyor...' : 'Devam Et'}
           </button>
@@ -199,7 +199,7 @@ function OnboardingContent() {
         {fromProfile && usernameFromQuery && (
           <Link
             href={`/profil/${usernameFromQuery}`}
-            className="mb-4 inline-block text-sm text-orange-600 dark:text-orange-400 hover:underline"
+            className="mb-4 inline-block text-sm text-brand hover:underline"
           >
             ← Profile dön
           </Link>
@@ -210,7 +210,7 @@ function OnboardingContent() {
               <div
                 key={i}
                 className={`h-1 flex-1 rounded-full ${
-                  i <= stepIndex ? 'bg-orange-500' : 'bg-gray-200 dark:bg-gray-700'
+                  i <= stepIndex ? 'bg-brand' : 'bg-gray-200 dark:bg-gray-700'
                 }`}
               />
             ))}
@@ -240,7 +240,7 @@ function OnboardingContent() {
                       onClick={() => toggleSelection(c.id)}
                       className={`w-full text-left px-4 py-3 rounded-lg border transition-colors ${
                         selectedIds.includes(c.id)
-                          ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300'
+                          ? 'border-brand bg-brand-pink/80 dark:bg-brand/10 text-brand-hover'
                           : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                       }`}
                     >
@@ -259,7 +259,7 @@ function OnboardingContent() {
                         onClick={() => toggleSelection(c.id)}
                         className={`w-full text-left px-4 py-3 rounded-lg border transition-colors ${
                           selectedIds.includes(c.id)
-                            ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300'
+                            ? 'border-brand bg-brand-pink/80 dark:bg-brand/10 text-brand-hover'
                             : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                         }`}
                       >
@@ -280,7 +280,7 @@ function OnboardingContent() {
                       onClick={() => toggleSelection(t.id)}
                       className={`w-full text-left px-4 py-3 rounded-lg border transition-colors ${
                         selectedIds.includes(t.id)
-                          ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300'
+                          ? 'border-brand bg-brand-pink/80 dark:bg-brand/10 text-brand-hover'
                           : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                       }`}
                     >
@@ -311,7 +311,7 @@ function OnboardingContent() {
                   type="button"
                   onClick={handleNext}
                   disabled={(!currentStep.is_optional && selectedIds.length === 0) || submitMutation.isPending || completeMutation.isPending}
-                  className="flex-1 py-2 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-lg disabled:opacity-50"
+                  className="flex-1 py-2 bg-brand hover:bg-brand-hover text-white font-medium rounded-lg disabled:opacity-50"
                 >
                   {stepIndex >= steps.length - 1 ? 'Bitir' : 'İleri'}
                 </button>

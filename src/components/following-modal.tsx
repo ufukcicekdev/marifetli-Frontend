@@ -103,7 +103,7 @@ export function FollowingModal({ isOpen, onClose }: FollowingModalProps) {
             placeholder="İsim, kullanıcı adı veya topluluk adıyla ara..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500"
+            className="w-full px-3 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-brand"
           />
         </div>
         <div className="overflow-y-auto flex-1 min-h-0 p-2">

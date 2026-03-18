@@ -67,7 +67,7 @@ export default function QuestionEditPage({ params }: { params: Promise<{ id: str
         <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-3xl min-w-0">
           <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-8 text-center">
             <p className="text-gray-500 dark:text-gray-400">Soru bulunamadı</p>
-            <Link href="/sorular" className="mt-4 inline-block text-orange-500 hover:text-orange-600">Sorulara dön →</Link>
+            <Link href="/sorular" className="mt-4 inline-block text-brand hover:text-brand-hover">Sorulara dön →</Link>
           </div>
         </main>
       </div>
@@ -80,7 +80,7 @@ export default function QuestionEditPage({ params }: { params: Promise<{ id: str
         <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-3xl min-w-0">
           <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-8 text-center">
             <p className="text-gray-500 dark:text-gray-400">Bu gönderiyi düzenleme yetkiniz yok.</p>
-            <Link href={`/soru/${slug}`} className="mt-4 inline-block text-orange-500 hover:text-orange-600">Geri dön →</Link>
+            <Link href={`/soru/${slug}`} className="mt-4 inline-block text-brand hover:text-brand-hover">Geri dön →</Link>
           </div>
         </main>
       </div>
@@ -92,7 +92,7 @@ export default function QuestionEditPage({ params }: { params: Promise<{ id: str
       <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-3xl min-w-0">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Gönderiyi Düzenle</h1>
-          <Link href={`/soru/${slug}`} className="text-sm text-orange-500 hover:text-orange-600">İptal</Link>
+          <Link href={`/soru/${slug}`} className="text-sm text-brand hover:text-brand-hover">İptal</Link>
         </div>
 
         <QuestionForm

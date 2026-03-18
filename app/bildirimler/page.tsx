@@ -70,7 +70,7 @@ export default function BildirimlerPage() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">Bildirimler</h1>
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-12 text-center">
             <p className="text-gray-500 dark:text-gray-400">Bildirimleri görmek için giriş yapın.</p>
-            <Link href="/" className="mt-4 inline-block text-orange-500 hover:text-orange-600">
+            <Link href="/" className="mt-4 inline-block text-brand hover:text-brand-hover">
               Ana sayfaya dön
             </Link>
           </div>
@@ -89,7 +89,7 @@ export default function BildirimlerPage() {
               <button
                 onClick={() => markAllReadMutation.mutate()}
                 disabled={markAllReadMutation.isPending}
-                className="text-sm text-orange-500 hover:text-orange-600 disabled:opacity-70"
+                className="text-sm text-brand hover:text-brand-hover disabled:opacity-70"
               >
                 Tümünü okundu işaretle
               </button>
@@ -130,7 +130,7 @@ export default function BildirimlerPage() {
                     className={`block rounded-xl border p-4 transition-colors ${
                       n.is_read
                         ? 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50'
-                        : 'bg-orange-50/50 dark:bg-orange-900/10 border-orange-200 dark:border-orange-800/50 hover:bg-orange-50 dark:hover:bg-orange-900/20'
+                        : 'bg-brand-pink/50 dark:bg-brand/5 border-brand/20 dark:border-brand/30 hover:bg-brand-pink/80 dark:hover:bg-brand/10'
                     }`}
                   >
                     <div className="flex gap-3">
@@ -148,7 +148,7 @@ export default function BildirimlerPage() {
                         </p>
                       </div>
                       {!n.is_read && (
-                        <span className="w-2 h-2 rounded-full bg-orange-500 shrink-0 mt-2" title="Okunmadı" />
+                        <span className="w-2 h-2 rounded-full bg-brand shrink-0 mt-2" title="Okunmadı" />
                       )}
                     </div>
                   </Link>

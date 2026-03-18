@@ -28,7 +28,7 @@ export default function Error({
           <button
             type="button"
             onClick={() => reset()}
-            className="inline-flex items-center justify-center px-5 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-lg transition-colors"
+            className="inline-flex items-center justify-center px-5 py-2.5 bg-brand hover:bg-brand-hover text-white font-medium rounded-lg transition-colors"
           >
             Tekrar dene
           </button>

@@ -7,7 +7,7 @@ import api from '@/src/lib/api';
 import { useAuthModalStore } from '@/src/stores/auth-modal-store';
 
 const inputClass =
-  'w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500 sm:text-sm';
+  'w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-brand sm:text-sm';
 
 export default function ResetPasswordPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
@@ -58,7 +58,7 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
         <div className="max-w-md w-full bg-white dark:bg-gray-900 p-8 rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 text-center">
           <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Geçersiz bağlantı</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">Şifre sıfırlama linki eksik veya hatalı.</p>
-          <Link href="/" className="mt-6 inline-block text-orange-500 hover:text-orange-600 font-medium">
+          <Link href="/" className="mt-6 inline-block text-brand hover:text-brand-hover font-medium">
             Ana sayfaya dön
           </Link>
         </div>
@@ -117,14 +117,14 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+                className="w-full py-2.5 bg-brand hover:bg-brand-hover text-white font-medium rounded-lg transition-colors disabled:opacity-50"
               >
                 {loading ? 'Kaydediliyor...' : 'Şifreyi güncelle'}
               </button>
             </form>
 
             <p className="mt-6 text-center text-sm text-gray-500">
-              <Link href="/" className="text-orange-500 hover:text-orange-600">
+              <Link href="/" className="text-brand hover:text-brand-hover">
                 Ana sayfaya dön
               </Link>
             </p>

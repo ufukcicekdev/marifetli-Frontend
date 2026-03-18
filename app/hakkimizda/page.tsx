@@ -42,7 +42,7 @@ export default function AboutPage() {
         <p className="mt-6 text-center">
           <Link
             href="/sorular"
-            className="text-orange-600 dark:text-orange-400 font-medium hover:underline"
+            className="text-brand font-medium hover:underline"
           >
             Sorulara göz atın →
           </Link>

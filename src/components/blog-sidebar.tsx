@@ -24,15 +24,15 @@ export function BlogSidebar() {
         <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-2">Blog&apos;da neler var?</h3>
         <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1.5">
           <li className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0" />
+            <span className="w-1.5 h-1.5 rounded-full bg-brand shrink-0" />
             İpuçları ve rehberler
           </li>
           <li className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0" />
+            <span className="w-1.5 h-1.5 rounded-full bg-brand shrink-0" />
             El işi projeleri
           </li>
           <li className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0" />
+            <span className="w-1.5 h-1.5 rounded-full bg-brand shrink-0" />
             Topluluk yazıları
           </li>
         </ul>
@@ -47,9 +47,9 @@ export function BlogSidebar() {
                 <li key={post.id}>
                   <Link
                     href={`/blog/${post.slug}`}
-                    className="flex gap-3 rounded-lg p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:border-orange-300 dark:hover:border-orange-700 transition-colors min-w-0"
+                    className="flex gap-3 rounded-lg p-3 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:border-brand/40 transition-colors min-w-0"
                   >
-                    <span className="flex items-center justify-center w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400 text-sm font-bold shrink-0">
+                    <span className="flex items-center justify-center w-8 h-8 rounded-full bg-brand-pink dark:bg-brand/20 text-brand text-sm font-bold shrink-0">
                       {index + 1}
                     </span>
                     <div className="min-w-0 flex-1">

@@ -24,7 +24,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/
 const GOOGLE_LOGIN_URL = `${API_BASE}/auth/start-google-login/`;
 
 const inputClass =
-  'w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/50 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500 transition-colors text-sm';
+  'w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/50 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand transition-colors text-sm';
 
 export function AuthModal() {
   const router = useRouter();
@@ -37,6 +37,7 @@ export function AuthModal() {
   });
   const authHeadline = (siteSettings?.auth_modal_headline ?? '').trim() || DEFAULT_AUTH_HEADLINE;
   const authDescription = (siteSettings?.auth_modal_description ?? '').trim() || DEFAULT_AUTH_DESCRIPTION;
+  const logoUrl = siteSettings?.logo_url?.trim() || null;
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -136,9 +137,13 @@ export function AuthModal() {
         aria-labelledby="auth-modal-title"
       >
         {/* Sol: Marka + görsel collage (masaüstü, Facebook tarzı) */}
-        <div className="hidden md:flex md:flex-1 flex-col bg-gradient-to-br from-orange-500 via-orange-500 to-amber-600 p-8 min-h-[440px] overflow-hidden">
+        <div className="hidden md:flex md:flex-1 flex-col bg-gradient-to-br from-brand via-brand to-brand-hover p-8 min-h-[440px] overflow-hidden">
           <Link href="/" className="font-logo flex items-center gap-1.5 text-white/95 hover:text-white shrink-0">
-            <Image src="/favicon-32x32.png" alt="" width={36} height={36} className="shrink-0 w-9 h-9 object-contain brightness-0 invert" />
+            {logoUrl ? (
+              <Image src={logoUrl} alt="" width={36} height={36} className="shrink-0 w-9 h-9 object-contain brightness-0 invert" />
+            ) : (
+              <Image src="/logo.png" alt="" width={36} height={36} className="shrink-0 w-9 h-9 object-contain brightness-0 invert" />
+            )}
             <span className="text-xl font-semibold tracking-tight">arifetli</span>
           </Link>
           <div className="flex-1 flex flex-col justify-center min-h-0 relative mt-4">
@@ -204,7 +209,11 @@ export function AuthModal() {
         <div className="flex-1 flex flex-col min-w-0 max-h-[90vh] overflow-y-auto">
           <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-100 dark:border-gray-800 shrink-0 md:justify-end">
             <Link href="/" className="font-logo flex items-center gap-1 text-gray-900 dark:text-white md:hidden">
-              <Image src="/favicon-32x32.png" alt="" width={24} height={24} className="shrink-0 w-6 h-6 object-contain" />
+              {logoUrl ? (
+                <Image src={logoUrl} alt="" width={24} height={24} className="shrink-0 w-6 h-6 object-contain" />
+              ) : (
+                <Image src="/logo.png" alt="" width={24} height={24} className="shrink-0 w-6 h-6 object-contain" />
+              )}
               <span className="text-lg font-semibold">arifetli</span>
             </Link>
             <button type="button" onClick={close} className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 dark:text-gray-300" aria-label="Kapat">
@@ -225,7 +234,7 @@ export function AuthModal() {
                   <button
                     type="button"
                     onClick={() => resetAndSwitch('login')}
-                    className="w-full py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-medium text-sm transition-colors"
+                    className="w-full py-3 rounded-xl bg-brand hover:bg-brand-hover text-white font-medium text-sm transition-colors"
                   >
                     Girişe dön
                   </button>
@@ -246,14 +255,14 @@ export function AuthModal() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-medium text-sm transition-colors disabled:opacity-60"
+                    className="w-full py-3 rounded-xl bg-brand hover:bg-brand-hover text-white font-medium text-sm transition-colors disabled:opacity-60"
                   >
                     {loading ? 'Gönderiliyor...' : 'Sıfırlama linki gönder'}
                   </button>
                   <button
                     type="button"
                     onClick={() => resetAndSwitch('login')}
-                    className="w-full py-2 text-sm text-gray-500 hover:text-orange-500 dark:text-gray-400 dark:hover:text-orange-400"
+                    className="w-full py-2 text-sm text-gray-500 hover:text-brand dark:text-gray-400 dark:hover:text-brand"
                   >
                     ← Girişe dön
                   </button>
@@ -308,13 +317,13 @@ export function AuthModal() {
                 </div>
                 <div className="flex items-center justify-between">
                   <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" className="rounded border-gray-300 dark:border-gray-600 text-orange-500 focus:ring-orange-500" />
+                    <input type="checkbox" className="rounded border-gray-300 dark:border-gray-600 text-brand focus:ring-brand" />
                     <span className="text-sm text-gray-600 dark:text-gray-400">Beni hatırla</span>
                   </label>
                   <button
                     type="button"
                     onClick={() => { setTab('forgot'); setError(''); }}
-                    className="text-sm font-medium text-orange-500 hover:text-orange-600 dark:text-orange-400"
+                    className="text-sm font-medium text-brand hover:text-brand-hover dark:text-brand"
                   >
                     Şifremi unuttum
                   </button>
@@ -322,7 +331,7 @@ export function AuthModal() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3 rounded-full bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm transition-colors disabled:opacity-60"
+                  className="w-full py-3 rounded-full bg-brand hover:bg-brand-hover text-white font-semibold text-sm transition-colors disabled:opacity-60"
                 >
                   {loading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
                 </button>
@@ -348,7 +357,7 @@ export function AuthModal() {
               </a>
               <p className="mt-5 text-center text-sm text-gray-500 dark:text-gray-400">
                 Hesabın yok mu?{' '}
-                <button type="button" onClick={() => resetAndSwitch('register')} className="w-full py-3 rounded-full border-2 border-orange-500 text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 font-semibold text-sm transition-colors">
+                <button type="button" onClick={() => resetAndSwitch('register')} className="w-full py-3 rounded-full border-2 border-brand text-brand hover:bg-brand-pink/50 dark:hover:bg-brand/10 font-semibold text-sm transition-colors">
                   Yeni hesap oluştur
                 </button>
               </p>
@@ -418,7 +427,7 @@ export function AuthModal() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-medium text-sm transition-colors disabled:opacity-60"
+                  className="w-full py-3 rounded-xl bg-brand hover:bg-brand-hover text-white font-medium text-sm transition-colors disabled:opacity-60"
                 >
                   {loading ? 'Kayıt yapılıyor...' : 'Üye Ol'}
                 </button>
@@ -444,7 +453,7 @@ export function AuthModal() {
               </a>
               <p className="mt-5 text-center text-sm text-gray-500 dark:text-gray-400">
                 Zaten hesabın var mı?{' '}
-                <button type="button" onClick={() => resetAndSwitch('login')} className="font-medium text-orange-500 hover:text-orange-600 dark:text-orange-400">
+                <button type="button" onClick={() => resetAndSwitch('login')} className="font-medium text-brand hover:text-brand-hover dark:text-brand">
                   Giriş yap
                 </button>
               </p>
@@ -454,11 +463,11 @@ export function AuthModal() {
           {/* Alt bilgi metni */}
           <p className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800 text-xs text-gray-400 dark:text-gray-500 leading-relaxed">
             Devam ederek{' '}
-            <Link href="/gizlilik-politikasi" onClick={close} className="underline hover:text-orange-500">
+            <Link href="/gizlilik-politikasi" onClick={close} className="underline hover:text-brand">
               Gizlilik Politikası
             </Link>
             ,{' '}
-            <Link href="/kullanim-sartlari" onClick={close} className="underline hover:text-orange-500">
+            <Link href="/kullanim-sartlari" onClick={close} className="underline hover:text-brand">
               Kullanım Şartları
             </Link>
             {' '}ve çerez kullanımını kabul etmiş olursunuz.

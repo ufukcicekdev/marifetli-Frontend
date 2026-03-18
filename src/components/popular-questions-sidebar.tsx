@@ -21,7 +21,7 @@ class PopularQuestionsErrorBoundary extends React.Component<
         <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-4 mt-4">
           <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-3">Popüler sorular</h3>
           <div className="min-h-[120px] flex items-center justify-center text-sm text-gray-500 dark:text-gray-400">
-            Bu alan şu an gösterilemiyor. <Link href="/sorular" className="text-orange-500 ml-1 hover:underline">Sorulara git →</Link>
+            Bu alan şu an gösterilemiyor. <Link href="/sorular" className="text-brand ml-1 hover:underline">Sorulara git →</Link>
           </div>
         </div>
       );
@@ -54,7 +54,7 @@ function PopularQuestionsSidebarContent() {
             <button
               type="button"
               onClick={() => refetch()}
-              className="text-orange-600 dark:text-orange-400 hover:underline font-medium"
+              className="text-brand hover:underline font-medium"
             >
               Tekrar dene
             </button>
@@ -64,7 +64,7 @@ function PopularQuestionsSidebarContent() {
             <p className="mb-2">Henüz popüler soru yok.</p>
             <Link
               href="/sorular"
-              className="text-orange-600 dark:text-orange-400 hover:underline font-medium"
+              className="text-brand hover:underline font-medium"
             >
               Tüm sorulara git →
             </Link>
@@ -79,7 +79,7 @@ function PopularQuestionsSidebarContent() {
                 <li key={id}>
                   <Link
                     href={`/soru/${slug}`}
-                    className="text-gray-700 dark:text-gray-300 hover:text-orange-500 line-clamp-2 block"
+                    className="text-gray-700 dark:text-gray-300 hover:text-brand line-clamp-2 block"
                   >
                     {title}
                   </Link>

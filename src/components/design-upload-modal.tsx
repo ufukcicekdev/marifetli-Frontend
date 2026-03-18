@@ -82,7 +82,7 @@ function DesignPreviewSlider({
               key={i}
               type="button"
               onClick={(e) => { e.stopPropagation(); onIndexChange(i); }}
-              className={`w-2.5 h-2.5 rounded-full transition-colors ${i === index ? 'bg-orange-500 ring-2 ring-orange-300' : 'bg-white/60 hover:bg-white/80'}`}
+              className={`w-2.5 h-2.5 rounded-full transition-colors ${i === index ? 'bg-brand ring-2 ring-brand/40' : 'bg-white/60 hover:bg-white/80'}`}
               aria-label={`Görsel ${i + 1}`}
             />
           ))}
@@ -123,7 +123,7 @@ function DesignThumbnailStrip({
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onSelectIndex(i); }}
-            className={`block w-full h-full ${i === currentIndex ? 'ring-2 ring-orange-500 ring-offset-1' : 'opacity-80 hover:opacity-100'}`}
+            className={`block w-full h-full ${i === currentIndex ? 'ring-2 ring-brand ring-offset-1' : 'opacity-80 hover:opacity-100'}`}
           >
             {urls[i] && (
               <img
@@ -305,7 +305,7 @@ export function DesignUploadModal({ isOpen, onClose, onSubmit, isSubmitting = fa
                 className={`
                   relative rounded-2xl border-2 border-dashed min-h-[200px] flex flex-col transition-colors
                   ${isDragging
-                    ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20'
+                    ? 'border-brand bg-brand-pink/80 dark:bg-brand/10'
                     : 'border-gray-300 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/50'
                   }
                 `}
@@ -348,7 +348,7 @@ export function DesignUploadModal({ isOpen, onClose, onSubmit, isSubmitting = fa
                         <button
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/30 hover:bg-orange-100 dark:hover:bg-orange-900/50 border border-orange-200 dark:border-orange-800 transition-colors"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium text-brand bg-brand-pink/80 dark:bg-brand/15 hover:bg-brand-pink dark:hover:bg-brand/25 border border-brand/20 dark:border-brand/30 transition-colors"
                         >
                           <span className="text-base leading-none">+</span>
                           Görsel ekle
@@ -380,7 +380,7 @@ export function DesignUploadModal({ isOpen, onClose, onSubmit, isSubmitting = fa
                     <button
                       type="button"
                       onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/30 hover:bg-orange-100 dark:hover:bg-orange-900/50 border border-orange-200 dark:border-orange-800 transition-colors"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-medium text-brand bg-brand-pink/80 dark:bg-brand/15 hover:bg-brand-pink dark:hover:bg-brand/25 border border-brand/20 dark:border-brand/30 transition-colors"
                     >
                       <span className="text-lg leading-none">+</span>
                       Görsel ekle
@@ -402,7 +402,7 @@ export function DesignUploadModal({ isOpen, onClose, onSubmit, isSubmitting = fa
                     className={`
                       flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors
                       ${license === opt.value
-                        ? 'border-orange-500 bg-orange-50/50 dark:bg-orange-900/20 dark:border-orange-500'
+                        ? 'border-brand bg-brand-pink/80/50 dark:bg-brand/10 dark:border-brand'
                         : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                       }
                     `}
@@ -413,7 +413,7 @@ export function DesignUploadModal({ isOpen, onClose, onSubmit, isSubmitting = fa
                       value={opt.value}
                       checked={license === opt.value}
                       onChange={() => setLicense(opt.value)}
-                      className="mt-1 w-4 h-4 text-orange-500 border-gray-300 focus:ring-orange-500"
+                      className="mt-1 w-4 h-4 text-brand border-gray-300 focus:ring-brand"
                     />
                     <div>
                       <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -434,7 +434,7 @@ export function DesignUploadModal({ isOpen, onClose, onSubmit, isSubmitting = fa
                 type="checkbox"
                 checked={addWatermark}
                 onChange={(e) => setAddWatermark(e.target.checked)}
-                className="mt-1 w-4 h-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500"
+                className="mt-1 w-4 h-4 rounded border-gray-300 text-brand focus:ring-brand"
               />
               <span className="text-sm text-gray-700 dark:text-gray-300">
                 Görselin üzerine otomatik <strong>marifetli.com.tr</strong> filigranı eklensin
@@ -452,7 +452,7 @@ export function DesignUploadModal({ isOpen, onClose, onSubmit, isSubmitting = fa
                 value={tags}
                 onChange={(e) => setTags(e.target.value)}
                 placeholder="Örn: Örgü, Ahşap, Kanaviçe"
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"
               />
             </div>
 
@@ -468,20 +468,20 @@ export function DesignUploadModal({ isOpen, onClose, onSubmit, isSubmitting = fa
                 placeholder="Tasarımı kısaca anlatın; arama motorları ve ziyaretçiler için faydalıdır."
                 rows={3}
                 maxLength={2000}
-                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent resize-y"
+                className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent resize-y"
               />
             </div>
 
             {/* Telif onayı */}
             <label className={`
               flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors
-              ${!copyrightConfirmed ? 'border-gray-200 dark:border-gray-700' : 'border-orange-500/50 dark:border-orange-500/50'}
+              ${!copyrightConfirmed ? 'border-gray-200 dark:border-gray-700' : 'border-brand/50 dark:border-brand/50'}
             `}>
               <input
                 type="checkbox"
                 checked={copyrightConfirmed}
                 onChange={(e) => setCopyrightConfirmed(e.target.checked)}
-                className="mt-0.5 w-4 h-4 rounded border-gray-300 text-orange-500 focus:ring-orange-500 shrink-0"
+                className="mt-0.5 w-4 h-4 rounded border-gray-300 text-brand focus:ring-brand shrink-0"
               />
               <span className="text-sm text-gray-700 dark:text-gray-300">
                 Bu tasarımın bana ait olduğunu ve tüm telif haklarının bende olduğunu beyan ederim.
@@ -500,7 +500,7 @@ export function DesignUploadModal({ isOpen, onClose, onSubmit, isSubmitting = fa
             <button
               type="submit"
               disabled={!copyrightConfirmed || isSubmitting}
-              className="px-5 py-2.5 rounded-xl text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="px-5 py-2.5 rounded-xl text-sm font-medium text-white bg-brand hover:bg-brand-hover disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isSubmitting ? 'Yükleniyor...' : 'Yükle'}
             </button>

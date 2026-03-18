@@ -21,7 +21,7 @@ export function HeaderSearchBar() {
   };
 
   return (
-    <div className="w-full bg-orange-500 dark:bg-orange-600 border-b border-orange-600 dark:border-orange-700 px-3 sm:px-4 py-3">
+    <div className="w-full bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700 px-3 sm:px-4 py-3">
       <div className="container mx-auto max-w-2xl">
         <form onSubmit={handleSubmit} className="flex gap-2">
           <input
@@ -34,7 +34,7 @@ export function HeaderSearchBar() {
           />
           <button
             type="submit"
-            className="shrink-0 px-5 py-3 rounded-xl bg-white text-orange-600 dark:text-orange-400 font-medium text-sm hover:bg-white/95 transition-colors shadow-sm"
+            className="shrink-0 px-5 py-3 rounded-xl bg-white text-brand font-medium text-sm hover:bg-white/95 transition-colors shadow-sm"
           >
             Ara
           </button>

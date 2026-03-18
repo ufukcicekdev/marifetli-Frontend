@@ -80,7 +80,7 @@ export function MediaSlider({ items, className = '', alt }: MediaSliderProps) {
               key={i}
               type="button"
               onClick={(e) => { e.stopPropagation(); e.preventDefault(); setIndex(i); }}
-              className={`w-2 h-2 rounded-full transition-colors ${i === index ? 'bg-orange-500' : 'bg-gray-400 dark:bg-gray-600 hover:bg-gray-500'}`}
+              className={`w-2 h-2 rounded-full transition-colors ${i === index ? 'bg-brand' : 'bg-gray-400 dark:bg-gray-600 hover:bg-gray-500'}`}
               aria-label={`Medya ${i + 1}`}
             />
           ))}

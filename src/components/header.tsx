@@ -109,6 +109,13 @@ export function Header() {
   });
   const unreadCount = unreadData?.unread_count ?? 0;
 
+  const { data: siteSettings } = useQuery({
+    queryKey: ['site-settings'],
+    queryFn: () => api.getSiteSettings().then((r) => r.data),
+    staleTime: 5 * 60 * 1000,
+  });
+  const logoUrl = siteSettings?.logo_url?.trim() || null;
+
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       const target = e.target as Node;
@@ -122,14 +129,14 @@ export function Header() {
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 h-[104px] flex flex-col bg-orange-500 dark:bg-orange-600 border-b border-orange-600 dark:border-orange-700 shadow-sm" style={{ height: HEADER_HEIGHT_PX }}>
+      <header className="fixed top-0 left-0 right-0 z-50 h-[104px] flex flex-col bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 shadow-sm text-gray-900 dark:text-white" style={{ height: HEADER_HEIGHT_PX }}>
         {/* Üst satır: Menü | Marifetli (ortada) | Tema, Giriş/Üye — 52px, dikey ortada */}
         <div className="relative h-[52px] flex items-center justify-between gap-1 sm:gap-2 px-2 sm:px-4 container mx-auto w-full min-w-0 shrink-0">
-          {/* Sol: sadece Menü — mobilde yer kaplamasın */}
+          {/* Sol: Menü */}
           <div className="flex items-center shrink-0 min-w-0 w-9 sm:w-auto sm:min-w-0">
             <button
               onClick={sidebarToggle}
-              className="header-nav-btn px-2 sm:px-2"
+              className="header-nav-btn px-2 sm:px-2 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-white/15"
               title="Menü"
               aria-label="Menüyü aç"
             >
@@ -139,9 +146,13 @@ export function Header() {
               <span className="hidden sm:inline text-sm font-medium">Menü</span>
             </button>
           </div>
-          {/* Orta: logo (M yerine) + arifetli */}
-          <Link href="/" className="font-logo flex items-center justify-center gap-0.5 text-lg sm:text-xl md:text-2xl font-semibold text-white tracking-tight hover:opacity-95 transition-opacity shrink-0 absolute left-1/2 -translate-x-1/2 whitespace-nowrap" tabIndex={0}>
-            <Image src="/favicon-32x32.png" alt="" width={28} height={28} className="shrink-0 w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 object-contain -mr-0.5" priority />
+          {/* Orta: logo + arifetli — daha büyük, açık modda koyu renk */}
+          <Link href="/" className="font-logo flex items-center justify-center gap-1 text-xl sm:text-2xl md:text-3xl font-semibold text-gray-900 dark:text-white tracking-tight hover:opacity-90 transition-opacity shrink-0 absolute left-1/2 -translate-x-1/2 whitespace-nowrap" tabIndex={0}>
+            {logoUrl ? (
+              <Image src={logoUrl} alt="" width={40} height={40} className="shrink-0 w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 object-contain -mr-0.5" priority />
+            ) : (
+              <Image src="/logo.png" alt="" width={40} height={40} className="shrink-0 w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 object-contain -mr-0.5" priority />
+            )}
             <span className="leading-none">arifetli</span>
           </Link>
           {/* Sağ: mobilde sadece bildirim + profil (tema ve gönderi oluştur menüde); md+ tema + gönderi + bildirim + profil */}
@@ -156,7 +167,7 @@ export function Header() {
                   {user.is_verified ? (
                     <Link
                       href="/soru-sor"
-                      className="header-nav-btn bg-white text-orange-600 hover:bg-white/95 px-3"
+                      className="header-nav-btn bg-brand hover:bg-brand-hover text-white px-3"
                       title="Gönderi Oluştur"
                     >
                       <span className="text-base">+</span>
@@ -166,7 +177,7 @@ export function Header() {
                     <button
                       type="button"
                       onClick={() => toast.error('Gönderi paylaşmak için önce e-posta adresinizi doğrulayın.')}
-                      className="header-nav-btn bg-white text-orange-600 hover:bg-white/95 px-3"
+                      className="header-nav-btn bg-brand hover:bg-brand-hover text-white px-3"
                       title="Gönderi Oluştur (e-posta doğrulama gerekli)"
                     >
                       <span className="text-base">+</span>
@@ -176,15 +187,15 @@ export function Header() {
                 </span>
                 <Link
                   href="/bildirimler"
-                  className="header-nav-btn relative w-9 min-w-[36px] px-0"
+                  className="header-nav-btn relative w-9 min-w-[36px] px-0 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-white/15"
                   title="Bildirimler"
                   aria-label={unreadCount > 0 ? `Bildirimler (${unreadCount} okunmamış)` : 'Bildirimler'}
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-5 h-5 text-current" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                   </svg>
                   {unreadCount > 0 && (
-                    <span className="absolute top-0.5 right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-white text-orange-600 text-[10px] font-bold">
+                    <span className="absolute top-0.5 right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-brand text-white text-[10px] font-bold">
                       {unreadCount > 99 ? '99+' : unreadCount}
                     </span>
                   )}
@@ -193,19 +204,19 @@ export function Header() {
                   <button
                     type="button"
                     onClick={() => setDropdownOpen((o) => !o)}
-                    className="header-nav-btn gap-1.5 px-1"
+                    className="header-nav-btn gap-1.5 px-1 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-white/15"
                     aria-label="Profil menüsünü aç"
                     aria-haspopup="menu"
                     aria-expanded={dropdownOpen}
                   >
-                    <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-sm overflow-hidden shrink-0 ring-2 ring-white/30">
+                    <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-white/20 flex items-center justify-center text-gray-700 dark:text-white font-bold text-sm overflow-hidden shrink-0 ring-2 ring-gray-300 dark:ring-white/30">
                       {user.profile_picture ? (
                         <OptimizedAvatar src={user.profile_picture} size={32} alt="" className="w-full h-full" priority />
                       ) : (
                         (user.first_name || user.username)?.charAt(0)?.toUpperCase() || '?'
                       )}
                     </div>
-                    <svg className="w-4 h-4 text-white/90 hidden sm:block shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-4 h-4 text-gray-600 dark:text-white/90 hidden sm:block shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
                   </button>
@@ -229,13 +240,13 @@ export function Header() {
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   onClick={() => openAuth('login')}
-                  className="header-nav-btn border border-white/60 px-3 hover:bg-white/15"
+                  className="header-nav-btn border border-gray-300 dark:border-white/60 text-gray-900 dark:text-white px-3 hover:bg-gray-100 dark:hover:bg-white/15"
                 >
                   Giriş Yap
                 </button>
                 <button
                   onClick={() => openAuth('register')}
-                  className="header-nav-btn bg-white text-orange-600 px-3 hover:bg-white/95"
+                  className="header-nav-btn bg-brand hover:bg-brand-hover text-white px-3 hidden sm:inline-flex"
                 >
                   Üye Ol
                 </button>
@@ -248,7 +259,7 @@ export function Header() {
           <div className="w-full max-w-2xl">
             <form
               onSubmit={handleSearchSubmit}
-              className="flex items-center rounded-full bg-white dark:bg-gray-900 shadow-sm overflow-hidden border border-gray-200/80 dark:border-gray-700 focus-within:ring-2 focus-within:ring-orange-400/50 focus-within:border-orange-400 hover:border-orange-300 dark:hover:border-orange-500/60 hover:shadow-md transition-all duration-200"
+              className="flex items-center rounded-full bg-white dark:bg-gray-900 shadow-sm overflow-hidden border border-gray-200/80 dark:border-gray-700 focus-within:ring-2 focus-within:ring-brand/50 focus-within:border-brand hover:border-brand/70 dark:hover:border-brand/60 hover:shadow-md transition-all duration-200"
             >
               <span className="pl-4 pr-2 text-gray-400 dark:text-gray-500 shrink-0 py-2" aria-hidden>
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -281,7 +292,7 @@ export function Header() {
               />
               <button
                 type="submit"
-                className="shrink-0 px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-medium text-sm transition-colors"
+                className="shrink-0 px-4 py-2.5 bg-brand hover:bg-brand-hover text-white font-medium text-sm transition-colors rounded-full"
               >
                 Ara
               </button>

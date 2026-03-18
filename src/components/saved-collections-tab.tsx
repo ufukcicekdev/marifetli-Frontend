@@ -153,7 +153,7 @@ export function SavedCollectionsTab({ isOwnProfile }: SavedCollectionsTabProps) 
                   className="flex-1 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
                   autoFocus
                 />
-                <button type="submit" disabled={!newName.trim() || createMutation.isPending} className="px-2 py-1 text-xs bg-orange-500 text-white rounded">
+                <button type="submit" disabled={!newName.trim() || createMutation.isPending} className="px-2 py-1 text-xs bg-brand text-white rounded">
                   Ekle
                 </button>
                 <button type="button" onClick={() => { setShowNewInput(false); setNewName(''); }} className="px-2 py-1 text-xs text-gray-500">
@@ -163,7 +163,7 @@ export function SavedCollectionsTab({ isOwnProfile }: SavedCollectionsTabProps) 
             ) : (
               <button
                 onClick={() => setShowNewInput(true)}
-                className="w-full text-left px-3 py-2 rounded-lg text-sm text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+                className="w-full text-left px-3 py-2 rounded-lg text-sm text-brand hover:bg-brand-pink/80 dark:hover:bg-brand/10"
               >
                 + Yeni koleksiyon
               </button>
@@ -174,7 +174,7 @@ export function SavedCollectionsTab({ isOwnProfile }: SavedCollectionsTabProps) 
                 onClick={() => setSelectedCollectionId(c.id)}
                 className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
                   activeId === c.id
-                    ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300'
+                    ? 'bg-brand-pink dark:bg-brand/15 text-brand-hover'
                     : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
                 }`}
               >
@@ -238,7 +238,7 @@ export function SavedCollectionsTab({ isOwnProfile }: SavedCollectionsTabProps) 
                             <div className="flex-1 min-w-0">
                               <Link
                                 href={`/blog/${blog.slug}`}
-                                className="block rounded-lg p-3 border border-gray-200 dark:border-gray-800 hover:border-orange-300 dark:hover:border-orange-700 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                                className="block rounded-lg p-3 border border-gray-200 dark:border-gray-800 hover:border-brand/40 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                               >
                                 <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-1">
                                   {author?.profile_picture ? (

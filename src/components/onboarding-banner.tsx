@@ -24,7 +24,7 @@ export function OnboardingBanner() {
   }
 
   return (
-    <div className="bg-orange-50 dark:bg-orange-950/40 border-b border-orange-200 dark:border-orange-800 text-orange-900 dark:text-orange-100">
+    <div className="bg-brand-pink/80 dark:bg-brand/10 border-b border-brand/20 dark:border-brand/30 text-gray-900 dark:text-gray-100">
       <div className="container mx-auto px-3 sm:px-4 py-2.5 flex items-center justify-between gap-3 flex-wrap">
         <p className="text-sm">
           <span className="font-medium">Profilini tamamla.</span>
@@ -33,7 +33,7 @@ export function OnboardingBanner() {
         </p>
         <Link
           href="/onboarding"
-          className="shrink-0 px-4 py-1.5 text-sm font-medium bg-orange-500 hover:bg-orange-600 text-white rounded-lg transition-colors"
+          className="shrink-0 px-4 py-1.5 text-sm font-medium bg-brand hover:bg-brand-hover text-white rounded-lg transition-colors"
         >
           Tamamla
         </Link>

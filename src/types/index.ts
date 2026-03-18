@@ -60,6 +60,10 @@ export interface SiteSettings {
   about_content?: string;
   auth_modal_headline?: string;
   auth_modal_description?: string;
+  /** Admin panelden seçilen gövde yazı tipi (Google Fonts ailesi adı). Boş = varsayılan. */
+  font_body?: string | null;
+  /** Admin panelden seçilen başlık yazı tipi. Boş = font_body kullanılır. */
+  font_heading?: string | null;
 }
 
 export interface Question {

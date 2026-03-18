@@ -169,7 +169,7 @@ export function SaveModal({ questionId, blogPostId, isOpen, onClose, onSaved }: 
               <button
                 type="submit"
                 disabled={createAndSaveMutation.isPending || !newCollectionName.trim()}
-                className="px-4 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-50"
+                className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-hover disabled:opacity-50"
               >
                 Oluştur
               </button>

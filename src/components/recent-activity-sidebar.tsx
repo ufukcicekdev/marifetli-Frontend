@@ -37,7 +37,7 @@ function useSlugToNameMap(): Record<string, string> {
 function CommunityIcon({ className }: { className?: string }) {
   return (
     <div
-      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-500 text-white ${className ?? ''}`}
+      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand text-white ${className ?? ''}`}
       aria-hidden
     >
       <span className="text-sm font-bold">r</span>

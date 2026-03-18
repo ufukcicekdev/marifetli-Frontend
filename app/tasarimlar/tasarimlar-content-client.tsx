@@ -105,7 +105,7 @@ export default function TasarimlarContentClient() {
           <button
             type="button"
             onClick={() => setUploadModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white bg-orange-500 hover:bg-orange-600 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-white bg-brand hover:bg-brand-hover transition-colors"
           >
             <span className="text-lg leading-none">+</span>
             Tasarım Yükle
@@ -135,7 +135,7 @@ export default function TasarimlarContentClient() {
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Tasarımlarda ara (etiket, açıklama, kullanıcı)"
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:ring-2 focus:ring-brand focus:border-transparent"
             autoComplete="off"
             aria-label="Tasarım ara"
           />
@@ -158,7 +158,7 @@ export default function TasarimlarContentClient() {
               <button
                 type="button"
                 onClick={() => { setSearchInput(''); router.replace('/tasarimlar'); }}
-                className="text-sm font-medium text-orange-500 hover:text-orange-600"
+                className="text-sm font-medium text-brand hover:text-brand-hover"
               >
                 Aramayı temizle
               </button>
@@ -170,7 +170,7 @@ export default function TasarimlarContentClient() {
                 <button
                   type="button"
                   onClick={() => setUploadModalOpen(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-orange-500 hover:text-orange-600 border border-orange-500 transition-colors"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-brand hover:text-brand-hover border border-brand transition-colors"
                 >
                   İlk tasarımı sen yükle
                 </button>
@@ -184,7 +184,7 @@ export default function TasarimlarContentClient() {
             <Link
               key={d.id}
               href={`/tasarim/${d.id}`}
-              className="group block rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 hover:border-orange-400 dark:hover:border-orange-600 transition-colors bg-white dark:bg-gray-900"
+              className="group block rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 hover:border-brand dark:hover:border-brand-hover transition-colors bg-white dark:bg-gray-900"
             >
               <div className="aspect-square relative overflow-hidden" onClick={(e) => e.stopPropagation()}>
                 <MediaSlider
@@ -197,7 +197,7 @@ export default function TasarimlarContentClient() {
                 <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
                   u/{d.author_username}
                 </p>
-                <p className="text-xs text-orange-600 dark:text-orange-400 mt-0.5">
+                <p className="text-xs text-brand mt-0.5">
                   {LICENSE_LABELS[d.license] ?? d.license}
                 </p>
                 {d.tags && (

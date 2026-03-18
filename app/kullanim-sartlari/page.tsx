@@ -62,7 +62,7 @@ export default function TermsPage() {
           Kullanım şartlarıyla ilgili sorularınız, görüşleriniz veya itirazlarınız için bize{' '}
           <a
             href="mailto:hello@marifetli.com.tr"
-            className="text-orange-600 dark:text-orange-400 hover:underline font-medium"
+            className="text-brand hover:underline font-medium"
           >
             hello@marifetli.com.tr
           </a>{' '}

@@ -8,19 +8,25 @@ html {
   scrollbar-gutter: stable;
 }
 
+/* Logo paleti: Açık Neon Pembe, Parlak Kırmızı, Mavi, Gökmavisi, Parlak Koyu Kırmızı */
 :root {
-  --background: #f3f4f6;
+  --brand-pink: #fcfbfc;
+  --brand-red: #fe544e;
+  --brand-red-dark: #ea3750;
+  --brand-blue: #599af6;
+  --brand-sky: #58baf3;
+  --background: #fcfbfc;
   --foreground: #171717;
-  /* Baloncuk arka plan - light (iyice belli) */
-  --bubble-1: rgb(251 146 60 / 0.32);
-  --bubble-2: rgb(253 186 116 / 0.26);
-  --bubble-3: rgb(254 215 170 / 0.34);
-  --bubble-4: rgb(251 146 60 / 0.22);
-  /* Blog hero - aynı class ile hydration uyumu */
-  --blog-hero-from: rgb(255 247 237 / 0.9);
-  --blog-hero-via: rgb(255 251 235 / 0.8);
+  /* Baloncuk arka plan - logo kırmızı/mavi tonları */
+  --bubble-1: rgb(254 84 78 / 0.2);
+  --bubble-2: rgb(88 186 243 / 0.18);
+  --bubble-3: rgb(89 154 246 / 0.15);
+  --bubble-4: rgb(254 84 78 / 0.12);
+  /* Blog hero */
+  --blog-hero-from: rgb(252 251 252 / 0.95);
+  --blog-hero-via: rgb(252 251 252 / 0.9);
   --blog-hero-to: #ffffff;
-  --blog-hero-border: rgb(255 237 213 / 0.6);
+  --blog-hero-border: rgb(254 84 78 / 0.15);
   --blog-hero-title: #171717;
   --blog-hero-text: #4b5563;
 }
@@ -28,11 +34,10 @@ html {
 .dark {
   --background: #111827;
   --foreground: #f3f4f6;
-  /* Baloncuk arka plan - dark */
-  --bubble-1: rgb(251 146 60 / 0.24);
-  --bubble-2: rgb(253 186 116 / 0.18);
-  --bubble-3: rgb(254 215 170 / 0.16);
-  --bubble-4: rgb(251 146 60 / 0.12);
+  --bubble-1: rgb(254 84 78 / 0.15);
+  --bubble-2: rgb(88 186 243 / 0.12);
+  --bubble-3: rgb(89 154 246 / 0.1);
+  --bubble-4: rgb(254 84 78 / 0.08);
   --blog-hero-from: #111827;
   --blog-hero-via: #1f2937;
   --blog-hero-to: #111827;
@@ -41,11 +46,32 @@ html {
   --blog-hero-text: #e5e7eb;
 }
 
+/* Site fontları: admin panelden gelen font_body / font_heading (SiteFonts bileşeni) bu değişkenleri set eder. Varsayılan: TT Octosquares. */
+/* TT Octosquares: public/fonts/ altına .woff2 dosyalarını koyun (örn. TTOctosquares-Regular.woff2). */
+@font-face {
+  font-family: 'TT Octosquares';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/TTOctosquares-Regular.woff2') format('woff2');
+}
+
+:root {
+  --font-body: "Nunito", ui-sans-serif, system-ui, sans-serif;
+  --font-heading: "TT Octosquares", var(--font-body);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-body);
+  --font-mono: ui-monospace, monospace;
+  /* Logo paleti – buton/header/link için */
+  --color-brand: var(--brand-red);
+  --color-brand-hover: var(--brand-red-dark);
+  --color-brand-blue: var(--brand-blue);
+  --color-brand-sky: var(--brand-sky);
+  --color-brand-pink: var(--brand-pink);
 }
 
 /* Logo metni için modern font (Outfit, layout'ta --font-logo ile yüklenir) */
@@ -73,10 +99,15 @@ body {
   position: relative;
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
   transition: background-color 0.2s, color 0.2s;
   overflow-x: hidden;
   min-width: 0;
+}
+
+/* Başlıklar: admin’den font_heading gelirse uygulanır */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
 }
 
 /* Soluk baloncuklu arka plan + hafif hareket */
@@ -101,6 +132,14 @@ body::before {
   25% { transform: translate(1.5%, -0.8%) scale(1.02); opacity: 0.98; }
   50% { transform: translate(-1%, 1.2%) scale(0.99); opacity: 1; }
   75% { transform: translate(0.8%, 0.5%) scale(1.01); opacity: 0.99; }
+}
+
+/* Açık modda beyaz header: nav buton/link/ikonlar koyu renk (bildirim çanı vb.) */
+:root:not(.dark) header .header-nav-btn,
+:root:not(.dark) header a.header-nav-btn,
+:root:not(.dark) header .header-nav-link,
+:root:not(.dark) header .header-nav-theme-wrap button {
+  color: #111827;
 }
 
 /* Header nav: satır tam 52px, hücreler stretch → içerik dikey ortada */
@@ -168,18 +207,23 @@ body::before {
   vertical-align: middle;
 }
 .header-nav-link {
-  color: rgba(255, 255, 255, 0.95);
+  color: inherit;
   background: transparent;
 }
 .header-nav-link:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+.dark .header-nav-link:hover {
   background: rgba(255, 255, 255, 0.15);
-  color: #fff;
 }
 .header-nav-btn {
-  color: #fff;
+  color: inherit;
   background: transparent;
 }
 .header-nav-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+.dark .header-nav-btn:hover {
   background: rgba(255, 255, 255, 0.15);
 }
 /* Tema butonu: mobilde header'da gizli (Tailwind hidden), md+ görünsün */
@@ -209,13 +253,16 @@ body::before {
   padding: 0 !important;
   border: none;
   border-radius: 0.5rem;
-  color: #fff;
+  color: inherit;
   background: transparent;
   cursor: pointer;
   box-sizing: border-box;
   vertical-align: middle;
 }
 .header-nav-theme-wrap button:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+.dark .header-nav-theme-wrap button:hover {
   background: rgba(255, 255, 255, 0.15);
 }
 .header-nav-right .header-nav-btn,
