@@ -374,6 +374,9 @@ class ApiService {
   // Achievements
   getAchievementsByUsername = (username: string) =>
     this.axiosInstance.get<AchievementCategoryResponse[]>(`/achievements/users/${username}/`);
+  /** Son 2 dakikada açılan başarı (modal göstermek için) */
+  getRecentAchievementUnlock = () =>
+    this.axiosInstance.get<{ unlocked: { id: number; name: string; description: string; code: string; icon: string; unlocked_at: string } | null }>('/achievements/recent-unlock/');
 
   // Favorites / Saved collections
   getSavedCollections = () =>

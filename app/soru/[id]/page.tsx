@@ -19,6 +19,7 @@ import { CommentItem } from '@/src/components/comment-item';
 import { CommentEditor } from '@/src/components/comment-editor';
 import { OptimizedAvatar } from '@/src/components/optimized-avatar';
 import { ShareButton } from '@/src/components/share-button';
+import { checkRecentAchievementUnlock } from '@/src/lib/check-achievement-unlock';
 
 const SaveModal = dynamic(() => import('@/src/components/save-modal').then((m) => ({ default: m.SaveModal })), { ssr: false });
 const RemoveFromCommunityModal = dynamic(
@@ -125,6 +126,7 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
       setAnswerText('');
       setAnswerFormOpen(false);
       toast.success('Cevabınız alındı ve moderasyon sonrasında yayınlanacak.');
+      checkRecentAchievementUnlock();
       // Moderasyon arka planda çalıştıktan sonra listeyi güncelle (reddedilirse cevap listeden gitsin)
       window.setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: questionKeys.detail(slug) });
@@ -162,7 +164,7 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 overflow-x-hidden">
+      <div className="min-h-screen overflow-x-hidden">
         <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-4xl min-w-0">
           <div className="animate-pulse bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
             <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-3/4 mb-4" />
@@ -177,7 +179,7 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
 
   if (error || !question) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 overflow-x-hidden">
+      <div className="min-h-screen overflow-x-hidden">
         <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-4xl min-w-0">
           <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-8 text-center">
             <p className="text-gray-500 dark:text-gray-400">Soru bulunamadı</p>
@@ -201,7 +203,7 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
   const communityMemberCount = communityData?.member_count ?? 0;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 overflow-x-hidden">
+    <div className="min-h-screen overflow-x-hidden">
       <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 min-w-0 flex flex-col lg:flex-row gap-6 max-w-6xl">
         <div className="flex-1 min-w-0">
         <div className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-800 overflow-hidden mb-6">

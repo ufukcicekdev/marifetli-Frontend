@@ -52,7 +52,7 @@ function AuthCallbackContent() {
   }, [searchParams, setAuth, router]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">
         {status === 'loading' && <p className="text-gray-600 dark:text-gray-400">Giriş tamamlanıyor...</p>}
         {status === 'ok' && <p className="text-gray-600 dark:text-gray-400">Yönlendiriliyorsunuz...</p>}
@@ -81,7 +81,7 @@ function AuthCallbackContent() {
 export default function AuthCallbackPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
+      <div className="min-h-screen flex items-center justify-center">
         <p className="text-gray-600 dark:text-gray-400">Giriş tamamlanıyor...</p>
       </div>
     }>

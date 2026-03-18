@@ -131,7 +131,7 @@ export default async function TopicPage({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
         />
       )}
-      <Suspense fallback={<div className="min-h-screen bg-gray-50 dark:bg-gray-950 animate-pulse" />}>
+      <Suspense fallback={<div className="min-h-screen animate-pulse" />}>
         <TopicPageContent slug={slug} />
       </Suspense>
     </>

@@ -40,7 +40,7 @@ export default function VerifyEmailPage({ params }: { params: Promise<{ token: s
   }, [token, router]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center py-12 px-4">
+    <div className="min-h-screen flex items-center justify-center py-12 px-4">
       <div className="max-w-md w-full bg-white dark:bg-gray-900 p-8 rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 text-center">
         {status === 'loading' && (
           <>

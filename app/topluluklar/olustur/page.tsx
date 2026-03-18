@@ -204,7 +204,7 @@ export default function ToplulukOlusturPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center p-4">
         <div className="text-center">
           <p className="text-gray-600 dark:text-gray-400">Topluluk oluşturmak için giriş yapmalısınız.</p>
           <Link href="/topluluklar" className="mt-4 inline-block text-orange-500 hover:underline">
@@ -216,7 +216,7 @@ export default function ToplulukOlusturPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen">
       <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-xl">
         <Link href="/topluluklar" className="text-sm text-orange-500 hover:underline mb-6 inline-block">
           ← Topluluklara dön

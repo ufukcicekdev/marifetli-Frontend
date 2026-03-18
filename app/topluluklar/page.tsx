@@ -168,7 +168,7 @@ export default function TopluluklarPage() {
     : 'Sizin için önerilenler';
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 w-full">
+    <div className="min-h-screen w-full">
       <main className="w-full min-h-screen px-3 sm:px-4 py-6 sm:py-8 max-w-5xl mx-auto">
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>

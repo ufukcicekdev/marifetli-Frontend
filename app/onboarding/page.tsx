@@ -168,7 +168,7 @@ function OnboardingContent() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="animate-pulse text-gray-500">Yükleniyor...</div>
       </div>
     );
@@ -176,7 +176,7 @@ function OnboardingContent() {
 
   if (steps.length === 0) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center max-w-md">
           <p className="text-gray-600 dark:text-gray-400 mb-4">
             Henüz onboarding adımı tanımlanmamış. Admin panelden adımları ekleyebilirsiniz.
@@ -194,7 +194,7 @@ function OnboardingContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center py-12 px-4">
+    <div className="min-h-screen flex items-center justify-center py-12 px-4">
       <div className="w-full max-w-lg">
         {fromProfile && usernameFromQuery && (
           <Link
@@ -326,7 +326,7 @@ function OnboardingContent() {
 
 export default function OnboardingPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center"><p className="text-gray-500">Yükleniyor...</p></div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Yükleniyor...</p></div>}>
       <OnboardingContent />
     </Suspense>
   );

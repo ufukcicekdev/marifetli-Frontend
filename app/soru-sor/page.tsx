@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import api from '@/src/lib/api';
 import { useAuthStore } from '@/src/stores/auth-store';
+import { checkRecentAchievementUnlock } from '@/src/lib/check-achievement-unlock';
 import { QuestionForm, type QuestionFormPayload } from '@/src/components/question-form';
 
 function SoruSorContent() {
@@ -31,6 +32,7 @@ function SoruSorContent() {
     mutationFn: (payload: QuestionFormPayload) => api.createQuestionRaw(payload).then((r) => r.data),
     onSuccess: (data) => {
       toast.success(data?.slug ? 'Gönderi yayınlandı!' : 'Kaydedildi');
+      checkRecentAchievementUnlock();
       const slug = data?.slug;
       if (slug) router.push(`/soru/${slug}`);
       else if (communitySlug) router.push(`/topluluk/${communitySlug}`);
@@ -56,7 +58,7 @@ function SoruSorContent() {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 overflow-x-hidden">
+    <div className="min-h-screen overflow-x-hidden">
       <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 max-w-3xl min-w-0">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
           <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
@@ -89,7 +91,7 @@ function SoruSorContent() {
 
 export default function SoruSorPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center"><p className="text-gray-500">Yükleniyor...</p></div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Yükleniyor...</p></div>}>
       <SoruSorContent />
     </Suspense>
   );

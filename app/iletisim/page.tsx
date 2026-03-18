@@ -54,7 +54,7 @@ export default function ContactPage() {
   };
 
   return (
-    <div className="min-h-screen bg-linear-to-b from-indigo-50 via-white to-white dark:from-gray-950 dark:via-gray-950 dark:to-gray-950">
+    <div className="min-h-screen">
       <main className="container mx-auto px-4 py-10 max-w-5xl">
         <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>

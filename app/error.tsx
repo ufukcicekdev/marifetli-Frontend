@@ -15,7 +15,7 @@ export default function Error({
   }, [error]);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center px-4">
+    <div className="min-h-screen flex items-center justify-center px-4">
       <div className="max-w-md w-full text-center">
         <p className="text-8xl font-bold text-red-500/20 dark:text-red-500/30">500</p>
         <h1 className="mt-4 text-2xl font-bold text-gray-900 dark:text-gray-100">

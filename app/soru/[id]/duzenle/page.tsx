@@ -50,7 +50,7 @@ export default function QuestionEditPage({ params }: { params: Promise<{ id: str
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      <div className="min-h-screen">
         <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-3xl min-w-0">
           <div className="animate-pulse bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-6">
             <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/2 mb-4" />
@@ -63,7 +63,7 @@ export default function QuestionEditPage({ params }: { params: Promise<{ id: str
 
   if (error || !question) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      <div className="min-h-screen">
         <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-3xl min-w-0">
           <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-8 text-center">
             <p className="text-gray-500 dark:text-gray-400">Soru bulunamadı</p>
@@ -76,7 +76,7 @@ export default function QuestionEditPage({ params }: { params: Promise<{ id: str
 
   if (!isAuthor) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      <div className="min-h-screen">
         <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-3xl min-w-0">
           <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-8 text-center">
             <p className="text-gray-500 dark:text-gray-400">Bu gönderiyi düzenleme yetkiniz yok.</p>
@@ -88,7 +88,7 @@ export default function QuestionEditPage({ params }: { params: Promise<{ id: str
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 overflow-x-hidden">
+    <div className="min-h-screen overflow-x-hidden">
       <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-3xl min-w-0">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Gönderiyi Düzenle</h1>

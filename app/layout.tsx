@@ -16,6 +16,7 @@ import { CategoriesPrefetcher } from '@/src/components/categories-prefetcher';
 import { FirebasePushHandler } from '@/src/components/firebase-push-handler';
 import { CookieConsentBanner } from '@/src/components/cookie-consent-banner';
 import { SiteFooter } from '@/src/components/site-footer';
+import { AchievementUnlockedModal } from '@/src/components/achievement-unlocked-modal';
 
 // Canlıda NEXT_PUBLIC_SITE_URL deploy ortamında tanımlı olsun; yoksa production URL fallback
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.marifetli.com.tr';
@@ -177,6 +178,7 @@ export default function RootLayout({
         </ThemeProvider>
         <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
         <CookieConsentBanner />
+        <AchievementUnlockedModal />
       </body>
     </html>
   );

@@ -24,7 +24,7 @@ export default function AboutPage() {
   const content = (settings?.about_content?.trim() || DEFAULT_ABOUT).trim();
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen">
       <main className="container mx-auto px-3 sm:px-4 py-8 max-w-4xl min-w-0 overflow-x-hidden">
         <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-6">
           {isLoading ? '…' : 'Marifetli Hakkında'}

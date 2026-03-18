@@ -125,7 +125,7 @@ function CommunityDetailContent({ params }: { params: Promise<{ slug: string }> 
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin w-8 h-8 border-2 border-orange-500 border-t-transparent rounded-full" />
       </div>
     );
@@ -133,7 +133,7 @@ function CommunityDetailContent({ params }: { params: Promise<{ slug: string }> 
 
   if (error || !community) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <p className="text-gray-600 dark:text-gray-400">Topluluk bulunamadı.</p>
           <Link href="/topluluklar" className="mt-4 inline-block text-orange-500 hover:underline">
@@ -154,7 +154,7 @@ function CommunityDetailContent({ params }: { params: Promise<{ slug: string }> 
   const hasCover = !!community.cover_image_url;
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-900 w-full">
+    <div className="min-h-screen w-full">
       {/* Reddit gibi: ortalı değil, tam genişlik — sol sidebar'dan sağ kenara kadar */}
       <main className="w-full min-h-screen overflow-hidden">
           <div className="w-full">
@@ -352,7 +352,7 @@ function CommunityDetailContent({ params }: { params: Promise<{ slug: string }> 
 
 export default function CommunityDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center"><p className="text-gray-500">Yükleniyor...</p></div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><p className="text-gray-500">Yükleniyor...</p></div>}>
       <CommunityDetailContent params={params} />
     </Suspense>
   );

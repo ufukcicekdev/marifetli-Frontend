@@ -54,7 +54,7 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
 
   if (!token) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center py-12 px-4">
+      <div className="min-h-screen flex items-center justify-center py-12 px-4">
         <div className="max-w-md w-full bg-white dark:bg-gray-900 p-8 rounded-xl shadow-lg border border-gray-200 dark:border-gray-800 text-center">
           <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">Geçersiz bağlantı</h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">Şifre sıfırlama linki eksik veya hatalı.</p>
@@ -67,7 +67,7 @@ export default function ResetPasswordPage({ params }: { params: Promise<{ token:
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center py-12 px-4">
+    <div className="min-h-screen flex items-center justify-center py-12 px-4">
       <div className="max-w-md w-full bg-white dark:bg-gray-900 p-8 rounded-xl shadow-lg border border-gray-200 dark:border-gray-800">
         {success ? (
           <div className="text-center">

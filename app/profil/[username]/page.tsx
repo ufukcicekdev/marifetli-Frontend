@@ -207,11 +207,12 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      <div className="min-h-screen">
         <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-6xl min-w-0 overflow-x-hidden">
-          <div className="animate-pulse bg-white dark:bg-gray-900 rounded-lg shadow p-8">
-            <div className="h-24 w-24 rounded-xl bg-gray-200 dark:bg-gray-700" />
-            <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded mt-4 w-48" />
+          <div className="animate-pulse bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-sm p-8">
+            <div className="h-28 rounded-2xl bg-gray-200 dark:bg-gray-700 w-full" />
+            <div className="h-24 w-24 rounded-2xl bg-gray-200 dark:bg-gray-700 -mt-12 ml-4" />
+            <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded-lg mt-4 w-48" />
           </div>
         </main>
       </div>
@@ -222,7 +223,7 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
     const ax = error as { response?: { data?: { detail?: string }; status?: number } };
     const errMsg = ax?.response?.data?.detail ?? (error instanceof Error ? error.message : 'Bilinmeyen hata');
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      <div className="min-h-screen">
         <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-4xl min-w-0 overflow-x-hidden">
           <div className="bg-white dark:bg-gray-900 rounded-lg shadow p-8 text-center">
             <p className="text-gray-500 dark:text-gray-400">Kullanıcı bulunamadı</p>
@@ -240,7 +241,7 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
   const tabs: ProfileTab[] = ['gonderiler', 'tasarimlarim', 'yorumlar', 'kaydettiklerim', 'gecmis'];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen">
       <main className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-6xl min-w-0 overflow-x-hidden">
         {showOnboardingCard && (
           <Link
@@ -261,16 +262,18 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Sol + Orta: Ana içerik */}
           <div className="flex-1 min-w-0">
-            {/* Profil kartı */}
-            <div className="bg-white dark:bg-gray-900 rounded-xl shadow border border-gray-200 dark:border-gray-800 overflow-hidden">
-              <div className="h-24 sm:h-32 bg-gradient-to-r from-orange-400 to-orange-600 dark:from-orange-600 dark:to-orange-800">
-                {profile.cover_image && (
-                  <img src={profile.cover_image} alt={`${profile.username} profil kapağı`} className="w-full h-full object-cover" />
+            {/* Profil kartı — modern cover + avatar */}
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-lg shadow-gray-200/50 dark:shadow-none border border-gray-200/80 dark:border-gray-800 overflow-hidden">
+              <div className="h-28 sm:h-36 bg-gradient-to-br from-orange-400 via-orange-500 to-amber-500 dark:from-orange-700 dark:via-orange-800 dark:to-amber-800 relative">
+                {profile.cover_image ? (
+                  <img src={profile.cover_image} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_0%,rgba(255,255,255,0.2),transparent)]" aria-hidden />
                 )}
               </div>
-              <div className="px-4 sm:px-6 pb-4 -mt-10 sm:-mt-12 relative">
-                <div className="flex flex-col sm:flex-row items-start sm:items-end gap-3">
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl bg-white dark:bg-gray-800 border-4 border-white dark:border-gray-900 overflow-hidden flex-shrink-0 shadow">
+              <div className="px-4 sm:px-6 pb-5 -mt-12 sm:-mt-14 relative">
+                <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
+                  <div className="w-20 h-20 sm:w-28 sm:h-28 rounded-2xl bg-white dark:bg-gray-800 border-4 border-white dark:border-gray-900 overflow-hidden flex-shrink-0 shadow-xl ring-1 ring-gray-200/50 dark:ring-gray-700">
                     {profile.profile_picture ? (
                       <OptimizedAvatar src={profile.profile_picture} size={96} alt="" className="w-full h-full rounded-xl" />
                     ) : (
@@ -291,7 +294,7 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
                               type="button"
                               onClick={() => unfollowMutation.mutate(profile.id)}
                               disabled={unfollowMutation.isPending}
-                              className="px-3 py-1.5 text-sm font-medium border border-gray-300 dark:border-gray-600 rounded-full text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50"
+                              className="px-4 py-2 text-sm font-medium border border-gray-300 dark:border-gray-600 rounded-xl text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 transition-colors"
                             >
                               {unfollowMutation.isPending ? '...' : 'Takibi Bırak'}
                             </button>
@@ -300,7 +303,7 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
                               type="button"
                               onClick={() => followMutation.mutate(profile.id)}
                               disabled={followMutation.isPending}
-                              className="px-3 py-1.5 text-sm font-medium bg-orange-500 hover:bg-orange-600 text-white rounded-full disabled:opacity-50"
+                              className="px-4 py-2 text-sm font-medium bg-orange-500 hover:bg-orange-600 text-white rounded-xl disabled:opacity-50 transition-colors shadow-sm"
                             >
                               {followMutation.isPending ? '...' : 'Takip Et'}
                             </button>
@@ -315,16 +318,16 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
                   <p className="mt-3 text-gray-700 dark:text-gray-300 text-sm break-words">{profile.bio}</p>
                 )}
 
-                {/* Tab'lar */}
-                <div className="mt-4 flex overflow-x-auto overflow-y-hidden gap-1 border-b border-gray-200 dark:border-gray-800 -mb-px">
+                {/* Tab'lar — pill / segment tarzı */}
+                <div className="mt-5 flex overflow-x-auto overflow-y-hidden gap-1 p-1 rounded-xl bg-gray-100 dark:bg-gray-800/60">
                   {tabs.map((tab) => (
                     <button
                       key={tab}
                       onClick={() => setActiveTab(tab)}
-                      className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2 -mb-px ${
+                      className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap rounded-lg transition-all ${
                         activeTab === tab
-                          ? 'border-orange-500 text-orange-600 dark:text-orange-400'
-                          : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'
+                          ? 'bg-white dark:bg-gray-700 text-orange-600 dark:text-orange-400 shadow-sm'
+                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
                       }`}
                     >
                       {tab === 'tasarimlarim' && !isOwnProfile ? 'Tasarımları' : TAB_LABELS[tab]}
@@ -335,7 +338,7 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
             </div>
 
             {/* Tab içeriği */}
-            <div className="mt-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden min-h-[200px]">
+            <div className="mt-4 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-sm overflow-hidden min-h-[200px]">
               {activeTab === 'gonderiler' && (
                 <div>
                   {questionsLoading ? (
@@ -542,36 +545,38 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
           {/* Sağ sidebar */}
           <div className="w-full lg:w-80 flex-shrink-0 space-y-4">
             {/* Profil istatistikleri */}
-            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
-              <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-3">{profile.username}</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-sm overflow-hidden">
+              <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
+                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">@{profile.username}</h3>
+              </div>
+              <div className="p-5 space-y-0 text-sm">
+                <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-800">
                   <span className="text-gray-600 dark:text-gray-400">Takipçi</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{profile.followers_count}</span>
+                  <span className="font-semibold text-gray-900 dark:text-gray-100 tabular-nums">{profile.followers_count ?? 0}</span>
                 </div>
                 {isOwnProfile ? (
                 <button
                   type="button"
                   onClick={() => setFollowingModalOpen(true)}
-                  className="w-full flex justify-between items-center text-sm rounded-lg py-0.5 -mx-1 px-1 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left"
+                  className="w-full flex justify-between items-center text-sm rounded-lg py-2 -mx-1 px-1 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left border-b border-gray-100 dark:border-gray-800"
                 >
                   <span className="text-gray-600 dark:text-gray-400">Takip ettiklerim</span>
-                  <span className="font-medium text-orange-600 dark:text-orange-400">{profile.following_count ?? 0}</span>
+                  <span className="font-semibold text-orange-600 dark:text-orange-400 tabular-nums">{profile.following_count ?? 0}</span>
                 </button>
               ) : (
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-800">
                   <span className="text-gray-600 dark:text-gray-400">Takip ettiklerim</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{profile.following_count ?? 0}</span>
+                  <span className="font-semibold text-gray-900 dark:text-gray-100 tabular-nums">{profile.following_count ?? 0}</span>
                 </div>
               )}
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center py-2">
                   <span className="text-gray-600 dark:text-gray-400">İtibar</span>
-                  <span className="font-medium text-gray-900 dark:text-gray-100">{profile.reputation}</span>
+                  <span className="font-semibold text-amber-600 dark:text-amber-400 tabular-nums">{profile.reputation ?? 0}</span>
                 </div>
               </div>
               {(profile.website || profile.instagram_url || profile.twitter_url || profile.facebook_url || profile.linkedin_url || profile.youtube_url || profile.pinterest_url) && (
-                <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                  <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Bağlantılar</p>
+                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">Bağlantılar</p>
                   <div className="flex flex-wrap gap-2">
                     {profile.website && (
                       <a href={profile.website} target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:text-orange-600 text-sm truncate max-w-full" title="Web sitesi" aria-label="Web sitesi">
@@ -603,8 +608,11 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
 
             {/* Oluşturduğum / yönettiğim topluluklar (sadece kendi profil – her zaman göster) */}
             {isOwnProfile && (
-              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
-                <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-3">Oluşturduğum topluluklar</h3>
+              <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-sm overflow-hidden">
+                <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
+                  <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Oluşturduğum topluluklar</h3>
+                </div>
+                <div className="p-5">
                 {managedList.length === 0 ? (
                   <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">Henüz topluluk oluşturmadınız.</p>
                 ) : (
@@ -635,57 +643,65 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
                 )}
                 <Link
                   href="/topluluklar/olustur"
-                  className="mt-3 inline-block text-sm font-medium text-orange-500 hover:text-orange-600"
+                  className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300"
                 >
-                  {managedList.length === 0 ? 'Topluluk oluştur →' : '+ Yeni topluluk'}
+                  {managedList.length === 0 ? 'Topluluk oluştur' : '+ Yeni topluluk'}
+                  <span aria-hidden>→</span>
                 </Link>
+                </div>
               </div>
             )}
 
             {/* Başarılar */}
-            <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-bold text-gray-900 dark:text-gray-100">Başarılar</h3>
+            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-sm overflow-hidden">
+              <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Başarılar</h3>
                 <Link
                   href={`/profil/${username}/basarilar`}
-                  className="text-sm text-orange-500 hover:text-orange-600"
+                  className="text-sm font-medium text-orange-500 hover:text-orange-600 dark:text-orange-400"
                 >
-                  Tümünü gör
+                  Tümünü gör →
                 </Link>
               </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">{unlockedCount} açıldı</p>
-              <Link
-                href={`/profil/${username}/basarilar`}
-                className="block w-full py-2 text-center text-sm font-medium text-orange-500 hover:text-orange-600 border border-orange-500 rounded-lg"
-              >
-                Başarıları görüntüle
-              </Link>
+              <div className="p-5">
+                <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">{unlockedCount} rozet açıldı</p>
+                <Link
+                  href={`/profil/${username}/basarilar`}
+                  className="block w-full py-2.5 text-center text-sm font-medium text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/30 border border-orange-200 dark:border-orange-800 rounded-xl transition-colors"
+                >
+                  Başarıları görüntüle
+                </Link>
+              </div>
             </div>
 
-            {/* Ayarlar (sadece kendi profili) */}
+            {/* Ayarlar (sadece kendi profili) — profil/ayarlar sayfası ile aynı modern kart stili */}
             {isOwnProfile && (
-              <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4">
-                <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-3">Ayarlar</h3>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm text-gray-700 dark:text-gray-300">Profil</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Profil bilgilerinizi özelleştirin</p>
+              <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-sm overflow-hidden">
+                <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
+                  <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Ayarlar</h3>
+                </div>
+                <div className="divide-y divide-gray-100 dark:divide-gray-800">
+                  <div className="p-4">
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">Profil</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Profil bilgilerinizi özelleştirin</p>
                     <Link
                       href="/ayarlar"
-                      className="mt-1 inline-block text-sm font-medium text-orange-500 hover:text-orange-600"
+                      className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300"
                     >
-                      Güncelle →
+                      Güncelle
+                      <span aria-hidden>→</span>
                     </Link>
                   </div>
                   {onboardingStatus?.completed && (
-                    <div>
-                      <p className="text-sm text-gray-700 dark:text-gray-300">İlgi alanları</p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Kategoriler, cinsiyet ve tercihlerinizi güncelleyin</p>
+                    <div className="p-4">
+                      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">İlgi alanları</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Kategoriler, cinsiyet ve tercihlerinizi güncelleyin</p>
                       <Link
                         href="/onboarding?from=profile"
-                        className="mt-1 inline-block text-sm font-medium text-orange-500 hover:text-orange-600"
+                        className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-orange-600 dark:text-orange-400 hover:text-orange-700 dark:hover:text-orange-300"
                       >
-                        İlgi alanlarını güncelle →
+                        İlgi alanlarını güncelle
+                        <span aria-hidden>→</span>
                       </Link>
                     </div>
                   )}

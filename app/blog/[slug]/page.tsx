@@ -134,7 +134,7 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      <div className="min-h-screen">
         <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-10 flex flex-col lg:flex-row gap-8 max-w-6xl">
           <main className="min-w-0 flex-1 max-w-4xl">
             <div className="animate-pulse bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-6">
@@ -151,7 +151,7 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
 
   if (error || !post) {
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      <div className="min-h-screen">
         <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-10 flex flex-col lg:flex-row gap-8 max-w-6xl">
           <main className="min-w-0 flex-1 max-w-4xl">
             <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-8 text-center">
@@ -174,7 +174,7 @@ export default function BlogPostPage({ params }: { params: Promise<{ slug: strin
   const comments = (post.comments ?? []).filter((c) => (c.moderation_status ?? 1) !== 2);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen">
       <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-10 flex flex-col lg:flex-row gap-8 max-w-6xl">
         <main className="min-w-0 flex-1 max-w-4xl">
           <div className="mb-4">

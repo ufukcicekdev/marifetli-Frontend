@@ -49,7 +49,7 @@ export default function BlogPage() {
   const restPosts = featuredPost ? posts.slice(1) : posts;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="min-h-screen">
       <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-10 flex flex-col lg:flex-row gap-8 max-w-6xl">
         <main className="min-w-0 flex-1 max-w-4xl">
           <BlogHero />
