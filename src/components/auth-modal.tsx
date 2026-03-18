@@ -3,11 +3,22 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { useAuthModalStore } from '../stores/auth-modal-store';
 import { useAuthStore } from '../stores/auth-store';
 import api from '../lib/api';
+
+const DEFAULT_AUTH_HEADLINE = 'Sevdiğin el işlerini keşfet.';
+const DEFAULT_AUTH_DESCRIPTION = 'Örgü, dikiş, nakış ve el sanatları topluluğunda soru sor, deneyimlerini paylaş.';
+
+/** Giriş/kayıt modalı görselleri (Facebook tarzı sol panel) — public/login-register/ altında */
+const LOGIN_REGISTER_IMAGES = {
+  heroMain: '/login-register/hero-main.png',
+  heroPeople1: '/login-register/hero-people-1.png',
+  heroPeople2: '/login-register/hero-people-2.png',
+} as const;
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
 const GOOGLE_LOGIN_URL = `${API_BASE}/auth/start-google-login/`;
@@ -19,6 +30,13 @@ export function AuthModal() {
   const router = useRouter();
   const { isOpen, tab, close, setTab } = useAuthModalStore();
   const { setAuth } = useAuthStore();
+  const { data: siteSettings } = useQuery({
+    queryKey: ['site-settings'],
+    queryFn: async () => (await api.getSiteSettings()).data,
+    staleTime: 5 * 60 * 1000,
+  });
+  const authHeadline = (siteSettings?.auth_modal_headline ?? '').trim() || DEFAULT_AUTH_HEADLINE;
+  const authDescription = (siteSettings?.auth_modal_description ?? '').trim() || DEFAULT_AUTH_DESCRIPTION;
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -111,22 +129,70 @@ export function AuthModal() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={close} aria-hidden />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={close} aria-hidden />
       <div
-        className="relative w-full max-w-[420px] max-h-[90vh] overflow-y-auto rounded-2xl bg-white dark:bg-gray-900 shadow-2xl border border-gray-100 dark:border-gray-800"
+        className="relative w-full max-w-[900px] max-h-[90vh] overflow-hidden rounded-2xl bg-white dark:bg-gray-900 shadow-2xl border border-gray-200 dark:border-gray-800 flex flex-col md:flex-row"
         role="dialog"
         aria-labelledby="auth-modal-title"
       >
-        {/* Header: Logo + arifetli (ortalı), sağda kapat */}
-        <div className="relative flex items-center justify-center px-6 pt-6 pb-2 min-h-[52px]">
-          <Link href="/" className="font-logo flex items-center gap-0.5 text-xl font-semibold text-gray-900 dark:text-white tracking-tight">
-            <Image src="/favicon-32x32.png" alt="" width={28} height={28} className="shrink-0 w-7 h-7 object-contain -mr-0.5" />
-            <span className="leading-none">arifetli</span>
+        {/* Sol: Marka + görsel collage (masaüstü, Facebook tarzı) */}
+        <div className="hidden md:flex md:flex-1 flex-col bg-gradient-to-br from-orange-500 via-orange-500 to-amber-600 p-8 min-h-[440px] overflow-hidden">
+          <Link href="/" className="font-logo flex items-center gap-1.5 text-white/95 hover:text-white shrink-0">
+            <Image src="/favicon-32x32.png" alt="" width={36} height={36} className="shrink-0 w-9 h-9 object-contain brightness-0 invert" />
+            <span className="text-xl font-semibold tracking-tight">arifetli</span>
           </Link>
+          <div className="flex-1 flex flex-col justify-center min-h-0 relative mt-4">
+            <h2 className="text-3xl font-bold text-white leading-tight max-w-[260px] shrink-0">
+              {authHeadline}
+            </h2>
+            <p className="mt-3 text-white/80 text-sm max-w-[240px] shrink-0">
+              {authDescription}
+            </p>
+            {/* Collage alanı: birden fazla görsel + üstte uçuşan ikonlar (Facebook tarzı) */}
+            <div className="relative mt-6 flex-1 min-h-[200px] max-h-[230px]">
+              {/* Ana büyük kart */}
+              <div className="absolute inset-y-4 left-6 right-10 flex items-center justify-center">
+                <div className="relative w-[260px] h-[190px] rounded-2xl overflow-hidden shadow-2xl ring-2 ring-white/20 bg-white/10">
+                  <Image
+                    src={LOGIN_REGISTER_IMAGES.heroMain}
+                    alt=""
+                    fill
+                    className="object-cover"
+                    sizes="260px"
+                  />
+                </div>
+              </div>
+              {/* Üstte küçük kart (insanlar 1) */}
+              <div className="absolute -top-2 right-4 w-32 h-24 rounded-2xl overflow-hidden shadow-xl ring-2 ring-white/60 bg-white">
+                <Image
+                  src={LOGIN_REGISTER_IMAGES.heroPeople1}
+                  alt=""
+                  fill
+                  className="object-cover"
+                  sizes="150px"
+                />
+              </div>
+              {/* Altta küçük kart (insanlar 2) */}
+              <div className="absolute bottom-0 left-0 w-32 h-24 rounded-2xl overflow-hidden shadow-xl ring-2 ring-white/60 bg-white">
+                <Image
+                  src={LOGIN_REGISTER_IMAGES.heroPeople2}
+                  alt=""
+                  fill
+                  className="object-cover"
+                  sizes="150px"
+                />
+              </div>
+              {/* Üstte uçuşan ikonlar */}
+              <span className="absolute top-4 left-40 w-10 h-10 rounded-xl bg-white/90 shadow-lg flex items-center justify-center text-xl" aria-hidden>🧵</span>
+              <span className="absolute top-16 right-1 w-9 h-9 rounded-lg bg-white/90 shadow-lg flex items-center justify-center text-lg" aria-hidden>✂️</span>
+              <span className="absolute bottom-6 left-28 w-9 h-9 rounded-lg bg-white/90 shadow-lg flex items-center justify-center text-lg" aria-hidden>🪡</span>
+              <span className="absolute bottom-2 right-10 w-8 h-8 rounded-full bg-white/90 shadow flex items-center justify-center text-sm" aria-hidden>❤️</span>
+            </div>
+          </div>
           <button
             type="button"
             onClick={close}
-            className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 dark:hover:text-gray-300 transition-colors"
+            className="hidden text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 dark:hover:text-gray-300 transition-colors"
             aria-label="Kapat"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -135,7 +201,17 @@ export function AuthModal() {
           </button>
         </div>
 
-        <div className="px-6 pb-6">
+        <div className="flex-1 flex flex-col min-w-0 max-h-[90vh] overflow-y-auto">
+          <div className="flex items-center justify-between p-4 md:p-6 border-b border-gray-100 dark:border-gray-800 shrink-0 md:justify-end">
+            <Link href="/" className="font-logo flex items-center gap-1 text-gray-900 dark:text-white md:hidden">
+              <Image src="/favicon-32x32.png" alt="" width={24} height={24} className="shrink-0 w-6 h-6 object-contain" />
+              <span className="text-lg font-semibold">arifetli</span>
+            </Link>
+            <button type="button" onClick={close} className="p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 dark:text-gray-300" aria-label="Kapat">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
+        <div className="px-6 md:px-10 py-6 md:py-8 flex-1">
           {tab === 'forgot' ? (
             <div className="space-y-5">
               <h2 id="auth-modal-title" className="text-lg font-bold text-gray-900 dark:text-white text-center">
@@ -186,8 +262,8 @@ export function AuthModal() {
             </div>
           ) : tab === 'login' ? (
             <>
-              <h2 id="auth-modal-title" className="text-lg font-bold text-gray-900 dark:text-white mb-5 text-center">
-                Giriş Yap
+              <h2 id="auth-modal-title" className="text-xl font-bold text-gray-900 dark:text-white mb-6 text-center">
+                Marifetli&apos;ye Giriş Yap
               </h2>
               {error && (
                 <div className="mb-4 p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm">
@@ -246,7 +322,7 @@ export function AuthModal() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-3 rounded-xl bg-gray-900 dark:bg-white text-white dark:text-gray-900 font-medium text-sm hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors disabled:opacity-60"
+                  className="w-full py-3 rounded-full bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm transition-colors disabled:opacity-60"
                 >
                   {loading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
                 </button>
@@ -272,8 +348,8 @@ export function AuthModal() {
               </a>
               <p className="mt-5 text-center text-sm text-gray-500 dark:text-gray-400">
                 Hesabın yok mu?{' '}
-                <button type="button" onClick={() => resetAndSwitch('register')} className="font-medium text-orange-500 hover:text-orange-600 dark:text-orange-400">
-                  Üye ol
+                <button type="button" onClick={() => resetAndSwitch('register')} className="w-full py-3 rounded-full border-2 border-orange-500 text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 font-semibold text-sm transition-colors">
+                  Yeni hesap oluştur
                 </button>
               </p>
             </>
@@ -387,6 +463,7 @@ export function AuthModal() {
             </Link>
             {' '}ve çerez kullanımını kabul etmiş olursunuz.
           </p>
+        </div>
         </div>
       </div>
     </div>

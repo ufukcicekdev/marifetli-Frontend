@@ -58,6 +58,8 @@ export interface SiteSettings {
   primary_color?: string | null;
   about_summary?: string;
   about_content?: string;
+  auth_modal_headline?: string;
+  auth_modal_description?: string;
 }
 
 export interface Question {
