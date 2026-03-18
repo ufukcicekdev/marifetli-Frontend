@@ -161,13 +161,16 @@ export default function RootLayout({
                 <Header />
               </Suspense>
               <NavMegaMenu />
+              {/* İçerik + footer: footer her zaman en sonda render edilir; kısa içerikte sayfa altında, uzun içerikte scroll ile görünür */}
               <div className="flex min-h-screen pt-[104px] flex-col">
                 <MainContentWrapper>
                   <VerifyEmailBanner />
                   <OnboardingBanner />
                   {children}
                 </MainContentWrapper>
-                <SiteFooter />
+                <div className="mt-auto shrink-0 relative z-10">
+                  <SiteFooter />
+                </div>
               </div>
             </OnboardingGuard>
           </QueryProvider>

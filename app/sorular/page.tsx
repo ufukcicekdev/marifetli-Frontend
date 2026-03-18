@@ -73,7 +73,7 @@ function QuestionsContent() {
   };
 
   return (
-    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 flex flex-col lg:flex-row lg:items-start gap-4 sm:gap-6 min-w-0">
+    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 flex flex-col lg:flex-row lg:items-start gap-4 sm:gap-6 min-w-0 min-h-[calc(100vh-104px)]">
       <div className="flex-1 min-w-0 overflow-hidden">
           <HomeHero />
           <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 overflow-hidden">
@@ -151,7 +151,7 @@ function QuestionsContent() {
           </div>
       </div>
 
-      <div className="w-80 shrink-0 hidden lg:block self-start sticky top-[104px] max-h-[calc(100vh-104px)] overflow-y-auto">
+      <div className="w-80 shrink-0 hidden lg:block self-start pb-6">
         <RecentActivitySidebar />
         <SiteStatsSidebar />
         <PopularQuestionsSidebar />

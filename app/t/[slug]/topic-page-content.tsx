@@ -131,7 +131,7 @@ export function TopicPageContent({ slug }: { slug: string }) {
   return (
     <>
       <RecordCommunityVisit slug={slug} label={label} />
-      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 flex flex-col lg:flex-row lg:items-start gap-4 sm:gap-6 min-w-0">
+      <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 flex flex-col lg:flex-row lg:items-start gap-4 sm:gap-6 min-w-0 min-h-[calc(100vh-104px)]">
         <div className="flex-1 min-w-0 overflow-hidden">
           <nav className="mb-4 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400" aria-label="Breadcrumb">
             <Link href="/" className="hover:text-orange-500">Marifetli</Link>
@@ -244,7 +244,7 @@ export function TopicPageContent({ slug }: { slug: string }) {
           )}
         </div>
 
-        <div className="w-80 shrink-0 hidden lg:block self-start sticky top-[104px] max-h-[calc(100vh-104px)] overflow-y-auto">
+        <div className="w-80 shrink-0 hidden lg:block self-start pb-6">
           <RecentActivitySidebar />
           <SiteStatsSidebar />
           <PopularQuestionsSidebar />
