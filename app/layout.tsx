@@ -47,7 +47,7 @@ function getSiteStructuredData() {
       '@id': `${SITE_URL}/#organization`,
       name: 'Marifetli',
       url: SITE_URL,
-      description: 'İlgi alanlarının buluşma noktası. Örgü, dikiş, yemek, müzik, sanat, hobiler. Soru sor, paylaş, topluluklara katıl.',
+      description: 'İlgi alanlarının buluşma noktası.. Sor .Cevapla .Öğren. En marifetli rozetini kazan.',
       sameAs: [],
     },
     {
@@ -56,7 +56,7 @@ function getSiteStructuredData() {
       '@id': `${SITE_URL}/#website`,
       name: 'Marifetli',
       url: SITE_URL,
-      description: 'İlgi alanları topluluğu. Soru sor, cevapla, paylaş.',
+      description: 'İlgi alanlarının buluşma noktası.. Sor .Cevapla .Öğren. En marifetli rozetini kazan.',
       inLanguage: 'tr-TR',
       publisher: { '@id': `${SITE_URL}/#organization` },
       // Arama URL’si: sitelinks’te arama kutusu çıkma ihtimali + site yapısının anlaşılması
@@ -101,20 +101,20 @@ export const metadata: Metadata = {
     default: 'Marifetli - İlgi Alanları Topluluğu',
     template: '%s | Marifetli',
   },
-  description: 'İlgi alanlarının buluşma noktası. Örgü, dikiş, yemek, müzik, sanat, hobiler. Soru sor, paylaş, topluluklara katıl.',
+  description: 'İlgi alanlarının buluşma noktası.. Sor .Cevapla .Öğren. En marifetli rozetini kazan.',
   openGraph: {
     type: 'website',
     locale: 'tr_TR',
     url: SITE_URL,
     siteName: 'Marifetli',
     title: 'Marifetli - İlgi Alanları Topluluğu',
-    description: 'İlgi alanlarının buluşma noktası. Örgü, dikiş, yemek, müzik, sanat, hobiler. Soru sor, paylaş, topluluklara katıl.',
+    description: 'İlgi alanlarının buluşma noktası.. Sor .Cevapla .Öğren. En marifetli rozetini kazan.',
     images: [{ url: '/og-default.png', width: 1200, height: 630, alt: 'Marifetli' }],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Marifetli - İlgi Alanları Topluluğu',
-    description: 'İlgi alanlarının buluşma noktası. Örgü, dikiş, yemek, müzik, sanat, hobiler. Soru sor, paylaş.',
+    description: 'İlgi alanlarının buluşma noktası.. Sor .Cevapla .Öğren. En marifetli rozetini kazan.',
   },
   alternates: { canonical: SITE_URL },
   // Mutlak URL kullan ki Google/Vercel kendi favicon'unu göstermesin (site:marifetli.com.tr aramasında)
