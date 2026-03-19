@@ -190,6 +190,7 @@ export default function TasarimlarContentClient() {
                 <MediaSlider
                   items={((d as { image_urls?: string[] }).image_urls ?? (d.image_url ? [d.image_url] : [])).map((url) => ({ url, type: 'image' as const }))}
                   className="aspect-square"
+                  fit="cover"
                   alt={d.tags || 'Tasarım'}
                 />
               </div>

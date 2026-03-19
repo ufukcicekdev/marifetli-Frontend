@@ -11,9 +11,10 @@ interface MediaSliderProps {
   className?: string;
   /** SEO/erişilebilirlik: görsel açıklaması (örn. gönderi başlığı) */
   alt?: string;
+  fit?: 'contain' | 'cover';
 }
 
-export function MediaSlider({ items, className = '', alt }: MediaSliderProps) {
+export function MediaSlider({ items, className = '', alt, fit = 'contain' }: MediaSliderProps) {
   const [index, setIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
@@ -35,13 +36,13 @@ export function MediaSlider({ items, className = '', alt }: MediaSliderProps) {
         className={`relative rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 ${className}`}
       >
         <div
-          className="aspect-video min-h-[200px] relative flex items-center justify-center cursor-pointer group"
+          className={`relative flex items-center justify-center cursor-pointer group ${className ? 'w-full h-full' : 'aspect-video min-h-[200px]'}`}
           onClick={() => setLightboxOpen(true)}
         >
           {current.type === 'image' ? (
-            <img src={current.url} alt={alt ?? 'Gönderi görseli'} className="w-full h-full object-contain" />
+            <img src={current.url} alt={alt ?? 'Gönderi görseli'} className={`w-full h-full ${fit === 'cover' ? 'object-cover' : 'object-contain'}`} />
         ) : (
-          <video src={current.url} controls className="w-full h-full object-contain" playsInline onClick={(e) => e.stopPropagation()} />
+          <video src={current.url} controls className={`w-full h-full ${fit === 'cover' ? 'object-cover' : 'object-contain'}`} playsInline onClick={(e) => e.stopPropagation()} />
         )}
         {items.length > 1 && (
           <>
