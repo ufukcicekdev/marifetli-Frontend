@@ -39,11 +39,5 @@
   "background_color": "#ffffff",
   "display": "standalone",
   "start_url": "/",
-  "description": "İlgi alanlarının buluşma noktası.. Sor .Cevapla .Öğren. En marifetli rozetini kazan.",
-  "protocol_handlers": [
-    {
-      "protocol": "web+marifetli",
-      "url": "/?url=%s"
-    }
-  ]
+  "description": "İlgi alanlarının buluşma noktası.. Sor .Cevapla .Öğren. En marifetli rozetini kazan."
 }
