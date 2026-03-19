@@ -34,7 +34,7 @@ class ApiService {
     );
 
     // Public endpoints: 401'de token olmadan tekrar dene, /giris'e yönlendirme
-    const PUBLIC_PATHS = ['/questions/', '/categories/', '/questions/tags', '/settings/public', '/settings/stats', '/contact/', '/blog/'];
+    const PUBLIC_PATHS = ['/questions/', '/categories/', '/designs/', '/questions/tags', '/settings/public', '/settings/stats', '/contact/', '/blog/'];
     const isPublicPath = (url: string) => PUBLIC_PATHS.some((p) => url?.includes(p));
 
     // Response interceptor: token refresh; public path'te 401'de girişe yönlendirme
@@ -466,6 +466,18 @@ class ApiService {
   deleteDesign = (id: number) =>
     this.axiosInstance.delete(`/designs/${id}/`);
 
+  likeDesign = (id: number) =>
+    this.axiosInstance.post(`/designs/${id}/like/`);
+
+  unlikeDesign = (id: number) =>
+    this.axiosInstance.delete(`/designs/${id}/unlike/`);
+
+  getDesignComments = (id: number) =>
+    this.axiosInstance.get<DesignCommentItem[]>(`/designs/${id}/comments/`);
+
+  createDesignComment = (id: number, content: string, parent?: number) =>
+    this.axiosInstance.post<DesignCommentItem>(`/designs/${id}/comments/`, parent ? { content, parent } : { content });
+
   // Blog (sadece admin yazar; kullanıcılar okuyup yorum/beğeni yapabilir)
   getBlogPosts = (params?: { page?: number }) =>
     this.axiosInstance.get<{ results: BlogPostListItem[]; count?: number }>('/blog/', { params });
@@ -562,10 +574,25 @@ export interface DesignListItem {
   add_watermark: boolean;
   tags: string;
   description: string;
+  like_count: number;
+  comment_count: number;
+  liked_by_me: boolean;
   created_at: string;
   author_username: string;
 }
 export type DesignResponse = DesignListItem;
+
+export interface DesignCommentItem {
+  id: number;
+  design: number;
+  author: number;
+  author_username: string;
+  author_profile_picture?: string | null;
+  parent?: number | null;
+  content: string;
+  created_at: string;
+  updated_at: string;
+}
 
 // Blog types
 export interface BlogPostListItem {

@@ -108,11 +108,13 @@ export interface Notification {
   id: number;
   recipient: number;
   sender: User;
-  notification_type: 'answer' | 'like_question' | 'like_answer' | 'follow' | 'mention' | 'best_answer' | 'followed_post' | 'community_join_request' | 'community_post_removed' | 'moderation_removed';
+  notification_type: 'answer' | 'like_question' | 'like_answer' | 'like_design' | 'comment_design' | 'follow' | 'mention' | 'best_answer' | 'followed_post' | 'community_join_request' | 'community_post_removed' | 'moderation_removed';
   question?: number;
   answer?: number;
+  design?: number;
   question_slug?: string | null;
   community_slug?: string | null;
+  design_id?: number | null;
   message: string;
   is_read: boolean;
   created_at: string;

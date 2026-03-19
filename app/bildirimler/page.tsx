@@ -117,6 +117,8 @@ export default function BildirimlerPage() {
             {notifications.map((n) => {
               const href = n.notification_type === 'community_join_request' && (n as { community_slug?: string }).community_slug
                 ? `/topluluk/${(n as { community_slug: string }).community_slug}/yonet`
+                : (n as { design_id?: number | null }).design_id
+                  ? `/tasarim/${(n as { design_id: number }).design_id}`
                 : n.question_slug
                   ? `/soru/${n.question_slug}${n.answer ? `#comment-${n.answer}` : ''}`
                   : n.sender?.username

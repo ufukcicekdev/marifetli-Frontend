@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import api from '@/src/lib/api';
@@ -23,6 +23,9 @@ type DesignItem = {
   license: string;
   tags: string;
   description?: string;
+  like_count: number;
+  comment_count: number;
+  liked_by_me: boolean;
   created_at: string;
   author_username: string;
 };
@@ -52,6 +55,21 @@ export default function TasarimlarContentClient() {
   }, [searchParams?.get('q')]);
 
   const allDesigns = (data as { results?: DesignItem[] })?.results ?? [];
+
+  const likeMutation = useMutation({
+    mutationFn: async (payload: { id: number; liked: boolean }) =>
+      payload.liked ? api.unlikeDesign(payload.id) : api.likeDesign(payload.id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['designs', 'list'] });
+    },
+    onError: (err: unknown) => {
+      const msg = err && typeof err === 'object' && 'response' in err
+        && typeof (err as { response?: { data?: { detail?: string } } }).response?.data?.detail === 'string'
+        ? (err as { response: { data: { detail: string } } }).response.data.detail
+        : 'İşlem başarısız.';
+      toast.error(msg);
+    },
+  });
 
   const filteredDesigns = useMemo(() => {
     if (!searchInput.trim()) return allDesigns;
@@ -206,6 +224,25 @@ export default function TasarimlarContentClient() {
                     {d.tags.split(',').map((t) => t.trim()).filter(Boolean).slice(0, 2).join(', ')}
                   </p>
                 )}
+                <div className="mt-2 flex items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-3 text-gray-500 dark:text-gray-400">
+                    <span>❤️ {d.like_count ?? 0}</span>
+                    <span>💬 {d.comment_count ?? 0}</span>
+                  </div>
+                  {isAuthenticated && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        likeMutation.mutate({ id: d.id, liked: !!d.liked_by_me });
+                      }}
+                      className={`font-medium ${d.liked_by_me ? 'text-brand' : 'text-gray-500 dark:text-gray-400 hover:text-brand'}`}
+                    >
+                      {d.liked_by_me ? 'Beğendin' : 'Beğen'}
+                    </button>
+                  )}
+                </div>
               </div>
             </Link>
           ))}
