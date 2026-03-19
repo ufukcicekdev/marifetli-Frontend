@@ -22,15 +22,19 @@ const LOAD_MORE = 12;
 
 function CommunityCard({
   community,
+  currentUserId,
   onJoinClick,
 }: {
   community: CommunityListItem;
+  currentUserId: number | null;
   onJoinClick: (e: React.MouseEvent, c: CommunityListItem) => void;
 }) {
   const letter = (community.name || community.slug || 'r').charAt(0).toUpperCase();
   const isMember = community.is_member ?? false;
   const isModOrOwner = community.is_mod_or_owner ?? false;
-  const showLeaveButton = isMember && !isModOrOwner;
+  const isOwnerUser =
+    community.is_owner ?? (currentUserId != null && community.owner === currentUserId);
+  const showLeaveButton = isMember && !isOwnerUser;
 
   return (
     <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 h-full flex flex-col hover:border-brand/30/50 transition-colors">
@@ -56,34 +60,42 @@ function CommunityCard({
           <p className="text-sm text-gray-500 dark:text-gray-500 italic line-clamp-2 mb-3">Açıklama yok</p>
         )}
       </Link>
-      {showLeaveButton ? (
-        <button
-          type="button"
-          onClick={(e) => onJoinClick(e, community)}
-          className="mt-auto w-full rounded-full px-4 py-2 text-sm font-medium bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-        >
-          Ayrıl
-        </button>
-      ) : isModOrOwner ? (
-        <div className="mt-auto pt-2 text-center">
-          <span className="text-xs text-gray-500 dark:text-gray-400">Yönetici</span>
-        </div>
-      ) : (
-        <button
-          type="button"
-          onClick={(e) => onJoinClick(e, community)}
-          className="mt-auto w-full rounded-full px-4 py-2 text-sm font-medium bg-brand text-white hover:bg-brand-hover transition-colors"
-        >
-          Katılmak
-        </button>
-      )}
+      <div className="mt-auto flex flex-col gap-2 w-full">
+        {isModOrOwner && (
+          <Link
+            href={`/topluluk/${community.slug}?modal=yonet`}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full text-center rounded-full border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          >
+            Yönet
+          </Link>
+        )}
+        {showLeaveButton && (
+          <button
+            type="button"
+            onClick={(e) => onJoinClick(e, community)}
+            className="w-full rounded-full px-4 py-2 text-sm font-medium bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+          >
+            Ayrıl
+          </button>
+        )}
+        {!isMember && !isModOrOwner && (
+          <button
+            type="button"
+            onClick={(e) => onJoinClick(e, community)}
+            className="w-full rounded-full px-4 py-2 text-sm font-medium bg-brand text-white hover:bg-brand-hover transition-colors"
+          >
+            Katılmak
+          </button>
+        )}
+      </div>
     </div>
   );
 }
 
 export default function TopluluklarPage() {
   const queryClient = useQueryClient();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
   const openAuth = useAuthModalStore((s) => s.open);
   const setPageSearchScope = useUIStore((s) => s.setPageSearchScope);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -99,13 +111,17 @@ export default function TopluluklarPage() {
     return () => setPageSearchScope(null);
   }, [setPageSearchScope]);
 
-  const { data: categoriesData } = useQuery({
+  const { data: categoriesData, isLoading: categoriesLoading } = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
       const res = await api.getCategories();
-      const raw = res.data;
-      const list = Array.isArray(raw) ? raw : (raw as { results?: CategoryItem[] })?.results ?? [];
-      return (list as CategoryItem[]).filter((c) => !c.parent) as CategoryItem[];
+      const raw = res.data as { results?: CategoryItem[] } | CategoryItem[] | undefined;
+      const list = Array.isArray(raw)
+        ? raw
+        : raw && typeof raw === 'object' && Array.isArray((raw as { results?: CategoryItem[] }).results)
+          ? (raw as { results: CategoryItem[] }).results
+          : [];
+      return (list as CategoryItem[]).filter((c) => !(c as { parent?: number | null }).parent);
     },
   });
 
@@ -143,11 +159,38 @@ export default function TopluluklarPage() {
     return slug;
   };
 
+  /** Tümü: category_slug → topluluklar (çiplerin hemen altında gösterilir) */
+  const communitiesBySlug = useMemo(() => {
+    const m = new Map<string, CommunityListItem[]>();
+    for (const c of allCommunities) {
+      const slug = (c.category_slug || '').trim() || '_none';
+      if (!m.has(slug)) m.set(slug, []);
+      m.get(slug)!.push(c);
+    }
+    return m;
+  }, [allCommunities]);
+
+  const orphanCommunities = useMemo(() => {
+    if (activeCategory != null || categoriesTree.length === 0) return [];
+    const known = new Set<string>();
+    for (const main of categoriesTree) {
+      known.add(main.slug);
+      for (const sub of main.subcategories || []) known.add(sub.slug);
+    }
+    return allCommunities.filter((c) => {
+      const s = (c.category_slug || '').trim();
+      return !s || !known.has(s);
+    });
+  }, [activeCategory, allCommunities, categoriesTree]);
+
   const displayedCommunities = useMemo(
     () => allCommunities.slice(0, showCount),
     [allCommunities, showCount]
   );
-  const hasMore = allCommunities.length > showCount;
+  const hasMore = activeCategory != null && allCommunities.length > showCount;
+
+  const showCommunitiesUnderCategories =
+    activeCategory === null && !isLoading && !error && allCommunities.length > 0;
 
   const handleJoinClick = (e: React.MouseEvent, c: CommunityListItem) => {
     e.preventDefault();
@@ -208,7 +251,7 @@ export default function TopluluklarPage() {
           </div>
         )}
 
-        {/* Kategori sekmeleri - ana kategori altında alt kategoriler */}
+        {/* Kategoriler + (Tümü iken) o kategorideki topluluklar hemen altında */}
         {categoriesTree.length > 0 && (
           <div className="mb-8 space-y-4">
             <div className="flex flex-wrap items-center gap-2">
@@ -224,41 +267,106 @@ export default function TopluluklarPage() {
                 Tümü
               </button>
             </div>
-            <div className="flex flex-col gap-4 sm:gap-3">
-              {categoriesTree.map((main) => (
-                <div key={main.id}>
-                  <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                    {main.name}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setCategory(main.slug)}
-                      className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium transition-colors whitespace-nowrap ${
-                        activeCategory === main.slug
-                          ? 'bg-brand text-white'
-                          : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                      }`}
-                    >
+            <div className="flex flex-col gap-8 sm:gap-6">
+              {categoriesTree.map((main) => {
+                const mainItems = communitiesBySlug.get(main.slug) ?? [];
+                const subs = main.subcategories || [];
+                return (
+                  <div key={main.id} className="rounded-xl border border-gray-200/80 dark:border-gray-700/80 bg-gray-50/40 dark:bg-gray-800/20 p-4 sm:p-5">
+                    <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
                       {main.name}
-                    </button>
-                    {(main.subcategories || []).map((sub) => (
+                    </div>
+                    <div className="flex flex-wrap gap-2">
                       <button
-                        key={sub.id}
                         type="button"
-                        onClick={() => setCategory(sub.slug)}
+                        onClick={() => setCategory(main.slug)}
                         className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium transition-colors whitespace-nowrap ${
-                          activeCategory === sub.slug
+                          activeCategory === main.slug
                             ? 'bg-brand text-white'
-                            : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
                         }`}
                       >
-                        {sub.name}
+                        {main.name}
                       </button>
+                      {subs.map((sub) => (
+                        <button
+                          key={sub.id}
+                          type="button"
+                          onClick={() => setCategory(sub.slug)}
+                          className={`shrink-0 rounded-full px-3 py-1.5 text-sm font-medium transition-colors whitespace-nowrap ${
+                            activeCategory === sub.slug
+                              ? 'bg-brand text-white'
+                              : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
+                          }`}
+                        >
+                          {sub.name}
+                        </button>
+                      ))}
+                    </div>
+
+                    {showCommunitiesUnderCategories && (
+                      <div className="mt-5 pt-4 border-t border-gray-200 dark:border-gray-700 space-y-6">
+                        {mainItems.length > 0 && (
+                          <div>
+                            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
+                              {main.name} — doğrudan bu kategorideki topluluklar
+                            </p>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                              {mainItems.map((c) => (
+                                <CommunityCard
+                                  key={c.id}
+                                  community={c}
+                                  currentUserId={user?.id ?? null}
+                                  onJoinClick={handleJoinClick}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {subs.map((sub) => {
+                          const subItems = communitiesBySlug.get(sub.slug) ?? [];
+                          if (subItems.length === 0) return null;
+                          return (
+                            <div key={sub.id}>
+                              <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 pl-3 border-l-4 border-brand">
+                                {sub.name}
+                              </h4>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {subItems.map((c) => (
+                                  <CommunityCard
+                                    key={c.id}
+                                    community={c}
+                                    currentUserId={user?.id ?? null}
+                                    onJoinClick={handleJoinClick}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {showCommunitiesUnderCategories && orphanCommunities.length > 0 && (
+                <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 sm:p-5">
+                  <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 mb-3">Diğer</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+                    Ağaçta eşleşmeyen kategori slug’ına sahip topluluklar.
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {orphanCommunities.map((c) => (
+                      <CommunityCard
+                        key={c.id}
+                        community={c}
+                        currentUserId={user?.id ?? null}
+                        onJoinClick={handleJoinClick}
+                      />
                     ))}
                   </div>
                 </div>
-              ))}
+              )}
             </div>
           </div>
         )}
@@ -275,14 +383,20 @@ export default function TopluluklarPage() {
           </div>
         )}
 
-        {!isLoading && !error && allCommunities.length > 0 && (
+        {/* Tek kategori seçiliyken: altta tek liste + sayfalama */}
+        {!isLoading && !error && allCommunities.length > 0 && activeCategory != null && (
           <section>
             <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">
               {sectionTitle}
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {displayedCommunities.map((c) => (
-                <CommunityCard key={c.id} community={c} onJoinClick={handleJoinClick} />
+                <CommunityCard
+                  key={c.id}
+                  community={c}
+                  currentUserId={user?.id ?? null}
+                  onJoinClick={handleJoinClick}
+                />
               ))}
             </div>
             {hasMore && (
@@ -298,6 +412,28 @@ export default function TopluluklarPage() {
             )}
           </section>
         )}
+
+        {/* Kategori ağacı gelmediyse ama topluluk var: basit liste */}
+        {!isLoading &&
+          !error &&
+          !categoriesLoading &&
+          activeCategory === null &&
+          categoriesTree.length === 0 &&
+          allCommunities.length > 0 && (
+            <section className="mt-6">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4">Topluluklar</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {allCommunities.map((c) => (
+                  <CommunityCard
+                    key={c.id}
+                    community={c}
+                    currentUserId={user?.id ?? null}
+                    onJoinClick={handleJoinClick}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
       </main>
     </div>
   );

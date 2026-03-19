@@ -396,7 +396,13 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
                     </p>
                   ) : (
                     <div className="divide-y divide-gray-200 dark:divide-gray-800">
-                      {answersByQuestion.map(({ questionId, comments }) => {
+                      {answersByQuestion
+                        .filter(({ comments }) => {
+                          const first = comments[0];
+                          const q = (first as { question?: unknown } | undefined)?.question;
+                          return q != null && typeof q === 'object';
+                        })
+                        .map(({ questionId, comments }) => {
                         const first = comments[0];
                         const q = (first as { question?: unknown }).question as {
                           id: number;
@@ -408,8 +414,7 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
                           like_count?: number;
                           answer_count?: number;
                           view_count?: number;
-                        } | null;
-                        if (!q) return null;
+                        };
                         return (
                           <div key={questionId} className="py-3">
                             <PostItem

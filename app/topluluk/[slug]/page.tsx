@@ -11,6 +11,7 @@ import { PostItem } from '@/src/components/post-item';
 import { PostFeedControls, type SortOption, type ViewMode } from '@/src/components/post-feed-controls';
 import { RemoveFromCommunityModal } from '@/src/components/remove-from-community-modal';
 import { CommunitySettingsModal } from '@/src/components/community-settings-modal';
+import { ShareButton } from '@/src/components/share-button';
 import { formatTimeAgo } from '@/src/lib/format-time';
 import toast from 'react-hot-toast';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -25,7 +26,7 @@ const SORT_TO_KEY: Record<SortOption, keyof Question | 'hot_score'> = {
 function CommunityDetailContent({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const queryClient = useQueryClient();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
   const openAuth = useAuthModalStore((s) => s.open);
   const [sort, setSort] = useState<SortOption>('new');
   const [viewMode, setViewMode] = useState<ViewMode>('compact');
@@ -65,6 +66,17 @@ function CommunityDetailContent({ params }: { params: Promise<{ slug: string }> 
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [settingsModalTab, setSettingsModalTab] = useState<'yonet' | 'duzenle'>('yonet');
 
+  const inviteRequested = searchParams.get('invite') === '1';
+
+  useEffect(() => {
+    if (!inviteRequested) return;
+    if (!isAuthenticated) {
+      openAuth('login');
+      return;
+    }
+    router.replace(`/topluluk/${slug}`, { scroll: false });
+  }, [inviteRequested, isAuthenticated, openAuth, router, slug]);
+
   useEffect(() => {
     const m = searchParams.get('modal');
     if (m === 'manage' || m === 'yonet') {
@@ -76,6 +88,17 @@ function CommunityDetailContent({ params }: { params: Promise<{ slug: string }> 
       setSettingsModalTab('duzenle');
     }
   }, [searchParams]);
+
+  /** Davet paylaşımı: önce NEXT_PUBLIC_SITE_URL, yoksa istemci origin (modal açılmadan URL hazır olsun) */
+  const inviteShareUrl = useMemo(() => {
+    if (!slug) return '';
+    const envBase =
+      typeof process !== 'undefined' && process.env.NEXT_PUBLIC_SITE_URL
+        ? process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, '')
+        : '';
+    const origin = envBase || (typeof window !== 'undefined' ? window.location.origin : '');
+    return origin ? `${origin}/topluluk/${slug}?invite=1` : '';
+  }, [slug]);
 
   const openSettingsModal = (tab?: 'yonet' | 'duzenle') => {
     setSettingsModalTab(tab ?? 'yonet');
@@ -148,6 +171,8 @@ function CommunityDetailContent({ params }: { params: Promise<{ slug: string }> 
   const isBanned = community.is_banned ?? false;
   const joinRequestPending = community.join_request_pending ?? false;
   const isModOrOwner = community.is_mod_or_owner ?? false;
+  const isOwner =
+    community.is_owner ?? (!!user && community.owner === user.id);
   const letter = (community.name || community.slug).charAt(0).toUpperCase();
   const createdDate = community.created_at ? new Date(community.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric' }) : null;
 
@@ -198,7 +223,7 @@ function CommunityDetailContent({ params }: { params: Promise<{ slug: string }> 
                         >
                           Soru sor
                         </Link>
-                        {!isModOrOwner && (
+                        {!isOwner && (
                           <button
                             type="button"
                             onClick={() => leaveMutation.mutate()}
@@ -241,6 +266,14 @@ function CommunityDetailContent({ params }: { params: Promise<{ slug: string }> 
                       Yönet
                     </button>
                   )}
+                  <ShareButton
+                    url={inviteShareUrl || undefined}
+                    title={`${community.name || slug} topluluğuna katıl`}
+                    text="Marifetli'de bu topluluğa katılmak için linke tıkla:"
+                    className="inline-flex items-center rounded-full border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer select-none"
+                  >
+                    <span>Davet et</span>
+                  </ShareButton>
                   <Link
                     href="/topluluklar"
                     className="rounded-full border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
@@ -345,7 +378,15 @@ function CommunityDetailContent({ params }: { params: Promise<{ slug: string }> 
           onConfirm={(reason) => removeModalQuestionId != null && removeFromCommunityMutation.mutate({ questionId: removeModalQuestionId, reason: reason || undefined })}
           isLoading={removeFromCommunityMutation.isPending}
         />
-        <CommunitySettingsModal isOpen={settingsModalOpen} onClose={closeSettingsModal} slug={slug} community={community} isModOrOwner={isModOrOwner} initialTab={settingsModalTab} />
+        <CommunitySettingsModal
+          isOpen={settingsModalOpen}
+          onClose={closeSettingsModal}
+          slug={slug}
+          community={community}
+          isModOrOwner={isModOrOwner}
+          isOwner={isOwner}
+          initialTab={settingsModalTab}
+        />
     </div>
   );
 }

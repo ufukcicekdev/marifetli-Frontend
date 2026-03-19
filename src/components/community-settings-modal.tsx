@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
 import api, { type CommunityListItem } from '@/src/lib/api';
 import toast from 'react-hot-toast';
 
@@ -16,6 +17,8 @@ interface CommunitySettingsModalProps {
   slug: string;
   community: CommunityListItem | null;
   isModOrOwner: boolean;
+  /** Sadece sahip topluluğu kalıcı silebilir */
+  isOwner?: boolean;
   initialTab?: TabId;
 }
 
@@ -25,6 +28,7 @@ export function CommunitySettingsModal({
   slug,
   community,
   isModOrOwner,
+  isOwner = false,
   initialTab = 'yonet',
 }: CommunitySettingsModalProps) {
   const queryClient = useQueryClient();
@@ -74,7 +78,7 @@ export function CommunitySettingsModal({
         </div>
         <div className="overflow-y-auto flex-1 min-h-0">
           {activeTab === 'yonet' && (
-            <ManageTab slug={slug} isModOrOwner={isModOrOwner} onClose={onClose} />
+            <ManageTab slug={slug} isModOrOwner={isModOrOwner} isOwner={isOwner} onClose={onClose} />
           )}
           {activeTab === 'duzenle' && (
             <EditTab slug={slug} community={community} onClose={onClose} />
@@ -85,8 +89,21 @@ export function CommunitySettingsModal({
   );
 }
 
-function ManageTab({ slug, isModOrOwner, onClose }: { slug: string; isModOrOwner: boolean; onClose: () => void }) {
+function ManageTab({
+  slug,
+  isModOrOwner,
+  isOwner,
+  onClose,
+}: {
+  slug: string;
+  isModOrOwner: boolean;
+  isOwner: boolean;
+  onClose: () => void;
+}) {
   const queryClient = useQueryClient();
+  const router = useRouter();
+  const [deleteReason, setDeleteReason] = useState('');
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const { data: joinRequests = [], refetch: refetchRequests } = useQuery({
     queryKey: ['community', slug, 'join-requests'],
     queryFn: () => api.getCommunityJoinRequests(slug).then((r) => r.data as JoinRequest[]),
@@ -133,6 +150,20 @@ function ManageTab({ slug, isModOrOwner, onClose }: { slug: string; isModOrOwner
     },
     onError: (err: { response?: { data?: { detail?: string } }; message?: string }) => {
       toast.error((err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? err?.message ?? 'Yasaklama başarısız.');
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => api.deleteCommunity(slug, { reason: deleteReason.trim() }),
+    onSuccess: () => {
+      toast.success('Topluluk silindi.');
+      queryClient.invalidateQueries({ queryKey: ['communities'] });
+      queryClient.removeQueries({ queryKey: ['community', slug] });
+      onClose();
+      router.push('/topluluklar');
+    },
+    onError: (err: { response?: { data?: { detail?: string } } }) => {
+      toast.error(err?.response?.data?.detail ?? 'Silinemedi.');
     },
   });
 
@@ -185,6 +216,60 @@ function ManageTab({ slug, isModOrOwner, onClose }: { slug: string; isModOrOwner
           </div>
         </div>
       </section>
+
+      {isOwner && (
+        <section className="pt-4 border-t border-red-200 dark:border-red-900/50">
+          <h3 className="text-sm font-semibold text-red-700 dark:text-red-400 mb-2">Tehlikeli bölge</h3>
+          <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
+            Topluluğu silince tüm üyelikler, bekleyen katılım talepleri ve yasak kayıtları kaldırılır; üyeler başka hesaplarından etkilenmez.
+            Bu toplulukta paylaşılmış sorular silinmez, yalnızca topluluk bağlantısı kalkar. Geri alınamaz.
+          </p>
+          {!deleteConfirmOpen ? (
+            <button
+              type="button"
+              onClick={() => setDeleteConfirmOpen(true)}
+              className="rounded-lg border border-red-300 dark:border-red-800 bg-red-50 dark:bg-red-950/30 px-4 py-2 text-sm font-medium text-red-800 dark:text-red-200 hover:bg-red-100 dark:hover:bg-red-950/50"
+            >
+              Topluluğu kalıcı olarak sil
+            </button>
+          ) : (
+            <div className="space-y-3 rounded-lg border border-red-200 dark:border-red-900/60 bg-red-50/50 dark:bg-red-950/20 p-4">
+              <label className="block text-sm font-medium text-gray-800 dark:text-gray-200">
+                Silme nedeni <span className="text-red-600">*</span>
+                <span className="block text-xs font-normal text-gray-500 dark:text-gray-400 mt-0.5">En az 10 karakter. Denetim kaydında saklanır.</span>
+              </label>
+              <textarea
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                placeholder="Örn: Artık bu konuda topluluk yönetmek istemiyorum; üyeler bilgilendirildi."
+                rows={4}
+                className="w-full rounded-lg border border-red-200 dark:border-red-900/50 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm resize-none"
+              />
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={deleteReason.trim().length < 10 || deleteMutation.isPending}
+                  onClick={() => deleteMutation.mutate()}
+                  className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                >
+                  {deleteMutation.isPending ? 'Siliniyor…' : 'Evet, kalıcı olarak sil'}
+                </button>
+                <button
+                  type="button"
+                  disabled={deleteMutation.isPending}
+                  onClick={() => {
+                    setDeleteConfirmOpen(false);
+                    setDeleteReason('');
+                  }}
+                  className="rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                >
+                  Vazgeç
+                </button>
+              </div>
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }

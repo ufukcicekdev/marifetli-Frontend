@@ -196,7 +196,9 @@ export function SavedCollectionsTab({ isOwnProfile }: SavedCollectionsTabProps) 
                 <p className="text-gray-500 dark:text-gray-400 text-sm py-4">Bu koleksiyonda henüz gönderi yok.</p>
               ) : (
                 <div className="divide-y divide-gray-200 dark:divide-gray-800">
-                  {displayItems.map((item: SavedItem) => {
+                  {displayItems
+                    .filter((item: SavedItem) => item.question != null || item.blog_post != null)
+                    .map((item: SavedItem) => {
                     const q = item.question;
                     const blog = item.blog_post;
                     if (q) {
@@ -230,53 +232,51 @@ export function SavedCollectionsTab({ isOwnProfile }: SavedCollectionsTabProps) 
                         </div>
                       );
                     }
-                    if (blog) {
-                      const author = typeof blog.author === 'object' ? blog.author : null;
-                      return (
-                        <div key={item.id} className="py-3">
-                          <div className="flex items-start gap-3">
-                            <div className="flex-1 min-w-0">
-                              <Link
-                                href={`/blog/${blog.slug}`}
-                                className="block rounded-lg p-3 border border-gray-200 dark:border-gray-800 hover:border-brand/40 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
-                              >
-                                <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-1">
-                                  {author?.profile_picture ? (
-                                    <OptimizedAvatar src={author.profile_picture} size={24} alt="" className="w-5 h-5 rounded-full shrink-0" />
-                                  ) : (
-                                    <span className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[10px] font-medium shrink-0">
-                                      {author?.username?.charAt(0)?.toUpperCase() ?? '?'}
-                                    </span>
-                                  )}
-                                  <span className="truncate">{author?.username ?? 'Marifetli'}</span>
-                                  <span>·</span>
-                                  <span>{formatTimeAgo(item.created_at)}</span>
-                                </div>
-                                <h3 className="font-medium text-gray-900 dark:text-gray-100 line-clamp-2 text-sm">
-                                  {blog.title}
-                                </h3>
-                                {blog.excerpt && (
-                                  <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-400 line-clamp-1">
-                                    {stripHtml(blog.excerpt)}
-                                  </p>
-                                )}
-                                <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                  {blog.like_count} beğeni · {blog.comment_count} yorum
-                                </div>
-                              </Link>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => removeBlogMutation.mutate(blog.id)}
-                              className="mt-2 px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    const b = blog!;
+                    const author = typeof b.author === 'object' ? b.author : null;
+                    return (
+                      <div key={item.id} className="py-3">
+                        <div className="flex items-start gap-3">
+                          <div className="flex-1 min-w-0">
+                            <Link
+                              href={`/blog/${b.slug}`}
+                              className="block rounded-lg p-3 border border-gray-200 dark:border-gray-800 hover:border-brand/40 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                             >
-                              Kaldır
-                            </button>
+                              <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mb-1">
+                                {author?.profile_picture ? (
+                                  <OptimizedAvatar src={author.profile_picture} size={24} alt="" className="w-5 h-5 rounded-full shrink-0" />
+                                ) : (
+                                  <span className="w-5 h-5 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[10px] font-medium shrink-0">
+                                    {author?.username?.charAt(0)?.toUpperCase() ?? '?'}
+                                  </span>
+                                )}
+                                <span className="truncate">{author?.username ?? 'Marifetli'}</span>
+                                <span>·</span>
+                                <span>{formatTimeAgo(item.created_at)}</span>
+                              </div>
+                              <h3 className="font-medium text-gray-900 dark:text-gray-100 line-clamp-2 text-sm">
+                                {b.title}
+                              </h3>
+                              {b.excerpt && (
+                                <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-400 line-clamp-1">
+                                  {stripHtml(b.excerpt)}
+                                </p>
+                              )}
+                              <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                {b.like_count} beğeni · {b.comment_count} yorum
+                              </div>
+                            </Link>
                           </div>
+                          <button
+                            type="button"
+                            onClick={() => removeBlogMutation.mutate(b.id)}
+                            className="mt-2 px-2 py-1 text-xs rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                          >
+                            Kaldır
+                          </button>
                         </div>
-                      );
-                    }
-                    return null;
+                      </div>
+                    );
                   })}
                 </div>
               )}

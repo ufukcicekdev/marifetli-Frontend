@@ -271,6 +271,9 @@ class ApiService {
   leaveCommunity = (slug: string) =>
     this.axiosInstance.post<{ member_count: number }>(`/communities/${slug}/leave/`);
 
+  deleteCommunity = (slug: string, payload: { reason: string }) =>
+    this.axiosInstance.post<{ deleted: boolean }>(`/communities/${slug}/delete/`, payload);
+
   getCommunity = (slug: string) =>
     this.axiosInstance.get<CommunityListItem>(`/communities/${slug}/`);
 
@@ -521,6 +524,7 @@ export interface CommunityListItem {
   join_request_pending?: boolean;
   is_banned?: boolean;
   is_mod_or_owner?: boolean;
+  is_owner?: boolean;
   created_at: string;
 }
 
