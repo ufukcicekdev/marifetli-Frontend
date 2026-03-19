@@ -4,17 +4,17 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.marifetli.com.
 
 export const metadata: Metadata = {
   title: 'Kategoriler',
-  description: 'El işi ve el sanatları kategorilerine göz atın. Örgü, dikiş, nakış, amigurumi, dantel, tasarım ve daha fazlası. Konuya göre sorulara göz atın.',
+  description: 'İlgi alanı kategorilerine göz atın. Örgü, dikiş, yemek, müzik, sanat, hobiler ve daha fazlası. Konuya göre sorulara göz atın.',
   openGraph: {
-    title: 'Kategoriler | Marifetli - El İşi & El Sanatları',
-    description: 'Örgü, dikiş, nakış, tasarım ve el sanatları kategorileri. Konuya göre soruları keşfedin.',
+    title: 'Kategoriler | Marifetli - İlgi Alanları Topluluğu',
+    description: 'Örgü, dikiş, yemek, müzik, sanat ve hobiler kategorileri. Konuya göre soruları keşfedin.',
     url: `${SITE_URL}/kategoriler`,
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Kategoriler | Marifetli',
-    description: 'El işi ve el sanatları kategorilerine göz atın. Konuya göre soruları keşfedin.',
+    description: 'İlgi alanı kategorilerine göz atın. Konuya göre soruları keşfedin.',
   },
   alternates: { canonical: `${SITE_URL}/kategoriler` },
   robots: { index: true, follow: true },
@@ -29,7 +29,7 @@ export default function KategorilerLayout({
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
     name: 'Kategoriler | Marifetli',
-    description: 'El işi ve el sanatları kategorilerine göz atın. Örgü, dikiş, nakış, tasarım ve daha fazlası.',
+    description: 'İlgi alanı kategorilerine göz atın. Örgü, dikiş, yemek, müzik, sanat ve daha fazlası.',
     url: `${SITE_URL}/kategoriler`,
     isPartOf: {
       '@type': 'WebSite',

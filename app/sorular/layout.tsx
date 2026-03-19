@@ -4,10 +4,10 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.marifetli.com.
 
 export const metadata: Metadata = {
   title: 'Sorular',
-  description: 'El işi ve el sanatları topluluğunda sorular sorun, cevaplara ulaşın. Örgü, dikiş, nakış, takı ve daha fazlası.',
+  description: 'İlgi alanları topluluğunda sorular sorun, cevaplara ulaşın. Örgü, dikiş, yemek, müzik, sanat, hobiler ve daha fazlası.',
   openGraph: {
     title: 'Sorular | Marifetli',
-    description: 'El işi ve el sanatları topluluğunda sorular sorun, cevaplara ulaşın.',
+    description: 'İlgi alanları topluluğunda sorular sorun, cevaplara ulaşın.',
     url: `${SITE_URL}/sorular`,
   },
   alternates: { canonical: `${SITE_URL}/sorular` },

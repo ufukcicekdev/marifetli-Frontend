@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Tasarım Yükle',
-  description: 'El işi ve el sanatları tasarımlarınızı yükleyin, lisans seçin ve toplulukla paylaşın.',
+  description: 'Tasarımlarınızı yükleyin, lisans seçin ve toplulukla paylaşın.',
 };
 
 export default function TasarimYukleLayout({

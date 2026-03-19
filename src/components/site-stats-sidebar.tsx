@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import api from '@/src/lib/api';
 
 const DEFAULT_ABOUT_SUMMARY =
-  'Marifetli, el işi ve el sanatları tutkunlarının buluşma noktası. Örgü, dikiş, nakış, takı tasarımı ve daha fazlası hakkında sorular sor, deneyimlerini paylaş.';
+  'Marifetli, ilgi alanlarının buluşma noktası. Örgü, dikiş, yemek, müzik, sanat, hobiler ve daha fazlası. Soru sor, paylaş.';
 
 /**
  * Anasayfa sidebar: Hakkımızda (site ayarlarından) + canlı site istatistikleri.

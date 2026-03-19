@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "Marifetli - El İşi & El Sanatları Topluluğu",
+  "name": "Marifetli - İlgi Alanları Topluluğu",
   "short_name": "Marifetli",
-  "description": "Örgü, dikiş, nakış, takı tasarımı ve el sanatları tutkunlarının buluşma noktası.",
+  "description": "İlgi alanlarının buluşma noktası. Örgü, dikiş, yemek, müzik, sanat, hobiler. Soru sor, paylaş.",
   "start_url": "/",
   "display": "standalone",
   "display_override": [

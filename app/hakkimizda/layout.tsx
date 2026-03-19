@@ -5,18 +5,18 @@ const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.marifetli.com.
 export const metadata: Metadata = {
   title: 'Hakkımızda',
   description:
-    'Marifetli, el işi ve el sanatları tutkunlarının buluşma noktası. Örgü, dikiş, nakış, amigurumi, takı ve daha fazlası hakkında soru sorun, deneyimlerinizi paylaşın.',
+    'Marifetli, ilgi alanlarının buluşma noktası. Örgü, dikiş, yemek, müzik, sanat, hobiler ve daha fazlası hakkında soru sorun, deneyimlerinizi paylaşın.',
   openGraph: {
-    title: 'Hakkımızda | Marifetli - El İşi & El Sanatları Topluluğu',
+    title: 'Hakkımızda | Marifetli - İlgi Alanları Topluluğu',
     description:
-      'El işi ve el sanatları topluluğu Marifetli hakkında bilgi. Misyon, vizyon ve topluluk değerleri.',
+      'İlgi alanları topluluğu Marifetli hakkında bilgi. Misyon, vizyon ve topluluk değerleri.',
     url: `${SITE_URL}/hakkimizda`,
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
     title: 'Hakkımızda | Marifetli',
-    description: 'El işi ve el sanatları topluluğu Marifetli. Birlikte öğreniyor, paylaşıyor ve üretiyoruz.',
+    description: 'İlgi alanları topluluğu Marifetli. Birlikte öğreniyor, paylaşıyor ve üretiyoruz.',
   },
   alternates: { canonical: `${SITE_URL}/hakkimizda` },
   robots: { index: true, follow: true },
@@ -32,7 +32,7 @@ export default function HakkımızdaLayout({
     '@type': 'AboutPage',
     name: 'Hakkımızda | Marifetli',
     description:
-      'Marifetli, el işi ve el sanatları tutkunlarının buluşma noktası. Örgü, dikiş, nakış ve daha fazlası.',
+      'Marifetli, ilgi alanlarının buluşma noktası. Örgü, dikiş, yemek, müzik, sanat ve hobiler.',
     url: `${SITE_URL}/hakkimizda`,
     isPartOf: {
       '@type': 'WebSite',
@@ -42,7 +42,7 @@ export default function HakkımızdaLayout({
     mainEntity: {
       '@type': 'Organization',
       name: 'Marifetli',
-      description: 'El işi ve el sanatları topluluğu.',
+      description: 'İlgi alanları topluluğu.',
       url: SITE_URL,
     },
   };

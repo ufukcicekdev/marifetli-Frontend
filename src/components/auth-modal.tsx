@@ -11,7 +11,7 @@ import { useAuthStore } from '../stores/auth-store';
 import api from '../lib/api';
 
 const DEFAULT_AUTH_HEADLINE = 'Sevdiğin el işlerini keşfet.';
-const DEFAULT_AUTH_DESCRIPTION = 'Örgü, dikiş, nakış ve el sanatları topluluğunda soru sor, deneyimlerini paylaş.';
+const DEFAULT_AUTH_DESCRIPTION = 'İlgi alanları topluluğunda soru sor, deneyimlerini paylaş. Örgü, dikiş, yemek, müzik, sanat, hobiler.';
 
 /** Giriş/kayıt modalı görselleri (Facebook tarzı sol panel) — public/login-register/ altında */
 const LOGIN_REGISTER_IMAGES = {

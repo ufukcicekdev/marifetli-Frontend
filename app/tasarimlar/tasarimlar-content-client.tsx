@@ -113,7 +113,7 @@ export default function TasarimlarContentClient() {
         )}
       </div>
       <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-        Topluluktan yüklenen el işi ve el sanatları tasarımları.
+        Topluluktan yüklenen tasarımlar. Örgü, dikiş, sanat ve daha fazlası.
       </p>
 
       {/* Tasarımlarda arama (topluluklar sayfasındaki gibi) */}

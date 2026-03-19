@@ -45,7 +45,7 @@ function buildDesignStructuredData(design: DesignForMeta, id: string) {
   return {
     '@context': 'https://schema.org',
     '@type': 'CreativeWork',
-    name: design.tags ? `Tasarım: ${design.tags.split(',')[0]?.trim() || 'El işi'}` : 'El işi tasarımı',
+    name: design.tags ? `Tasarım: ${design.tags.split(',')[0]?.trim() || 'Tasarım'}` : 'Tasarım',
     description: (design.description || design.tags || 'Marifetli topluluk tasarımı').slice(0, 500),
     ...(design.author_username && {
       author: { '@type': 'Person', name: design.author_username },
@@ -73,7 +73,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     design.tags
       ? `${design.tags.split(',')[0]?.trim() || 'Tasarım'} — u/${design.author_username || 'Marifetli'}`
       : `Tasarım — u/${design.author_username || 'Marifetli'}`;
-  const description = (design.description || design.tags || 'El işi ve el sanatları tasarımı.').slice(0, 160);
+  const description = (design.description || design.tags || 'Marifetli topluluk tasarımı.').slice(0, 160);
   const url = `${SITE_URL}/tasarim/${id}`;
   const imageUrl = toAbsoluteImageUrl(design.image_url || design.image_urls?.[0]);
 

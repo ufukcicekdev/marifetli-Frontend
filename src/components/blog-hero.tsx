@@ -12,7 +12,7 @@ export function BlogHero() {
           Marifetli Blog
         </h1>
         <p className="blog-hero-text text-sm sm:text-base leading-relaxed">
-          Örgü, dikiş, nakış ve el sanatları üzerine ipuçları, rehberler ve topluluk yazıları. 
+          Örgü, dikiş, yemek, müzik, sanat ve hobiler üzerine ipuçları, rehberler ve topluluk yazıları. 
           Yeni fikirler keşfet, projelerini paylaş.
         </p>
       </div>

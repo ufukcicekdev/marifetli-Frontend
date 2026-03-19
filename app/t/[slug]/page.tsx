@@ -8,11 +8,11 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://web-production
 const SPECIAL_SLUGS: Record<string, { title: string; description: string }> = {
   populer: {
     title: 'Popüler Sorular',
-    description: 'Marifetli topluluğunda en popüler el işi ve el sanatları soruları. Örgü, dikiş, nakış, takı tasarımı ve daha fazlası.',
+    description: 'Marifetli topluluğunda en popüler sorular. Örgü, dikiş, yemek, müzik, sanat, hobiler ve daha fazlası.',
   },
   tum: {
     title: 'Tüm Sorular',
-    description: 'Marifetli\'de paylaşılan tüm el işi ve el sanatları soruları. Soruları keşfet, deneyimlerini paylaş.',
+    description: 'Marifetli\'de paylaşılan tüm sorular. Soruları keşfet, deneyimlerini paylaş.',
   },
 };
 
@@ -48,7 +48,7 @@ export async function generateMetadata({
     const description = (
       cat.meta_description?.trim() ||
       cat.description?.trim() ||
-      `${name} kategorisindeki el işi ve el sanatları soruları. Marifetli topluluğunda soru sor, cevapla, paylaş.`
+      `${name} kategorisindeki sorular. Marifetli topluluğunda soru sor, cevapla, paylaş.`
     ).slice(0, 160);
     return {
       title,
@@ -116,7 +116,7 @@ export default async function TopicPage({
         const description =
           cat.meta_description?.trim() ||
           cat.description?.trim() ||
-          `${name} kategorisindeki el işi ve el sanatları soruları. Marifetli topluluğunda soru sor, cevapla, paylaş.`;
+          `${name} kategorisindeki sorular. Marifetli topluluğunda soru sor, cevapla, paylaş.`;
         structuredData = buildTopicPageStructuredData(slug, name, description, cat.parent_slug, cat.parent_name);
       }
     } catch {

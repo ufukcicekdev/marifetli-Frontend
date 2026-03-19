@@ -29,7 +29,7 @@ export function BlogSidebar() {
           </li>
           <li className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-brand shrink-0" />
-            El işi projeleri
+            Projeler ve rehberler
           </li>
           <li className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-brand shrink-0" />

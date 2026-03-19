@@ -47,7 +47,7 @@ function getSiteStructuredData() {
       '@id': `${SITE_URL}/#organization`,
       name: 'Marifetli',
       url: SITE_URL,
-      description: 'Örgü, dikiş, nakış, takı tasarımı ve el sanatları tutkunlarının buluşma noktası. Sorular sor, deneyimlerini paylaş, el emeğini keşfet.',
+      description: 'İlgi alanlarının buluşma noktası. Örgü, dikiş, yemek, müzik, sanat, hobiler. Soru sor, paylaş, topluluklara katıl.',
       sameAs: [],
     },
     {
@@ -56,7 +56,7 @@ function getSiteStructuredData() {
       '@id': `${SITE_URL}/#website`,
       name: 'Marifetli',
       url: SITE_URL,
-      description: 'El işi ve el sanatları topluluğu. Soru sor, cevapla, paylaş.',
+      description: 'İlgi alanları topluluğu. Soru sor, cevapla, paylaş.',
       inLanguage: 'tr-TR',
       publisher: { '@id': `${SITE_URL}/#organization` },
       // Arama URL’si: sitelinks’te arama kutusu çıkma ihtimali + site yapısının anlaşılması
@@ -98,23 +98,23 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'Marifetli - El İşi & El Sanatları Topluluğu',
+    default: 'Marifetli - İlgi Alanları Topluluğu',
     template: '%s | Marifetli',
   },
-  description: 'Örgü, dikiş, nakış, takı tasarımı ve el sanatları tutkunlarının buluşma noktası. Sorular sor, deneyimlerini paylaş, el emeğini keşfet.',
+  description: 'İlgi alanlarının buluşma noktası. Örgü, dikiş, yemek, müzik, sanat, hobiler. Soru sor, paylaş, topluluklara katıl.',
   openGraph: {
     type: 'website',
     locale: 'tr_TR',
     url: SITE_URL,
     siteName: 'Marifetli',
-    title: 'Marifetli - El İşi & El Sanatları Topluluğu',
-    description: 'Örgü, dikiş, nakış, takı tasarımı ve el sanatları tutkunlarının buluşma noktası. Sorular sor, deneyimlerini paylaş, el emeğini keşfet.',
+    title: 'Marifetli - İlgi Alanları Topluluğu',
+    description: 'İlgi alanlarının buluşma noktası. Örgü, dikiş, yemek, müzik, sanat, hobiler. Soru sor, paylaş, topluluklara katıl.',
     images: [{ url: '/og-default.png', width: 1200, height: 630, alt: 'Marifetli' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Marifetli - El İşi & El Sanatları Topluluğu',
-    description: 'Örgü, dikiş, nakış, takı tasarımı ve el sanatları tutkunlarının buluşma noktası.',
+    title: 'Marifetli - İlgi Alanları Topluluğu',
+    description: 'İlgi alanlarının buluşma noktası. Örgü, dikiş, yemek, müzik, sanat, hobiler. Soru sor, paylaş.',
   },
   alternates: { canonical: SITE_URL },
   // Mutlak URL kullan ki Google/Vercel kendi favicon'unu göstermesin (site:marifetli.com.tr aramasında)
