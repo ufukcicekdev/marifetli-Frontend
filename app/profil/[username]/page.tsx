@@ -205,6 +205,16 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
 
   const unlockedCount = achievementsData?.reduce((s, c) => s + c.unlocked_count, 0) ?? 0;
 
+  // Başka profilde sadece gönderiler + tasarımlar görünür.
+  const tabs: ProfileTab[] = isOwnProfile
+    ? ['gonderiler', 'tasarimlarim', 'yorumlar', 'kaydettiklerim', 'gecmis']
+    : ['gonderiler', 'tasarimlarim'];
+
+  // Profil sahibi değiştiğinde görünmeyen bir sekmede kalınmasını engelle.
+  useEffect(() => {
+    if (!tabs.includes(activeTab)) setActiveTab('gonderiler');
+  }, [tabs, activeTab]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen">
@@ -235,10 +245,6 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
       </div>
     );
   }
-
-  // Başkasının profilinde yorumlar sekmesi gösterilmez; sadece kendi profilde kullanıcı kendi yorumlarını görsün
-  // Sekmeleri auth'dan bağımsız hep aynı gösteriyoruz; yenilemede Tasarımlarım kaybolmasın diye
-  const tabs: ProfileTab[] = ['gonderiler', 'tasarimlarim', 'yorumlar', 'kaydettiklerim', 'gecmis'];
 
   return (
     <div className="min-h-screen">
@@ -652,27 +658,29 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
               </div>
             )}
 
-            {/* Başarılar */}
-            <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-sm overflow-hidden">
-              <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Başarılar</h3>
-                <Link
-                  href={`/profil/${username}/basarilar`}
-                  className="text-sm font-medium text-brand hover:text-brand hover:text-brand-hover"
-                >
-                  Tümünü gör →
-                </Link>
+            {/* Başarılar (sadece kendi profil) */}
+            {isOwnProfile && (
+              <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-sm overflow-hidden">
+                <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Başarılar</h3>
+                  <Link
+                    href={`/profil/${username}/basarilar`}
+                    className="text-sm font-medium text-brand hover:text-brand hover:text-brand-hover"
+                  >
+                    Tümünü gör →
+                  </Link>
+                </div>
+                <div className="p-5">
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">{unlockedCount} rozet açıldı</p>
+                  <Link
+                    href={`/profil/${username}/basarilar`}
+                    className="block w-full py-2.5 text-center text-sm font-medium text-brand bg-brand-pink/50 dark:bg-brand/10 hover:bg-brand-pink/70 dark:hover:bg-brand/20 border border-brand/30 dark:border-brand/40 rounded-xl transition-colors"
+                  >
+                    Başarıları görüntüle
+                  </Link>
+                </div>
               </div>
-              <div className="p-5">
-                <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">{unlockedCount} rozet açıldı</p>
-                <Link
-                  href={`/profil/${username}/basarilar`}
-                  className="block w-full py-2.5 text-center text-sm font-medium text-brand bg-brand-pink/50 dark:bg-brand/10 hover:bg-brand-pink/70 dark:hover:bg-brand/20 border border-brand/30 dark:border-brand/40 rounded-xl transition-colors"
-                >
-                  Başarıları görüntüle
-                </Link>
-              </div>
-            </div>
+            )}
 
             {/* Ayarlar (sadece kendi profili) — profil/ayarlar sayfası ile aynı modern kart stili */}
             {isOwnProfile && (
