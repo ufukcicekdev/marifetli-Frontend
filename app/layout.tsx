@@ -109,7 +109,7 @@ export const metadata: Metadata = {
     siteName: 'Marifetli',
     title: 'Marifetli - İlgi Alanları Topluluğu',
     description: 'İlgi alanlarının buluşma noktası.. Sor .Cevapla .Öğren. En marifetli rozetini kazan.',
-    images: [{ url: '/og-default.png', width: 1200, height: 630, alt: 'Marifetli' }],
+    images: [{ url: '/android-chrome-512x512.png', width: 1200, height: 630, alt: 'Marifetli' }],
   },
   twitter: {
     card: 'summary_large_image',
