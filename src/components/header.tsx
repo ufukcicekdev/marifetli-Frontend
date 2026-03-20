@@ -11,9 +11,11 @@ import { useAuthStore } from '../stores/auth-store';
 import { useSidebarStore } from '../stores/sidebar-store';
 import { useUIStore } from '../stores/ui-store';
 import { ThemeToggle } from './theme-toggle';
-import { OptimizedAvatar } from './optimized-avatar';
+import { AvatarCornerBadges, OptimizedAvatar } from './optimized-avatar';
 import { AuthModal } from './auth-modal';
+import { Gift } from 'lucide-react';
 import api from '@/src/lib/api';
+import { useGamificationRoadmapModalStore } from '@/src/stores/gamification-roadmap-modal-store';
 
 /** Tek parça header yüksekliği (nav + search bar) — layout/mega menu/sticky için */
 export const HEADER_HEIGHT_PX = 104;
@@ -168,6 +170,23 @@ export function Header() {
             className="header-top-right flex items-center justify-end gap-0.5 sm:gap-2 shrink-0 min-w-0 self-stretch"
             style={{ minHeight: 52, display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}
           >
+            <button
+              type="button"
+              onClick={() =>
+                useGamificationRoadmapModalStore.getState().openModal({
+                  tab: isAuthenticated ? 'personal' : 'general',
+                })
+              }
+              className="header-nav-btn gap-1.5 px-2 sm:px-3 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-white/15"
+              title="Ödüller ve yol haritası"
+              aria-label="Ödüller ve yol haritası"
+            >
+              <Gift
+                className="w-[22px] h-[22px] sm:w-5 sm:h-5 shrink-0 text-brand dark:text-brand stroke-[2.25]"
+                aria-hidden
+              />
+              <span className="hidden sm:inline text-sm font-medium">Ödüller</span>
+            </button>
             <span className="header-nav-theme-wrap hidden md:inline-flex">
               <ThemeToggle />
             </span>
@@ -220,11 +239,28 @@ export function Header() {
                     aria-haspopup="menu"
                     aria-expanded={dropdownOpen}
                   >
-                    <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-white/20 flex items-center justify-center text-gray-700 dark:text-white font-bold text-sm overflow-hidden shrink-0 ring-2 ring-gray-300 dark:ring-white/30">
+                    <div className="relative w-8 h-8 rounded-full bg-gray-200 dark:bg-white/20 flex items-center justify-center text-gray-700 dark:text-white font-bold text-sm shrink-0 ring-1 ring-gray-200/90 dark:ring-white/25 overflow-visible">
                       {user.profile_picture ? (
-                        <OptimizedAvatar src={user.profile_picture} size={32} alt="" className="w-full h-full" priority />
+                        <OptimizedAvatar
+                          src={user.profile_picture}
+                          size={32}
+                          alt=""
+                          className="w-full h-full"
+                          priority
+                          badges={user.avatar_badges}
+                          levelTitleFallback={user.current_level_title}
+                          cornerTone="header"
+                        />
                       ) : (
-                        (user.first_name || user.username)?.charAt(0)?.toUpperCase() || '?'
+                        <>
+                          {(user.first_name || user.username)?.charAt(0)?.toUpperCase() || '?'}
+                          <AvatarCornerBadges
+                            badges={user.avatar_badges}
+                            size={32}
+                            levelTitleFallback={user.current_level_title}
+                            cornerTone="header"
+                          />
+                        </>
                       )}
                     </div>
                     <svg className="w-4 h-4 text-gray-600 dark:text-white/90 hidden sm:block shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -235,10 +271,22 @@ export function Header() {
                     <div className="absolute right-0 top-full mt-1 w-52 py-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-[100]">
                       <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
                         <p className="text-sm font-medium text-gray-900 dark:text-gray-100">@{user.username}</p>
-                        <p className="text-xs text-gray-500">Karma · Yeni</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
+                          {user.current_level_title?.trim() || 'Marifetli üyesi'}
+                        </p>
                       </div>
                       <Link href={`/profil/${user.username}`} className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" onClick={() => setDropdownOpen(false)}>Profilim</Link>
                       <Link href={`/profil/${user.username}/basarilar`} className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" onClick={() => setDropdownOpen(false)}>Başarılar</Link>
+                      <button
+                        type="button"
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        onClick={() => {
+                          setDropdownOpen(false);
+                          useGamificationRoadmapModalStore.getState().openModal({ tab: 'personal' });
+                        }}
+                      >
+                        Yol haritası
+                      </button>
                       <Link href="/ayarlar" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" onClick={() => setDropdownOpen(false)}>Ayarlar</Link>
                       <Link href="/bildirimler" className="block px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 sm:hidden" onClick={() => setDropdownOpen(false)}>Bildirimler</Link>
                       <hr className="my-1 border-gray-200 dark:border-gray-700" />

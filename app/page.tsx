@@ -1,111 +1,60 @@
 'use client';
 
-import { useState, useEffect, useMemo, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { PostFeedControls, type SortOption, type ViewMode } from '@/src/components/post-feed-controls';
-import { PostItem } from '@/src/components/post-item';
-import { useQuestions } from '@/src/hooks/use-questions';
-import { formatTimeAgo } from '@/src/lib/format-time';
+import Link from 'next/link';
+import { ExpertAskLaunchButton } from '@/src/components/expert-ask-launch-button';
 import { HomeHero } from '@/src/components/home-hero';
 import { RecentActivitySidebar } from '@/src/components/recent-activity-sidebar';
 import { PopularQuestionsSidebar } from '@/src/components/popular-questions-sidebar';
 import { SiteStatsSidebar } from '@/src/components/site-stats-sidebar';
-import { QuestionsPagination } from '@/src/components/questions-pagination';
 
-const SORT_TO_ORDER: Record<SortOption, string> = {
-  hot: '-hot_score',
-  new: '-created_at',
-  top: '-like_count',
-  best: '-hot_score',
-};
-
-function HomePageContent() {
-  const searchParams = useSearchParams();
-  const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10) || 1);
-  const [sort, setSort] = useState<SortOption>('new');
-  const [viewMode, setViewMode] = useState<ViewMode>('compact');
-  const params = useMemo(() => ({ ordering: SORT_TO_ORDER[sort], page }), [sort, page]);
-  const { data, isLoading, error } = useQuestions(params);
-
-  useEffect(() => {
-    const stored = localStorage.getItem('feedViewMode') as ViewMode | null;
-    if (stored === 'card' || stored === 'compact') setViewMode(stored);
-  }, []);
-  useEffect(() => {
-    localStorage.setItem('feedViewMode', viewMode);
-  }, [viewMode]);
-
-  const questions = data?.results ?? [];
-  const totalCount =
-    typeof (data as { count?: number })?.count === 'number'
-      ? (data as { count: number }).count
-      : 0;
-
+/**
+ * Ana sayfa: hero + keşif; tam soru listesi /sorular’da (ilk yükleme hızı için).
+ */
+export default function HomePage() {
   return (
     <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 flex flex-col lg:flex-row lg:items-start gap-4 sm:gap-6 min-w-0 min-h-[calc(100vh-104px)]">
       <div className="flex-1 min-w-0 overflow-hidden">
-          <HomeHero />
-          <div id="sorular" className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/80 dark:border-gray-800 overflow-hidden shadow-sm scroll-mt-4">
-            <PostFeedControls
-              sort={sort}
-              onSortChange={setSort}
-              viewMode={viewMode}
-              onViewModeChange={setViewMode}
-              totalCount={totalCount}
-            />
-
-            <div>
-              {isLoading && (
-                <div className="p-8 text-center text-gray-500 dark:text-gray-400">Yükleniyor...</div>
-              )}
-              {error && (
-                <div className="p-8 text-center text-amber-600 dark:text-amber-400">Gönderiler yüklenemedi.</div>
-              )}
-              {!isLoading && !error && questions.length === 0 && (
-                <div className="p-8 text-center text-gray-500 dark:text-gray-400">Henüz gönderi yok.</div>
-              )}
-              {!isLoading && questions.map((q, index) => (
-                <PostItem
-                  key={q.id}
-                  id={q.id}
-                  slug={q.slug}
-                  title={q.title}
-                  content={(q as { content?: string }).content}
-                  author={typeof q.author === 'object' ? q.author?.username ?? '' : ''}
-                  authorAvatar={typeof q.author === 'object' ? (q.author as { profile_picture?: string })?.profile_picture : undefined}
-                  timeAgo={formatTimeAgo(q.created_at)}
-                  commentCount={q.answer_count ?? 0}
-                  voteCount={q.like_count ?? 0}
-                  viewCount={q.view_count ?? 0}
-                  viewMode={viewMode}
-                  communitySlug={(q as { community_slug?: string })?.community_slug}
-                  communityName={(q as { community_name?: string })?.community_name}
-                  priorityImage={index < 4}
-                />
-              ))}
-            </div>
-            <QuestionsPagination
-              currentPage={page}
-              totalCount={totalCount}
-              basePath="/"
-              queryParams={{}}
-            />
+        <HomeHero />
+        <section
+          aria-labelledby="home-feed-cta-heading"
+          className="rounded-2xl border border-gray-200/80 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
+        >
+          <div className="min-w-0">
+            <h2 id="home-feed-cta-heading" className="text-lg font-semibold text-gray-900 dark:text-white">
+              Sorular ve gönderiler
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 max-w-xl">
+              Sıralama, görünüm ve arama <strong className="font-medium text-gray-800 dark:text-gray-200">Sorular</strong> sayfasında.
+              Ana sayfada tam liste yok; açılış daha hızlı kalır.
+            </p>
           </div>
+          <div className="flex flex-wrap gap-3 shrink-0">
+            <Link
+              href="/sorular"
+              className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-brand hover:bg-brand-hover text-white shadow-sm transition-colors"
+            >
+              Tüm sorulara git
+              <span aria-hidden>→</span>
+            </Link>
+            <Link
+              href="/soru-sor"
+              className="inline-flex items-center justify-center px-5 py-2.5 rounded-xl text-sm font-medium border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            >
+              Gönderi oluştur
+            </Link>
+            <ExpertAskLaunchButton className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-violet-600 to-brand hover:opacity-95 text-white shadow-sm transition-opacity border border-white/10">
+              <span aria-hidden>🧠</span>
+              Uzmana sor
+            </ExpertAskLaunchButton>
+          </div>
+        </section>
       </div>
 
       <div className="w-80 shrink-0 hidden lg:block self-start pb-6">
-          <RecentActivitySidebar />
-          <SiteStatsSidebar />
-          <PopularQuestionsSidebar />
-        </div>
+        <RecentActivitySidebar />
+        <SiteStatsSidebar />
+        <PopularQuestionsSidebar />
+      </div>
     </div>
-  );
-}
-
-export default function HomePage() {
-  return (
-    <Suspense fallback={<div className="container mx-auto px-4 py-8 text-center text-gray-500 dark:text-gray-400">Yükleniyor...</div>}>
-      <HomePageContent />
-    </Suspense>
   );
 }

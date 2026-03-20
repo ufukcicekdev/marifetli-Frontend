@@ -13,6 +13,7 @@ import { RemoveFromCommunityModal } from '@/src/components/remove-from-community
 import { CommunitySettingsModal } from '@/src/components/community-settings-modal';
 import { ShareButton } from '@/src/components/share-button';
 import { formatTimeAgo } from '@/src/lib/format-time';
+import { postItemAuthorFields } from '@/src/lib/post-item-author';
 import toast from 'react-hot-toast';
 import { useSearchParams, useRouter } from 'next/navigation';
 
@@ -309,8 +310,7 @@ function CommunityDetailContent({ params }: { params: Promise<{ slug: string }> 
                         title={q.title}
                         content={(q as { content?: string }).content}
                         category={q.tags?.[0]?.name}
-                        author={typeof q.author === 'object' ? (q.author as { username?: string })?.username ?? '' : ''}
-                        authorAvatar={typeof q.author === 'object' ? (q.author as { profile_picture?: string })?.profile_picture : undefined}
+                        {...postItemAuthorFields(q.author)}
                         timeAgo={formatTimeAgo(q.created_at)}
                         commentCount={q.answer_count ?? 0}
                         voteCount={q.like_count ?? 0}

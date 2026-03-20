@@ -1,6 +1,19 @@
 import axios, { AxiosInstance } from 'axios';
 import toast from 'react-hot-toast';
-import { User, UserProfile, Question, Answer, Notification, Tag, SiteSettings } from '../types';
+import {
+  User,
+  UserProfile,
+  Question,
+  Answer,
+  Notification,
+  Tag,
+  SiteSettings,
+  GamificationRoadmap,
+  PublicGamificationInfo,
+  CategoryExpertsConfig,
+  CategoryExpertAskResponse,
+  CategoryExpertHistoryItem,
+} from '../types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
 
@@ -34,8 +47,26 @@ class ApiService {
     );
 
     // Public endpoints: 401'de token olmadan tekrar dene, /giris'e yönlendirme
-    const PUBLIC_PATHS = ['/questions/', '/categories/', '/designs/', '/questions/tags', '/settings/public', '/settings/stats', '/contact/', '/blog/'];
-    const isPublicPath = (url: string) => PUBLIC_PATHS.some((p) => url?.includes(p));
+    const PUBLIC_PATHS = [
+      '/questions/',
+      '/categories/',
+      '/designs/',
+      '/questions/tags',
+      '/settings/public',
+      '/settings/stats',
+      '/contact/',
+      '/blog/',
+      '/gamification/public',
+    ];
+    /** Sadece GET /category-experts/ herkese açık; ask/history JWT ister */
+    const isCategoryExpertPublicConfig = (url: string) => {
+      const u = (url || '').split('?')[0];
+      if (u.includes('/category-experts/ask')) return false;
+      if (u.includes('/category-experts/my-history')) return false;
+      return u.endsWith('/category-experts') || u.endsWith('/category-experts/');
+    };
+    const isPublicPath = (url: string) =>
+      PUBLIC_PATHS.some((p) => url?.includes(p)) || isCategoryExpertPublicConfig(url);
 
     // Response interceptor: token refresh; public path'te 401'de girişe yönlendirme
     this.axiosInstance.interceptors.response.use(
@@ -120,6 +151,12 @@ class ApiService {
 
   getCurrentUser = () => this.axiosInstance.get<User>('/auth/me/');
 
+  /** Seviye / rozet ilerlemesi (yalnızca giriş yapmış kullanıcı) */
+  getMyGamificationRoadmap = () => this.axiosInstance.get<GamificationRoadmap>('/auth/me/gamification/');
+
+  /** Ödül sistemi özeti — giriş gerekmez (modal tanıtım) */
+  getPublicGamificationInfo = () => this.axiosInstance.get<PublicGamificationInfo>('/gamification/public/');
+
   updateUser = (userData: Partial<Pick<User, 'first_name' | 'last_name' | 'bio' | 'gender'>>) =>
     this.axiosInstance.patch('/auth/me/', userData);
 
@@ -140,7 +177,21 @@ class ApiService {
   getUserByUsername = (username: string) => this.axiosInstance.get<{
     id: number; username: string; first_name: string; last_name: string; display_name: string;
     bio: string; profile_picture: string | null; cover_image: string | null;
-    followers_count: number; following_count: number; reputation: number; location: string; website: string;
+    followers_count: number; following_count: number; reputation: number;
+    current_level_title?: string;
+    reputation_badges?: {
+      id: number;
+      slug: string;
+      name: string;
+      description: string;
+      icon: string;
+      icon_svg: string;
+      badge_type: string;
+      requirement_value: number;
+      earned: boolean;
+      earned_at: string | null;
+    }[];
+    location: string; website: string;
     is_following?: boolean;
     instagram_url?: string; twitter_url?: string; facebook_url?: string; linkedin_url?: string; youtube_url?: string; pinterest_url?: string;
   }>(`/auth/username/${username}/`);
@@ -377,9 +428,45 @@ class ApiService {
   // Achievements
   getAchievementsByUsername = (username: string) =>
     this.axiosInstance.get<AchievementCategoryResponse[]>(`/achievements/users/${username}/`);
-  /** Son 2 dakikada açılan başarı (modal göstermek için) */
+  /** Son 2 dakikada açılan başarı veya itibar rozeti (modal göstermek için) */
   getRecentAchievementUnlock = () =>
-    this.axiosInstance.get<{ unlocked: { id: number; name: string; description: string; code: string; icon: string; unlocked_at: string } | null }>('/achievements/recent-unlock/');
+    this.axiosInstance.get<{
+      unlocked: {
+        kind?: string;
+        id: number;
+        name: string;
+        description: string;
+        code?: string;
+        icon: string;
+        unlocked_at: string;
+      } | null;
+      badge_unlocked: {
+        kind?: string;
+        id: number;
+        slug: string;
+        name: string;
+        description: string;
+        icon: string;
+        icon_svg: string;
+        unlocked_at: string;
+      } | null;
+    }>('/achievements/recent-unlock/');
+
+  /** İlerleme eşiği (25/50/75/90/95) — toast için; tam kilitle çakışmaz */
+  getProgressNudge = () =>
+    this.axiosInstance.get<{
+      nudge: {
+        kind: 'progress';
+        achievement_id: number;
+        code: string;
+        name: string;
+        icon: string;
+        current: number;
+        target: number;
+        milestone_percent: number;
+        hint: string;
+      } | null;
+    }>('/achievements/progress-nudge/');
 
   // Favorites / Saved collections
   getSavedCollections = () =>
@@ -503,6 +590,22 @@ class ApiService {
 
   getBlogLikeStatus = (slug: string) =>
     this.axiosInstance.get<{ liked: boolean; like_count: number }>(`/blog/${slug}/like-status/`);
+
+  /** Kategori uzmanı (AI) — özellik kapalıysa enabled: false */
+  getCategoryExpertsConfig = () =>
+    this.axiosInstance.get<CategoryExpertsConfig>('/category-experts/').then((r) => r.data);
+
+  askCategoryExpert = (data: {
+    main_category_id: number;
+    subcategory_id?: number | null;
+    question: string;
+  }) =>
+    this.axiosInstance.post<CategoryExpertAskResponse>('/category-experts/ask/', data).then((r) => r.data);
+
+  getCategoryExpertHistory = () =>
+    this.axiosInstance
+      .get<{ results: CategoryExpertHistoryItem[] }>('/category-experts/my-history/')
+      .then((r) => r.data);
 }
 
 export interface CommunityListItem {

@@ -13,6 +13,7 @@ import { RecordCommunityVisit } from '@/src/components/record-community-visit';
 import { RecentActivitySidebar } from '@/src/components/recent-activity-sidebar';
 import { PopularQuestionsSidebar } from '@/src/components/popular-questions-sidebar';
 import { SiteStatsSidebar } from '@/src/components/site-stats-sidebar';
+import { postItemAuthorFields } from '@/src/lib/post-item-author';
 
 const SORT_TO_ORDER: Record<SortOption, string> = {
   hot: '-hot_score',
@@ -223,12 +224,7 @@ export function TopicPageContent({ slug }: { slug: string }) {
                       slug={q.slug}
                       title={q.title}
                       content={(q as { content?: string }).content}
-                      author={typeof q.author === 'object' ? q.author?.username ?? '' : ''}
-                      authorAvatar={
-                        typeof q.author === 'object'
-                          ? (q.author as { profile_picture?: string })?.profile_picture
-                          : undefined
-                      }
+                      {...postItemAuthorFields(q.author)}
                       timeAgo={formatTimeAgo(q.created_at)}
                       commentCount={q.answer_count ?? 0}
                       voteCount={q.like_count ?? 0}

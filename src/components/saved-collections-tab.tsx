@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import api, { type SavedCollection, type SavedItem } from '@/src/lib/api';
 import { PostItem } from './post-item';
 import { OptimizedAvatar } from './optimized-avatar';
+import { postItemAuthorFields } from '@/src/lib/post-item-author';
 import { formatTimeAgo } from '@/src/lib/format-time';
 import { stripHtml } from '@/src/lib/extract-media';
 
@@ -202,7 +203,6 @@ export function SavedCollectionsTab({ isOwnProfile }: SavedCollectionsTabProps) 
                     const q = item.question;
                     const blog = item.blog_post;
                     if (q) {
-                      const author = typeof q.author === 'object' ? q.author : null;
                       return (
                         <div key={item.id} className="py-3">
                           <div className="flex items-start gap-3">
@@ -213,7 +213,7 @@ export function SavedCollectionsTab({ isOwnProfile }: SavedCollectionsTabProps) 
                                 title={q.title}
                                 content={(q as { content?: string }).content}
                                 category={undefined}
-                                author={author?.username ?? ''}
+                                {...postItemAuthorFields(q.author)}
                                 timeAgo={formatTimeAgo(item.created_at)}
                                 commentCount={q.answer_count ?? 0}
                                 voteCount={q.like_count ?? 0}

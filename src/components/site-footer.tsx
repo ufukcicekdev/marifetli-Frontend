@@ -13,6 +13,9 @@ export function SiteFooter() {
     <footer className="mt-auto border-t border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
       <div className="container mx-auto px-3 sm:px-4 py-6 flex flex-col items-center justify-center gap-3 text-sm text-gray-600 dark:text-gray-400 text-center">
         <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1" aria-label="Site sayfaları">
+          <Link href="/" className="hover:text-brand dark:hover:text-brand transition-colors">
+            Ana sayfa
+          </Link>
           <Link href="/sorular" className="hover:text-brand dark:hover:text-brand transition-colors">
             Sorular
           </Link>

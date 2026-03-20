@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 
-export interface UnlockedAchievement {
+export type UnlockPending = AchievementUnlockPayload | BadgeUnlockPayload;
+
+export interface AchievementUnlockPayload {
+  kind?: 'achievement';
   id: number;
   name: string;
   description: string;
@@ -9,26 +12,46 @@ export interface UnlockedAchievement {
   unlocked_at: string;
 }
 
+export interface BadgeUnlockPayload {
+  kind: 'badge';
+  id: number;
+  slug: string;
+  name: string;
+  description: string;
+  icon: string;
+  icon_svg: string;
+  unlocked_at: string;
+}
+
 interface AchievementUnlockState {
-  /** Gösterilecek son açılan başarı (modal açık) */
-  pending: UnlockedAchievement | null;
-  /** Aynı başarıyı tekrar göstermemek için son gösterilen id */
-  lastShownId: number | null;
-  show: (achievement: UnlockedAchievement) => void;
+  pending: UnlockPending | null;
+  lastShownKey: string | null;
+  show: (payload: UnlockPending) => void;
   dismiss: () => void;
-  /** recent-unlock API'den gelen veriyi işle; daha önce gösterilmediyse show çağır */
-  setFromApi: (unlocked: UnlockedAchievement | null) => void;
+  setFromApi: (payload: UnlockPending | null) => void;
+}
+
+function normalizeKey(payload: UnlockPending): string {
+  const kind = payload.kind === 'badge' ? 'badge' : 'achievement';
+  return `${kind}-${payload.id}`;
 }
 
 export const useAchievementUnlockStore = create<AchievementUnlockState>((set, get) => ({
   pending: null,
-  lastShownId: null,
-  show: (achievement) => set({ pending: achievement, lastShownId: achievement.id }),
+  lastShownKey: null,
+  show: (payload) =>
+    set({
+      pending: { ...payload, kind: payload.kind === 'badge' ? 'badge' : 'achievement' } as UnlockPending,
+      lastShownKey: normalizeKey(payload),
+    }),
   dismiss: () => set({ pending: null }),
-  setFromApi: (unlocked) => {
-    if (!unlocked) return;
-    const { lastShownId } = get();
-    if (lastShownId === unlocked.id) return;
-    set({ pending: unlocked, lastShownId: unlocked.id });
+  setFromApi: (payload) => {
+    if (!payload) return;
+    const key = normalizeKey(payload);
+    if (get().lastShownKey === key) return;
+    set({
+      pending: { ...payload, kind: payload.kind === 'badge' ? 'badge' : 'achievement' } as UnlockPending,
+      lastShownKey: key,
+    });
   },
 }));

@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useState } from 'react';
-import { OptimizedAvatar } from '@/src/components/optimized-avatar';
+import { AvatarCornerBadges, OptimizedAvatar } from '@/src/components/optimized-avatar';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 const MediaLightbox = dynamic(() => import('@/src/components/media-lightbox').then((m) => ({ default: m.MediaLightbox })), { ssr: false });
@@ -157,10 +157,22 @@ export function CommentItem({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2 flex-wrap">
               {author?.profile_picture ? (
-                <OptimizedAvatar src={author.profile_picture} size={32} alt="" className="w-8 h-8" />
+                <OptimizedAvatar
+                  src={author.profile_picture}
+                  size={32}
+                  alt=""
+                  className="w-8 h-8"
+                  badges={author.avatar_badges}
+                  levelTitleFallback={author.current_level_title}
+                />
               ) : (
-                <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-500 shrink-0">
+                <div className="relative w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-500 shrink-0">
                   {authorName.charAt(0).toUpperCase()}
+                  <AvatarCornerBadges
+                    badges={author?.avatar_badges}
+                    size={32}
+                    levelTitleFallback={author?.current_level_title}
+                  />
                 </div>
               )}
               <Link
@@ -169,6 +181,14 @@ export function CommentItem({
               >
                 u/{authorName}
               </Link>
+              {(author as { current_level_title?: string } | null)?.current_level_title && (
+                <span
+                  className="text-[10px] sm:text-xs font-semibold px-1.5 py-0.5 rounded-md bg-amber-100/90 text-amber-900 dark:bg-amber-900/45 dark:text-amber-100 border border-amber-200/80 dark:border-amber-700/50 whitespace-nowrap max-w-[140px] truncate"
+                  title="İtibar rütbesi"
+                >
+                  {(author as { current_level_title?: string }).current_level_title}
+                </span>
+              )}
               <span className="text-sm text-gray-500 dark:text-gray-400">{formatTimeAgo(answer.created_at)}</span>
               {(answer.moderation_status === 0) && (
                 <span className="bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 text-xs font-medium px-2 py-0.5 rounded">

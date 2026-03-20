@@ -7,7 +7,8 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { ViewMode } from './post-feed-controls';
 import { extractMediaFromHtml } from '@/src/lib/extract-media';
 import { MediaSlider } from './media-slider';
-import { OptimizedAvatar } from './optimized-avatar';
+import type { AvatarBadgeChip } from './optimized-avatar';
+import { AvatarCornerBadges, OptimizedAvatar } from './optimized-avatar';
 import api from '@/src/lib/api';
 import { questionKeys } from '@/src/hooks/use-questions';
 
@@ -24,6 +25,10 @@ interface PostItemProps {
   category?: string;
   author: string;
   authorAvatar?: string | null;
+  /** Soru yazarının son rozetleri (liste API’si) */
+  authorAvatarBadges?: AvatarBadgeChip[] | null;
+  /** Rozet yoksa köşede rütbe özeti */
+  authorLevelTitle?: string | null;
   timeAgo: string;
   commentCount: number;
   voteCount: number;
@@ -40,7 +45,28 @@ interface PostItemProps {
   priorityImage?: boolean;
 }
 
-export function PostItem({ id, slug, title, content, category, author, authorAvatar, timeAgo, commentCount, voteCount, viewCount, viewMode, showEditButton, showDeleteButton, onDeleteClick, communitySlug, communityName, priorityImage = false }: PostItemProps) {
+export function PostItem({
+  id,
+  slug,
+  title,
+  content,
+  category,
+  author,
+  authorAvatar,
+  authorAvatarBadges,
+  authorLevelTitle,
+  timeAgo,
+  commentCount,
+  voteCount,
+  viewCount,
+  viewMode,
+  showEditButton,
+  showDeleteButton,
+  onDeleteClick,
+  communitySlug,
+  communityName,
+  priorityImage = false,
+}: PostItemProps) {
   const mediaItems = useMemo(() => extractMediaFromHtml(content), [content]);
   const firstMedia = mediaItems[0];
   const href = `/soru/${slug ?? id}`;
@@ -205,10 +231,23 @@ export function PostItem({ id, slug, title, content, category, author, authorAva
           </h2>
           <div className="flex items-center gap-2 mb-3">
             {authorAvatar ? (
-              <OptimizedAvatar src={authorAvatar} size={24} alt="" className="w-6 h-6" priority={priorityImage} />
+              <OptimizedAvatar
+                src={authorAvatar}
+                size={24}
+                alt=""
+                className="w-6 h-6"
+                priority={priorityImage}
+                badges={authorAvatarBadges}
+                levelTitleFallback={authorLevelTitle}
+              />
             ) : (
-              <div className="w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[10px] font-bold text-gray-500 shrink-0">
+              <div className="relative w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-[10px] font-bold text-gray-500 shrink-0">
                 {author?.charAt(0)?.toUpperCase() ?? '?'}
+                <AvatarCornerBadges
+                  badges={authorAvatarBadges}
+                  size={24}
+                  levelTitleFallback={authorLevelTitle}
+                />
               </div>
             )}
             <AuthorMeta />
@@ -228,10 +267,23 @@ export function PostItem({ id, slug, title, content, category, author, authorAva
     <div className="p-3 sm:p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors border-b border-gray-200 dark:border-gray-800 last:border-b-0">
       <div className="flex gap-2 sm:gap-3">
         {authorAvatar ? (
-          <OptimizedAvatar src={authorAvatar} size={32} alt="" className="w-8 h-8" priority={priorityImage} />
+          <OptimizedAvatar
+            src={authorAvatar}
+            size={32}
+            alt=""
+            className="w-8 h-8"
+            priority={priorityImage}
+            badges={authorAvatarBadges}
+            levelTitleFallback={authorLevelTitle}
+          />
         ) : (
-          <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-500 shrink-0">
+          <div className="relative w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-xs font-bold text-gray-500 shrink-0">
             {author?.charAt(0)?.toUpperCase() ?? '?'}
+            <AvatarCornerBadges
+              badges={authorAvatarBadges}
+              size={32}
+              levelTitleFallback={authorLevelTitle}
+            />
           </div>
         )}
         <div className="flex-1 w-0 flex flex-col gap-1">

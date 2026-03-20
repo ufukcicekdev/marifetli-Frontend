@@ -17,7 +17,7 @@ import { sanitizeHtml } from '@/src/lib/sanitize-html';
 import { MediaSlider } from '@/src/components/media-slider';
 import { CommentItem } from '@/src/components/comment-item';
 import { CommentEditor } from '@/src/components/comment-editor';
-import { OptimizedAvatar } from '@/src/components/optimized-avatar';
+import { AvatarCornerBadges, OptimizedAvatar } from '@/src/components/optimized-avatar';
 import { ShareButton } from '@/src/components/share-button';
 import { checkRecentAchievementUnlock } from '@/src/lib/check-achievement-unlock';
 
@@ -210,10 +210,22 @@ export default function QuestionDetailPage({ params }: { params: Promise<{ id: s
           <div className="min-w-0 p-4 sm:p-6">
               <div className="flex items-center gap-3 mb-4">
                 {author?.profile_picture ? (
-                  <OptimizedAvatar src={author.profile_picture} size={32} alt="" className="w-8 h-8 shrink-0" />
+                  <OptimizedAvatar
+                    src={author.profile_picture}
+                    size={32}
+                    alt=""
+                    className="w-8 h-8 shrink-0"
+                    badges={author.avatar_badges}
+                    levelTitleFallback={author.current_level_title}
+                  />
                 ) : (
-                  <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-sm font-bold text-gray-500 shrink-0">
+                  <div className="relative w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-sm font-bold text-gray-500 shrink-0">
                     {authorName.charAt(0).toUpperCase()}
+                    <AvatarCornerBadges
+                      badges={author?.avatar_badges}
+                      size={32}
+                      levelTitleFallback={author?.current_level_title}
+                    />
                   </div>
                 )}
                 <div className="flex items-center gap-2 flex-wrap min-w-0">

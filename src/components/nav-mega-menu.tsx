@@ -9,12 +9,20 @@ import { useSidebarStore } from '../stores/sidebar-store';
 import { useAuthStore } from '../stores/auth-store';
 import { useAuthModalStore } from '../stores/auth-modal-store';
 import { ThemeToggle } from './theme-toggle';
+import { ExpertAskLaunchButton } from './expert-ask-launch-button';
 import api from '../lib/api';
 
 type CategoryItem = { id: number; name: string; slug: string; subcategories?: CategoryItem[] };
 
-const NAV_ITEMS: { href: string; label: string; icon: string; description: string }[] = [
-  { href: '/sorular', label: 'Anasayfa', icon: '🏠', description: 'Son gönderileri gör, topluluğu keşfet.' },
+function isNavActive(pathname: string | null | undefined, href: string) {
+  if (!pathname) return false;
+  if (href === '/') return pathname === '/';
+  return pathname === href || pathname.startsWith(`${href}/`) || pathname.startsWith(`${href}?`);
+}
+
+const NAV_ITEMS_BASE: { href: string; label: string; icon: string; description: string }[] = [
+  { href: '/', label: 'Anasayfa', icon: '🏠', description: 'Keşfet, kategoriler ve hızlı başlangıç.' },
+  { href: '/sorular', label: 'Sorular', icon: '💬', description: 'Gönderi akışı, sıralama ve arama.' },
   { href: '/topluluklar', label: 'Toplulukları Keşfet', icon: '🔍', description: 'Kategorilere göz at, topluluklara katıl.' },
   { href: '/t/populer', label: 'Popüler', icon: '🔥', description: 'Günün çok konuşulanlarına göz at.' },
   { href: '/t/tum', label: 'Tümü', icon: '📋', description: 'Tüm soruları listele.' },
@@ -22,6 +30,10 @@ const NAV_ITEMS: { href: string; label: string; icon: string; description: strin
   { href: '/tasarimlar', label: 'Tasarımlar', icon: '🎨', description: 'Topluluk tasarımlarını keşfet.' },
   { href: '/iletisim', label: 'İletişim', icon: '✉️', description: 'Bizimle iletişime geçin.' },
 ];
+
+type MegaNavItem =
+  | { kind: 'link'; href: string; label: string; icon: string; description: string }
+  | { kind: 'expert'; label: string; icon: string; description: string };
 
 export function NavMegaMenu() {
   const pathname = usePathname();
@@ -34,6 +46,26 @@ export function NavMegaMenu() {
     queryKey: ['categories'],
     queryFn: () => api.getCategories().then((r) => r.data),
   });
+
+  const { data: expertCfg } = useQuery({
+    queryKey: ['category-experts-config', user?.id ?? 'anon'],
+    queryFn: () => api.getCategoryExpertsConfig(),
+    staleTime: 60_000,
+  });
+
+  const navItems = useMemo((): MegaNavItem[] => {
+    const items: MegaNavItem[] = NAV_ITEMS_BASE.map((x) => ({ kind: 'link', ...x }));
+    if (expertCfg?.enabled && expertCfg?.backend_ready) {
+      const i = items.findIndex((x) => x.kind === 'link' && x.href === '/sorular');
+      items.splice(i + 1, 0, {
+        kind: 'expert',
+        label: 'Uzmana sor',
+        icon: '🧠',
+        description: 'Sağdaki panelden kategori seçip uzmanla yazışın.',
+      });
+    }
+    return items;
+  }, [expertCfg?.enabled, expertCfg?.backend_ready]);
 
   const categoriesTree = useMemo(() => {
     const raw = categoriesData as { results?: CategoryItem[] } | CategoryItem[] | undefined;
@@ -84,6 +116,17 @@ export function NavMegaMenu() {
             >
               {/* Mobil: Gönderi Oluştur + Tema (aydınlık/karanlık) — header’da yer kalmadığı için menüde */}
               <div className="flex flex-col gap-2 pb-4 mb-4 border-b border-gray-100 dark:border-gray-800 md:hidden">
+                {expertCfg?.enabled && expertCfg?.backend_ready && (
+                  <ExpertAskLaunchButton
+                    onOpen={close}
+                    className="flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-brand text-white font-medium text-sm shadow-sm"
+                  >
+                    <span className="text-lg" aria-hidden>
+                      🧠
+                    </span>
+                    <span>Uzmana sor</span>
+                  </ExpertAskLaunchButton>
+                )}
                 {isAuthenticated && user && (
                   user.is_verified ? (
                     <Link
@@ -111,8 +154,25 @@ export function NavMegaMenu() {
                 </div>
               </div>
               <div className="grid gap-1 grid-cols-1 md:grid-cols-2">
-                {NAV_ITEMS.map((item) => {
-                  const active = pathname === item.href || (item.href !== '/sorular' && pathname?.startsWith(item.href));
+                {navItems.map((item) => {
+                  if (item.kind === 'expert') {
+                    return (
+                      <ExpertAskLaunchButton
+                        key="nav-expert-panel"
+                        onOpen={close}
+                        className="flex gap-3 p-3 rounded-xl transition-colors w-full text-left hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-200"
+                      >
+                        <span className="text-2xl shrink-0" aria-hidden>
+                          {item.icon}
+                        </span>
+                        <div className="min-w-0">
+                          <span className="font-medium block">{item.label}</span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400 block mt-0.5">{item.description}</span>
+                        </div>
+                      </ExpertAskLaunchButton>
+                    );
+                  }
+                  const active = isNavActive(pathname, item.href);
                   return (
                     <Link
                       key={item.href}

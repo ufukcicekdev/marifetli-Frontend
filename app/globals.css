@@ -309,3 +309,19 @@ header .header-top-right > * {
 .kategoriler-grid section:not([data-puzzle-tall="true"]) {
   min-height: 200px;
 }
+
+/* Rozet / başarı modalı — hafif konfeti */
+@keyframes marifetli-confetti-fall {
+  0% {
+    transform: translateY(0) rotate(0deg);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(220px) rotate(720deg);
+    opacity: 0;
+  }
+}
+.marifetli-confetti-piece {
+  animation: marifetli-confetti-fall var(--confetti-dur, 1.3s) ease-out var(--confetti-delay, 0s) forwards;
+  opacity: 0;
+}

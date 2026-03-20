@@ -2,15 +2,33 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useSidebarStore } from '../stores/sidebar-store';
 import { useAuthStore } from '../stores/auth-store';
 import { useAuthModalStore } from '../stores/auth-modal-store';
 import { ThemeToggle } from './theme-toggle';
+import { ExpertAskLaunchButton } from './expert-ask-launch-button';
+import api from '../lib/api';
 
-// Sol menü: Tasarım Yükle yok; tasarım yükleme sadece /tasarimlar sayfasındaki butondan.
-const SIDEBAR_NAV_ITEMS = [
-  { href: '/sorular', label: 'Anasayfa', icon: '🏠' },
+function normalizePath(p: string) {
+  if (p.length > 1 && p.endsWith('/')) return p.slice(0, -1);
+  return p;
+}
+
+function isSidebarNavActive(pathname: string | null, href: string) {
+  if (!pathname) return false;
+  const p = normalizePath(pathname);
+  const h = normalizePath(href);
+  // Ana sayfa: sadece kök (Sorular /sorular ile karışmasın)
+  if (h === '/' || h === '') return p === '/' || p === '';
+  return p === h || p.startsWith(`${h}/`) || p.startsWith(`${h}?`);
+}
+
+// Sol menü: Anasayfa = keşfet (/), Sorular = gönderi akışı (/sorular). Uzman satırı özellik açıksa eklenir.
+const SIDEBAR_NAV_BASE = [
+  { href: '/', label: 'Anasayfa', icon: '🏠' },
+  { href: '/sorular', label: 'Sorular', icon: '💬' },
   { href: '/kategoriler', label: 'Kategoriler', icon: '📁' },
   { href: '/blog', label: 'Blog', icon: '📝' },
   { href: '/tasarimlar', label: 'Tasarımlar', icon: '🎨' },
@@ -34,8 +52,22 @@ export function AppSidebar() {
   const pathname = usePathname();
   const isOpen = useSidebarStore((s) => s.isOpen);
   const toggle = useSidebarStore((s) => s.toggle);
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
   const openAuth = useAuthModalStore((s) => s.open);
+
+  const { data: expertCfg } = useQuery({
+    queryKey: ['category-experts-config', user?.id ?? 'anon'],
+    queryFn: () => api.getCategoryExpertsConfig(),
+    staleTime: 60_000,
+  });
+
+  const sidebarNavItems = useMemo(() => [...SIDEBAR_NAV_BASE], []);
+
+  const closeSidebarOnMobile = () => {
+    if (typeof window !== 'undefined' && !window.matchMedia('(min-width: 1024px)').matches) {
+      toggle();
+    }
+  };
 
   useEffect(() => setMounted(true), []);
 
@@ -120,12 +152,17 @@ export function AppSidebar() {
           </div>
         )}
         <div className="space-y-1">
-          {SIDEBAR_NAV_ITEMS.map((item) => {
-            const active = pathname === item.href || (item.href !== '/sorular' && pathname?.startsWith(item.href));
+          {sidebarNavItems.map((item) => {
+            const active = isSidebarNavActive(pathname, item.href);
             return (
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => {
+                  if (typeof window !== 'undefined' && !window.matchMedia('(min-width: 1024px)').matches) {
+                    toggle();
+                  }
+                }}
                 className={`flex items-center rounded-lg text-sm transition-colors ${
                   isOpen ? 'gap-3 px-3 py-2' : 'justify-center p-2'
                 } ${
@@ -140,23 +177,40 @@ export function AppSidebar() {
               </Link>
             );
           })}
+          {expertCfg?.enabled && expertCfg?.backend_ready && (
+            <ExpertAskLaunchButton
+              title="Uzmana sor — kategori AI yardımcısı"
+              onOpen={closeSidebarOnMobile}
+              className={`w-full flex items-center rounded-lg text-sm font-medium transition-colors bg-gradient-to-r from-violet-600/90 to-brand hover:opacity-95 text-white shadow-sm ${
+                isOpen ? 'gap-3 px-3 py-2.5 mt-2' : 'justify-center p-2.5 mt-2'
+              }`}
+            >
+              <span className="text-base shrink-0">🧠</span>
+              {isOpen && <span>Uzmana sor</span>}
+            </ExpertAskLaunchButton>
+          )}
         </div>
 
         {isOpen && (
           <>
-            <div className="mt-8 border-t border-gray-200 dark:border-gray-800 pt-3 px-3 space-y-1 text-center">
-              <Link
-                href="/gizlilik-politikasi"
-                className="inline-block text-xs text-gray-500 dark:text-gray-400 hover:text-brand dark:hover:text-brand hover:underline"
-              >
-                Gizlilik Politikası
-              </Link>
-              <Link
-                href="/kullanim-sartlari"
-                className="inline-block text-xs text-gray-500 dark:text-gray-400 hover:text-brand dark:hover:text-brand hover:underline"
-              >
-                Kullanım Şartları
-              </Link>
+            <div className="mt-8 border-t border-gray-200 dark:border-gray-800 pt-3 px-3 flex flex-col items-center gap-1 text-center">
+              <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-xs">
+                <Link
+                  href="/gizlilik-politikasi"
+                  className="text-gray-500 dark:text-gray-400 hover:text-brand dark:hover:text-brand hover:underline"
+                >
+                  Gizlilik Politikası
+                </Link>
+                <span className="text-gray-300 dark:text-gray-600" aria-hidden>
+                  ·
+                </span>
+                <Link
+                  href="/kullanim-sartlari"
+                  className="text-gray-500 dark:text-gray-400 hover:text-brand dark:hover:text-brand hover:underline"
+                >
+                  Kullanım Şartları
+                </Link>
+              </div>
               <p className="text-[11px] text-gray-500 dark:text-gray-500">
                 © 2026 Marifetli
               </p>

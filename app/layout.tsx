@@ -19,6 +19,9 @@ import { FirebasePushHandler } from '@/src/components/firebase-push-handler';
 import { CookieConsentBanner } from '@/src/components/cookie-consent-banner';
 import { SiteFooter } from '@/src/components/site-footer';
 import { AchievementUnlockedModal } from '@/src/components/achievement-unlocked-modal';
+import { GamificationRoadmapModal } from '@/src/components/gamification-roadmap-modal';
+import { RecentUnlockPoller } from '@/src/components/recent-unlock-poller';
+import { CategoryExpertChatPanel } from '@/src/components/category-expert-chat-panel';
 
 // Canlıda NEXT_PUBLIC_SITE_URL deploy ortamında tanımlı olsun; yoksa production URL fallback
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.marifetli.com.tr';
@@ -188,11 +191,14 @@ export default function RootLayout({
                 </>
               )}
             </OnboardingGuard>
+            <CategoryExpertChatPanel />
+            <AchievementUnlockedModal />
+            <GamificationRoadmapModal />
+            <RecentUnlockPoller />
           </QueryProvider>
         </ThemeProvider>
         <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
         <CookieConsentBanner />
-        <AchievementUnlockedModal />
       </body>
     </html>
   );

@@ -12,10 +12,13 @@ import { SavedCollectionsTab } from '@/src/components/saved-collections-tab';
 import { FollowingModal } from '@/src/components/following-modal';
 import { DesignUploadModal, type DesignUploadFormData } from '@/src/components/design-upload-modal';
 import { MediaSlider } from '@/src/components/media-slider';
-import { OptimizedAvatar } from '@/src/components/optimized-avatar';
+import { AvatarCornerBadges, OptimizedAvatar } from '@/src/components/optimized-avatar';
 import { formatTimeAgo } from '@/src/lib/format-time';
 import toast from 'react-hot-toast';
 import type { Answer } from '@/src/types';
+import { checkRecentAchievementUnlock } from '@/src/lib/check-achievement-unlock';
+import { useGamificationRoadmapModalStore } from '@/src/stores/gamification-roadmap-modal-store';
+import { postItemAuthorFields } from '@/src/lib/post-item-author';
 
 type ProfileTab = 'gonderiler' | 'yorumlar' | 'kaydettiklerim' | 'tasarimlarim' | 'gecmis';
 
@@ -39,6 +42,7 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
   const [uploading, setUploading] = useState(false);
   const isOwnProfile = isAuthenticated && !!currentUser?.username && !!username &&
     currentUser.username.toLowerCase() === username.toLowerCase();
+  const openGamificationModal = useGamificationRoadmapModalStore((s) => s.openModal);
 
   const { data: profile, isLoading, error } = useQuery({
     queryKey: ['user', username],
@@ -193,6 +197,7 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
       queryClient.invalidateQueries({ queryKey: ['designs', 'my'] });
       queryClient.invalidateQueries({ queryKey: ['designs', 'list'] });
       queryClient.invalidateQueries({ queryKey: ['designs', isOwnProfile ? 'my' : username, username] });
+      void checkRecentAchievementUnlock();
     } catch (err: unknown) {
       const msg = err && typeof err === 'object' && 'response' in err && typeof (err as { response?: { data?: { detail?: string } } }).response?.data?.detail === 'string'
         ? (err as { response: { data: { detail: string } } }).response.data.detail
@@ -279,12 +284,24 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
               </div>
               <div className="px-4 sm:px-6 pb-5 -mt-12 sm:-mt-14 relative">
                 <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
-                  <div className="w-20 h-20 sm:w-28 sm:h-28 rounded-2xl bg-white dark:bg-gray-800 border-4 border-white dark:border-gray-900 overflow-hidden flex-shrink-0 shadow-xl ring-1 ring-gray-200/50 dark:ring-gray-700">
+                  <div className="relative w-20 h-20 sm:w-28 sm:h-28 rounded-2xl bg-white dark:bg-gray-800 border-4 border-white dark:border-gray-900 flex-shrink-0 shadow-xl ring-1 ring-gray-200/50 dark:ring-gray-700">
                     {profile.profile_picture ? (
-                      <OptimizedAvatar src={profile.profile_picture} size={96} alt="" className="w-full h-full rounded-xl" />
+                      <OptimizedAvatar
+                        src={profile.profile_picture}
+                        size={96}
+                        alt=""
+                        className="w-full h-full rounded-xl"
+                        badges={(profile as { avatar_badges?: { slug: string; name: string; icon: string }[] }).avatar_badges}
+                        levelTitleFallback={(profile as { current_level_title?: string }).current_level_title}
+                      />
                     ) : (
-                      <div className="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-2xl sm:text-3xl font-bold text-gray-500">
+                      <div className="relative w-full h-full rounded-xl bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-2xl sm:text-3xl font-bold text-gray-500">
                         {profile.display_name?.charAt(0) || profile.username?.charAt(0) || '?'}
+                        <AvatarCornerBadges
+                          badges={(profile as { avatar_badges?: { slug: string; name: string; icon: string }[] }).avatar_badges}
+                          size={96}
+                          levelTitleFallback={(profile as { current_level_title?: string }).current_level_title}
+                        />
                       </div>
                     )}
                   </div>
@@ -367,7 +384,7 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
                           title={q.title}
                           content={(q as { content?: string }).content}
                           category={q.tags?.[0]?.name}
-                          author={typeof q.author === 'object' ? q.author?.username ?? '' : ''}
+                          {...postItemAuthorFields(q.author)}
                           timeAgo={formatTimeAgo(q.created_at)}
                           commentCount={q.answer_count ?? 0}
                           voteCount={q.like_count ?? 0}
@@ -410,7 +427,7 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
                           title: string;
                           content?: string;
                           tags?: { name: string }[];
-                          author?: { username: string };
+                          author?: unknown;
                           like_count?: number;
                           answer_count?: number;
                           view_count?: number;
@@ -423,7 +440,7 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
                               title={q.title}
                               content={q.content}
                               category={undefined}
-                              author={q.author?.username ?? ''}
+                              {...postItemAuthorFields(q.author)}
                               timeAgo={formatTimeAgo(first.created_at)}
                               commentCount={q.answer_count ?? 0}
                               voteCount={q.like_count ?? 0}
@@ -580,9 +597,18 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
                   <span className="font-semibold text-gray-900 dark:text-gray-100 tabular-nums">{profile.following_count ?? 0}</span>
                 </div>
               )}
-                <div className="flex justify-between items-center py-2">
+                <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-gray-800">
                   <span className="text-gray-600 dark:text-gray-400">İtibar</span>
                   <span className="font-semibold text-amber-600 dark:text-amber-400 tabular-nums">{profile.reputation ?? 0}</span>
+                </div>
+                <div className="flex justify-between items-center py-2">
+                  <span className="text-gray-600 dark:text-gray-400">Rütbe</span>
+                  <span
+                    className="text-xs sm:text-sm font-semibold text-amber-900 dark:text-amber-200 text-right max-w-[60%] leading-tight"
+                    title="İtibar puanına göre seviye"
+                  >
+                    {(profile as { current_level_title?: string }).current_level_title || 'Yeni Zanaatkar'}
+                  </span>
                 </div>
               </div>
               {(profile.website || profile.instagram_url || profile.twitter_url || profile.facebook_url || profile.linkedin_url || profile.youtube_url || profile.pinterest_url) && (
@@ -662,6 +688,67 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
                 </div>
               </div>
             )}
+
+            {/* Yol haritası (sadece kendi profilinde) */}
+            {isOwnProfile && (
+              <div className="bg-white dark:bg-gray-900 rounded-2xl border border-amber-200/70 dark:border-amber-900/40 shadow-sm overflow-hidden">
+                <div className="p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 uppercase tracking-wider">
+                      Yol haritan
+                    </h3>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      Rütbe, rozet ilerlemesi ve ödül kurallarını modalda aç.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => openGamificationModal({ tab: 'personal' })}
+                    className="shrink-0 rounded-xl bg-gradient-to-r from-amber-500 to-brand px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:opacity-95"
+                  >
+                    Yol haritasını aç
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* İtibar rozetleri (herkese açık galeri) */}
+            {Array.isArray((profile as { reputation_badges?: unknown[] }).reputation_badges) &&
+              (profile as { reputation_badges: { id: number; name: string; description: string; icon: string; earned: boolean }[] })
+                .reputation_badges.length > 0 && (
+                <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-sm overflow-hidden">
+                  <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
+                    <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Rozetler
+                    </h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Kazanılanlar renkli; kilitliler soluk görünür.
+                    </p>
+                  </div>
+                  <div className="p-4">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      {(profile as { reputation_badges: { id: number; name: string; description: string; icon: string; earned: boolean }[] }).reputation_badges.map((b) => (
+                        <div
+                          key={b.id}
+                          title={b.description || b.name}
+                          className={`flex flex-col items-center gap-1 rounded-xl border p-2 text-center transition ${
+                            b.earned
+                              ? 'border-amber-300/70 bg-amber-50/50 dark:border-amber-600/40 dark:bg-amber-900/20'
+                              : 'border-gray-200 dark:border-gray-700 opacity-45 grayscale'
+                          }`}
+                        >
+                          <span className="text-2xl leading-none" aria-hidden>
+                            {b.icon || '◆'}
+                          </span>
+                          <span className="text-[10px] sm:text-xs font-medium text-gray-800 dark:text-gray-200 line-clamp-2 leading-tight">
+                            {b.name}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
 
             {/* Başarılar (sadece kendi profil) */}
             {isOwnProfile && (

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/src/lib/api';
+import { ExpertAskLaunchButton } from '@/src/components/expert-ask-launch-button';
 
 
 const VALUE_ITEMS = [
@@ -48,10 +49,6 @@ function getCategoryAccent(slug: string) {
   return CATEGORY_ACCENT[slug] ?? defaultAccent;
 }
 
-function scrollToFeed() {
-  document.getElementById('sorular')?.scrollIntoView({ behavior: 'smooth' });
-}
-
 /**
  * Pinterest tarzı anasayfa landing: amaç, yapı ve keşfet CTA'ları.
  */
@@ -90,14 +87,17 @@ export function HomeHero() {
             >
               Toplulukları keşfet
             </Link>
-            <button
-              type="button"
-              onClick={scrollToFeed}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium text-brand hover:bg-brand-pink/50 dark:hover:bg-brand/10 transition-colors"
+            <Link
+              href="/sorular"
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium text-brand border border-brand/30 hover:bg-brand-pink/50 dark:hover:bg-brand/10 transition-colors"
             >
-              Sorulara göz at
-              <span aria-hidden>↓</span>
-            </button>
+              Tüm sorular
+              <span aria-hidden>→</span>
+            </Link>
+            <ExpertAskLaunchButton className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-violet-600 to-brand hover:opacity-95 text-white shadow-sm transition-opacity">
+              <span aria-hidden>🧠</span>
+              Uzmana sor
+            </ExpertAskLaunchButton>
           </div>
         </div>
       </div>

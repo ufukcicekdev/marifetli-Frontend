@@ -11,8 +11,97 @@ export interface User {
   following_count: number;
   date_of_birth?: string;
   is_verified: boolean;
+  /** İtibar puanına göre rütbe (forum etiketi vb.) */
+  current_level_title?: string;
+  /** Avatar köşesinde gösterilecek son kazanılan rozetler (en fazla 3) */
+  avatar_badges?: { slug: string; name: string; icon: string }[];
   created_at: string;
   updated_at: string;
+}
+
+/** /auth/me/gamification/ — seviye ve rozet yol haritası */
+export interface GamificationBadgeCue {
+  slug: string;
+  name: string;
+  icon: string;
+  current: number;
+  target: number;
+  hint: string;
+  cta_path: string;
+  cta_label: string;
+}
+
+/** GET /gamification/public/ — giriş gerekmez */
+export interface PublicGamificationLevelRow {
+  title: string;
+  points_min: number;
+  points_max: number | null;
+}
+
+export interface PublicGamificationBadgeRow {
+  slug: string;
+  name: string;
+  description: string;
+  badge_type: string;
+  requirement_value: number;
+  points_required: number;
+  icon: string;
+}
+
+export interface PublicGamificationInfo {
+  levels: PublicGamificationLevelRow[];
+  how_it_works: string[];
+  reputation_tips: string[];
+  badges: PublicGamificationBadgeRow[];
+}
+
+/** GET /category-experts/ */
+export interface CategoryExpertsConfig {
+  enabled: boolean;
+  backend_ready: boolean;
+  provider: string;
+  max_questions_per_user: number;
+  limit_period: string;
+  categories: { id: number; name: string; slug: string; expert_display_name: string }[];
+  authenticated?: boolean;
+  remaining_questions?: number;
+  max_questions_for_user?: number;
+}
+
+/** POST /category-experts/ask/ */
+export interface CategoryExpertAskResponse {
+  answer: string;
+  remaining_questions: number;
+  max_questions_for_user: number;
+  main_category: { id: number; name: string; slug: string };
+  subcategory: { id: number; name: string; slug: string } | null;
+}
+
+export interface CategoryExpertHistoryItem {
+  id: number;
+  question: string;
+  answer: string;
+  main_category: string;
+  subcategory: string | null;
+  created_at: string;
+}
+
+export interface GamificationRoadmap {
+  reputation: number;
+  level_title: string;
+  level_band: {
+    current_title: string;
+    next_title: string | null;
+    next_threshold: number | null;
+    points_to_next: number;
+    progress_percent_in_band: number;
+    band_min: number;
+    band_max: number | null;
+  };
+  headline: string;
+  subtext: string;
+  badge_cues: GamificationBadgeCue[];
+  top_badge_cue: GamificationBadgeCue | null;
 }
 
 export interface UserProfile {
