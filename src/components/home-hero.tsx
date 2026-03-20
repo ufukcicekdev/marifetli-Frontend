@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/src/lib/api';
-import { ExpertAskLaunchButton } from '@/src/components/expert-ask-launch-button';
+import { UzmanFullPageLink } from '@/src/components/uzman-full-page-link';
 
 
 const VALUE_ITEMS = [
@@ -94,10 +94,10 @@ export function HomeHero() {
               Tüm sorular
               <span aria-hidden>→</span>
             </Link>
-            <ExpertAskLaunchButton className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-violet-600 to-brand hover:opacity-95 text-white shadow-sm transition-opacity">
+            <UzmanFullPageLink className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-violet-600 to-brand hover:opacity-95 text-white shadow-sm transition-opacity">
               <span aria-hidden>🧠</span>
               Uzmana sor
-            </ExpertAskLaunchButton>
+            </UzmanFullPageLink>
           </div>
         </div>
       </div>

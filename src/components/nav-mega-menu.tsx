@@ -9,7 +9,7 @@ import { useSidebarStore } from '../stores/sidebar-store';
 import { useAuthStore } from '../stores/auth-store';
 import { useAuthModalStore } from '../stores/auth-modal-store';
 import { ThemeToggle } from './theme-toggle';
-import { ExpertAskLaunchButton } from './expert-ask-launch-button';
+import { UzmanFullPageLink } from './uzman-full-page-link';
 import api from '../lib/api';
 
 type CategoryItem = { id: number; name: string; slug: string; subcategories?: CategoryItem[] };
@@ -116,17 +116,15 @@ export function NavMegaMenu() {
             >
               {/* Mobil: Gönderi Oluştur + Tema (aydınlık/karanlık) — header’da yer kalmadığı için menüde */}
               <div className="flex flex-col gap-2 pb-4 mb-4 border-b border-gray-100 dark:border-gray-800 md:hidden">
-                {expertCfg?.enabled && expertCfg?.backend_ready && (
-                  <ExpertAskLaunchButton
-                    onOpen={close}
-                    className="flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-brand text-white font-medium text-sm shadow-sm"
-                  >
-                    <span className="text-lg" aria-hidden>
-                      🧠
-                    </span>
-                    <span>Uzmana sor</span>
-                  </ExpertAskLaunchButton>
-                )}
+                <UzmanFullPageLink
+                  onNavigate={close}
+                  className="flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-brand text-white font-medium text-sm shadow-sm"
+                >
+                  <span className="text-lg" aria-hidden>
+                    🧠
+                  </span>
+                  <span>Uzmana sor</span>
+                </UzmanFullPageLink>
                 {isAuthenticated && user && (
                   user.is_verified ? (
                     <Link
@@ -156,11 +154,17 @@ export function NavMegaMenu() {
               <div className="grid gap-1 grid-cols-1 md:grid-cols-2">
                 {navItems.map((item) => {
                   if (item.kind === 'expert') {
+                    const expertActive =
+                      pathname === '/uzman' || (pathname?.startsWith('/uzman/') ?? false) || (pathname?.startsWith('/uzman?') ?? false);
                     return (
-                      <ExpertAskLaunchButton
-                        key="nav-expert-panel"
-                        onOpen={close}
-                        className="flex gap-3 p-3 rounded-xl transition-colors w-full text-left hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-200"
+                      <UzmanFullPageLink
+                        key="nav-expert-uzman"
+                        onNavigate={close}
+                        className={`flex gap-3 p-3 rounded-xl transition-colors w-full text-left ${
+                          expertActive
+                            ? 'bg-brand-pink/80 dark:bg-brand/10 text-brand'
+                            : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-200'
+                        }`}
                       >
                         <span className="text-2xl shrink-0" aria-hidden>
                           {item.icon}
@@ -169,7 +173,7 @@ export function NavMegaMenu() {
                           <span className="font-medium block">{item.label}</span>
                           <span className="text-xs text-gray-500 dark:text-gray-400 block mt-0.5">{item.description}</span>
                         </div>
-                      </ExpertAskLaunchButton>
+                      </UzmanFullPageLink>
                     );
                   }
                   const active = isNavActive(pathname, item.href);

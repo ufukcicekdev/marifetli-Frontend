@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic';
 
 const AppSidebar = dynamic(
-  () => import('@/src/components/app-sidebar').then((m) => ({ default: m.AppSidebar })),
+  () => import('@/src/components/sidebar-navigation').then((m) => ({ default: m.AppSidebar })),
   {
     ssr: false,
     loading: () => (

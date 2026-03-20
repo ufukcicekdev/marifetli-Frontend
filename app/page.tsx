@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ExpertAskLaunchButton } from '@/src/components/expert-ask-launch-button';
+import { UzmanFullPageLink } from '@/src/components/uzman-full-page-link';
 import { HomeHero } from '@/src/components/home-hero';
 import { RecentActivitySidebar } from '@/src/components/recent-activity-sidebar';
 import { PopularQuestionsSidebar } from '@/src/components/popular-questions-sidebar';
@@ -42,10 +42,10 @@ export default function HomePage() {
             >
               Gönderi oluştur
             </Link>
-            <ExpertAskLaunchButton className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-violet-600 to-brand hover:opacity-95 text-white shadow-sm transition-opacity border border-white/10">
+            <UzmanFullPageLink className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-violet-600 to-brand hover:opacity-95 text-white shadow-sm transition-opacity border border-white/10">
               <span aria-hidden>🧠</span>
               Uzmana sor
-            </ExpertAskLaunchButton>
+            </UzmanFullPageLink>
           </div>
         </section>
       </div>

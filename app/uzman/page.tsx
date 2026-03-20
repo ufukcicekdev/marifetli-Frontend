@@ -140,8 +140,10 @@ export default function UzmanPage() {
     <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-3xl">
       <div className="mb-6 flex flex-wrap items-baseline justify-between gap-2">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Kategori uzmanı</h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+          <h1 id="uzman-main-heading" className="text-2xl font-bold text-gray-900 dark:text-white">
+            Kategori uzmanı
+          </h1>
+          <p id="uzman-hero-lead" className="text-sm text-gray-600 dark:text-gray-400 mt-1">
             Ana kategorilere özel yardımcı; yanıtlar yapay zeka ile üretilir. Marifetli uzmanı olarak samimi, uygulanabilir öneriler
             sunması beklenir.
           </p>
