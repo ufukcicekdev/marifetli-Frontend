@@ -1,20 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { User as AppUser } from '@/src/types';
 
-export interface User {
-  id: number;
-  email: string;
-  username: string;
-  first_name?: string;
-  last_name?: string;
-  bio?: string;
-  profile_picture?: string;
-  gender?: string;
+/**
+ * Oturum kullanıcısı — API User ile aynı; reputation bazı uçlarda ek gelir.
+ */
+export type User = AppUser & {
   reputation?: number;
-  followers_count?: number;
-  following_count?: number;
-  is_verified?: boolean;
-}
+};
 
 interface AuthState {
   user: User | null;
