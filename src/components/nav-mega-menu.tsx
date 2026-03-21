@@ -50,7 +50,8 @@ export function NavMegaMenu() {
   const { data: expertCfg } = useQuery({
     queryKey: ['category-experts-config', user?.id ?? 'anon'],
     queryFn: () => api.getCategoryExpertsConfig(),
-    staleTime: 60_000,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   const navItems = useMemo((): MegaNavItem[] => {

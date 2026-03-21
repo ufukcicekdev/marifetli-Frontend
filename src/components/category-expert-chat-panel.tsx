@@ -39,7 +39,9 @@ export function CategoryExpertChatPanel() {
   const { data: cfg, isLoading: cfgLoading } = useQuery({
     queryKey: ['category-experts-config', user?.id ?? 'anon'],
     queryFn: () => api.getCategoryExpertsConfig(),
-    staleTime: 30_000,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
   const { data: categoriesRaw } = useQuery({
@@ -211,6 +213,9 @@ export function CategoryExpertChatPanel() {
             {cfg.authenticated && maxQ > 0 && (
               <p className="text-xs text-brand mt-1">
                 Kalan: <strong>{remaining}</strong> / {maxQ}
+                {cfg.limit_period === 'day' && ' (bugün)'}
+                {cfg.limit_period === 'month' && ' (bu ay)'}
+                {cfg.limit_period === 'all_time' && ' (toplam)'}
               </p>
             )}
           </div>

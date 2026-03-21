@@ -21,7 +21,8 @@ export function UzmanFullPageLink({ className, children, onNavigate, title }: Pr
   const { data: cfg } = useQuery({
     queryKey: ['category-experts-config', user?.id ?? 'anon'],
     queryFn: () => api.getCategoryExpertsConfig(),
-    staleTime: 60_000,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
   });
 
   if (!cfg?.enabled || !cfg?.backend_ready) {

@@ -1,12 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import api from '@/src/lib/api';
 import { useAuthStore } from '@/src/stores/auth-store';
 import { useAuthModalStore } from '@/src/stores/auth-modal-store';
+import type { CategoryExpertHistoryItem } from '@/src/types';
+import { CategoryDropdown, buildCategoriesTree, type CategoryWithSubs } from '@/src/components/category-dropdown';
+import { ExpertFlatDropdown } from '@/src/components/expert-flat-dropdown';
 
 type CategoryItem = { id: number; name: string; slug: string; subcategories?: CategoryItem[] };
 
@@ -18,14 +21,17 @@ export default function UzmanPage() {
   const [subId, setSubId] = useState<number | ''>('');
   const [question, setQuestion] = useState('');
   const [lastAnswer, setLastAnswer] = useState<string | null>(null);
+  const [historyDetail, setHistoryDetail] = useState<CategoryExpertHistoryItem | null>(null);
 
   const { data: cfg, isLoading: cfgLoading } = useQuery({
     queryKey: ['category-experts-config', user?.id ?? 'anon'],
     queryFn: () => api.getCategoryExpertsConfig(),
-    staleTime: 30_000,
+    staleTime: 0,
+    refetchOnMount: 'always',
+    refetchOnWindowFocus: true,
   });
 
-  const { data: categoriesRaw } = useQuery({
+  const { data: categoriesRaw, isLoading: categoriesLoading } = useQuery({
     queryKey: ['categories'],
     queryFn: () => api.getCategories().then((r) => r.data),
     enabled: Boolean(cfg?.enabled && cfg.categories?.length),
@@ -42,6 +48,24 @@ export default function UzmanPage() {
     const main = (list as CategoryItem[]).find((c) => c.id === mainId);
     return main?.subcategories ?? [];
   }, [categoriesRaw, mainId]);
+
+  /** Tam sayfa uzman: sadece uzmanı olan ana kategoriler; isimde uzman etiketi */
+  const expertMainTree = useMemo((): CategoryWithSubs[] => {
+    if (!categoriesRaw || !cfg?.categories?.length) return [];
+    const all = buildCategoriesTree(categoriesRaw);
+    const byId = new Map(all.map((m) => [m.id, m]));
+    return cfg.categories
+      .map((c) => {
+        const m = byId.get(c.id);
+        if (!m) return null;
+        return {
+          ...m,
+          name: `${m.name} — ${c.expert_display_name}`,
+          subcategories: [] as CategoryWithSubs['subcategories'],
+        };
+      })
+      .filter((x): x is CategoryWithSubs => Boolean(x));
+  }, [categoriesRaw, cfg?.categories]);
 
   const askMutation = useMutation({
     mutationFn: () =>
@@ -76,6 +100,20 @@ export default function UzmanPage() {
     queryFn: () => api.getCategoryExpertHistory(),
     enabled: Boolean(isAuthenticated && user?.is_verified && cfg?.enabled),
   });
+
+  useEffect(() => {
+    if (!historyDetail) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setHistoryDetail(null);
+    };
+    document.addEventListener('keydown', onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [historyDetail]);
 
   if (cfgLoading || !cfg) {
     return (
@@ -181,24 +219,23 @@ export default function UzmanPage() {
       <form onSubmit={handleSubmit} className="space-y-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 sm:p-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ana kategori</label>
-          <select
-            value={mainId}
-            onChange={(e) => {
-              const v = e.target.value;
-              setMainId(v === '' ? '' : Number(v));
-              setSubId('');
-              setLastAnswer(null);
-            }}
-            className="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-            required
-          >
-            <option value="">Seçin…</option>
-            {cfg.categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name} — {c.expert_display_name}
-              </option>
-            ))}
-          </select>
+          {categoriesLoading && expertMainTree.length === 0 ? (
+            <p className="text-sm text-gray-500 dark:text-gray-400 py-2">Kategoriler yükleniyor…</p>
+          ) : (
+            <CategoryDropdown
+              categoriesTree={expertMainTree}
+              value={mainId === '' ? null : mainId}
+              onChange={(id) => {
+                setMainId(id == null ? '' : id);
+                setSubId('');
+                setLastAnswer(null);
+              }}
+              placeholder="Seçin…"
+              allowClear
+              clearLabel="Seçin…"
+              disabled={categoriesLoading || expertMainTree.length === 0}
+            />
+          )}
         </div>
 
         {subsForMain.length > 0 && (
@@ -206,21 +243,14 @@ export default function UzmanPage() {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Alt kategori <span className="text-gray-400 font-normal">(isteğe bağlı)</span>
             </label>
-            <select
-              value={subId}
-              onChange={(e) => {
-                const v = e.target.value;
-                setSubId(v === '' ? '' : Number(v));
-              }}
-              className="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-            >
-              <option value="">— Tümü / genel —</option>
-              {subsForMain.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+            <ExpertFlatDropdown
+              className="w-full"
+              value={subId === '' ? null : subId}
+              onChange={(id) => setSubId(id == null ? '' : id)}
+              options={subsForMain.map((s) => ({ id: s.id, name: s.name }))}
+              placeholder="— Tümü / genel —"
+              disabled={mainId === ''}
+            />
           </div>
         )}
 
@@ -259,24 +289,92 @@ export default function UzmanPage() {
       {history?.results?.length ? (
         <div className="mt-8">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Son sorularınız</h2>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Detayı görmek için bir kayda tıklayın.</p>
           <ul className="space-y-3">
             {history.results.map((row) => (
-              <li
-                key={row.id}
-                className="p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm"
-              >
-                <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                  {row.main_category}
-                  {row.subcategory ? ` › ${row.subcategory}` : ''}
-                  {' · '}
-                  {new Date(row.created_at).toLocaleString('tr-TR')}
-                </p>
-                <p className="font-medium text-gray-900 dark:text-gray-100">{row.question}</p>
-                <p className="mt-2 text-gray-600 dark:text-gray-300 whitespace-pre-wrap line-clamp-4">{row.answer}</p>
+              <li key={row.id}>
+                <button
+                  type="button"
+                  onClick={() => setHistoryDetail(row)}
+                  className="w-full text-left p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm transition hover:border-brand/50 hover:bg-gray-50 dark:hover:bg-gray-800/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                >
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                    {row.main_category}
+                    {row.subcategory ? ` › ${row.subcategory}` : ''}
+                    {' · '}
+                    {new Date(row.created_at).toLocaleString('tr-TR')}
+                  </p>
+                  <p className="font-medium text-gray-900 dark:text-gray-100 line-clamp-2">{row.question}</p>
+                  <p className="mt-2 text-gray-600 dark:text-gray-300 whitespace-pre-wrap line-clamp-3">{row.answer}</p>
+                  <span className="mt-2 inline-block text-xs font-medium text-brand">Tam metin →</span>
+                </button>
               </li>
             ))}
           </ul>
         </div>
+      ) : null}
+
+      {historyDetail ? (
+        <>
+          <div
+            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm"
+            aria-hidden
+            onClick={() => setHistoryDetail(null)}
+          />
+          <div
+            className="fixed left-1/2 top-1/2 z-[101] w-[min(92vw,560px)] max-h-[min(88vh,720px)] -translate-x-1/2 -translate-y-1/2 flex flex-col rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="expert-history-modal-title"
+          >
+            <div className="shrink-0 flex items-start justify-between gap-3 border-b border-gray-200 dark:border-gray-700 px-4 py-3">
+              <div className="min-w-0">
+                <h3 id="expert-history-modal-title" className="text-base font-semibold text-gray-900 dark:text-white">
+                  Soru detayı
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  {historyDetail.main_category}
+                  {historyDetail.subcategory ? ` › ${historyDetail.subcategory}` : ''}
+                  {' · '}
+                  {new Date(historyDetail.created_at).toLocaleString('tr-TR')}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setHistoryDetail(null)}
+                className="shrink-0 rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"
+                aria-label="Kapat"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 space-y-4">
+              <div>
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
+                  Sorunuz
+                </h4>
+                <p className="text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap">{historyDetail.question}</p>
+              </div>
+              <div>
+                <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-1">
+                  Uzman yanıtı
+                </h4>
+                <p className="text-sm text-gray-700 dark:text-gray-200 whitespace-pre-wrap">{historyDetail.answer}</p>
+              </div>
+            </div>
+            <div className="shrink-0 border-t border-gray-200 dark:border-gray-700 px-4 py-3">
+              <button
+                type="button"
+                onClick={() => setHistoryDetail(null)}
+                className="w-full sm:w-auto px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-700"
+              >
+                Kapat
+              </button>
+            </div>
+          </div>
+        </>
       ) : null}
     </div>
   );
