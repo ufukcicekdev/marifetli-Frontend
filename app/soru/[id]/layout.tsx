@@ -16,14 +16,26 @@ function firstImageFromHtml(html: string | null | undefined): string | undefined
   return m?.[1]?.trim();
 }
 
+type AnswerForMeta = {
+  id?: number;
+  content?: string;
+  like_count?: number;
+  created_at?: string;
+  parent?: number | null;
+  is_best_answer?: boolean;
+  moderation_status?: number;
+  author?: { username?: string; first_name?: string };
+};
+
 type QuestionForMeta = {
   title: string;
+  slug?: string;
   description?: string;
   content?: string;
   meta_title?: string;
   meta_description?: string;
   created_at?: string;
-  answers?: Array<{ content?: string; author?: { username?: string; first_name?: string }; moderation_status?: number }>;
+  answers?: AnswerForMeta[];
   author?: { username?: string; first_name?: string };
 };
 
@@ -44,16 +56,45 @@ function stripHtmlForSchema(html: string | null | undefined): string {
   return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 500);
 }
 
-function buildQAPageStructuredData(question: QuestionForMeta, id: string) {
+function personForSchema(displayName: string, username?: string | null) {
+  const node: Record<string, unknown> = { '@type': 'Person', name: displayName };
+  if (username) node.url = `${SITE_URL}/profil/${username}`;
+  return node;
+}
+
+function buildQAPageStructuredData(question: QuestionForMeta, paramId: string) {
+  const qSlug = question.slug || paramId;
+  const pageBase = `${SITE_URL}/soru/${qSlug}`;
   const text = stripHtmlForSchema(question.content || question.description || '');
   const authorName =
     question.author?.username || question.author?.first_name || 'Marifetli topluluk üyesi';
-  const answers = (question.answers || []).filter((a) => a?.moderation_status !== 2); // reddedilenleri atla
-  const suggestedAnswer = answers.slice(0, 8).map((a) => ({
-    '@type': 'Answer',
-    text: stripHtmlForSchema(a.content),
-    author: { '@type': 'Person', name: a.author?.username || a.author?.first_name || 'Anonim' },
-  }));
+  const questionAuthorUsername = question.author?.username || undefined;
+
+  // Sadece üst düzey cevaplar (yorum zinciri değil); reddedilenleri atla
+  const topLevel = (question.answers || []).filter(
+    (a) => a && a.moderation_status !== 2 && (a.parent == null || a.parent === undefined),
+  );
+  const sorted = [...topLevel].sort((a, b) => {
+    if (a.is_best_answer && !b.is_best_answer) return -1;
+    if (!a.is_best_answer && b.is_best_answer) return 1;
+    return 0;
+  });
+
+  const suggestedAnswer = sorted.slice(0, 8).map((a) => {
+    const aid = a.id;
+    const answerUrl = typeof aid === 'number' ? `${pageBase}#comment-${aid}` : pageBase;
+    const ansAuthorName = a.author?.username || a.author?.first_name || 'Anonim';
+    const ansUsername = a.author?.username || undefined;
+    const votes = typeof a.like_count === 'number' ? a.like_count : 0;
+    return {
+      '@type': 'Answer',
+      url: answerUrl,
+      text: stripHtmlForSchema(a.content),
+      ...(a.created_at && { datePublished: a.created_at }),
+      upvoteCount: votes,
+      author: personForSchema(ansAuthorName, ansUsername),
+    };
+  });
 
   return {
     '@context': 'https://schema.org',
@@ -62,9 +103,9 @@ function buildQAPageStructuredData(question: QuestionForMeta, id: string) {
       '@type': 'Question',
       name: question.title,
       text: text || question.title,
-      author: { '@type': 'Person', name: authorName },
+      author: personForSchema(authorName, questionAuthorUsername),
       ...(question.created_at && { dateCreated: question.created_at }),
-      answerCount: answers.length,
+      answerCount: topLevel.length,
       ...(suggestedAnswer.length > 0 && { suggestedAnswer }),
     },
   };
@@ -85,7 +126,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
   const title = question.meta_title || question.title;
   const description = question.meta_description || question.description || question.title;
-  const url = `${SITE_URL}/soru/${id}`;
+  const slug = question.slug || id;
+  const url = `${SITE_URL}/soru/${slug}`;
   const imageUrl = toAbsoluteImageUrl(firstImageFromHtml(question.content));
 
   return {
