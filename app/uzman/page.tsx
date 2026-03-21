@@ -54,17 +54,17 @@ export default function UzmanPage() {
     if (!categoriesRaw || !cfg?.categories?.length) return [];
     const all = buildCategoriesTree(categoriesRaw);
     const byId = new Map(all.map((m) => [m.id, m]));
-    return cfg.categories
-      .map((c) => {
-        const m = byId.get(c.id);
-        if (!m) return null;
-        return {
-          ...m,
-          name: `${m.name} — ${c.expert_display_name}`,
-          subcategories: [] as CategoryWithSubs['subcategories'],
-        };
-      })
-      .filter((x): x is CategoryWithSubs => Boolean(x));
+    return cfg.categories.flatMap((c) => {
+      const m = byId.get(c.id);
+      if (!m) return [];
+      const node: CategoryWithSubs = {
+        id: m.id,
+        slug: m.slug,
+        name: `${m.name} — ${c.expert_display_name}`,
+        subcategories: [],
+      };
+      return [node];
+    });
   }, [categoriesRaw, cfg?.categories]);
 
   const askMutation = useMutation({
