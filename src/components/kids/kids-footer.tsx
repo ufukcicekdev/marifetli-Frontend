@@ -1,0 +1,53 @@
+'use client';
+
+const MAIN_SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.marifetli.com.tr';
+
+type KidsFooterProps = {
+  pathPrefix: string;
+};
+
+export function KidsFooter({ pathPrefix }: KidsFooterProps) {
+  const year = new Date().getFullYear();
+  const kidsHome = pathPrefix || '/';
+
+  return (
+    <footer className="mt-auto bg-white/90 backdrop-blur-md dark:bg-gray-900/90">
+      <div
+        className="h-1 w-full bg-gradient-to-r from-violet-500 via-amber-400 to-sky-500"
+        aria-hidden
+      />
+      <div className="container mx-auto flex flex-col items-center justify-center gap-3 px-3 py-6 text-center text-sm text-violet-900/80 dark:text-violet-100/80 sm:px-4">
+        <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1" aria-label="Kids sayfaları">
+          <a href={kidsHome} className="transition-colors hover:text-brand dark:hover:text-brand">
+            Kids ana sayfa
+          </a>
+          <a
+            href={MAIN_SITE}
+            rel="noopener noreferrer"
+            className="transition-colors hover:text-brand dark:hover:text-brand"
+          >
+            Marifetli
+          </a>
+          <a
+            href={`${MAIN_SITE}/iletisim`}
+            rel="noopener noreferrer"
+            className="transition-colors hover:text-brand dark:hover:text-brand"
+          >
+            İletişim
+          </a>
+          <a
+            href={`${MAIN_SITE}/gizlilik-politikasi`}
+            rel="noopener noreferrer"
+            className="transition-colors hover:text-brand dark:hover:text-brand"
+          >
+            Gizlilik
+          </a>
+        </nav>
+        <span>
+          © {year} Marifetli Kids —{' '}
+          <span className="text-gray-500 dark:text-gray-500">marifetli.com.tr ailesi</span>
+        </span>
+      </div>
+    </footer>
+  );
+}

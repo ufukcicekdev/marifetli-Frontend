@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import { Suspense } from 'react';
+import { headers } from 'next/headers';
 import { Inter, Outfit } from 'next/font/google';
 import { Toaster } from 'react-hot-toast';
 import { QueryProvider } from '@/src/providers/query-provider';
@@ -132,11 +133,28 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const isKidsPortal = (await headers()).get('x-marifetli-kids') === '1';
+
+  if (isKidsPortal) {
+    return (
+      <html lang="tr" suppressHydrationWarning>
+        <body
+          className={`${inter.className} ${outfit.variable} min-h-screen bg-gradient-to-br from-violet-100/70 via-amber-50/80 to-sky-100/70 antialiased dark:from-violet-950/90 dark:via-slate-950 dark:to-sky-950/80`}
+        >
+          <QueryProvider>
+            {children}
+          </QueryProvider>
+          <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
+        </body>
+      </html>
+    );
+  }
+
   return (
     <html lang="tr" suppressHydrationWarning>
       <head>
