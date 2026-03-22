@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-export const dynamic = 'force-static';
+export const revalidate = 3600;
 
 const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.marifetli.com.tr').replace(/\/$/, '');
 const apiBase = (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api').replace(/\/$/, '');
@@ -16,14 +16,15 @@ async function fetchDesignIds(): Promise<number[]> {
         { next: { revalidate: 3600 } }
       );
       if (!res.ok) break;
-      const data = (await res.json()) as { results?: { id: number }[]; next?: string };
+      const data = (await res.json()) as { results?: { id: number }[]; next?: string | null };
       const results = data?.results ?? [];
+      if (results.length === 0) break;
       for (const d of results) {
         if (d?.id) ids.push(d.id);
       }
-      if (results.length < pageSize || !data?.next) break;
-      page++;
-      if (page > 100) break;
+      if (!data?.next) break;
+      page += 1;
+      if (page > 200) break;
     }
   } catch {
     // ignore

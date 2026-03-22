@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-export const dynamic = 'force-static';
+export const revalidate = 3600;
 
 const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.marifetli.com.tr').replace(/\/$/, '');
 const apiBase = (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api').replace(/\/$/, '');
@@ -17,12 +17,14 @@ async function fetchBlogSlugs(): Promise<string[]> {
       if (!res.ok) break;
       const data = await res.json();
       const results = Array.isArray(data) ? data : data?.results ?? [];
+      const next = !Array.isArray(data) ? (data as { next?: string | null }).next : null;
+      if (!Array.isArray(results) || results.length === 0) break;
       for (const p of results) {
         if (p?.slug) slugs.push(p.slug);
       }
-      if (results.length < pageSize) break;
-      page++;
-      if (page > 100) break;
+      if (Array.isArray(data) || !next) break;
+      page += 1;
+      if (page > 200) break;
     }
   } catch {
     // ignore

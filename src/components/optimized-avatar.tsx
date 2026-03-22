@@ -30,6 +30,8 @@ type OptimizedAvatarProps = {
   src: string | null | undefined;
   alt?: string;
   size?: 24 | 32 | 40 | 48 | 80 | 96;
+  /** true: ebeveyn kutuyu (w/h sabit) tamamen doldurur; profil kartı gibi kare/squircle için */
+  fill?: boolean;
   className?: string;
   priority?: boolean;
   /** Son kazanılan rozetler (API: user.avatar_badges) */
@@ -129,6 +131,7 @@ export function OptimizedAvatar({
   src,
   alt = '',
   size = 40,
+  fill = false,
   className = '',
   priority = false,
   badges,
@@ -140,6 +143,47 @@ export function OptimizedAvatar({
   const canOptimize = isOptimizable(src);
   const hasCorner =
     (badges?.length ?? 0) > 0 || Boolean(levelTitleFallback?.trim());
+
+  /** Profil banner üstü: kutu 80px / 112px; köşe yuvarlaklığı className ile (örn. rounded-2xl) */
+  if (fill) {
+    const wrapClass = `relative flex w-full h-full min-h-0 min-w-0 overflow-hidden ${className}`.trim();
+    const fillSizes = '(max-width: 640px) 80px, 112px';
+    const inner = canOptimize ? (
+      <Image
+        src={url}
+        alt={alt}
+        fill
+        className="object-cover"
+        sizes={fillSizes}
+        priority={priority}
+      />
+    ) : (
+      <img
+        src={url}
+        alt={alt}
+        className="absolute inset-0 h-full w-full object-cover"
+        loading={priority ? 'eager' : 'lazy'}
+        decoding="async"
+        fetchPriority={priority ? 'high' : undefined}
+      />
+    );
+
+    if (!hasCorner) {
+      return <span className={wrapClass}>{inner}</span>;
+    }
+
+    return (
+      <span className={wrapClass}>
+        {inner}
+        <AvatarCornerBadges
+          badges={badges}
+          size={s}
+          levelTitleFallback={levelTitleFallback}
+          cornerTone={cornerTone}
+        />
+      </span>
+    );
+  }
 
   const imgClassName = `rounded-full object-cover shrink-0 ${className}`;
 

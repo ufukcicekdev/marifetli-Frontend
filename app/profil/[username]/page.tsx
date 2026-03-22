@@ -284,18 +284,19 @@ export default function ProfilePage({ params }: { params: Promise<{ username: st
               </div>
               <div className="px-4 sm:px-6 pb-5 -mt-12 sm:-mt-14 relative">
                 <div className="flex flex-col sm:flex-row items-start sm:items-end gap-4">
-                  <div className="relative w-20 h-20 sm:w-28 sm:h-28 rounded-2xl bg-white dark:bg-gray-800 border-4 border-white dark:border-gray-900 flex-shrink-0 shadow-xl ring-1 ring-gray-200/50 dark:ring-gray-700">
+                  <div className="relative w-20 h-20 sm:w-28 sm:h-28 shrink-0 overflow-hidden rounded-2xl border-4 border-white bg-white shadow-xl ring-1 ring-gray-200/50 dark:border-gray-900 dark:bg-gray-800 dark:ring-gray-700">
                     {profile.profile_picture ? (
                       <OptimizedAvatar
+                        fill
                         src={profile.profile_picture}
                         size={96}
                         alt=""
-                        className="w-full h-full rounded-xl"
+                        className="rounded-2xl"
                         badges={(profile as { avatar_badges?: { slug: string; name: string; icon: string }[] }).avatar_badges}
                         levelTitleFallback={(profile as { current_level_title?: string }).current_level_title}
                       />
                     ) : (
-                      <div className="relative w-full h-full rounded-xl bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-2xl sm:text-3xl font-bold text-gray-500">
+                      <div className="relative flex h-full w-full items-center justify-center overflow-hidden rounded-2xl bg-gray-200 text-2xl font-bold text-gray-500 dark:bg-gray-700 sm:text-3xl">
                         {profile.display_name?.charAt(0) || profile.username?.charAt(0) || '?'}
                         <AvatarCornerBadges
                           badges={(profile as { avatar_badges?: { slug: string; name: string; icon: string }[] }).avatar_badges}

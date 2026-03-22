@@ -1,9 +1,12 @@
 import { NextResponse } from 'next/server';
 
-export const dynamic = 'force-static';
+/** Build / CDN önbelleği: sitemap düzenli yenilensin (force-static tek sayfa ile kesiyordu). */
+export const revalidate = 3600;
 
 const baseUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.marifetli.com.tr').replace(/\/$/, '');
 const apiBase = (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api').replace(/\/$/, '');
+
+const MAX_PAGES = 600; // 100/sayfa → 60k URL üst sınır
 
 async function fetchQuestionSlugs(): Promise<string[]> {
   const slugs: string[] = [];
@@ -16,14 +19,15 @@ async function fetchQuestionSlugs(): Promise<string[]> {
         { next: { revalidate: 3600 } }
       );
       if (!res.ok) break;
-      const data = await res.json();
+      const data = (await res.json()) as { results?: { slug?: string }[]; next?: string | null };
       const results = data?.results ?? [];
+      if (results.length === 0) break;
       for (const q of results) {
         if (q?.slug) slugs.push(q.slug);
       }
-      if (results.length < pageSize || !data?.next) break;
-      page++;
-      if (page > 500) break;
+      if (!data?.next) break;
+      page += 1;
+      if (page > MAX_PAGES) break;
     }
   } catch {
     // ignore
