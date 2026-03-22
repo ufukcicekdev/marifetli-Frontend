@@ -128,6 +128,14 @@ export function KidsHeader({ pathPrefix }: KidsHeaderProps) {
                     ) : null}
                   </div>
                   <Link
+                    href={`${pathPrefix}/bildirimler`}
+                    className="block px-4 py-2 text-sm text-gray-700 hover:bg-violet-50 dark:text-gray-300 dark:hover:bg-violet-950/50"
+                    onClick={() => setMenuOpen(false)}
+                    role="menuitem"
+                  >
+                    Bildirimler
+                  </Link>
+                  <Link
                     href={`${pathPrefix}/profil`}
                     className="block px-4 py-2 text-sm text-gray-700 hover:bg-violet-50 dark:text-gray-300 dark:hover:bg-violet-950/50"
                     onClick={() => setMenuOpen(false)}

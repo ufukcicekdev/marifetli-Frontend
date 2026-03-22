@@ -477,7 +477,9 @@ export async function kidsNotificationUnreadCount(): Promise<number> {
 export async function kidsListNotifications(): Promise<KidsNotificationRow[]> {
   const res = await kidsAuthorizedFetch('/notifications/', { method: 'GET' });
   if (!res.ok) throw new Error('Bildirimler yüklenemedi');
-  return res.json() as Promise<KidsNotificationRow[]>;
+  const d = (await res.json()) as KidsNotificationRow[] | { results?: KidsNotificationRow[] };
+  if (Array.isArray(d)) return d;
+  return Array.isArray(d?.results) ? d.results : [];
 }
 
 export async function kidsMarkNotificationRead(id: number): Promise<KidsNotificationRow> {

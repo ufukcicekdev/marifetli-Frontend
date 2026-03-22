@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
+import { KidsNotificationBell } from '@/src/components/kids/kids-notification-bell';
 import { kidsClassLocationLine, kidsStudentDashboard, type KidsAssignment, type KidsClass } from '@/src/lib/kids-api';
 
 export default function KidsStudentPanelPage() {
@@ -48,11 +49,14 @@ export default function KidsStudentPanelPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-10">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Öğrenci paneli</h1>
-        <p className="text-slate-600 dark:text-gray-300">
-          Merhaba {user.first_name || user.email} — ödevlerini tamamla, serbest kürsüye göz at.
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Öğrenci paneli</h1>
+          <p className="text-slate-600 dark:text-gray-300">
+            Merhaba {user.first_name || user.email} — ödevlerini tamamla, serbest kürsüye göz at.
+          </p>
+        </div>
+        <KidsNotificationBell pathPrefix={pathPrefix} showLabel className="shrink-0 self-start" />
       </div>
 
       <section className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-900/80">
