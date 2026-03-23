@@ -14,7 +14,6 @@ import {
   type KidsClass,
   type KidsSchool,
 } from '@/src/lib/kids-api';
-import { KidsNotificationBell } from '@/src/components/kids/kids-notification-bell';
 import {
   KidsCard,
   KidsEmptyState,
@@ -127,10 +126,6 @@ export default function KidsTeacherPanelPage() {
         title={`Merhaba, ${firstName}!`}
         subtitle="Önce okulunu tanımla, sonra sınıf açarken o okulu seç. Davet ve ödevler sınıf sayfasından yönetilir."
       />
-
-      <div className="mb-6">
-        <KidsNotificationBell pathPrefix={pathPrefix} showLabel />
-      </div>
 
       <div className="grid gap-8 lg:grid-cols-12 lg:gap-10">
         <div className="lg:col-span-5">

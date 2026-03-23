@@ -9,12 +9,14 @@ import {
   kidsAuthorizedFetch,
   kidsCreateAssignment,
   kidsCreateInvite,
+  kidsDeleteClass,
   kidsListAssignments,
   parseKidsInviteEmails,
   kidsListStudents,
   kidsClassLocationLine,
   kidsListSchools,
   kidsPatchClass,
+  kidsRemoveEnrollment,
   kidsSchoolLocationLine,
   kidsWeeklyChampion,
   type KidsAssignment,
@@ -92,6 +94,8 @@ export default function KidsTeacherClassPage() {
   /** Öğrenci teslim türü: görsel/adım adım veya video (ikisi birden değil). */
   const [asgMediaType, setAsgMediaType] = useState<'image' | 'video'>('image');
   const [asgSaving, setAsgSaving] = useState(false);
+  const [deletingClass, setDeletingClass] = useState(false);
+  const [removingEnrollmentId, setRemovingEnrollmentId] = useState<number | null>(null);
 
   const editNameId = useId();
   const editDescId = useId();
@@ -243,6 +247,42 @@ export default function KidsTeacherClassPage() {
     }
   }
 
+  async function removeStudentFromClass(en: KidsEnrollment) {
+    const label = [en.student.first_name, en.student.last_name].filter(Boolean).join(' ').trim() || en.student.email;
+    const ok = window.confirm(
+      `${label} bu sınıftan çıkarılsın mı? Bu sınıfa ait ödev teslimleri de silinir; öğrenci hesabı silinmez.`,
+    );
+    if (!ok) return;
+    setRemovingEnrollmentId(en.id);
+    try {
+      await kidsRemoveEnrollment(classId, en.id);
+      setStudents((prev) => prev.filter((x) => x.id !== en.id));
+      toast.success('Öğrenci sınıftan çıkarıldı');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'İşlem başarısız');
+    } finally {
+      setRemovingEnrollmentId(null);
+    }
+  }
+
+  async function deleteEntireClass() {
+    if (!cls) return;
+    const ok = window.confirm(
+      `“${cls.name}” sınıfı kalıcı olarak silinsin mi? Öğrenci kayıtları, ödevler ve teslimler silinir. Geri alınamaz.`,
+    );
+    if (!ok) return;
+    setDeletingClass(true);
+    try {
+      await kidsDeleteClass(cls.id);
+      toast.success('Sınıf silindi');
+      router.replace(`${pathPrefix}/ogretmen/panel`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Sınıf silinemedi');
+    } finally {
+      setDeletingClass(false);
+    }
+  }
+
   if (authLoading || !user) {
     return (
       <KidsPanelMax>
@@ -353,6 +393,21 @@ export default function KidsTeacherClassPage() {
               {savingClass ? 'Kaydediliyor…' : 'Değişiklikleri kaydet'}
             </KidsPrimaryButton>
           </form>
+
+          <div className="mt-10 border-t border-rose-200/80 pt-6 dark:border-rose-900/50">
+            <h3 className="font-logo text-base font-bold text-rose-900 dark:text-rose-100">Tehlikeli bölge</h3>
+            <p className="mt-2 text-sm text-slate-600 dark:text-gray-400">
+              Sınıfı silersen bu sınıfa bağlı tüm öğrenci kayıtları, ödevler ve teslimler kalıcı olarak kaldırılır.
+            </p>
+            <KidsSecondaryButton
+              type="button"
+              className="mt-4 border-rose-300 text-rose-700 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950/40"
+              disabled={deletingClass}
+              onClick={() => void deleteEntireClass()}
+            >
+              {deletingClass ? 'Siliniyor…' : 'Sınıfı kalıcı olarak sil'}
+            </KidsSecondaryButton>
+          </div>
         </KidsCard>
       )}
 
@@ -412,16 +467,29 @@ export default function KidsTeacherClassPage() {
           ) : (
             <ul className="mt-6 divide-y divide-amber-200/60 dark:divide-amber-900/40">
               {students.map((en) => (
-                <li key={en.id} className="flex flex-col gap-1 py-4 first:pt-0 sm:flex-row sm:items-center sm:justify-between">
+                <li
+                  key={en.id}
+                  className="flex flex-col gap-3 py-4 first:pt-0 sm:flex-row sm:items-center sm:justify-between"
+                >
                   <div>
                     <p className="font-bold text-slate-900 dark:text-white">
                       {en.student.first_name} {en.student.last_name}
                     </p>
                     <p className="text-sm text-slate-600 dark:text-gray-400">{en.student.email}</p>
                   </div>
-                  <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">
-                    Kayıt: {new Date(en.created_at).toLocaleDateString('tr-TR')}
-                  </span>
+                  <div className="flex flex-wrap items-center gap-2 sm:flex-col sm:items-end">
+                    <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">
+                      Kayıt: {new Date(en.created_at).toLocaleDateString('tr-TR')}
+                    </span>
+                    <KidsSecondaryButton
+                      type="button"
+                      className="border-rose-200 text-rose-700 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/40"
+                      disabled={removingEnrollmentId === en.id}
+                      onClick={() => void removeStudentFromClass(en)}
+                    >
+                      {removingEnrollmentId === en.id ? 'Çıkarılıyor…' : 'Sınıftan çıkar'}
+                    </KidsSecondaryButton>
+                  </div>
                 </li>
               ))}
             </ul>

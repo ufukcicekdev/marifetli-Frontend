@@ -323,10 +323,28 @@ export async function kidsPatchClass(
   return data as KidsClass;
 }
 
+export async function kidsDeleteClass(id: number): Promise<void> {
+  const res = await kidsAuthorizedFetch(`/classes/${id}/`, { method: 'DELETE' });
+  if (res.status === 204) return;
+  const text = await res.text();
+  const data = readJson<ApiErrorBody>(text);
+  throw new Error(data?.detail || 'Sınıf silinemedi');
+}
+
 export async function kidsListStudents(classId: number): Promise<KidsEnrollment[]> {
   const res = await kidsAuthorizedFetch(`/classes/${classId}/students/`, { method: 'GET' });
   if (!res.ok) throw new Error('Öğrenci listesi alınamadı');
   return res.json() as Promise<KidsEnrollment[]>;
+}
+
+export async function kidsRemoveEnrollment(classId: number, enrollmentId: number): Promise<void> {
+  const res = await kidsAuthorizedFetch(`/classes/${classId}/students/${enrollmentId}/`, {
+    method: 'DELETE',
+  });
+  if (res.status === 204) return;
+  const text = await res.text();
+  const data = readJson<ApiErrorBody>(text);
+  throw new Error(data?.detail || 'Öğrenci kaydı kaldırılamadı');
 }
 
 export async function kidsListAssignments(classId: number): Promise<KidsAssignment[]> {
