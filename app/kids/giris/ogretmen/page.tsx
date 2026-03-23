@@ -1,12 +1,9 @@
-import { KidsRoleLoginForm } from '@/src/components/kids/kids-role-login-form';
+import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { kidsLoginPortalHref, kidsPathPrefixFromHost } from '@/src/lib/kids-config';
 
-export default function KidsTeacherLoginPage() {
-  return (
-    <KidsRoleLoginForm
-      title="Öğretmen girişi"
-      subtitle="Hesabın Django yönetim panelinden veya admin tarafından açılmış olmalıdır."
-      allowedRoles={['teacher', 'admin']}
-      redirectTo="/ogretmen/panel"
-    />
-  );
+export default async function KidsTeacherLoginRedirectPage() {
+  const host = (await headers()).get('host') ?? '';
+  const p = kidsPathPrefixFromHost(host);
+  redirect(kidsLoginPortalHref(p, 'ogretmen'));
 }

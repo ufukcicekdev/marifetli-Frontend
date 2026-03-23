@@ -93,6 +93,8 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
+  /** env(safe-area-inset-*) için (çentik / home bar); kids modal & tam ekran */
+  viewportFit: 'cover',
   themeColor: [
     { media: '(prefers-color-scheme: light)', color: '#fe544e' },
     { media: '(prefers-color-scheme: dark)', color: '#ea3750' },

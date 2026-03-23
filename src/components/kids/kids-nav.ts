@@ -1,9 +1,7 @@
 import type { KidsUserRole } from '@/src/lib/kids-api';
+import { kidsHomeHref, kidsLoginPortalHref } from '@/src/lib/kids-config';
 
-/** Kids sidebar + aktif rota (pathPrefix: '' veya '/kids') */
-export function kidsHomeHref(pathPrefix: string): string {
-  return pathPrefix || '/';
-}
+export { kidsHomeHref } from '@/src/lib/kids-config';
 
 export type KidsNavItem = { href: string; label: string; icon: string };
 
@@ -16,17 +14,14 @@ export function kidsNavLinks(pathPrefix: string, role: KidsUserRole | null): Kid
     items.push({ href: `${p}/ogretmen/okullar`, label: 'Okullarım', icon: '🏫' });
   }
   if (role === 'student') {
-    items.push(
-      { href: `${p}/ogrenci/panel`, label: 'Öğrenci paneli', icon: '🎒' },
-      { href: `${p}/ogrenci/kursu`, label: 'Serbest kürsü', icon: '🎨' },
-    );
+    items.push({ href: `${p}/ogrenci/panel`, label: 'Öğrenci paneli', icon: '🎒' });
   }
   if (role) {
     items.push({ href: `${p}/bildirimler`, label: 'Bildirimler', icon: '🔔' });
     items.push({ href: `${p}/profil`, label: 'Profilim', icon: '👤' });
   }
   if (!role) {
-    items.push({ href: `${p}/giris`, label: 'Giriş', icon: '🔑' });
+    items.push({ href: kidsLoginPortalHref(p), label: 'Giriş', icon: '🔑' });
   }
   return items;
 }

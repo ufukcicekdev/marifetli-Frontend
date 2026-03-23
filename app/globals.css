@@ -134,6 +134,77 @@ body::before {
   75% { transform: translate(0.8%, 0.5%) scale(1.01); opacity: 0.99; }
 }
 
+/* Kids: <dialog showModal()> — top layer; inset=viewport (100vw iOS’ta yatay kaydırmaya sebep olabilir) */
+dialog.kids-dialog-overlay {
+  position: fixed !important;
+  inset: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+  box-sizing: border-box !important;
+  width: auto !important;
+  max-width: none !important;
+  height: auto !important;
+  min-height: 100dvh !important;
+  max-height: none !important;
+  overflow: hidden;
+}
+
+/* Viewport dolusu katman; hizalama burada (dialog kutusu küçük kaldığında da doğru çalışır) */
+dialog.kids-dialog-overlay .kids-dialog-fill {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* Varsayılan dim alanı; tek başına mobilde alttan sheet. --centered ile her ekranda ortalanır */
+dialog.kids-dialog-overlay .kids-dialog-backdrop {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: row;
+  align-items: flex-end;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
+  padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+  padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 640px) {
+  dialog.kids-dialog-overlay .kids-dialog-backdrop {
+    align-items: center;
+    padding-left: max(1rem, env(safe-area-inset-left, 0px));
+    padding-right: max(1rem, env(safe-area-inset-right, 0px));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* Her kırılımda ortalı kart (alt sayfa değil) */
+dialog.kids-dialog-overlay .kids-dialog-backdrop--centered {
+  align-items: center;
+  justify-content: center;
+  padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
+  padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+  padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+}
+
+@media (min-width: 640px) {
+  dialog.kids-dialog-overlay .kids-dialog-backdrop--centered {
+    padding-top: max(1rem, env(safe-area-inset-top, 0px));
+    padding-left: max(1rem, env(safe-area-inset-left, 0px));
+    padding-right: max(1rem, env(safe-area-inset-right, 0px));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  }
+}
+
 /* Açık modda beyaz header: nav buton/link/ikonlar koyu renk (bildirim çanı vb.) */
 :root:not(.dark) header .header-nav-btn,
 :root:not(.dark) header a.header-nav-btn,

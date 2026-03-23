@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import api from '@/src/lib/api';
 import { useAuthStore } from '@/src/stores/auth-store';
 import { useGamificationRoadmapModalStore } from '@/src/stores/gamification-roadmap-modal-store';
+import { SITE_KIDS_BTN_SOFT, SITE_KIDS_HREF } from '@/src/lib/site-kids';
 
 export const gamificationRoadmapQueryKey = ['gamification-roadmap'] as const;
 
@@ -22,7 +23,8 @@ export function GamificationMotivationStrip() {
     !pathname ||
     pathname.startsWith('/giris') ||
     pathname.startsWith('/kayit') ||
-    pathname.startsWith('/auth/');
+    pathname.startsWith('/auth/') ||
+    pathname.startsWith('/kids');
 
   const { data, isLoading, isError } = useQuery({
     queryKey: gamificationRoadmapQueryKey,
@@ -54,7 +56,7 @@ export function GamificationMotivationStrip() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={openGeneral}
@@ -62,11 +64,8 @@ export function GamificationMotivationStrip() {
             >
               Ödül sistemini gör
             </button>
-            <Link
-              href="/giris"
-              className="text-xs font-medium text-amber-800 dark:text-amber-300 hover:underline whitespace-nowrap"
-            >
-              Giriş yap
+            <Link href={SITE_KIDS_HREF} className={SITE_KIDS_BTN_SOFT}>
+              🎒 Kids
             </Link>
           </div>
         </div>

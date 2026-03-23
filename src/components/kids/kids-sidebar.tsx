@@ -8,6 +8,7 @@ import { ThemeToggle } from '@/src/components/theme-toggle';
 import { HEADER_HEIGHT_PX } from '@/src/components/header';
 import { isKidsNavActive, kidsNavLinks } from '@/src/components/kids/kids-nav';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
+import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 
 const MAIN_SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.marifetli.com.tr';
 
@@ -60,8 +61,8 @@ export function KidsSidebar({ pathPrefix }: KidsSidebarProps) {
       />
       <aside
         className={`
-          fixed bottom-0 left-0 z-40 flex flex-col border-r-2 border-violet-100 bg-gradient-to-b from-white via-violet-50/40 to-sky-50/30 shadow-xl transition-all duration-200
-          dark:border-violet-900/40 dark:from-gray-900 dark:via-violet-950/30 dark:to-sky-950/20 lg:z-30 lg:shadow-none
+          fixed bottom-0 left-0 z-50 flex flex-col border-r border-violet-200/90 bg-white shadow-xl transition-all duration-200
+          dark:border-violet-800/70 dark:bg-gray-900 lg:z-30 lg:shadow-none
           ${isOpen ? 'w-64 translate-x-0' : 'w-16 -translate-x-full lg:translate-x-0'}
         `}
         style={{ top: HEADER_HEIGHT_PX }}
@@ -89,7 +90,7 @@ export function KidsSidebar({ pathPrefix }: KidsSidebarProps) {
               </div>
               {!user && (
                 <Link
-                  href={`${pathPrefix}/giris`}
+                  href={kidsLoginPortalHref(pathPrefix)}
                   onClick={() => toggle()}
                   className="flex min-h-[44px] items-center justify-center rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-3 text-sm font-bold text-white shadow-md hover:from-violet-500 hover:to-fuchsia-500"
                 >

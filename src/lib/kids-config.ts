@@ -34,3 +34,17 @@ export function kidsApiUrl(path: string): string {
 
 export const KIDS_TOKEN_STORAGE_KEY = 'marifetli_kids_access';
 export const KIDS_REFRESH_STORAGE_KEY = 'marifetli_kids_refresh';
+
+/** Kids kök yolu (alt alan adında boş → `/`). */
+export function kidsHomeHref(pathPrefix: string): string {
+  return pathPrefix || '/';
+}
+
+/**
+ * Giriş modali anasayfada açılır; `giris=1` varsayılan sekme, `ogrenci` / `ogretmen` ilgili sekmeyi seçer.
+ */
+export function kidsLoginPortalHref(pathPrefix: string, tab?: 'ogrenci' | 'ogretmen'): string {
+  const base = kidsHomeHref(pathPrefix);
+  const slug = tab === 'ogrenci' ? 'ogrenci' : tab === 'ogretmen' ? 'ogretmen' : '1';
+  return `${base}?giris=${slug}`;
+}

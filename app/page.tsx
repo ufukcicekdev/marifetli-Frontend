@@ -6,6 +6,7 @@ import { HomeHero } from '@/src/components/home-hero';
 import { RecentActivitySidebar } from '@/src/components/recent-activity-sidebar';
 import { PopularQuestionsSidebar } from '@/src/components/popular-questions-sidebar';
 import { SiteStatsSidebar } from '@/src/components/site-stats-sidebar';
+import { SITE_KIDS_BTN_PRIMARY, SITE_KIDS_HREF } from '@/src/lib/site-kids';
 
 /**
  * Ana sayfa: hero + keşif; tam soru listesi /sorular’da (ilk yükleme hızı için).
@@ -46,6 +47,10 @@ export default function HomePage() {
               <span aria-hidden>🧠</span>
               Uzmana sor
             </UzmanFullPageLink>
+            <Link href={SITE_KIDS_HREF} className={`${SITE_KIDS_BTN_PRIMARY} justify-center`}>
+              <span aria-hidden>🎒</span>
+              Marifetli Kids
+            </Link>
           </div>
         </section>
       </div>

@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
-import type { KidsUserRole } from '@/src/lib/kids-api';
+import { kidsRequestPasswordReset, type KidsUserRole } from '@/src/lib/kids-api';
+import { kidsHomeHref, kidsLoginPortalHref } from '@/src/lib/kids-config';
 
 type Props = {
   title: string;
@@ -12,16 +13,51 @@ type Props = {
   /** Bu sayfadan girişe izin verilen roller */
   allowedRoles: KidsUserRole[];
   redirectTo: string;
+  /** Mod içi: çerçevesiz, küçük başlık */
+  embedded?: boolean;
+  /** Aynı ekranda iki form için benzersiz input id */
+  fieldIdSuffix?: string;
+  /** Şifremi unuttum (Kids e-posta ile sıfırlama). Belirtilmezse yalnızca embedded iken açılır. */
+  forgotPasswordEnabled?: boolean;
+  /** Modal: üst bilgi kutusunu şifre akışında gizlemek için */
+  onEmbeddedForgotPhaseChange?: (phase: 'login' | 'forgot' | 'sent') => void;
 };
 
-export function KidsRoleLoginForm({ title, subtitle, allowedRoles, redirectTo }: Props) {
+export function KidsRoleLoginForm({
+  title,
+  subtitle,
+  allowedRoles,
+  redirectTo,
+  embedded = false,
+  fieldIdSuffix = 'default',
+  forgotPasswordEnabled,
+  onEmbeddedForgotPhaseChange,
+}: Props) {
   const router = useRouter();
   const { pathPrefix, login, logout } = useKidsAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
 
-  const homeHref = pathPrefix || '/';
+  const homeHref = kidsHomeHref(pathPrefix);
+  const idE = `kids-role-email-${fieldIdSuffix}`;
+  const idP = `kids-role-password-${fieldIdSuffix}`;
+  const showForgot = forgotPasswordEnabled !== undefined ? forgotPasswordEnabled : embedded;
+
+  useEffect(() => {
+    if (!embedded || !showForgot || !onEmbeddedForgotPhaseChange) return;
+    if (!forgotOpen) onEmbeddedForgotPhaseChange('login');
+    else if (forgotSent) onEmbeddedForgotPhaseChange('sent');
+    else onEmbeddedForgotPhaseChange('forgot');
+  }, [embedded, showForgot, forgotOpen, forgotSent, onEmbeddedForgotPhaseChange]);
+
+  function closeForgotFlow() {
+    setForgotOpen(false);
+    setForgotSent(false);
+  }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -43,17 +79,115 @@ export function KidsRoleLoginForm({ title, subtitle, allowedRoles, redirectTo }:
     }
   }
 
-  return (
-    <div className="mx-auto max-w-md rounded-3xl border-2 border-amber-200 bg-white p-8 shadow-sm dark:border-amber-800/50 dark:bg-gray-900/80">
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{title}</h1>
-      <p className="mt-1 text-sm text-slate-600 dark:text-gray-300">{subtitle}</p>
-      <form className="mt-6 space-y-4" onSubmit={onSubmit}>
+  async function onForgotSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const em = email.trim();
+    if (!em) {
+      toast.error('E-posta adresini yaz.');
+      return;
+    }
+    setForgotLoading(true);
+    try {
+      await kidsRequestPasswordReset(em);
+      setForgotSent(true);
+      toast.success('İstek alındı — e-postanı kontrol et.');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Gönderilemedi');
+    } finally {
+      setForgotLoading(false);
+    }
+  }
+
+  const forgotPanelClass =
+    'rounded-2xl border-2 border-violet-200/90 bg-gradient-to-br from-violet-50/95 to-fuchsia-50/40 p-4 shadow-sm dark:border-violet-800/60 dark:from-violet-950/50 dark:to-fuchsia-950/25';
+
+  const inputClass =
+    'mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-slate-900 outline-none ring-violet-400/30 focus:border-violet-500 focus:ring-2 dark:border-gray-600 dark:bg-gray-800 dark:text-white';
+
+  /** Mod içi: şifre sıfırlama tam ekran kart — giriş alanları gizli, tek e-posta, modal kısa kalır */
+  if (embedded && showForgot && forgotOpen) {
+    return (
+      <div className="space-y-3">
+        {forgotSent ? (
+          <div className={forgotPanelClass}>
+            <p className="text-center text-2xl" aria-hidden>
+              📬
+            </p>
+            <h3 className="mt-2 text-center font-logo text-base font-bold text-violet-950 dark:text-violet-100">
+              E-postanı kontrol et
+            </h3>
+            <p className="mt-2 text-center text-xs leading-relaxed text-slate-600 dark:text-gray-300">
+              Gelen kutunda veya spam klasöründe şifre sıfırlama bağlantısını ara. Link yaklaşık{' '}
+              <strong className="font-semibold">1 saat</strong> geçerlidir.
+            </p>
+            <button
+              type="button"
+              onClick={closeForgotFlow}
+              className="mt-4 w-full rounded-full bg-violet-600 py-2.5 text-sm font-bold text-white hover:bg-violet-500"
+            >
+              Girişe dön
+            </button>
+          </div>
+        ) : (
+          <div className={forgotPanelClass}>
+            <button
+              type="button"
+              onClick={closeForgotFlow}
+              className="mb-1 flex items-center gap-1 text-xs font-bold text-violet-700 hover:text-fuchsia-600 dark:text-violet-300"
+            >
+              <span aria-hidden>←</span> Girişe dön
+            </button>
+            <h3 className="font-logo text-lg font-bold text-violet-950 dark:text-white">Şifre sıfırlama</h3>
+            <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-gray-300">
+              Kids hesabına kayıtlı e-postana tek kullanımlık bağlantı göndeririz (öğrenci veya öğretmen fark etmez).
+            </p>
+            <form className="mt-4 space-y-3" onSubmit={onForgotSubmit}>
+              <div>
+                <label htmlFor={idE} className="text-xs font-bold text-slate-700 dark:text-gray-200">
+                  E-posta
+                </label>
+                <input
+                  id={idE}
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={inputClass}
+                  placeholder="ornek@email.com"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={forgotLoading}
+                className="w-full rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 py-2.5 text-sm font-bold text-white shadow-md disabled:opacity-50"
+              >
+                {forgotLoading ? 'Gönderiliyor…' : 'Bağlantıyı gönder'}
+              </button>
+            </form>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  const inner = (
+    <>
+      {embedded ? (
+        <h2 className="text-lg font-bold text-slate-900 dark:text-white">{title}</h2>
+      ) : (
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{title}</h1>
+      )}
+      <p className={embedded ? 'mt-1 text-xs text-slate-600 dark:text-gray-300' : 'mt-1 text-sm text-slate-600 dark:text-gray-300'}>
+        {subtitle}
+      </p>
+      <form className={embedded ? 'mt-4 space-y-3' : 'mt-6 space-y-4'} onSubmit={onSubmit}>
         <div>
-          <label htmlFor="kids-role-email" className="block text-sm font-medium text-slate-700 dark:text-gray-200">
+          <label htmlFor={idE} className="block text-sm font-medium text-slate-700 dark:text-gray-200">
             E-posta
           </label>
           <input
-            id="kids-role-email"
+            id={idE}
             type="email"
             autoComplete="email"
             required
@@ -63,11 +197,11 @@ export function KidsRoleLoginForm({ title, subtitle, allowedRoles, redirectTo }:
           />
         </div>
         <div>
-          <label htmlFor="kids-role-password" className="block text-sm font-medium text-slate-700 dark:text-gray-200">
+          <label htmlFor={idP} className="block text-sm font-medium text-slate-700 dark:text-gray-200">
             Şifre
           </label>
           <input
-            id="kids-role-password"
+            id={idP}
             type="password"
             autoComplete="current-password"
             required
@@ -84,15 +218,106 @@ export function KidsRoleLoginForm({ title, subtitle, allowedRoles, redirectTo }:
           {loading ? 'Giriş…' : 'Giriş yap'}
         </button>
       </form>
-      <p className="mt-6 text-center text-sm text-slate-500 dark:text-gray-400">
-        <a href={homeHref} className="text-amber-700 underline dark:text-amber-400">
-          Ana sayfa
-        </a>
-        {' · '}
-        <a href={`${pathPrefix}/giris`} className="text-amber-700 underline dark:text-amber-400">
-          Tüm giriş seçenekleri
-        </a>
-      </p>
+
+      {showForgot ? (
+        <div className={embedded ? 'mt-3 text-center' : 'mt-6 border-t border-amber-200/60 pt-4 text-center dark:border-amber-900/30'}>
+          <button
+            type="button"
+            onClick={() => {
+              setForgotOpen(true);
+              setForgotSent(false);
+            }}
+            className="text-sm font-bold text-violet-700 underline underline-offset-2 hover:text-fuchsia-600 dark:text-violet-300"
+          >
+            Şifremi unuttum
+          </button>
+        </div>
+      ) : null}
+
+      {!embedded ? (
+        <p className="mt-6 text-center text-sm text-slate-500 dark:text-gray-400">
+          <a href={homeHref} className="text-amber-700 underline dark:text-amber-400">
+            Ana sayfa
+          </a>
+          {' · '}
+          <a href={kidsLoginPortalHref(pathPrefix)} className="text-amber-700 underline dark:text-amber-400">
+            Giriş modali
+          </a>
+        </p>
+      ) : null}
+    </>
+  );
+
+  /** Tam sayfa (embedded değil): şifre akışı aynı mantık, tek sütun */
+  if (!embedded && showForgot && forgotOpen) {
+    return (
+      <div className="mx-auto max-w-md rounded-3xl border-2 border-amber-200 bg-white p-8 shadow-sm dark:border-amber-800/50 dark:bg-gray-900/80">
+        {forgotSent ? (
+          <div className="text-center">
+            <p className="text-4xl" aria-hidden>
+              📬
+            </p>
+            <h2 className="mt-3 text-xl font-bold text-slate-900 dark:text-white">E-postanı kontrol et</h2>
+            <p className="mt-2 text-sm text-slate-600 dark:text-gray-400">
+              Bağlantı gelmezse spam klasörüne bak. Link yaklaşık 1 saat geçerlidir.
+            </p>
+            <button
+              type="button"
+              onClick={closeForgotFlow}
+              className="mt-6 w-full rounded-full bg-amber-500 py-2.5 text-sm font-semibold text-white"
+            >
+              Girişe dön
+            </button>
+          </div>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={closeForgotFlow}
+              className="text-sm font-bold text-amber-800 underline dark:text-amber-200"
+            >
+              ← Girişe dön
+            </button>
+            <h2 className="mt-4 text-xl font-bold text-slate-900 dark:text-white">Şifre sıfırlama (Kids)</h2>
+            <p className="mt-1 text-sm text-slate-600 dark:text-gray-400">
+              Kayıtlı Kids e-postana sıfırlama bağlantısı gönderilir.
+            </p>
+            <form className="mt-6 space-y-4" onSubmit={onForgotSubmit}>
+              <div>
+                <label htmlFor={`${idE}-full-forgot`} className="block text-sm font-medium text-slate-700 dark:text-gray-200">
+                  E-posta
+                </label>
+                <input
+                  id={`${idE}-full-forgot`}
+                  type="email"
+                  autoComplete="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-900 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={forgotLoading}
+                className="w-full rounded-full bg-amber-500 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+              >
+                {forgotLoading ? 'Gönderiliyor…' : 'Bağlantıyı gönder'}
+              </button>
+            </form>
+          </>
+        )}
+      </div>
+    );
+  }
+
+  if (embedded) {
+    return <div className="space-y-1">{inner}</div>;
+  }
+
+  return (
+    <div className="mx-auto max-w-md rounded-3xl border-2 border-amber-200 bg-white p-8 shadow-sm dark:border-amber-800/50 dark:bg-gray-900/80">
+      {inner}
     </div>
   );
 }

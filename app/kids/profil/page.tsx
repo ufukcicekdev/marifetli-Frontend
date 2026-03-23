@@ -14,6 +14,7 @@ import {
   KidsPrimaryButton,
   kidsInputClass,
 } from '@/src/components/kids/kids-ui';
+import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 
 export default function KidsProfilPage() {
   const router = useRouter();
@@ -92,7 +93,7 @@ export default function KidsProfilPage() {
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
-      router.replace(`${pathPrefix}/giris`);
+      router.replace(kidsLoginPortalHref(pathPrefix));
     }
   }, [authLoading, user, router, pathPrefix]);
 

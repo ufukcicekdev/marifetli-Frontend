@@ -8,6 +8,7 @@ import { ThemeToggle } from '@/src/components/theme-toggle';
 import { HEADER_HEIGHT_PX } from '@/src/components/header';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import { KidsNotificationBell } from '@/src/components/kids/kids-notification-bell';
+import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 
 type KidsHeaderProps = {
   pathPrefix: string;
@@ -160,7 +161,7 @@ export function KidsHeader({ pathPrefix }: KidsHeaderProps) {
             </div>
           ) : (
             <Link
-              href={`${pathPrefix}/giris`}
+              href={kidsLoginPortalHref(pathPrefix)}
               className="header-nav-btn hidden rounded-xl border-2 border-transparent bg-gradient-to-r from-violet-500 to-fuchsia-500 px-3 font-semibold text-white shadow-md hover:from-violet-600 hover:to-fuchsia-600 sm:inline-flex"
             >
               Giriş
@@ -173,7 +174,7 @@ export function KidsHeader({ pathPrefix }: KidsHeaderProps) {
         <div className="w-full max-w-2xl">
           <div className="flex items-center justify-center gap-2 rounded-full border-2 border-amber-300/70 bg-gradient-to-r from-amber-100/95 via-white to-sky-100/95 px-4 py-2 text-center text-sm font-semibold text-amber-950 shadow-sm dark:border-amber-600/40 dark:from-amber-950/60 dark:via-gray-900/90 dark:to-sky-950/60 dark:text-amber-50">
             <span aria-hidden>✨</span>
-            <span>Çocuklar için renkli, güvenli proje ve ödev dünyası</span>
+            <span>Çocuklar için renkli, güvenli proje dünyası</span>
             <span aria-hidden>🎨</span>
           </div>
         </div>

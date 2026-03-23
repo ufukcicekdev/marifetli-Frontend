@@ -1,7 +1,22 @@
 'use client';
 
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+
+function scrollableAncestors(el: HTMLElement | null): HTMLElement[] {
+  const out: HTMLElement[] = [];
+  let p: HTMLElement | null = el?.parentElement ?? null;
+  while (p && p !== document.body) {
+    const s = getComputedStyle(p);
+    const ox = s.overflowX;
+    const oy = s.overflowY;
+    if (/(auto|scroll|overlay)/.test(ox) || /(auto|scroll|overlay)/.test(oy)) out.push(p);
+    p = p.parentElement;
+  }
+  out.push(document.documentElement);
+  return out;
+}
 
 /** Kids formlarında tutarlı odak halkası ve köşe yuvarlaklığı */
 export const kidsInputClass =
@@ -203,7 +218,9 @@ export function KidsEmptyState({
 
 export type KidsSelectOption = { value: string; label: string };
 
-/** Kids temasına uygun özel açılır liste. */
+type PanelCoords = { top: number; left: number; width: number; maxH: number };
+
+/** Kids temasına uygun özel açılır liste (panel body’de portal + sabit yükseklik; blur/şeffaf karttan etkilenmez). */
 export function KidsSelect({
   id,
   value,
@@ -212,6 +229,9 @@ export function KidsSelect({
   disabled,
   className = '',
   buttonClassName = '',
+  searchable,
+  /** Tüm panel (arama + liste) için üst sınır (px). */
+  panelMaxHeightPx = 260,
 }: {
   id?: string;
   value: string;
@@ -220,19 +240,86 @@ export function KidsSelect({
   disabled?: boolean;
   className?: string;
   buttonClassName?: string;
+  /** Açıldığında üstte arama kutusu. `undefined` ise 8’den fazla seçenekte açılır. */
+  searchable?: boolean;
+  panelMaxHeightPx?: number;
 }) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [coords, setCoords] = useState<PanelCoords | null>(null);
+  const [query, setQuery] = useState('');
   const rootRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const selected = options.find((o) => o.value === value) ?? options[0];
+
+  const searchEnabled = searchable ?? options.length > 8;
+
+  const filteredOptions = useMemo(() => {
+    if (!searchEnabled || !query.trim()) return options;
+    const q = query.trim().toLocaleLowerCase('tr-TR');
+    return options.filter((o) => o.label.toLocaleLowerCase('tr-TR').includes(q));
+  }, [options, query, searchEnabled]);
+
+  const updatePosition = useCallback(() => {
+    const btn = buttonRef.current;
+    if (!btn) return;
+    const r = btn.getBoundingClientRect();
+    const gap = 6;
+    const pad = 8;
+    const below = window.innerHeight - r.bottom - gap - pad;
+    const maxH = Math.max(140, Math.min(panelMaxHeightPx, below));
+    let left = r.left;
+    const w = r.width;
+    if (left + w > window.innerWidth - pad) left = Math.max(pad, window.innerWidth - w - pad);
+    if (left < pad) left = pad;
+    setCoords({ top: r.bottom + gap, left, width: w, maxH });
+  }, [panelMaxHeightPx]);
+
+  useEffect(() => setMounted(true), []);
+
+  useLayoutEffect(() => {
+    if (!open || disabled) {
+      setCoords(null);
+      return;
+    }
+    updatePosition();
+  }, [open, disabled, updatePosition, options.length, searchEnabled]);
+
+  useEffect(() => {
+    if (!open || disabled) return;
+    const onScrollOrResize = () => updatePosition();
+    const parents = scrollableAncestors(rootRef.current);
+    parents.forEach((p) => p.addEventListener('scroll', onScrollOrResize, true));
+    window.addEventListener('resize', onScrollOrResize);
+    return () => {
+      parents.forEach((p) => p.removeEventListener('scroll', onScrollOrResize, true));
+      window.removeEventListener('resize', onScrollOrResize);
+    };
+  }, [open, disabled, updatePosition]);
 
   useEffect(() => {
     if (!open) return;
     const onDoc = (e: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
+      const t = e.target as Node;
+      if (rootRef.current?.contains(t)) return;
+      if (panelRef.current?.contains(t)) return;
+      setOpen(false);
     };
     document.addEventListener('mousedown', onDoc);
     return () => document.removeEventListener('mousedown', onDoc);
   }, [open]);
+
+  useEffect(() => {
+    if (!open) {
+      setQuery('');
+      return;
+    }
+    if (!searchEnabled) return;
+    const idRaf = requestAnimationFrame(() => searchInputRef.current?.focus());
+    return () => cancelAnimationFrame(idRaf);
+  }, [open, searchEnabled]);
 
   if (options.length === 0) {
     return (
@@ -245,9 +332,74 @@ export function KidsSelect({
     );
   }
 
+  const dropdown =
+    mounted && open && !disabled && coords
+      ? createPortal(
+          <div
+            ref={panelRef}
+            role="presentation"
+            className="fixed z-[9999] flex min-h-0 flex-col overflow-hidden rounded-2xl border-2 border-violet-300 bg-white shadow-2xl ring-1 ring-black/10 dark:border-violet-600 dark:bg-zinc-950 dark:ring-white/15"
+            style={{
+              top: coords.top,
+              left: coords.left,
+              width: coords.width,
+              maxHeight: coords.maxH,
+            }}
+          >
+            {searchEnabled ? (
+              <div className="shrink-0 border-b-2 border-violet-200 bg-white p-2 dark:border-violet-800 dark:bg-zinc-950">
+                <input
+                  ref={searchInputRef}
+                  type="search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Ara…"
+                  aria-label="Listede ara"
+                  className="w-full rounded-xl border-2 border-violet-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-500 dark:border-violet-700 dark:bg-zinc-900 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-violet-500"
+                  onKeyDown={(e) => e.stopPropagation()}
+                />
+              </div>
+            ) : null}
+            <ul
+              className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white py-1 dark:bg-zinc-950"
+              role="listbox"
+              style={{ WebkitOverflowScrolling: 'touch' }}
+            >
+              {filteredOptions.length === 0 ? (
+                <li className="px-4 py-3 text-sm text-slate-500 dark:text-gray-400">Eşleşme yok</li>
+              ) : (
+                filteredOptions.map((opt, idx) => {
+                  const isOn = opt.value === value;
+                  return (
+                    <li key={`${opt.value}-${idx}`} role="option" aria-selected={isOn}>
+                      <button
+                        type="button"
+                        className={`w-full px-4 py-2.5 text-left text-sm font-medium transition hover:bg-violet-100 dark:hover:bg-violet-900 ${
+                          isOn
+                            ? 'bg-violet-200 text-violet-950 dark:bg-violet-800 dark:text-violet-50'
+                            : 'bg-white text-slate-800 dark:bg-zinc-950 dark:text-gray-100'
+                        }`}
+                        onClick={() => {
+                          onChange(opt.value);
+                          setOpen(false);
+                        }}
+                      >
+                        {opt.label}
+                      </button>
+                    </li>
+                  );
+                })
+              )}
+            </ul>
+          </div>,
+          document.body,
+        )
+      : null;
+
   return (
     <div ref={rootRef} className={`relative ${className}`}>
       <button
+        ref={buttonRef}
         id={id}
         type="button"
         disabled={disabled}
@@ -267,32 +419,88 @@ export function KidsSelect({
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
-      {open && !disabled ? (
-        <ul
-          className="absolute left-0 right-0 top-full z-[80] mt-1 max-h-60 overflow-auto rounded-2xl border-2 border-violet-200 bg-white py-1 shadow-xl shadow-violet-500/15 dark:border-violet-800 dark:bg-gray-900"
-          role="listbox"
-        >
-          {options.map((opt) => {
-            const isOn = opt.value === value;
-            return (
-              <li key={opt.value} role="option" aria-selected={isOn}>
-                <button
-                  type="button"
-                  className={`w-full px-4 py-2.5 text-left text-sm font-medium transition hover:bg-violet-50 dark:hover:bg-violet-950/60 ${
-                    isOn ? 'bg-violet-100/90 text-violet-950 dark:bg-violet-900/50 dark:text-violet-50' : 'text-slate-800 dark:text-gray-100'
-                  }`}
-                  onClick={() => {
-                    onChange(opt.value);
-                    setOpen(false);
-                  }}
-                >
-                  {opt.label}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
+      {dropdown}
     </div>
+  );
+}
+
+/**
+ * Kids ortalı modal: mobil + masaüstünde kart viewport ortasında.
+ * `<dialog showModal()>` → top layer; `kids-dialog-backdrop--centered` ile hizalama.
+ *
+ * Kullanım: `{open && <KidsCenteredModal title="…" onClose={() => setOpen(false)}>…</KidsCenteredModal>}`
+ */
+export function KidsCenteredModal({
+  title,
+  children,
+  footer,
+  onClose,
+  panelClassName = '',
+  maxWidthClass = 'max-w-lg',
+}: {
+  title: ReactNode;
+  children: ReactNode;
+  footer?: ReactNode;
+  onClose: () => void;
+  /** Panel dış sarmalayıcı (örn. max-h) */
+  panelClassName?: string;
+  /** Kart genişliği: max-w-md | max-w-lg | max-w-2xl */
+  maxWidthClass?: string;
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useLayoutEffect(() => {
+    const el = dialogRef.current;
+    if (!el) return;
+    if (!el.open) el.showModal();
+    return () => {
+      el.close();
+    };
+  }, []);
+
+  return createPortal(
+    <dialog
+      ref={dialogRef}
+      className="kids-dialog-overlay bg-transparent"
+      onCancel={(e) => {
+        e.preventDefault();
+        onClose();
+      }}
+    >
+      <div className="kids-dialog-fill">
+        <div
+          className="kids-dialog-backdrop kids-dialog-backdrop--centered bg-violet-950/60 backdrop-blur-sm"
+          role="presentation"
+          onClick={onClose}
+        >
+          <div
+            className={`flex max-h-[85dvh] w-full min-w-0 shrink-0 flex-col overflow-hidden rounded-2xl border-2 border-violet-300 bg-white shadow-2xl shadow-fuchsia-500/20 dark:border-violet-700 dark:bg-gray-900 sm:max-h-[90dvh] sm:rounded-3xl ${maxWidthClass} ${panelClassName}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex shrink-0 items-center justify-between gap-2 border-b-2 border-violet-100 bg-gradient-to-r from-violet-100 via-fuchsia-100 to-amber-100 px-4 py-3 dark:border-violet-900 dark:from-violet-950 dark:via-fuchsia-950 dark:to-amber-950/80">
+              <h2 className="min-w-0 font-logo text-lg font-bold tracking-tight text-violet-950 dark:text-violet-100">
+                {title}
+              </h2>
+              <button
+                type="button"
+                onClick={onClose}
+                className="shrink-0 rounded-full border-2 border-violet-300 bg-white px-3 py-1.5 text-sm font-black text-violet-800 shadow-sm hover:bg-violet-50 dark:border-violet-700 dark:bg-gray-800 dark:text-violet-200 dark:hover:bg-violet-950"
+              >
+                ✕ Kapat
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-4 [-webkit-overflow-scrolling:touch]">
+              {children}
+            </div>
+            {footer ? (
+              <div className="shrink-0 border-t-2 border-violet-100 bg-violet-50/50 p-4 dark:border-violet-900 dark:bg-violet-950/40">
+                {footer}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </dialog>,
+    document.body,
   );
 }

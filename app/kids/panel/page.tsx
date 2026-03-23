@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
+import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 
 /** Eski /panel bağlantıları rolüne göre yönlendirilir. */
 export default function KidsPanelRedirectPage() {
@@ -12,7 +13,7 @@ export default function KidsPanelRedirectPage() {
   useEffect(() => {
     if (loading) return;
     if (!user) {
-      router.replace(`${pathPrefix}/giris`);
+      router.replace(kidsLoginPortalHref(pathPrefix));
       return;
     }
     if (user.role === 'student') {
@@ -23,7 +24,7 @@ export default function KidsPanelRedirectPage() {
       router.replace(`${pathPrefix}/ogretmen/panel`);
       return;
     }
-    router.replace(`${pathPrefix}/giris`);
+    router.replace(kidsLoginPortalHref(pathPrefix));
   }, [user, loading, pathPrefix, router]);
 
   return <p className="text-center text-gray-600 dark:text-gray-400">Yönlendiriliyorsun…</p>;

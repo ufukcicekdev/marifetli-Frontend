@@ -1,24 +1,42 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { KidsStudentDashboardPlayful } from '@/src/components/kids/kids-student-dashboard-playful';
+import {
+  detectNewPraiseTitles,
+  detectNewTeacherPicks,
+} from '@/src/components/kids/kids-student-panel-celebrations';
+import { KidsStudentStarOverlay } from '@/src/components/kids/kids-student-star-overlay';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
-import { kidsClassLocationLine, kidsStudentDashboard, type KidsAssignment, type KidsClass } from '@/src/lib/kids-api';
+import {
+  kidsGetBadgeRoadmap,
+  kidsStudentDashboard,
+  type KidsAssignment,
+  type KidsBadgeRoadmap,
+  type KidsClass,
+} from '@/src/lib/kids-api';
+import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 
 export default function KidsStudentPanelPage() {
   const router = useRouter();
   const { user, loading: authLoading, pathPrefix } = useKidsAuth();
   const [classes, setClasses] = useState<KidsClass[]>([]);
   const [assignments, setAssignments] = useState<KidsAssignment[]>([]);
+  const [roadmap, setRoadmap] = useState<KidsBadgeRoadmap | null>(null);
   const [loading, setLoading] = useState(true);
+  const [pickLabels, setPickLabels] = useState<string[] | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const data = await kidsStudentDashboard();
+      const [data, road] = await Promise.all([
+        kidsStudentDashboard(),
+        kidsGetBadgeRoadmap().catch(() => null),
+      ]);
       setClasses(data.classes);
       setAssignments(data.assignments);
+      setRoadmap(road);
     } catch {
       toast.error('Panel yüklenemedi');
     } finally {
@@ -29,15 +47,47 @@ export default function KidsStudentPanelPage() {
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
-      router.replace(`${pathPrefix}/giris/ogrenci`);
+      router.replace(kidsLoginPortalHref(pathPrefix, 'ogrenci'));
       return;
     }
     if (user.role !== 'student') {
-      router.replace(`${pathPrefix}/giris`);
+      router.replace(kidsLoginPortalHref(pathPrefix));
       return;
     }
-    load();
-  }, [authLoading, user, router, pathPrefix, load]);
+    void load();
+  }, [authLoading, user?.id, user?.role, router, pathPrefix, load]);
+
+  useEffect(() => {
+    if (!roadmap) return;
+    const ev = detectNewTeacherPicks(roadmap);
+    if (ev && ev.labels.length) setPickLabels(ev.labels);
+  }, [roadmap]);
+
+  useEffect(() => {
+    if (loading) return;
+    const titles = detectNewPraiseTitles(assignments);
+    if (titles.length === 0) return;
+    toast.custom(
+      () => (
+        <div className="pointer-events-auto flex max-w-sm items-start gap-3 rounded-2xl border-2 border-emerald-300 bg-gradient-to-r from-emerald-50 to-teal-50 px-4 py-3 shadow-xl dark:border-emerald-700 dark:from-emerald-950 dark:to-teal-950">
+          <span className="text-2xl" aria-hidden>
+            🌟
+          </span>
+          <div>
+            <p className="font-logo text-sm font-black text-emerald-900 dark:text-emerald-100">
+              Öğretmeninden süper haber!
+            </p>
+            <p className="mt-1 text-xs font-semibold text-emerald-800 dark:text-emerald-200">
+              {titles.length === 1
+                ? `“${titles[0]}” için çok güzel demiş.`
+                : `${titles.length} projende harika geri bildirim var.`}
+            </p>
+          </div>
+        </div>
+      ),
+      { duration: 6500, position: 'top-center' },
+    );
+  }, [loading, assignments]);
 
   if (authLoading || !user) {
     return <p className="text-center text-gray-600 dark:text-gray-400">Yükleniyor…</p>;
@@ -47,72 +97,20 @@ export default function KidsStudentPanelPage() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-10">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Öğrenci paneli</h1>
-        <p className="text-slate-600 dark:text-gray-300">
-          Merhaba {user.first_name || user.email} — ödevlerini tamamla, serbest kürsüye göz at.
-        </p>
-      </div>
-
-      <section className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-900/80">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Sınıflarım</h2>
-        {loading ? (
-          <p className="mt-2 text-gray-500">Yükleniyor…</p>
-        ) : classes.length === 0 ? (
-          <p className="mt-2 text-gray-500 dark:text-gray-400">
-            Henüz bir sınıfa kayıtlı değilsin. Öğretmeninin davet linkini kullan.
-          </p>
-        ) : (
-          <ul className="mt-3 space-y-1 text-sm text-slate-800 dark:text-gray-200">
-            {classes.map((c) => {
-              const loc = kidsClassLocationLine(c);
-              return (
-                <li key={c.id} className="leading-relaxed">
-                  <span className="font-medium">· {c.name}</span>
-                  {loc ? (
-                    <span className="mt-0.5 block pl-3 text-xs text-gray-500 dark:text-gray-400">{loc}</span>
-                  ) : null}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
-
-      <section className="rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-900/80">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Ödevler</h2>
-        {loading ? (
-          <p className="mt-2 text-gray-500">Yükleniyor…</p>
-        ) : assignments.length === 0 ? (
-          <p className="mt-2 text-gray-500 dark:text-gray-400">Şu an yayında ödev yok.</p>
-        ) : (
-          <ul className="mt-4 space-y-2">
-            {assignments.map((a) => (
-              <li key={a.id}>
-                <Link
-                  href={`${pathPrefix}/ogrenci/odev/${a.id}`}
-                  className="flex flex-col rounded-xl border border-gray-200 px-4 py-3 transition hover:border-sky-300 dark:border-gray-700 dark:hover:border-sky-700"
-                >
-                  <span className="font-medium text-slate-900 dark:text-white">{a.title}</span>
-                  <span className="text-xs text-gray-500">
-                    Video en fazla {a.video_max_seconds} sn
-                    {a.require_image ? ' · Görsel gerekli' : ''}
-                    {a.require_video ? ' · Video gerekli' : ''}
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      <Link
-        href={`${pathPrefix}/ogrenci/kursu`}
-        className="inline-flex rounded-full border-2 border-amber-300 px-5 py-2 text-sm font-semibold text-amber-800 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-200 dark:hover:bg-amber-950/40"
-      >
-        Serbest kürsüye git →
-      </Link>
-    </div>
+    <>
+      <KidsStudentStarOverlay
+        open={pickLabels !== null && pickLabels.length > 0}
+        labels={pickLabels ?? []}
+        onClose={() => setPickLabels(null)}
+      />
+      <KidsStudentDashboardPlayful
+        pathPrefix={pathPrefix}
+        user={user}
+        classes={classes}
+        assignments={assignments}
+        roadmap={roadmap}
+        loading={loading}
+      />
+    </>
   );
 }

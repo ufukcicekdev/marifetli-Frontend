@@ -1,14 +1,9 @@
-import { KidsRoleLoginForm } from '@/src/components/kids/kids-role-login-form';
+import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { kidsLoginPortalHref, kidsPathPrefixFromHost } from '@/src/lib/kids-config';
 
-export default function KidsStudentLoginPage() {
-  return (
-    <div className="space-y-8">
-      <KidsRoleLoginForm
-        title="Öğrenci girişi"
-        subtitle="Kayıt yalnızca öğretmen davetiyle yapılır. Davet e-postasındaki linkle ad-soyad ve şifre belirlersin."
-        allowedRoles={['student']}
-        redirectTo="/ogrenci/panel"
-      />
-    </div>
-  );
+export default async function KidsStudentLoginRedirectPage() {
+  const host = (await headers()).get('host') ?? '';
+  const p = kidsPathPrefixFromHost(host);
+  redirect(kidsLoginPortalHref(p, 'ogrenci'));
 }

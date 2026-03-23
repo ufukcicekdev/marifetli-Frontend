@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/src/lib/api';
 import { UzmanFullPageLink } from '@/src/components/uzman-full-page-link';
-
+import { SITE_KIDS_BTN_PRIMARY, SITE_KIDS_HREF } from '@/src/lib/site-kids';
 
 const VALUE_ITEMS = [
   {
@@ -30,6 +30,12 @@ const VALUE_ITEMS = [
     description: 'El emeği ürünlerini toplulukla paylaş.',
     href: '/tasarimlar',
     icon: '🎨',
+  },
+  {
+    title: 'Marifetli Kids',
+    description: 'Okul projeleri, rozet yolu — öğretmen ve öğrenciler için güvenli alan.',
+    href: SITE_KIDS_HREF,
+    icon: '🎒',
   },
 ];
 
@@ -64,6 +70,30 @@ export function HomeHero() {
 
   return (
     <section className="mb-6 sm:mb-8">
+      {/* Kids — ana hero başlığının üstünde */}
+      <div className="mb-4 overflow-hidden rounded-2xl border border-gray-200/80 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900 sm:mb-5">
+        <div className="h-1 w-full bg-gradient-to-r from-brand via-brand-pink to-brand-sky" aria-hidden />
+        <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:px-6 sm:py-4">
+          <div className="flex min-w-0 flex-1 items-start gap-3">
+            <span className="text-2xl shrink-0 sm:text-3xl" aria-hidden>
+              🎒
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-gray-900 dark:text-white sm:text-base">
+                Marifetli Kids — okul projeleri ve rozetler
+              </p>
+              <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-400 sm:text-sm">
+                Öğretmen ve öğrenci hesaplarıyla güvenli proje alanı; giriş ve davetler Kids ana sayfasından.
+              </p>
+            </div>
+          </div>
+          <Link href={SITE_KIDS_HREF} className={`${SITE_KIDS_BTN_PRIMARY} shrink-0 justify-center px-5 py-2.5 sm:px-6`}>
+            Kids alanına git
+            <span aria-hidden>→</span>
+          </Link>
+        </div>
+      </div>
+
       {/* Hero blok */}
       <div className="rounded-2xl border border-gray-200/80 dark:border-gray-800 bg-gradient-to-br from-brand-pink via-white to-brand-sky/10 dark:from-gray-800/90 dark:via-gray-800/80 dark:to-gray-900/90 overflow-hidden shadow-sm">
         <div className="px-5 sm:px-8 py-8 sm:py-10">
@@ -73,6 +103,7 @@ export function HomeHero() {
           <p className="text-base sm:text-lg text-gray-600 dark:text-gray-300 max-w-xl mb-6">
             Örgü, dikiş, yemek, müzik, sanat, fotoğraf, hobiler ve daha fazlası. Soru sor, cevapla, topluluklara katıl — birlikte öğreniyor ve üretiyoruz.
           </p>
+
           <div className="flex flex-wrap items-center gap-3">
             <Link
               href="/soru-sor"
@@ -98,27 +129,29 @@ export function HomeHero() {
               <span aria-hidden>🧠</span>
               Uzmana sor
             </UzmanFullPageLink>
+            <Link href={SITE_KIDS_HREF} className={SITE_KIDS_BTN_PRIMARY}>
+              <span aria-hidden>🎒</span>
+              Marifetli Kids
+            </Link>
           </div>
         </div>
       </div>
 
       {/* Marifetli'de neler yapabilirsin? */}
-      <div className="mt-6 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-5">
         {VALUE_ITEMS.map((item) => (
           <Link
             key={item.href}
             href={item.href}
-            className="group rounded-xl border border-gray-200/80 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-5 hover:border-brand/40 hover:shadow-md transition-all"
+            className="group rounded-xl border border-gray-200/80 bg-white p-4 transition-all hover:border-brand/40 hover:shadow-md dark:border-gray-800 dark:bg-gray-900 sm:p-5"
           >
-            <span className="text-2xl sm:text-3xl block mb-2" aria-hidden>
+            <span className="mb-2 block text-2xl sm:text-3xl" aria-hidden>
               {item.icon}
             </span>
-            <h2 className="text-sm font-semibold text-gray-900 dark:text-white group-hover:text-brand transition-colors">
+            <h2 className="text-sm font-semibold text-gray-900 transition-colors group-hover:text-brand dark:text-white">
               {item.title}
             </h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2">
-              {item.description}
-            </p>
+            <p className="mt-0.5 line-clamp-2 text-xs text-gray-600 dark:text-gray-400">{item.description}</p>
           </Link>
         ))}
       </div>
@@ -153,6 +186,15 @@ export function HomeHero() {
                   </Link>
                 );
               })}
+              <Link
+                href={SITE_KIDS_HREF}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm font-semibold text-gray-800 transition-all hover:scale-[1.02] hover:border-brand-sky hover:shadow-md dark:border-sky-700 dark:bg-sky-950/35 dark:text-gray-100 dark:hover:border-brand-sky"
+              >
+                <span className="text-base leading-none" aria-hidden>
+                  🎒
+                </span>
+                Marifetli Kids
+              </Link>
             </div>
           </div>
         </div>

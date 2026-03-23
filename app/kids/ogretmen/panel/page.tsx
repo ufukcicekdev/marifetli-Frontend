@@ -14,6 +14,7 @@ import {
   type KidsClass,
   type KidsSchool,
 } from '@/src/lib/kids-api';
+import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 import {
   KidsCard,
   KidsEmptyState,
@@ -55,7 +56,7 @@ export default function KidsTeacherPanelPage() {
   useEffect(() => {
     if (authLoading) return;
     if (!user || (user.role !== 'teacher' && user.role !== 'admin')) {
-      router.replace(`${pathPrefix}/giris`);
+      router.replace(kidsLoginPortalHref(pathPrefix, 'ogretmen'));
       return;
     }
     load();
@@ -124,7 +125,7 @@ export default function KidsTeacherPanelPage() {
       <KidsPageHeader
         emoji="👩‍🏫"
         title={`Merhaba, ${firstName}!`}
-        subtitle="Önce okulunu tanımla, sonra sınıf açarken o okulu seç. Davet ve ödevler sınıf sayfasından yönetilir."
+        subtitle="Önce okulunu tanımla, sonra sınıf açarken o okulu seç. Davet ve projeler sınıf sayfasından yönetilir."
       />
 
       <div className="grid gap-8 lg:grid-cols-12 lg:gap-10">
@@ -284,7 +285,7 @@ export default function KidsTeacherPanelPage() {
                       {creating ? 'Oluşturuluyor…' : 'Sınıfı oluştur'}
                     </KidsPrimaryButton>
                     <p className="text-center text-xs text-emerald-800/70 dark:text-emerald-200/70 sm:max-w-[14rem] sm:text-left">
-                      Sonra sınıfa tıklayıp veli daveti ve ödevleri ekleyebilirsin.
+                      Sonra sınıfa tıklayıp veli daveti ve projeleri ekleyebilirsin.
                     </p>
                   </div>
                 </form>

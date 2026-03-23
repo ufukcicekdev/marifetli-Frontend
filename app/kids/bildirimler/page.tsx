@@ -13,10 +13,11 @@ import {
   kidsRegisterFCMToken,
   type KidsNotificationRow,
 } from '@/src/lib/kids-api';
+import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 import { canRequestPush, getFCMTokenAndRegister } from '@/src/lib/firebase-messaging';
 
 function typeLabel(t: KidsNotificationRow['notification_type']): string {
-  if (t === 'kids_new_assignment') return 'Yeni ödev';
+  if (t === 'kids_new_assignment') return 'Yeni proje';
   if (t === 'kids_submission_received') return 'Teslim';
   return t;
 }
@@ -41,7 +42,7 @@ export default function KidsBildirimlerPage() {
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
-      router.replace(`${pathPrefix}/giris`);
+      router.replace(kidsLoginPortalHref(pathPrefix));
     }
   }, [authLoading, user, router, pathPrefix]);
 
@@ -97,7 +98,7 @@ export default function KidsBildirimlerPage() {
       </div>
 
       <p className="text-sm text-slate-600 dark:text-slate-400">
-        Yeni ödev ve öğrenci teslimleri burada listelenir. Tarayıcı bildirimleri için izin vermen yeterli.
+        Yeni projeler ve öğrenci teslimleri burada listelenir. Tarayıcı bildirimleri için izin vermen yeterli.
       </p>
 
       {isLoading ? (

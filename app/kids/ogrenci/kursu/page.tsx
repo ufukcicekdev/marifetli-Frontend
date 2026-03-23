@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import { kidsFreestyleCreate, kidsFreestyleList, type FreestyleItem } from '@/src/lib/kids-api';
+import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 
 export default function KidsFreestylePage() {
   const router = useRouter();
@@ -30,15 +31,15 @@ export default function KidsFreestylePage() {
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
-      router.replace(`${pathPrefix}/giris/ogrenci`);
+      router.replace(kidsLoginPortalHref(pathPrefix, 'ogrenci'));
       return;
     }
     if (user.role !== 'student') {
-      router.replace(`${pathPrefix}/giris`);
+      router.replace(kidsLoginPortalHref(pathPrefix));
       return;
     }
     load();
-  }, [authLoading, user, router, pathPrefix, load]);
+  }, [authLoading, user?.id, user?.role, router, pathPrefix, load]);
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -73,7 +74,7 @@ export default function KidsFreestylePage() {
     <div className="mx-auto max-w-3xl space-y-10">
       <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Serbest kürsü</h1>
-        <p className="text-slate-600 dark:text-gray-300">Ödev dışı projelerini burada paylaş.</p>
+        <p className="text-slate-600 dark:text-gray-300">Sınıf projelerinden ayrı, kendi çalışmalarını burada paylaş.</p>
       </div>
 
       <section className="rounded-2xl border border-amber-200 bg-white p-6 dark:border-amber-800/50 dark:bg-gray-900/80">
