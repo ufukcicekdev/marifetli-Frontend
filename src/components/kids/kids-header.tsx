@@ -68,9 +68,9 @@ export function KidsHeader({ pathPrefix }: KidsHeaderProps) {
             className="-mr-1.5 h-8 w-8 shrink-0 object-contain sm:h-9 sm:w-9 md:h-10 md:w-10"
             priority
           />
-          <span className="leading-none">arifetli</span>
-          <span className="ml-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-400 px-2 py-0.5 text-xs font-extrabold uppercase tracking-wide text-white shadow-sm">
-            Kids
+          <span lang="en" className="leading-none">arifetli</span>
+          <span lang="en" className="ml-1.5 rounded-xl bg-gradient-to-r from-amber-400 to-orange-400 px-2 py-0.5 text-xs font-extrabold tracking-wide text-white shadow-sm">
+            KIDS
           </span>
         </Link>
 
