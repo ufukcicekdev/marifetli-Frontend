@@ -107,7 +107,6 @@ export default function KidsStudentPanelPage() {
         pathPrefix={pathPrefix}
         user={user}
         classes={classes}
-        assignments={assignments}
         roadmap={roadmap}
         loading={loading}
       />

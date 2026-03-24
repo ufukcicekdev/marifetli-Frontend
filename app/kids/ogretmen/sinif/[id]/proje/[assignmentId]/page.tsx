@@ -13,7 +13,7 @@ import {
   type KidsUser,
 } from '@/src/lib/kids-api';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
-import { KidsTeacherSubmissionCard } from '@/src/components/kids/kids-teacher-submission-card';
+import { KidsTeacherStudentSubmissionsRow } from '@/src/components/kids/kids-teacher-student-submissions-row';
 import { KidsCard, KidsPanelMax, kidsLabelClass } from '@/src/components/kids/kids-ui';
 
 type FilterTab = 'all' | 'pending' | 'done' | 'star' | 'missing';
@@ -79,11 +79,66 @@ export default function KidsTeacherProjectDetailPage() {
     return sorted;
   }, [submissions, filter]);
 
+  /** Görünür teslimleri öğrenciye göre grupla; satırda yan yana tur kutuları. */
+  const submissionRowsByStudent = useMemo(() => {
+    const map = new Map<number, KidsTeacherSubmission[]>();
+    for (const s of visibleSubmissions) {
+      const sid = s.student.id;
+      if (!map.has(sid)) map.set(sid, []);
+      map.get(sid)!.push(s);
+    }
+    for (const arr of map.values()) {
+      arr.sort((a, b) => {
+        const ra = a.round_number ?? 1;
+        const rb = b.round_number ?? 1;
+        if (ra !== rb) return ra - rb;
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      });
+    }
+    return Array.from(map.values()).sort((a, b) => {
+      const aMax = Math.max(...a.map((x) => new Date(x.created_at).getTime()));
+      const bMax = Math.max(...b.map((x) => new Date(x.created_at).getTime()));
+      return bMax - aMax;
+    });
+  }, [visibleSubmissions]);
+
+  /** Bekleyen teslim sırası — değerlendirme kaydından sonra “sonraki” buradan seçilir. */
+  const pendingReviewQueue = useMemo(
+    () =>
+      [...submissions]
+        .filter((s) => !s.teacher_reviewed_at)
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+    [submissions],
+  );
+
+  const [activeReviewSubmissionId, setActiveReviewSubmissionId] = useState<number | null>(null);
+
+  const onSubmissionUpdated = useCallback(
+    async (opts?: { afterReviewOpenNextId?: number | null }) => {
+      await load({ silent: true });
+      if (opts && 'afterReviewOpenNextId' in opts) {
+        setActiveReviewSubmissionId(opts.afterReviewOpenNextId ?? null);
+      }
+    },
+    [load],
+  );
+
   useEffect(() => {
     if (filter === 'pending' && stats.pending === 0 && stats.total > 0) {
       setFilter('all');
     }
   }, [filter, stats.pending, stats.total]);
+
+  /** Filtre / liste değişince kart unmount olursa modal state takılı kalmasın */
+  useEffect(() => {
+    if (activeReviewSubmissionId == null) return;
+    if (filter === 'missing') {
+      setActiveReviewSubmissionId(null);
+      return;
+    }
+    const stillVisible = visibleSubmissions.some((s) => s.id === activeReviewSubmissionId);
+    if (!stillVisible) setActiveReviewSubmissionId(null);
+  }, [activeReviewSubmissionId, filter, visibleSubmissions]);
 
   if (authLoading || !user || (user.role !== 'teacher' && user.role !== 'admin')) {
     return (
@@ -182,11 +237,11 @@ export default function KidsTeacherProjectDetailPage() {
           <div className="border-t border-violet-100 px-3 pb-3 pt-2 text-sm dark:border-violet-900/50">
             <p className="text-xs text-slate-500 dark:text-gray-400">
               {assignment.require_video && assignment.require_image
-                ? `Görsel veya video · video en fazla ${assignment.video_max_seconds} sn`
+                ? `Görsel veya video · video en fazla ${assignment.video_max_seconds} sn · ${assignment.submission_rounds ?? 1} ayrı proje`
                 : assignment.require_video
-                  ? `Video · en fazla ${assignment.video_max_seconds} sn`
+                  ? `Video · en fazla ${assignment.video_max_seconds} sn · ${assignment.submission_rounds ?? 1} ayrı proje`
                   : assignment.require_image
-                    ? `Görsel · en fazla ${assignment.max_step_images ?? 3} adet`
+                    ? `Görsel · ${assignment.submission_rounds ?? 1} ayrı proje · tur başına 1 görsel`
                     : 'Teslim türü serbest'}
             </p>
             {assignment.purpose ? (
@@ -213,8 +268,10 @@ export default function KidsTeacherProjectDetailPage() {
               Seçili: {filterLabel[filter]}
             </p>
             <p className="mt-0.5 text-xs text-slate-600 dark:text-gray-400">
-              Görsel → tam ekran. Detay ve değerlendirme için karttaki renkli düğmeler — eğlenceli modallar açılır. «Teslim
-              Teslim etmeyenler sekmesi bu projeye hiç teslim göndermemiş kayıtlı öğrencileri listeler.
+              Mobilde her tur dar bir satırda; üzerine dokununca açılır (accordion). Geniş ekranda turlar yan yana
+              grid’de. Öğrenci sol bloka tıklayınca tüm turların özeti (küçük görseller + metin). Karttaki görsele
+              tıklayınca tam ekran. Kaydettiğinde sırada bekleyen varsa sonraki teslim açılır. «Teslim etmeyenler» bu
+              projeye hiç teslim göndermemiş kayıtlı öğrencileri gösterir.
             </p>
           </div>
           <div
@@ -275,13 +332,18 @@ export default function KidsTeacherProjectDetailPage() {
           </p>
         ) : (
           <ul className="mt-5 space-y-3">
-            {visibleSubmissions.map((sub) => (
-              <KidsTeacherSubmissionCard
-                key={sub.id}
+            {submissionRowsByStudent.map((subs) => (
+              <KidsTeacherStudentSubmissionsRow
+                key={subs[0].student.id}
                 classId={classId}
-                sub={sub}
+                subs={subs}
                 pickSlots={pickSlots}
-                onUpdated={() => void load({ silent: true })}
+                onUpdated={onSubmissionUpdated}
+                reviewFlow={{
+                  activeSubmissionId: activeReviewSubmissionId,
+                  setActiveSubmissionId: setActiveReviewSubmissionId,
+                  pendingQueue: pendingReviewQueue,
+                }}
               />
             ))}
           </ul>

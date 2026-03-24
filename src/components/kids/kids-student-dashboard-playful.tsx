@@ -2,10 +2,7 @@
 
 import Link from 'next/link';
 import {
-  kidsAssignmentSubmissionGate,
   kidsClassLocationLine,
-  kidsFormatAssignmentWindowTr,
-  type KidsAssignment,
   type KidsBadgeRoadmap,
   type KidsClass,
   type KidsRoadmapMilestone,
@@ -41,64 +38,6 @@ const classShells = [
   'border-amber-300/90 bg-gradient-to-br from-amber-50 to-white dark:border-amber-800 dark:from-amber-950/40 dark:to-gray-950',
   'border-emerald-300/90 bg-gradient-to-br from-emerald-50 to-white dark:border-emerald-800 dark:from-emerald-950/40 dark:to-gray-950',
 ];
-
-const projectShells = [
-  'from-violet-500/20 via-fuchsia-500/15 to-amber-400/20 ring-violet-400/40 hover:ring-fuchsia-400/60',
-  'from-sky-500/20 via-cyan-500/15 to-emerald-400/20 ring-sky-400/40 hover:ring-emerald-400/50',
-  'from-amber-500/25 via-orange-400/15 to-rose-400/20 ring-amber-400/40 hover:ring-rose-400/50',
-  'from-emerald-500/20 via-teal-500/15 to-sky-400/20 ring-emerald-400/40 hover:ring-sky-400/50',
-];
-
-type PlayTone = 'violet' | 'sky' | 'amber' | 'emerald' | 'rose' | 'slate';
-
-const toneChip: Record<
-  PlayTone,
-  string
-> = {
-  violet: 'bg-violet-500/15 text-violet-900 dark:bg-violet-500/25 dark:text-violet-100',
-  sky: 'bg-sky-500/15 text-sky-900 dark:bg-sky-500/25 dark:text-sky-100',
-  amber: 'bg-amber-400/25 text-amber-950 dark:bg-amber-500/20 dark:text-amber-100',
-  emerald: 'bg-emerald-500/15 text-emerald-950 dark:bg-emerald-500/20 dark:text-emerald-100',
-  rose: 'bg-rose-500/15 text-rose-900 dark:bg-rose-500/25 dark:text-rose-100',
-  slate: 'bg-slate-500/15 text-slate-800 dark:bg-slate-500/25 dark:text-slate-100',
-};
-
-/** Kart altı özet: video süresi yalnızca video teslimi varsa (require_video) gösterilir. */
-function assignmentSummaryBits(
-  a: KidsAssignment,
-  wl: string | null,
-  gate: ReturnType<typeof kidsAssignmentSubmissionGate>,
-): string[] {
-  const bits: string[] = [];
-  if (a.require_video) {
-    bits.push(`🎬 en fazla ${a.video_max_seconds} sn`);
-  }
-  if (a.require_image) {
-    bits.push(`🖼 en fazla ${a.max_step_images ?? 3} görsel`);
-  }
-  if (wl) bits.push(`📅 ${wl}`);
-  if (!gate.ok) {
-    bits.push(gate.phase === 'not_yet' ? 'teslim henüz başlamadı' : 'teslim kapandı');
-  }
-  return bits;
-}
-
-function assignmentPlayState(
-  a: KidsAssignment,
-  gate: ReturnType<typeof kidsAssignmentSubmissionGate>,
-): { emoji: string; label: string; tone: PlayTone } {
-  if (!gate.ok) {
-    if (gate.phase === 'not_yet') return { emoji: '⏳', label: 'Çok yakında', tone: 'slate' };
-    return { emoji: '🔒', label: 'Süre doldu', tone: 'slate' };
-  }
-  const s = a.my_submission;
-  if (!s) return { emoji: '🚀', label: 'Hadi başla', tone: 'violet' };
-  if (s.is_teacher_pick) return { emoji: '⭐', label: 'Yıldızlı proje', tone: 'amber' };
-  if (!s.teacher_reviewed_at) return { emoji: '📬', label: 'Öğretmen inceliyor', tone: 'sky' };
-  if (s.teacher_review_positive === true) return { emoji: '🌟', label: 'Süper geri bildirim', tone: 'emerald' };
-  if (s.teacher_review_positive === false) return { emoji: '💪', label: 'Biraz daha', tone: 'rose' };
-  return { emoji: '✓', label: 'Gönderildi', tone: 'sky' };
-}
 
 function RoadmapStrip({
   milestones,
@@ -146,7 +85,6 @@ type Props = {
   pathPrefix: string;
   user: KidsUser;
   classes: KidsClass[];
-  assignments: KidsAssignment[];
   roadmap: KidsBadgeRoadmap | null;
   loading: boolean;
 };
@@ -155,7 +93,6 @@ export function KidsStudentDashboardPlayful({
   pathPrefix,
   user,
   classes,
-  assignments,
   roadmap,
   loading,
 }: Props) {
@@ -174,7 +111,7 @@ export function KidsStudentDashboardPlayful({
             Merhaba {user.first_name || 'kahraman'}! 👋
           </h1>
           <p className="mx-auto mt-2 max-w-md text-center text-sm font-medium text-slate-600 dark:text-gray-300">
-            Projelerini renklendir, rozet topla — öğretmenin yıldızı burada parlayacak.
+            Rozet yolunu takip et, projelerini ayrı sayfadan yönet — öğretmenin yıldızı seninle.
           </p>
 
           {stage ? (
@@ -234,57 +171,21 @@ export function KidsStudentDashboardPlayful({
         )}
       </section>
 
-      <section className="rounded-3xl border-2 border-violet-200 bg-gradient-to-b from-violet-50/50 to-white p-5 shadow-lg dark:border-violet-900/50 dark:from-violet-950/20 dark:to-gray-950/80">
-        <h2 className="font-logo flex items-center gap-2 text-xl font-black text-violet-900 dark:text-violet-100">
-          <span aria-hidden>🎯</span> Projeler
-        </h2>
-        <p className="mt-1 text-xs font-medium text-violet-800/70 dark:text-violet-200/70">
-          Her kart bir macera — teslim et, geri bildirim al, yıldız topla.
-        </p>
-        {loading ? (
-          <p className="mt-4 animate-pulse text-sm text-gray-500">Yükleniyor…</p>
-        ) : assignments.length === 0 ? (
-          <p className="mt-4 text-sm font-medium text-gray-600 dark:text-gray-400">Şu an yayında proje yok.</p>
-        ) : (
-          <ul className="mt-4 space-y-3">
-            {assignments.map((a, i) => {
-              const gate = kidsAssignmentSubmissionGate(a);
-              const wl = kidsFormatAssignmentWindowTr(a);
-              const summaryBits = assignmentSummaryBits(a, wl || null, gate);
-              const play = assignmentPlayState(a, gate);
-              return (
-                <li key={a.id}>
-                  <Link
-                    href={`${pathPrefix}/ogrenci/proje/${a.id}`}
-                    className={`group flex flex-col rounded-2xl bg-gradient-to-br p-[2px] shadow-md ring-2 transition hover:scale-[1.01] hover:shadow-xl ${projectShells[i % projectShells.length]}`}
-                  >
-                    <div className="flex flex-col rounded-[0.9rem] bg-white/95 px-4 py-4 dark:bg-gray-950/95">
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <span className="font-logo text-lg font-black text-violet-950 dark:text-white">{a.title}</span>
-                        <span
-                          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-black ${toneChip[play.tone]}`}
-                        >
-                          <span aria-hidden>{play.emoji}</span>
-                          {play.label}
-                        </span>
-                      </div>
-                      {summaryBits.length > 0 ? (
-                        <span className="mt-2 text-xs font-medium text-gray-600 dark:text-gray-400">
-                          {summaryBits.join(' · ')}
-                        </span>
-                      ) : null}
-                      {a.my_submission?.review_hint_title && gate.ok ? (
-                        <p className="mt-2 rounded-xl bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-900 dark:bg-violet-950/50 dark:text-violet-100">
-                          💬 {a.my_submission.review_hint_title}
-                        </p>
-                      ) : null}
-                    </div>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        )}
+      <section className="rounded-3xl border-2 border-violet-300/80 bg-gradient-to-br from-violet-100/90 via-fuchsia-50/80 to-amber-50/70 p-1 shadow-lg dark:border-violet-800 dark:from-violet-950/50 dark:via-fuchsia-950/30 dark:to-amber-950/20">
+        <div className="rounded-[1.35rem] bg-white/95 px-5 py-5 dark:bg-gray-950/90">
+          <h2 className="font-logo flex items-center gap-2 text-lg font-black text-violet-900 dark:text-violet-100">
+            <span aria-hidden>🎯</span> Projeler
+          </h2>
+          <p className="mt-1 text-sm font-medium text-slate-600 dark:text-gray-300">
+            Çok adımlı projelerde her teslim ayrı kaydedilir. Tüm listeyi ve ilerlemeni buradan aç.
+          </p>
+          <Link
+            href={`${pathPrefix}/ogrenci/projeler`}
+            className="mt-4 flex min-h-12 w-full items-center justify-center rounded-2xl bg-gradient-to-r from-violet-600 via-fuchsia-600 to-amber-500 px-6 py-3 text-center text-sm font-black text-white shadow-md shadow-fuchsia-500/25 transition hover:brightness-105"
+          >
+            Projelerime git →
+          </Link>
+        </div>
       </section>
 
       <div className="flex justify-center">

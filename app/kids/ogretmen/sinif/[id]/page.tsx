@@ -19,7 +19,13 @@ import {
   kidsListSchools,
   kidsPatchClass,
   kidsRemoveEnrollment,
+  KIDS_CLASS_GRADE_OPTIONS,
+  KIDS_CLASS_SECTION_OPTIONS,
+  kidsAcademicYearSelectOptions,
+  kidsBuildStandardClassName,
+  kidsParseStandardClassName,
   kidsSchoolLocationLine,
+  kidsSuggestedAcademicYearLabel,
   kidsTeacherAppConfig,
   kidsDatetimeLocalDefaultClose,
   kidsDatetimeLocalToIso,
@@ -48,6 +54,7 @@ import {
   kidsLabelClass,
   kidsTextareaClass,
 } from '@/src/components/kids/kids-ui';
+import { KidsDateTimeField } from '@/src/components/kids/kids-datetime-field';
 
 const VIDEO_DURATION_OPTIONS: KidsSelectOption[] = [
   { value: '60', label: '1 dakika' },
@@ -55,10 +62,12 @@ const VIDEO_DURATION_OPTIONS: KidsSelectOption[] = [
   { value: '180', label: '3 dakika' },
 ];
 
-const MAX_STEP_IMAGE_OPTIONS: KidsSelectOption[] = [
-  { value: '1', label: 'En fazla 1 görsel' },
-  { value: '2', label: 'En fazla 2 görsel' },
-  { value: '3', label: 'En fazla 3 görsel' },
+const SUBMISSION_ROUNDS_OPTIONS: KidsSelectOption[] = [
+  { value: '1', label: '1 proje' },
+  { value: '2', label: '2 proje' },
+  { value: '3', label: '3 proje' },
+  { value: '4', label: '4 proje' },
+  { value: '5', label: '5 proje' },
 ];
 
 const INVITE_DAYS_OPTIONS: KidsSelectOption[] = [
@@ -95,6 +104,11 @@ export default function KidsTeacherClassPage() {
   } | null>(null);
 
   const [editName, setEditName] = useState('');
+  const [editClassNonStandard, setEditClassNonStandard] = useState(false);
+  const [editClassGrade, setEditClassGrade] = useState('4');
+  const [editClassSection, setEditClassSection] = useState('A');
+  const [editClassNameSuffix, setEditClassNameSuffix] = useState('');
+  const [editAcademicYear, setEditAcademicYear] = useState('');
   const [editDesc, setEditDesc] = useState('');
   const [editSchoolId, setEditSchoolId] = useState<string>('');
   const [savingClass, setSavingClass] = useState(false);
@@ -113,13 +127,13 @@ export default function KidsTeacherClassPage() {
   const [asgPurpose, setAsgPurpose] = useState('');
   const [asgMaterials, setAsgMaterials] = useState('');
   const [asgVideoSec, setAsgVideoSec] = useState<60 | 120 | 180>(120);
-  /** Görsel teslimde öğrencinin ekleyebileceği en fazla görsel sayısı (1–3). */
-  const [asgMaxStepImages, setAsgMaxStepImages] = useState<1 | 2 | 3>(3);
+  /** Aynı konu altında öğrencinin teslim edeceği ayrı proje sayısı (1–5). */
+  const [asgSubmissionRounds, setAsgSubmissionRounds] = useState<1 | 2 | 3 | 4 | 5>(1);
   /** Öğrenci teslim türü: görsel/adım adım veya video (ikisi birden değil). */
   const [asgMediaType, setAsgMediaType] = useState<'image' | 'video'>('image');
-  /** Teslime başlangıç (isteğe bağlı), `datetime-local` */
+  /** Teslime başlangıç (zorunlu), `YYYY-MM-DDTHH:mm` */
   const [asgOpenAt, setAsgOpenAt] = useState('');
-  /** Son teslim (zorunlu), `datetime-local` */
+  /** Son teslim (zorunlu), `YYYY-MM-DDTHH:mm` */
   const [asgCloseAt, setAsgCloseAt] = useState('');
   const [asgSaving, setAsgSaving] = useState(false);
   const [editAssignment, setEditAssignment] = useState<KidsAssignment | null>(null);
@@ -127,15 +141,21 @@ export default function KidsTeacherClassPage() {
   const [editPurpose, setEditPurpose] = useState('');
   const [editMaterials, setEditMaterials] = useState('');
   const [editVideoSec, setEditVideoSec] = useState<60 | 120 | 180>(120);
-  const [editMaxStepImages, setEditMaxStepImages] = useState<1 | 2 | 3>(3);
+  const [editSubmissionRounds, setEditSubmissionRounds] = useState<1 | 2 | 3 | 4 | 5>(1);
   const [editMediaType, setEditMediaType] = useState<'image' | 'video'>('image');
   const [editOpenAt, setEditOpenAt] = useState('');
   const [editCloseAt, setEditCloseAt] = useState('');
   const [editSaving, setEditSaving] = useState(false);
+  /** Modal `<dialog>` üst katmanda olduğu için toast görünmez; hata bu metinle gösterilir. */
+  const [editAssignmentError, setEditAssignmentError] = useState<string | null>(null);
   const [deletingClass, setDeletingClass] = useState(false);
   const [removingEnrollmentId, setRemovingEnrollmentId] = useState<number | null>(null);
 
   const editNameId = useId();
+  const editClassGradeId = useId();
+  const editClassSectionId = useId();
+  const editClassSuffixId = useId();
+  const editAcademicYearId = useId();
   const editDescId = useId();
   const editSchoolSelectId = useId();
   const inviteEmailsId = useId();
@@ -168,7 +188,21 @@ export default function KidsTeacherClassPage() {
       ]);
       setCls(c);
       setSchools([...schList].sort((a, b) => a.name.localeCompare(b.name, 'tr')));
-      setEditName(c.name);
+      const p = kidsParseStandardClassName(c.name);
+      if (p) {
+        setEditClassNonStandard(false);
+        setEditClassGrade(p.grade);
+        setEditClassSection(p.section);
+        setEditClassNameSuffix(p.suffix || '');
+        setEditName(c.name);
+      } else {
+        setEditClassNonStandard(true);
+        setEditClassGrade('4');
+        setEditClassSection('A');
+        setEditClassNameSuffix('');
+        setEditName(c.name);
+      }
+      setEditAcademicYear((c.academic_year_label || '').trim());
       setEditDesc(c.description || '');
       setEditSchoolId(String(c.school.id));
       setStudents(st);
@@ -221,7 +255,7 @@ export default function KidsTeacherClassPage() {
     }
   }, [assignmentVideoEnabled, editMediaType]);
 
-  /** Planlanmış / yayından kalkmış: tüm alanlar. Yayındaki: başlangıç + max görsel kilitli (backend ile aynı mantık). */
+  /** Planlanmış / yayından kalkmış: tüm alanlar. Yayındaki: başlangıç + proje tur sayısı kilitli (backend ile aynı mantık). */
   function isAssignmentEditFullyFree(a: KidsAssignment): boolean {
     if (!a.is_published) return true;
     const raw = a.submission_opens_at;
@@ -233,13 +267,14 @@ export default function KidsTeacherClassPage() {
 
   const openAssignmentEdit = useCallback((a: KidsAssignment) => {
     setEditAssignment(a);
+    setEditAssignmentError(null);
     setEditTitle(a.title);
     setEditPurpose(a.purpose || '');
     setEditMaterials(a.materials || '');
     setEditVideoSec(a.video_max_seconds);
     if (a.require_video && !a.require_image) setEditMediaType('video');
     else setEditMediaType('image');
-    setEditMaxStepImages((a.max_step_images ?? 3) as 1 | 2 | 3);
+    setEditSubmissionRounds((a.submission_rounds ?? 1) as 1 | 2 | 3 | 4 | 5);
     setEditOpenAt(kidsIsoToDatetimeLocal(a.submission_opens_at));
     const closeLocal = kidsIsoToDatetimeLocal(a.submission_closes_at);
     setEditCloseAt(closeLocal || kidsDatetimeLocalDefaultClose(7));
@@ -286,11 +321,11 @@ export default function KidsTeacherClassPage() {
           ) : null}
           <p className="mt-1 text-xs text-slate-500 dark:text-gray-400">
             {a.require_video && a.require_image
-              ? `Görsel veya video · video en fazla ${a.video_max_seconds} sn`
+              ? `Görsel veya video · video en fazla ${a.video_max_seconds} sn · ${a.submission_rounds ?? 1} ayrı proje`
               : a.require_video
-                ? `Video teslimi · en fazla ${a.video_max_seconds} sn`
+                ? `Video teslimi · en fazla ${a.video_max_seconds} sn · ${a.submission_rounds ?? 1} ayrı proje`
                 : a.require_image
-                  ? `Görsel teslim · en fazla ${a.max_step_images ?? 3} görsel`
+                  ? `Görsel teslim · ${a.submission_rounds ?? 1} ayrı proje`
                   : 'Teslim türü serbest'}
           </p>
           {winLabel ? (
@@ -329,6 +364,15 @@ export default function KidsTeacherClassPage() {
     );
   }
 
+  const editAcademicYearOptions = useMemo(() => {
+    const base = kidsAcademicYearSelectOptions();
+    const v = (editAcademicYear || '').trim();
+    if (v && !base.some((o) => o.value === v)) {
+      return [{ value: v, label: `${v} (kayıtlı)` }, ...base.filter((o) => o.value !== '')];
+    }
+    return base;
+  }, [editAcademicYear]);
+
   async function saveClass(e: React.FormEvent) {
     e.preventDefault();
     if (!cls) return;
@@ -338,10 +382,25 @@ export default function KidsTeacherClassPage() {
       toast.error('Bu sınıfın bağlı olduğu okulu seçmelisin.');
       return;
     }
+    let nameToSave: string;
+    if (editClassNonStandard) {
+      nameToSave = editName.trim();
+      if (!nameToSave) {
+        toast.error('Sınıf adı zorunludur.');
+        return;
+      }
+    } else {
+      if (!editClassGrade || !editClassSection) {
+        toast.error('Sınıf düzeyi ve şube harfini seçmelisin.');
+        return;
+      }
+      nameToSave = kidsBuildStandardClassName(editClassGrade, editClassSection, editClassNameSuffix);
+    }
     setSavingClass(true);
     try {
       const updated = await kidsPatchClass(cls.id, {
-        name: editName.trim(),
+        name: nameToSave,
+        academic_year_label: editAcademicYear.trim(),
         description: editDesc.trim(),
         school_id: sid,
       });
@@ -421,13 +480,20 @@ export default function KidsTeacherClassPage() {
 
   async function createAssignment(e: React.FormEvent) {
     e.preventDefault();
-    if (!asgTitle.trim()) return;
+    if (!asgTitle.trim()) {
+      toast.error('Proje başlığı zorunludur.');
+      return;
+    }
     const closeIso = kidsDatetimeLocalToIso(asgCloseAt);
     if (!closeIso) {
       toast.error('Son teslim tarih ve saatini seçmelisin.');
       return;
     }
     const openIso = kidsDatetimeLocalToIso(asgOpenAt);
+    if (!openIso) {
+      toast.error('Teslime başlangıç tarih ve saatini seçmelisin.');
+      return;
+    }
     setAsgSaving(true);
     try {
       const a = await kidsCreateAssignment(classId, {
@@ -437,7 +503,7 @@ export default function KidsTeacherClassPage() {
         video_max_seconds: asgVideoSec,
         require_image: asgMediaType === 'image',
         require_video: asgMediaType === 'video',
-        max_step_images: asgMediaType === 'image' ? asgMaxStepImages : 3,
+        submission_rounds: asgSubmissionRounds,
         is_published: true,
         submission_opens_at: openIso,
         submission_closes_at: closeIso,
@@ -449,11 +515,9 @@ export default function KidsTeacherClassPage() {
       setAsgOpenAt('');
       setAsgCloseAt(kidsDatetimeLocalDefaultClose(7));
       setAsgMediaType('image');
-      setAsgMaxStepImages(3);
+      setAsgSubmissionRounds(1);
       setAsgVideoSec(120);
-      const openStr = openIso ?? '';
-      const openMs = openStr ? new Date(openStr).getTime() : NaN;
-      const plannedLater = Boolean(openStr) && !Number.isNaN(openMs) && openMs > Date.now();
+      const plannedLater = new Date(openIso).getTime() > Date.now();
       toast.success(
         plannedLater
           ? 'Proje planlandı. Öğrenciler başlangıç saatine kadar görmeyecek; saat gelince kısa süre içinde haberdar edilirler.'
@@ -468,15 +532,27 @@ export default function KidsTeacherClassPage() {
 
   async function saveAssignmentEdit(e: React.FormEvent) {
     e.preventDefault();
+    setEditAssignmentError(null);
     if (!editAssignment) return;
-    if (!editTitle.trim()) return;
+    if (!editTitle.trim()) {
+      setEditAssignmentError('Proje başlığı zorunludur.');
+      return;
+    }
     const closeIso = kidsDatetimeLocalToIso(editCloseAt);
     if (!closeIso) {
-      toast.error('Son teslim tarih ve saatini seçmelisin.');
+      setEditAssignmentError('Son teslim tarih ve saatini seçmelisin.');
       return;
     }
     const free = isAssignmentEditFullyFree(editAssignment);
-    const openIso = free ? kidsDatetimeLocalToIso(editOpenAt) : undefined;
+    let openIso: string | undefined;
+    if (free) {
+      const parsed = kidsDatetimeLocalToIso(editOpenAt);
+      if (!parsed) {
+        setEditAssignmentError('Teslime başlangıç tarih ve saatini seçmelisin.');
+        return;
+      }
+      openIso = parsed;
+    }
     setEditSaving(true);
     try {
       const body: Parameters<typeof kidsPatchAssignment>[2] = {
@@ -489,15 +565,16 @@ export default function KidsTeacherClassPage() {
         submission_closes_at: closeIso,
       };
       if (free) {
-        body.submission_opens_at = openIso ?? null;
-        body.max_step_images = editMediaType === 'image' ? editMaxStepImages : 3;
+        body.submission_opens_at = openIso!;
+        body.submission_rounds = editSubmissionRounds;
       }
       const updated = await kidsPatchAssignment(classId, editAssignment.id, body);
       setAssignments((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
       setEditAssignment(null);
+      setEditAssignmentError(null);
       toast.success('Proje güncellendi.');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Güncellenemedi');
+      setEditAssignmentError(err instanceof Error ? err.message : 'Güncellenemedi');
     } finally {
       setEditSaving(false);
     }
@@ -587,9 +664,16 @@ export default function KidsTeacherClassPage() {
           <p className="text-sm font-bold uppercase tracking-wide text-fuchsia-600 dark:text-fuchsia-400">
             Sınıf paneli
           </p>
-          <h1 className="font-logo mt-1 text-3xl font-bold text-slate-900 dark:text-white sm:text-4xl">
-            {cls.name}
-          </h1>
+          <div className="mt-1 flex flex-wrap items-center gap-3">
+            <h1 className="font-logo text-3xl font-bold text-slate-900 dark:text-white sm:text-4xl">
+              {cls.name}
+            </h1>
+            {(cls.academic_year_label || '').trim() ? (
+              <span className="rounded-full bg-violet-100 px-3 py-1 text-sm font-bold text-violet-800 dark:bg-violet-900/60 dark:text-violet-200">
+                {(cls.academic_year_label || '').trim()}
+              </span>
+            ) : null}
+          </div>
           {classLocationLine ? (
             <p className="mt-2 max-w-2xl text-sm font-semibold text-emerald-800 dark:text-emerald-200">
               {classLocationLine}
@@ -609,7 +693,12 @@ export default function KidsTeacherClassPage() {
         </div>
       </div>
 
-      <KidsTabs tabs={TABS} active={tab} onChange={(id) => setTab(id as TabId)} />
+      <KidsTabs
+        tabs={TABS}
+        active={tab}
+        onChange={(id) => setTab(id as TabId)}
+        ariaLabel="Sınıf bölümleri"
+      />
 
       {tab === 'general' && (
         <KidsCard>
@@ -642,12 +731,99 @@ export default function KidsTeacherClassPage() {
                 }))}
               />
             </KidsFormField>
-            <KidsFormField id={editNameId} label="Sınıf adı" required>
-              <input
+            {editClassNonStandard ? (
+              <KidsFormField
                 id={editNameId}
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                className={kidsInputClass}
+                label="Sınıf adı (özel)"
+                required
+                hint="Kulüp veya özel grup adı gibi durumlarda serbest metin. Standart sınıf için aşağıdaki düğmeyi kullan."
+              >
+                <input
+                  id={editNameId}
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className={kidsInputClass}
+                  maxLength={200}
+                />
+              </KidsFormField>
+            ) : (
+              <>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <KidsFormField id={editClassGradeId} label="Sınıf düzeyi" required hint="1–12.">
+                    <KidsSelect
+                      id={editClassGradeId}
+                      value={editClassGrade}
+                      onChange={setEditClassGrade}
+                      options={KIDS_CLASS_GRADE_OPTIONS}
+                      searchable={false}
+                    />
+                  </KidsFormField>
+                  <KidsFormField id={editClassSectionId} label="Şube (harf)" required hint="A–Z.">
+                    <KidsSelect
+                      id={editClassSectionId}
+                      value={editClassSection}
+                      onChange={setEditClassSection}
+                      options={KIDS_CLASS_SECTION_OPTIONS}
+                      searchable
+                    />
+                  </KidsFormField>
+                </div>
+                <KidsFormField
+                  id={editClassSuffixId}
+                  label="Ek metin (isteğe bağlı)"
+                  hint='Örn. "Sınıfı" — kayıtlı ad: düzey + şube + bu metin.'
+                >
+                  <input
+                    id={editClassSuffixId}
+                    value={editClassNameSuffix}
+                    onChange={(e) => setEditClassNameSuffix(e.target.value)}
+                    className={kidsInputClass}
+                    maxLength={120}
+                    placeholder="Örn. Sınıfı"
+                  />
+                </KidsFormField>
+                <p className="text-sm text-slate-600 dark:text-gray-400">
+                  Önizleme:{' '}
+                  <strong className="font-logo text-slate-900 dark:text-white">
+                    {kidsBuildStandardClassName(editClassGrade, editClassSection, editClassNameSuffix)}
+                  </strong>
+                </p>
+              </>
+            )}
+            <div className="flex flex-wrap gap-2">
+              <KidsSecondaryButton
+                type="button"
+                onClick={() => {
+                  if (editClassNonStandard) {
+                    const p = kidsParseStandardClassName(editName);
+                    if (p) {
+                      setEditClassGrade(p.grade);
+                      setEditClassSection(p.section);
+                      setEditClassNameSuffix(p.suffix || '');
+                      setEditClassNonStandard(false);
+                    } else {
+                      toast.error('Önce 4-B veya 4-B Sınıfı biçiminde bir ad yazın ya da standart seçime geçin.');
+                    }
+                  } else {
+                    setEditName(kidsBuildStandardClassName(editClassGrade, editClassSection, editClassNameSuffix));
+                    setEditClassNonStandard(true);
+                  }
+                }}
+              >
+                {editClassNonStandard ? 'Standart seçim (düzey + şube)' : 'Özel ad yaz'}
+              </KidsSecondaryButton>
+            </div>
+            <KidsFormField
+              id={editAcademicYearId}
+              label="Eğitim-öğretim yılı"
+              hint={`Listelerde ayırt etmek için. «Seçilmedi» bırakılabilir. Önerilen: ${kidsSuggestedAcademicYearLabel()}.`}
+            >
+              <KidsSelect
+                id={editAcademicYearId}
+                value={editAcademicYear}
+                onChange={setEditAcademicYear}
+                options={editAcademicYearOptions}
+                searchable={false}
               />
             </KidsFormField>
             <KidsFormField id={editDescId} label="Açıklama" hint="Öğrenci ve velilere kısa bilgi.">
@@ -845,7 +1021,7 @@ export default function KidsTeacherClassPage() {
               <div className="shrink-0">
                 <h2 className="font-logo text-lg font-bold text-slate-900 dark:text-white">Yeni proje</h2>
                 <p className="mt-1 text-sm text-slate-600 dark:text-gray-400">
-                  Görsel teslimde öğrenci en az bir görsel yükler; üst sınırı sen seçersin.
+                  Görsel teslimde öğrenci her tur için 1 görsel yükler.
                   {assignmentVideoEnabled
                     ? ' İstersen video teslimi de seçebilirsin.'
                     : ' Video teslimi bu kurulumda kapalı.'}
@@ -853,7 +1029,7 @@ export default function KidsTeacherClassPage() {
               </div>
               <div className="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 [-webkit-overflow-scrolling:touch]">
                 <form className="space-y-4" onSubmit={createAssignment}>
-              <KidsFormField id={asgTitleId} label="Proje başlığı" required>
+              <KidsFormField id={asgTitleId} label="Başlık" required>
                 <input
                   id={asgTitleId}
                   required
@@ -884,15 +1060,16 @@ export default function KidsTeacherClassPage() {
               </KidsFormField>
               <KidsFormField
                 id={asgOpenAtId}
-                label="Teslime başlangıç (isteğe bağlı)"
-                hint="Boş bırakırsan proje hemen öğrencilere açılır. İleri bir tarih seçersen proje planlanmış listede durur; öğrenciler o saate kadar görmez, saat gelince haberdar edilir."
+                label="Teslime başlangıç tarihi ve saati"
+                required
+                hint="Başlangıç zamanı şu andan sonraysa proje planlanmış listede durur; öğrenciler o saate kadar görmez, saat gelince haberdar edilir. Şimdiki veya geçmiş bir saat seçersen proje öğrencilere hemen açık sayılır."
               >
-                <input
+                <KidsDateTimeField
                   id={asgOpenAtId}
-                  type="datetime-local"
                   value={asgOpenAt}
-                  onChange={(e) => setAsgOpenAt(e.target.value)}
-                  className={kidsInputClass}
+                  onChange={setAsgOpenAt}
+                  required
+                  placeholder="Başlangıç tarih ve saatini seç"
                 />
               </KidsFormField>
               <KidsFormField
@@ -901,13 +1078,12 @@ export default function KidsTeacherClassPage() {
                 required
                 hint="Öğrenci yalnızca bu zamana kadar (ve varsa başlangıçtan sonra) teslim edebilir."
               >
-                <input
+                <KidsDateTimeField
                   id={asgCloseAtId}
-                  type="datetime-local"
-                  required
                   value={asgCloseAt}
-                  onChange={(e) => setAsgCloseAt(e.target.value)}
-                  className={kidsInputClass}
+                  onChange={setAsgCloseAt}
+                  required
+                  placeholder="Son teslimi seçmek için dokun"
                 />
               </KidsFormField>
               <fieldset className="rounded-2xl border-2 border-violet-100 bg-violet-50/50 p-4 dark:border-violet-900/40 dark:bg-violet-950/30">
@@ -936,7 +1112,7 @@ export default function KidsTeacherClassPage() {
                       Görsel / adım adım
                     </span>
                     <span className="mt-1 block text-xs text-slate-600 dark:text-gray-400">
-                      Metin ve görsellerle teslim; en fazla görsel sayısını aşağıdan seç.
+                      Metin ve görselle teslim; her proje turunda 1 görsel.
                     </span>
                   </button>
                   {assignmentVideoEnabled ? (
@@ -961,22 +1137,6 @@ export default function KidsTeacherClassPage() {
                     </button>
                   ) : null}
                 </div>
-                {asgMediaType === 'image' ? (
-                  <div className="mt-4">
-                    <label htmlFor="asg-max-step-images" className={`${kidsLabelClass} block`}>
-                      Öğrenci en fazla kaç görsel ekleyebilir?
-                    </label>
-                    <p className="mb-2 text-xs text-slate-500 dark:text-gray-400">
-                      En az 1 görsel yüklemeleri gerekir; burada üst sınırı belirlersin (1–3).
-                    </p>
-                    <KidsSelect
-                      id="asg-max-step-images"
-                      value={String(asgMaxStepImages)}
-                      onChange={(v) => setAsgMaxStepImages(Number(v) as 1 | 2 | 3)}
-                      options={MAX_STEP_IMAGE_OPTIONS}
-                    />
-                  </div>
-                ) : null}
                 {asgMediaType === 'video' ? (
                   <div className="mt-4">
                     <label htmlFor="asg-video-duration" className={`${kidsLabelClass} block`}>
@@ -993,6 +1153,20 @@ export default function KidsTeacherClassPage() {
                     />
                   </div>
                 ) : null}
+                <div className="mt-4">
+                  <label htmlFor="asg-submission-rounds" className={`${kidsLabelClass} block`}>
+                    Bu konu için kaç ayrı proje teslim edilsin?
+                  </label>
+                  <p className="mb-2 text-xs text-slate-500 dark:text-gray-400">
+                    Öğrenci panelinde &quot;Proje 1&quot;, &quot;Proje 2&quot; şeklinde görünür (1–5).
+                  </p>
+                  <KidsSelect
+                    id="asg-submission-rounds"
+                    value={String(asgSubmissionRounds)}
+                    onChange={(v) => setAsgSubmissionRounds(Number(v) as 1 | 2 | 3 | 4 | 5)}
+                    options={SUBMISSION_ROUNDS_OPTIONS}
+                  />
+                </div>
               </fieldset>
               <KidsPrimaryButton type="submit" disabled={asgSaving}>
                 {asgSaving ? 'Kaydediliyor…' : 'Projeyi yayınla'}
@@ -1125,7 +1299,10 @@ export default function KidsTeacherClassPage() {
         <KidsCenteredModal
           title="Projeyi düzenle"
           onClose={() => {
-            if (!editSaving) setEditAssignment(null);
+            if (!editSaving) {
+              setEditAssignment(null);
+              setEditAssignmentError(null);
+            }
           }}
           maxWidthClass="max-w-2xl"
           panelClassName="max-h-[90dvh]"
@@ -1137,10 +1314,18 @@ export default function KidsTeacherClassPage() {
                 <p className="mb-4 text-sm text-slate-600 dark:text-gray-400">
                   {editFullyFree
                     ? 'Planlanmış veya taslak projede tüm alanları değiştirebilirsin.'
-                    : 'Öğrencilere açık projede teslim başlangıcı ve en fazla görsel sayısı sabittir; diğer alanları güncelleyebilirsin.'}
+                    : 'Öğrencilere açık projede teslim başlangıcı ve proje (tur) sayısı sabittir; diğer alanları güncelleyebilirsin.'}
                 </p>
+                {editAssignmentError ? (
+                  <div
+                    role="alert"
+                    className="mb-4 rounded-xl border border-rose-300 bg-rose-50 px-3 py-2.5 text-sm font-medium text-rose-900 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-100"
+                  >
+                    {editAssignmentError}
+                  </div>
+                ) : null}
                 <form className="space-y-4" onSubmit={saveAssignmentEdit}>
-                  <KidsFormField id={editAsgTitleId} label="Proje başlığı" required>
+                  <KidsFormField id={editAsgTitleId} label="Başlık" required>
                     <input
                       id={editAsgTitleId}
                       required
@@ -1169,20 +1354,23 @@ export default function KidsTeacherClassPage() {
                   </KidsFormField>
                   <KidsFormField
                     id={editAsgOpenAtId}
-                    label="Teslime başlangıç"
+                    label="Teslime başlangıç tarihi ve saati"
+                    required={editFullyFree}
                     hint={
                       editFullyFree
-                        ? 'Boş bırakırsan proje hemen öğrencilere açık sayılır (yayındaki projelerde bu alan kilitli).'
+                        ? 'Planlanmış projede başlangıç ve son teslim zorunludur; başlangıç, son teslimden önce olmalıdır.'
                         : 'Bu proje öğrencilere açık; başlangıç tarihini değiştirmek için projenin planlanmış olması gerekir.'
                     }
                   >
-                    <input
+                    <KidsDateTimeField
                       id={editAsgOpenAtId}
-                      type="datetime-local"
                       value={editOpenAt}
-                      onChange={(e) => setEditOpenAt(e.target.value)}
+                      onChange={setEditOpenAt}
                       disabled={!editFullyFree}
-                      className={`${kidsInputClass} disabled:cursor-not-allowed disabled:opacity-60`}
+                      required={editFullyFree}
+                      placeholder={
+                        editFullyFree ? 'Başlangıç tarih ve saatini seç' : 'Kilitli — planlanmış projede düzenlenebilir'
+                      }
                     />
                   </KidsFormField>
                   <KidsFormField
@@ -1191,13 +1379,12 @@ export default function KidsTeacherClassPage() {
                     required
                     hint="Öğrenci yalnızca bu zamana kadar (ve varsa başlangıçtan sonra) teslim edebilir."
                   >
-                    <input
+                    <KidsDateTimeField
                       id={editAsgCloseAtId}
-                      type="datetime-local"
-                      required
                       value={editCloseAt}
-                      onChange={(e) => setEditCloseAt(e.target.value)}
-                      className={kidsInputClass}
+                      onChange={setEditCloseAt}
+                      required
+                      placeholder="Son teslimi seçmek için dokun"
                     />
                   </KidsFormField>
                   <fieldset className="rounded-2xl border-2 border-violet-100 bg-violet-50/50 p-4 dark:border-violet-900/40 dark:bg-violet-950/30">
@@ -1226,7 +1413,7 @@ export default function KidsTeacherClassPage() {
                           Görsel / adım adım
                         </span>
                         <span className="mt-1 block text-xs text-slate-600 dark:text-gray-400">
-                          Metin ve görsellerle teslim; en fazla görsel sayısını aşağıdan seç.
+                          Metin ve görselle teslim; her turda 1 görsel.
                         </span>
                       </button>
                       {assignmentVideoEnabled ? (
@@ -1251,25 +1438,6 @@ export default function KidsTeacherClassPage() {
                         </button>
                       ) : null}
                     </div>
-                    {editMediaType === 'image' ? (
-                      <div className="mt-4">
-                        <label htmlFor="edit-asg-max-step-images" className={`${kidsLabelClass} block`}>
-                          Öğrenci en fazla kaç görsel ekleyebilir?
-                        </label>
-                        <p className="mb-2 text-xs text-slate-500 dark:text-gray-400">
-                          {editFullyFree
-                            ? 'En az 1 görsel yüklemeleri gerekir; burada üst sınırı belirlersin (1–3).'
-                            : 'Yayındaki projede bu üst sınır değiştirilemez.'}
-                        </p>
-                        <KidsSelect
-                          id="edit-asg-max-step-images"
-                          value={String(editMaxStepImages)}
-                          onChange={(v) => setEditMaxStepImages(Number(v) as 1 | 2 | 3)}
-                          options={MAX_STEP_IMAGE_OPTIONS}
-                          disabled={!editFullyFree}
-                        />
-                      </div>
-                    ) : null}
                     {editMediaType === 'video' ? (
                       <div className="mt-4">
                         <label htmlFor="edit-asg-video-duration" className={`${kidsLabelClass} block`}>
@@ -1286,6 +1454,23 @@ export default function KidsTeacherClassPage() {
                         />
                       </div>
                     ) : null}
+                    <div className="mt-4">
+                      <label htmlFor="edit-asg-submission-rounds" className={`${kidsLabelClass} block`}>
+                        Bu konu için kaç ayrı proje teslim edilsin?
+                      </label>
+                      <p className="mb-2 text-xs text-slate-500 dark:text-gray-400">
+                        {editFullyFree
+                          ? 'Öğrenci panelinde Proje 1, Proje 2 şeklinde görünür (1–5).'
+                          : 'Yayındaki projede bu sayı değiştirilemez.'}
+                      </p>
+                      <KidsSelect
+                        id="edit-asg-submission-rounds"
+                        value={String(editSubmissionRounds)}
+                        onChange={(v) => setEditSubmissionRounds(Number(v) as 1 | 2 | 3 | 4 | 5)}
+                        options={SUBMISSION_ROUNDS_OPTIONS}
+                        disabled={!editFullyFree}
+                      />
+                    </div>
                   </fieldset>
                   <div className="flex flex-wrap gap-2 pt-1">
                     <KidsPrimaryButton type="submit" disabled={editSaving}>
@@ -1294,7 +1479,10 @@ export default function KidsTeacherClassPage() {
                     <KidsSecondaryButton
                       type="button"
                       disabled={editSaving}
-                      onClick={() => setEditAssignment(null)}
+                      onClick={() => {
+                        setEditAssignment(null);
+                        setEditAssignmentError(null);
+                      }}
                     >
                       Vazgeç
                     </KidsSecondaryButton>

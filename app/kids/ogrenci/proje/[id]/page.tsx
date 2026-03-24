@@ -1,21 +1,31 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import {
+  KIDS_MAX_IMAGES_PER_SUBMISSION,
   kidsAssignmentSubmissionGate,
   kidsCreateSubmission,
   kidsFormatAssignmentWindowTr,
-  kidsGetSubmissionForAssignment,
+  kidsGetSubmissionRoundsForAssignment,
   kidsStudentDashboard,
   kidsUploadSubmissionImage,
   type KidsAssignment,
+  type KidsAssignmentRoundSlot,
   type KidsSubmissionRecord,
 } from '@/src/lib/kids-api';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
+import {
+  KidsAssignmentRoundStepper,
+  canNavigateToAssignmentRound,
+} from '@/src/components/kids/kids-assignment-round-stepper';
+import {
+  KidsStudentStepMotivationModal,
+  kidsPickStepMotivationMessage,
+} from '@/src/components/kids/kids-student-step-motivation';
 
 function readVideoDuration(file: File): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -50,6 +60,46 @@ export default function KidsStudentAssignmentPage() {
   const [submitting, setSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [existingSubmission, setExistingSubmission] = useState<KidsSubmissionRecord | null>(null);
+  const [roundSlots, setRoundSlots] = useState<KidsAssignmentRoundSlot[]>([]);
+  const [activeRound, setActiveRound] = useState(1);
+  const [totalRounds, setTotalRounds] = useState(1);
+  const [motivationOpen, setMotivationOpen] = useState(false);
+  const [motivationMessage, setMotivationMessage] = useState('');
+  const [motivationIsFinal, setMotivationIsFinal] = useState(false);
+  type MotivationNav = { kind: 'next'; next: number } | { kind: 'projects' };
+  const motivationNavRef = useRef<MotivationNav | null>(null);
+
+  const hydrateForm = useCallback((sub: KidsSubmissionRecord | null, found: KidsAssignment) => {
+    setExistingSubmission(sub);
+    let nextKind: 'steps' | 'video' = 'steps';
+    if (found.require_video && !found.require_image) nextKind = 'video';
+    else if (found.require_image && !found.require_video) nextKind = 'steps';
+    else if (sub) nextKind = sub.kind;
+    setKind(nextKind);
+
+    if (sub) {
+      if (sub.kind === 'steps') {
+        const rawSteps = sub.steps_payload?.steps;
+        setSteps(
+          rawSteps && rawSteps.length > 0
+            ? rawSteps.map((s) => ({ text: s.text || '' }))
+            : [{ text: '' }],
+        );
+        setImageUrls(sub.steps_payload?.image_urls ?? []);
+        setVideoUrl('');
+      } else {
+        setSteps([{ text: '' }]);
+        setImageUrls([]);
+        setVideoUrl(sub.video_url || '');
+      }
+      setCaption(sub.caption || '');
+    } else {
+      setSteps([{ text: '' }]);
+      setImageUrls([]);
+      setVideoUrl('');
+      setCaption('');
+    }
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -58,51 +108,42 @@ export default function KidsStudentAssignmentPage() {
       setAssignment(found);
       if (!found) {
         setExistingSubmission(null);
+        setRoundSlots([]);
         return;
       }
-      let sub: KidsSubmissionRecord | null = null;
       try {
-        sub = await kidsGetSubmissionForAssignment(assignmentId);
+        const bundle = await kidsGetSubmissionRoundsForAssignment(assignmentId);
+        setRoundSlots(bundle.rounds);
+        const total = Math.max(1, bundle.submission_rounds || 1);
+        setTotalRounds(total);
+        const qs =
+          typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('round') : null;
+        const qn = qs ? parseInt(qs, 10) : NaN;
+        const gateOk = kidsAssignmentSubmissionGate(found).ok;
+        let initial = 1;
+        const urlInRange = Number.isFinite(qn) && qn >= 1 && qn <= total;
+        if (urlInRange && (!gateOk || canNavigateToAssignmentRound(qn, bundle.rounds, total, true))) {
+          initial = qn;
+        } else {
+          const inc = bundle.rounds.find((x) => !x.submission);
+          if (inc) initial = inc.round_number;
+        }
+        setActiveRound(initial);
+        const slot = bundle.rounds.find((r) => r.round_number === initial);
+        hydrateForm(slot?.submission ?? null, found);
       } catch {
         toast.error('Kayıtlı teslim bilgisi alınamadı');
-        sub = null;
-      }
-      setExistingSubmission(sub);
-
-      let nextKind: 'steps' | 'video' = 'steps';
-      if (found.require_video && !found.require_image) nextKind = 'video';
-      else if (found.require_image && !found.require_video) nextKind = 'steps';
-      else if (sub) nextKind = sub.kind;
-      setKind(nextKind);
-
-      if (sub) {
-        if (sub.kind === 'steps') {
-          const rawSteps = sub.steps_payload?.steps;
-          setSteps(
-            rawSteps && rawSteps.length > 0
-              ? rawSteps.map((s) => ({ text: s.text || '' }))
-              : [{ text: '' }],
-          );
-          setImageUrls(sub.steps_payload?.image_urls ?? []);
-          setVideoUrl('');
-        } else {
-          setSteps([{ text: '' }]);
-          setImageUrls([]);
-          setVideoUrl(sub.video_url || '');
-        }
-        setCaption(sub.caption || '');
-      } else {
-        setSteps([{ text: '' }]);
-        setImageUrls([]);
-        setVideoUrl('');
-        setCaption('');
+        setRoundSlots([]);
+        setTotalRounds(Math.max(1, found.submission_rounds ?? 1));
+        setActiveRound(1);
+        hydrateForm(null, found);
       }
     } catch {
       toast.error('Proje yüklenemedi');
     } finally {
       setLoading(false);
     }
-  }, [assignmentId]);
+  }, [assignmentId, hydrateForm]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -120,7 +161,7 @@ export default function KidsStudentAssignmentPage() {
     return 'both';
   }, [assignment]);
 
-  const maxStepImages = assignment?.max_step_images ?? 3;
+  const maxStepImages = KIDS_MAX_IMAGES_PER_SUBMISSION;
 
   const showSteps =
     submissionMode === 'steps_only' || (submissionMode === 'both' && kind === 'steps');
@@ -160,6 +201,22 @@ export default function KidsStudentAssignmentPage() {
   const formLocked = !submissionGate.ok && !submissionClosed;
   /** Öğretmen değerlendirmesi kaydedildiyse backend ile uyumlu: düzenleme yok. */
   const teacherEvaluated = Boolean(existingSubmission?.teacher_reviewed_at);
+
+  function switchRound(r: number) {
+    if (!assignment || r < 1 || r > totalRounds) return;
+    if (
+      submissionGate.ok &&
+      !canNavigateToAssignmentRound(r, roundSlots, totalRounds, true)
+    ) {
+      toast.error(`Önce “Adım ${r - 1}” teslimini tamamlamalısın.`);
+      return;
+    }
+    const slot = roundSlots.find((x) => x.round_number === r);
+    setActiveRound(r);
+    hydrateForm(slot?.submission ?? null, assignment);
+    const path = `${pathPrefix}/ogrenci/proje/${assignmentId}${r > 1 ? `?round=${r}` : ''}`;
+    router.replace(path, { scroll: false });
+  }
   const showReadOnlySubmission = Boolean(
     existingSubmission && (submissionClosed || teacherEvaluated),
   );
@@ -207,6 +264,18 @@ export default function KidsStudentAssignmentPage() {
     setImageUrls((prev) => prev.filter((_, j) => j !== i));
   }
 
+  const closeMotivationAndNavigate = useCallback(() => {
+    setMotivationOpen(false);
+    const p = motivationNavRef.current;
+    motivationNavRef.current = null;
+    if (!p) return;
+    if (p.kind === 'next') {
+      router.replace(`${pathPrefix}/ogrenci/proje/${assignmentId}?round=${p.next}`, { scroll: false });
+    } else {
+      router.push(`${pathPrefix}/ogrenci/projeler`);
+    }
+  }, [router, pathPrefix, assignmentId]);
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!assignment || !canSubmitFinal) return;
@@ -223,6 +292,7 @@ export default function KidsStudentAssignmentPage() {
         }
         rec = await kidsCreateSubmission({
           assignment: assignment.id,
+          round_number: activeRound,
           kind: 'steps',
           steps_payload: payload,
           caption: caption.trim(),
@@ -230,15 +300,58 @@ export default function KidsStudentAssignmentPage() {
       } else {
         rec = await kidsCreateSubmission({
           assignment: assignment.id,
+          round_number: activeRound,
           kind: 'video',
           video_url: videoUrl.trim(),
           caption: caption.trim(),
         });
       }
       setExistingSubmission(rec);
+      let bundle: Awaited<ReturnType<typeof kidsGetSubmissionRoundsForAssignment>> | null = null;
+      try {
+        bundle = await kidsGetSubmissionRoundsForAssignment(assignmentId);
+        setRoundSlots(bundle.rounds);
+        const tr = Math.max(1, bundle.submission_rounds || 1);
+        setTotalRounds(tr);
+        const slot = bundle.rounds.find((x) => x.round_number === activeRound);
+        hydrateForm(slot?.submission ?? rec, assignment);
+      } catch {
+        hydrateForm(rec, assignment);
+      }
       toast.success(isUpdate ? 'Teslimin güncellendi' : 'Teslim alındı');
       if (!isUpdate) {
-        router.push(`${pathPrefix}/ogrenci/panel`);
+        const tr = Math.max(
+          1,
+          bundle?.submission_rounds ?? assignment.submission_rounds ?? 1,
+        );
+        const hasMoreRounds = tr > 1 && activeRound < tr;
+        const isFinalStep = !hasMoreRounds;
+        /** Son adımda her zaman kutla; ara adımlarda maskot ara sıra (yaklaşık %80) çıkar. */
+        const showMotivation = isFinalStep || Math.random() < 0.82;
+
+        if (hasMoreRounds) {
+          const next = activeRound + 1;
+          const nextSlot = bundle?.rounds.find((x) => x.round_number === next);
+          setActiveRound(next);
+          hydrateForm(nextSlot?.submission ?? null, assignment);
+          if (showMotivation) {
+            setMotivationMessage(kidsPickStepMotivationMessage(false));
+            setMotivationIsFinal(false);
+            motivationNavRef.current = { kind: 'next', next };
+            setMotivationOpen(true);
+          } else {
+            router.replace(`${pathPrefix}/ogrenci/proje/${assignmentId}?round=${next}`, { scroll: false });
+          }
+        } else {
+          if (showMotivation) {
+            setMotivationMessage(kidsPickStepMotivationMessage(true));
+            setMotivationIsFinal(true);
+            motivationNavRef.current = { kind: 'projects' };
+            setMotivationOpen(true);
+          } else {
+            router.push(`${pathPrefix}/ogrenci/projeler`);
+          }
+        }
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Kaydedilemedi');
@@ -257,8 +370,8 @@ export default function KidsStudentAssignmentPage() {
     return (
       <div className="mx-auto max-w-lg text-center">
         <p className="text-gray-600 dark:text-gray-400">Bu proje bulunamadı veya sana atanmadı.</p>
-        <Link href={`${pathPrefix}/ogrenci/panel`} className="mt-4 inline-block text-brand hover:underline">
-          Panele dön
+        <Link href={`${pathPrefix}/ogrenci/projeler`} className="mt-4 inline-block text-brand hover:underline">
+          Projelere dön
         </Link>
       </div>
     );
@@ -270,10 +383,10 @@ export default function KidsStudentAssignmentPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <Link
-        href={`${pathPrefix}/ogrenci/panel`}
+        href={`${pathPrefix}/ogrenci/projeler`}
         className="inline-flex text-sm font-bold text-fuchsia-700 hover:underline dark:text-fuchsia-300"
       >
-        ← Öğrenci paneli
+        ← Projeler
       </Link>
       <div className="rounded-[1.75rem] border-4 border-white/90 bg-gradient-to-br from-violet-500 via-fuchsia-500 to-amber-400 p-1 shadow-xl shadow-fuchsia-500/20 dark:border-violet-900/50 dark:from-violet-800 dark:via-fuchsia-800 dark:to-amber-700">
         <div className="rounded-2xl bg-white/95 px-5 py-6 dark:bg-gray-950/95 sm:px-7 sm:py-7">
@@ -298,9 +411,17 @@ export default function KidsStudentAssignmentPage() {
             {assignment.require_video && !assignment.require_image
               ? `🎬 Video teslimi · en fazla ${assignment.video_max_seconds} sn`
               : assignment.require_image && !assignment.require_video
-                ? `📝 Adım adım yazılı teslim + en az 1 görsel (en fazla ${maxStepImages}).`
+                ? `📝 Adım adım yazılı teslim + her tur için 1 görsel.`
                 : `🎬📝 Video süre sınırı: ${assignment.video_max_seconds} sn${assignment.require_image ? ' · Görsel veya video seçebilirsin' : ''}`}
           </p>
+          <KidsAssignmentRoundStepper
+            totalRounds={totalRounds}
+            activeRound={activeRound}
+            roundSlots={roundSlots}
+            gateOpen={submissionGate.ok}
+            disableNavigation={formLocked}
+            onSelectRound={switchRound}
+          />
           {windowLabel ? (
             <p className="mt-2 rounded-xl bg-amber-100/80 px-3 py-2 text-sm font-bold text-amber-950 dark:bg-amber-950/40 dark:text-amber-100">
               📅 {windowLabel}
@@ -354,6 +475,12 @@ export default function KidsStudentAssignmentPage() {
             <div>
               <h2 className="font-logo flex items-center gap-2 text-xl font-black text-violet-800 dark:text-violet-200">
                 <span aria-hidden>📦</span> Teslimin
+                {totalRounds > 1 ? (
+                  <span className="text-base font-black text-fuchsia-700 dark:text-fuchsia-300">
+                    {' '}
+                    · Adım {activeRound}
+                  </span>
+                ) : null}
               </h2>
               <p className="mt-1 text-sm font-semibold text-violet-600/90 dark:text-violet-300/90">
                 {submissionClosed
@@ -378,7 +505,7 @@ export default function KidsStudentAssignmentPage() {
                 ))}
                 {(existingSubmission.steps_payload?.image_urls ?? []).length > 0 ? (
                   <div className="rounded-2xl border-2 border-amber-300/70 bg-gradient-to-r from-amber-50 to-orange-50 p-4 dark:border-amber-800 dark:from-amber-950/40 dark:to-orange-950/30">
-                    <p className="font-logo text-sm font-black text-amber-900 dark:text-amber-100">🖼 Görsellerin</p>
+                    <p className="font-logo text-sm font-black text-amber-900 dark:text-amber-100">🖼 Görselin</p>
                     <ul className="mt-3 flex flex-wrap gap-3">
                       {(existingSubmission.steps_payload?.image_urls ?? []).map((url, idx) => (
                         <li
@@ -428,7 +555,12 @@ export default function KidsStudentAssignmentPage() {
             <span className="text-2xl" aria-hidden>
               🚀
             </span>
-            <h2 className="font-logo text-lg font-black text-violet-900 dark:text-violet-100">Teslimini yükle</h2>
+            <h2 className="font-logo text-lg font-black text-violet-900 dark:text-violet-100">
+              Teslimini yükle
+              {totalRounds > 1 ? (
+                <span className="text-fuchsia-700 dark:text-fuchsia-300"> · Adım {activeRound}</span>
+              ) : null}
+            </h2>
           </div>
 
           {submissionMode === 'both' ? (
@@ -498,10 +630,10 @@ export default function KidsStudentAssignmentPage() {
               {assignment.require_image ? (
                 <div className="rounded-2xl border-2 border-amber-300/90 bg-gradient-to-br from-amber-50 via-orange-50/80 to-yellow-50/60 p-4 shadow-inner dark:border-amber-800 dark:from-amber-950/40 dark:via-orange-950/30 dark:to-yellow-950/20">
                   <p className="font-logo text-sm font-black text-amber-950 dark:text-amber-100">
-                    🖼 Görseller ({imageUrls.length} / {maxStepImages})
+                    🖼 Görsel
                   </p>
                   <p className="mt-1 text-xs font-semibold text-amber-900/85 dark:text-amber-200/90">
-                    JPEG, PNG veya WebP · dosya başına en fazla 2 MB · en az 1 görsel
+                    JPEG, PNG veya WebP · tur başına 1 görsel
                   </p>
                   {imageUrls.length > 0 ? (
                     <ul className="mt-3 flex flex-wrap gap-2">
@@ -595,6 +727,12 @@ export default function KidsStudentAssignmentPage() {
           </button>
         </form>
       )}
+      <KidsStudentStepMotivationModal
+        open={motivationOpen}
+        message={motivationMessage}
+        isFinalStep={motivationIsFinal}
+        onContinue={closeMotivationAndNavigate}
+      />
     </div>
   );
 }

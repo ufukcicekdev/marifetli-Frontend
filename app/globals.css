@@ -396,3 +396,35 @@ header .header-top-right > * {
   animation: marifetli-confetti-fall var(--confetti-dur, 1.3s) ease-out var(--confetti-delay, 0s) forwards;
   opacity: 0;
 }
+
+/* Öğrenci proje adımı — maskot girişi */
+@keyframes kids-mascot-pop {
+  0% {
+    transform: scale(0.5) translateY(12px);
+    opacity: 0;
+  }
+  65% {
+    transform: scale(1.06) translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+.kids-mascot-pop {
+  animation: kids-mascot-pop 0.55s cubic-bezier(0.34, 1.45, 0.64, 1) forwards;
+}
+
+@keyframes kids-mascot-wiggle {
+  0%,
+  100% {
+    transform: rotate(-4deg);
+  }
+  50% {
+    transform: rotate(4deg);
+  }
+}
+.kids-mascot-wiggle {
+  animation: kids-mascot-wiggle 0.9s ease-in-out infinite;
+}

@@ -1,16 +1,21 @@
 'use client';
 
-import { useCallback, useEffect, useId, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import {
+  KIDS_CLASS_GRADE_OPTIONS,
+  KIDS_CLASS_SECTION_OPTIONS,
+  kidsAcademicYearSelectOptions,
+  kidsBuildStandardClassName,
   kidsClassLocationLine,
   kidsCreateClass,
   kidsListClasses,
   kidsListSchools,
   kidsSchoolLocationLine,
+  kidsSuggestedAcademicYearLabel,
   type KidsClass,
   type KidsSchool,
 } from '@/src/lib/kids-api';
@@ -33,13 +38,19 @@ export default function KidsTeacherPanelPage() {
   const [classes, setClasses] = useState<KidsClass[]>([]);
   const [schools, setSchools] = useState<KidsSchool[]>([]);
   const [loading, setLoading] = useState(true);
-  const [name, setName] = useState('');
+  const [classGrade, setClassGrade] = useState('4');
+  const [classSection, setClassSection] = useState('A');
   const [description, setDescription] = useState('');
+  const [academicYearLabel, setAcademicYearLabel] = useState(() => kidsSuggestedAcademicYearLabel());
   const [schoolId, setSchoolId] = useState<string>('');
   const [creating, setCreating] = useState(false);
-  const nameId = useId();
+  const classGradeId = useId();
+  const classSectionId = useId();
   const descId = useId();
+  const academicYearId = useId();
   const schoolSelectId = useId();
+
+  const academicYearOptions = useMemo(() => kidsAcademicYearSelectOptions(), []);
 
   const load = useCallback(async () => {
     try {
@@ -69,22 +80,29 @@ export default function KidsTeacherPanelPage() {
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim()) return;
     const sid = Number(schoolId);
     if (!Number.isFinite(sid) || sid <= 0) {
       toast.error('Önce en az bir okul tanımlayıp listeden seçmelisin.');
       return;
     }
+    if (!classGrade || !classSection) {
+      toast.error('Sınıf düzeyi ve şube harfini seçmelisin.');
+      return;
+    }
+    const composedName = kidsBuildStandardClassName(classGrade, classSection);
     setCreating(true);
     try {
       const c = await kidsCreateClass({
-        name: name.trim(),
+        name: composedName,
         description: description.trim(),
         school_id: sid,
+        academic_year_label: academicYearLabel.trim(),
       });
       setClasses((prev) => [c, ...prev]);
-      setName('');
+      setClassGrade('4');
+      setClassSection('A');
       setDescription('');
+      setAcademicYearLabel(kidsSuggestedAcademicYearLabel());
       toast.success('Yeni sınıf hazır — öğrenci davetine geçebilirsin.');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Oluşturulamadı');
@@ -203,7 +221,8 @@ export default function KidsTeacherPanelPage() {
                       Yeni sınıf oluştur
                     </h2>
                     <p className="mt-1 text-sm leading-relaxed text-emerald-900/80 dark:text-emerald-100/80">
-                      Okulunu seç, sınıf adını yaz ve kaydet. Yeni okul eklemek için{' '}
+                      Okulunu seç, sınıf adını yaz ve kaydet. Her eğitim-öğretim yılı için ayrı sınıf kaydı
+                      açıp isteğe bağlı yıl etiketi kullanabilirsin. Yeni okul eklemek için{' '}
                       <Link
                         href={okullarHref}
                         className="font-bold text-emerald-800 underline decoration-emerald-400/80 underline-offset-2 hover:text-emerald-950 dark:text-emerald-100 dark:hover:text-white"
@@ -243,22 +262,54 @@ export default function KidsTeacherPanelPage() {
                     <p className="text-xs font-bold uppercase tracking-wide text-emerald-800/90 dark:text-emerald-200/90">
                       Adım 2 · Sınıf bilgileri
                     </p>
-                    <KidsFormField
-                      id={nameId}
-                      label="Sınıf adı"
-                      required
-                      hint="Örn. 3-A Fen, Hafta sonu robotik — en fazla 200 karakter önerilir."
-                    >
-                      <input
-                        id={nameId}
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <KidsFormField
+                        id={classGradeId}
+                        label="Sınıf düzeyi"
                         required
-                        maxLength={200}
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className={kidsInputClass}
-                        placeholder="Örn. 4-B Sınıfı"
-                        autoComplete="off"
-                        aria-describedby={`${nameId}-hint`}
+                        hint="1–12 arası."
+                      >
+                        <KidsSelect
+                          id={classGradeId}
+                          value={classGrade}
+                          onChange={setClassGrade}
+                          options={KIDS_CLASS_GRADE_OPTIONS}
+                          searchable={false}
+                        />
+                      </KidsFormField>
+                      <KidsFormField
+                        id={classSectionId}
+                        label="Şube (harf)"
+                        required
+                        hint="A–Z."
+                      >
+                        <KidsSelect
+                          id={classSectionId}
+                          value={classSection}
+                          onChange={setClassSection}
+                          options={KIDS_CLASS_SECTION_OPTIONS}
+                          searchable
+                        />
+                      </KidsFormField>
+                    </div>
+                    <p className="-mt-1 text-sm text-emerald-900/75 dark:text-emerald-100/75" id={`${classGradeId}-preview`}>
+                      Oluşan ad:{' '}
+                      <strong className="font-logo text-emerald-950 dark:text-emerald-50">
+                        {kidsBuildStandardClassName(classGrade, classSection)}
+                      </strong>
+                    </p>
+
+                    <KidsFormField
+                      id={academicYearId}
+                      label="Eğitim-öğretim yılı"
+                      hint={`Öğrenciler sınıf atlayınca yeni sınıf açıp yıl seç; listelerde ayırt etmek için. «Seçilmedi» bırakılabilir.`}
+                    >
+                      <KidsSelect
+                        id={academicYearId}
+                        value={academicYearLabel}
+                        onChange={setAcademicYearLabel}
+                        options={academicYearOptions}
+                        searchable={false}
                       />
                     </KidsFormField>
 
@@ -329,7 +380,14 @@ export default function KidsTeacherPanelPage() {
                       className="group flex items-center justify-between gap-4 rounded-3xl border-2 border-violet-100 bg-white/90 p-5 shadow-md transition hover:border-fuchsia-300 hover:shadow-lg hover:shadow-fuchsia-500/10 dark:border-violet-900/40 dark:bg-gray-900/70 dark:hover:border-fuchsia-700"
                     >
                       <div className="min-w-0">
-                        <p className="font-logo text-lg font-bold text-slate-900 dark:text-white">{c.name}</p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="font-logo text-lg font-bold text-slate-900 dark:text-white">{c.name}</p>
+                          {(c.academic_year_label || '').trim() ? (
+                            <span className="rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-bold text-violet-800 dark:bg-violet-900/60 dark:text-violet-200">
+                              {(c.academic_year_label || '').trim()}
+                            </span>
+                          ) : null}
+                        </div>
                         {locLine ? (
                           <p className="mt-1 line-clamp-1 text-sm font-medium text-emerald-800/90 dark:text-emerald-200/90">
                             {locLine}

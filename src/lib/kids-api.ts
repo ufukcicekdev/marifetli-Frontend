@@ -40,6 +40,8 @@ export type KidsClass = {
   id: number;
   name: string;
   description: string;
+  /** Örn. `2024-2025`; yeni eğitim yılında sınıfları ayırt etmek için (isteğe bağlı). */
+  academic_year_label?: string;
   /** Her sınıf mutlaka bir okula bağlıdır; adres bilgisi okul kaydındadır. */
   school: KidsSchool;
   teacher: number;
@@ -65,6 +67,80 @@ export function kidsClassLocationLine(c: Pick<KidsClass, 'school'>): string | nu
   return kidsSchoolLocationLine(c.school);
 }
 
+/** Eylül itibarıyla başlayan eğitim-öğretim yılı etiketi (placeholder önerisi). */
+export function kidsSuggestedAcademicYearLabel(d = new Date()): string {
+  const y = d.getFullYear();
+  const m = d.getMonth();
+  const start = m >= 8 ? y : y - 1;
+  return `${start}-${start + 1}`;
+}
+
+/** Takvim yılı → eğitim yılının başlangıç yılı (Eylül kuralı). */
+export function kidsAcademicYearStart(d = new Date()): number {
+  const y = d.getFullYear();
+  const m = d.getMonth();
+  return m >= 8 ? y : y - 1;
+}
+
+/** Eğitim-öğretim yılı dropdown seçenekleri; `value: ''` = seçilmedi. */
+export function kidsAcademicYearSelectOptions(
+  yearsBack = 4,
+  yearsForward = 1,
+  d = new Date(),
+): { value: string; label: string }[] {
+  const base = kidsAcademicYearStart(d);
+  const out: { value: string; label: string }[] = [{ value: '', label: 'Seçilmedi' }];
+  for (let s = base + yearsForward; s >= base - yearsBack; s--) {
+    const label = `${s}-${s + 1}`;
+    out.push({ value: label, label });
+  }
+  return out;
+}
+
+export const KIDS_CLASS_GRADE_OPTIONS = Array.from({ length: 12 }, (_, i) => {
+  const n = i + 1;
+  return { value: String(n), label: `${n}. sınıf` };
+});
+
+export const KIDS_CLASS_SECTION_OPTIONS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map((L) => ({
+  value: L,
+  label: `Şube ${L}`,
+}));
+
+/** Standart `4-B` veya `4-B Sınıfı` adını parçala; şube yalnızca A–Z ise döner. */
+export function kidsParseStandardClassName(
+  name: string,
+): { grade: string; section: string; suffix?: string } | null {
+  const t = name.trim();
+  const m = /^(\d{1,2})-([A-Za-z])(?:\s+(.*))?$/.exec(t);
+  if (!m) return null;
+  const g = parseInt(m[1], 10);
+  if (g < 1 || g > 12) return null;
+  const sectionUp = m[2].toUpperCase();
+  if (!/^[A-Z]$/.test(sectionUp)) return null;
+  const suffix = (m[3] || '').trim();
+  return { grade: String(g), section: sectionUp, suffix: suffix || undefined };
+}
+
+export function kidsBuildStandardClassName(grade: string, section: string, suffix?: string): string {
+  const g = (grade || '').trim();
+  const s = (section || '').trim().toUpperCase();
+  const core = `${g}-${s}`;
+  const rest = (suffix || '').trim();
+  return rest ? `${core} ${rest}` : core;
+}
+
+/** Görsel teslimde teknik üst sınır (öğretmen seçmez; backend ile aynı). */
+export const KIDS_MAX_IMAGES_PER_SUBMISSION = 1;
+
+/** Öğrenci: bu konu için gerekli tüm teslim turları gönderildi mi? (panel / projeler sekmeleri). */
+export function kidsStudentAssignmentAllRoundsSubmitted(a: KidsAssignment): boolean {
+  const total = Math.max(1, a.submission_rounds ?? 1);
+  const rp = a.my_rounds_progress;
+  if (rp) return rp.submitted >= rp.total;
+  return Boolean(a.my_submission) && total <= 1;
+}
+
 export type KidsAssignment = {
   id: number;
   kids_class: number;
@@ -74,8 +150,8 @@ export type KidsAssignment = {
   video_max_seconds: 60 | 120 | 180;
   require_image: boolean;
   require_video: boolean;
-  /** Görsel teslimde öğrencinin ekleyebileceği en fazla görsel (1–3). */
-  max_step_images?: 1 | 2 | 3;
+  /** Aynı konu başlığı altında kaç ayrı teslim (Proje 1…N). */
+  submission_rounds?: number;
   is_published: boolean;
   /** Öğrencilere “yeni proje” bildiriminin gittiği zaman (planlı projelerde başlangıçtan sonra dolur). */
   students_notified_at?: string | null;
@@ -91,6 +167,8 @@ export type KidsAssignment = {
   enrolled_student_count?: number | null;
   /** Öğrenci paneli: bu projedeki son tesliminin özeti (öğretmen yanıtı / yıldız). */
   my_submission?: KidsStudentAssignmentSubmission | null;
+  /** Öğrenci paneli: kaç tur teslim edildi / toplam tur. */
+  my_rounds_progress?: { submitted: number; total: number } | null;
 };
 
 /** `/student/dashboard/` içindeki `assignments[].my_submission`. */
@@ -178,6 +256,32 @@ export function parseKidsInviteEmails(raw: string): string[] {
 }
 
 export type ApiErrorBody = { detail?: string };
+
+/**
+ * DRF / benzeri JSON hata gövdelerinden ilk okunabilir mesajı alır
+ * (`detail` string | string[], alan bazlı `string[]`, `non_field_errors`).
+ */
+export function kidsFirstApiErrorMessage(body: unknown, fallback: string): string {
+  if (body == null || typeof body !== 'object') return fallback;
+  const o = body as Record<string, unknown>;
+  const detail = o.detail;
+  if (typeof detail === 'string' && detail.trim()) return detail;
+  if (Array.isArray(detail) && detail.length) {
+    const first = detail[0];
+    if (typeof first === 'string') return first;
+  }
+  const nfe = o.non_field_errors;
+  if (Array.isArray(nfe) && nfe.length && typeof nfe[0] === 'string') return nfe[0];
+  for (const [key, v] of Object.entries(o)) {
+    if (key === 'detail') continue;
+    if (Array.isArray(v) && v.length) {
+      const first = v[0];
+      if (typeof first === 'string') return first;
+    }
+    if (typeof v === 'string' && v.trim()) return v;
+  }
+  return fallback;
+}
 
 /** `datetime-local` için varsayılan son teslim (örn. 7 gün sonra 23:59). */
 export function kidsDatetimeLocalDefaultClose(daysAhead = 7): string {
@@ -293,7 +397,7 @@ export async function kidsLogin(email: string, password: string) {
   const text = await res.text();
   const data = readJson<{ access?: string; refresh?: string; user?: KidsUser } & ApiErrorBody>(text);
   if (!res.ok) {
-    throw new Error(data?.detail || 'Giriş başarısız');
+    throw new Error(kidsFirstApiErrorMessage(data, 'Giriş başarısız'));
   }
   if (data?.access) localStorage.setItem(KIDS_TOKEN_STORAGE_KEY, data.access);
   if (data?.refresh) localStorage.setItem(KIDS_REFRESH_STORAGE_KEY, data.refresh);
@@ -310,7 +414,7 @@ export async function kidsRequestPasswordReset(email: string): Promise<void> {
   const text = await res.text();
   const data = readJson<ApiErrorBody>(text);
   if (!res.ok) {
-    throw new Error(data?.detail || 'İstek gönderilemedi');
+    throw new Error(kidsFirstApiErrorMessage(data, 'İstek gönderilemedi'));
   }
 }
 
@@ -323,7 +427,7 @@ export async function kidsConfirmPasswordReset(token: string, newPassword: strin
   const text = await res.text();
   const data = readJson<ApiErrorBody>(text);
   if (!res.ok) {
-    throw new Error(data?.detail || 'Şifre güncellenemedi');
+    throw new Error(kidsFirstApiErrorMessage(data, 'Şifre güncellenemedi'));
   }
 }
 
@@ -371,7 +475,7 @@ export async function kidsUploadProfilePhoto(file: File): Promise<KidsUser> {
   return data as KidsUser;
 }
 
-/** Öğrenci proje görseli (JPEG/PNG/WebP, en fazla 2 MB). */
+/** Öğrenci proje görseli (JPEG/PNG/WebP; boyut üst sınırı sunucuda, varsayılan ~25 MB). */
 export async function kidsUploadSubmissionImage(file: File): Promise<{ url: string }> {
   const fd = new FormData();
   fd.append('image', file);
@@ -486,13 +590,19 @@ export async function kidsMebSchoolsPick(
   return Array.isArray(d.schools) ? d.schools : [];
 }
 
-export async function kidsCreateClass(body: { name: string; description?: string; school_id: number }) {
+export async function kidsCreateClass(body: {
+  name: string;
+  description?: string;
+  school_id: number;
+  academic_year_label?: string;
+}) {
   const res = await kidsAuthorizedFetch('/classes/', {
     method: 'POST',
     body: JSON.stringify({
       name: body.name,
       description: body.description ?? '',
       school_id: body.school_id,
+      academic_year_label: body.academic_year_label?.trim() ?? '',
     }),
   });
   const text = await res.text();
@@ -515,7 +625,7 @@ export async function kidsCreateClass(body: { name: string; description?: string
 
 export async function kidsPatchClass(
   id: number,
-  body: Partial<Pick<KidsClass, 'name' | 'description'>> & { school_id?: number },
+  body: Partial<Pick<KidsClass, 'name' | 'description' | 'academic_year_label'>> & { school_id?: number },
 ) {
   const res = await kidsAuthorizedFetch(`/classes/${id}/`, {
     method: 'PATCH',
@@ -568,6 +678,7 @@ export type KidsSubmissionRecord = {
   id: number;
   assignment: number;
   student: number;
+  round_number?: number;
   kind: 'steps' | 'video';
   steps_payload: {
     steps?: { text: string }[];
@@ -590,6 +701,7 @@ export type KidsSubmissionRecord = {
 export type KidsTeacherSubmission = {
   id: number;
   assignment: { id: number; title: string };
+  round_number?: number;
   student: {
     id: number;
     email: string;
@@ -722,7 +834,7 @@ export async function kidsCreateAssignment(
   > & {
     title: string;
     submission_closes_at: string;
-    submission_opens_at?: string | null;
+    submission_opens_at: string;
   },
 ) {
   const res = await kidsAuthorizedFetch(`/classes/${classId}/assignments/`, {
@@ -734,15 +846,15 @@ export async function kidsCreateAssignment(
       video_max_seconds: body.video_max_seconds ?? 120,
       require_image: body.require_image ?? false,
       require_video: body.require_video ?? false,
-      max_step_images: body.max_step_images ?? 3,
+      submission_rounds: body.submission_rounds ?? 1,
       is_published: body.is_published ?? true,
-      submission_opens_at: body.submission_opens_at ?? null,
+      submission_opens_at: body.submission_opens_at,
       submission_closes_at: body.submission_closes_at,
     }),
   });
   const text = await res.text();
   const data = readJson<KidsAssignment & ApiErrorBody>(text);
-  if (!res.ok) throw new Error(data?.detail || 'Proje oluşturulamadı');
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Proje oluşturulamadı'));
   return data as KidsAssignment;
 }
 
@@ -756,7 +868,7 @@ export async function kidsPatchAssignment(
     video_max_seconds: 60 | 120 | 180;
     require_image: boolean;
     require_video: boolean;
-    max_step_images: 1 | 2 | 3;
+    submission_rounds: number;
     submission_opens_at: string | null;
     submission_closes_at: string | null;
   }>,
@@ -768,17 +880,7 @@ export async function kidsPatchAssignment(
   const text = await res.text();
   const data = readJson<KidsAssignment & ApiErrorBody>(text);
   if (!res.ok) {
-    let msg = 'Proje güncellenemedi';
-    if (typeof data?.detail === 'string') msg = data.detail;
-    else if (data && typeof data === 'object') {
-      for (const v of Object.values(data)) {
-        if (Array.isArray(v) && typeof v[0] === 'string') {
-          msg = v[0];
-          break;
-        }
-      }
-    }
-    throw new Error(msg);
+    throw new Error(kidsFirstApiErrorMessage(data, 'Proje güncellenemedi'));
   }
   return data as KidsAssignment;
 }
@@ -857,6 +959,8 @@ export async function kidsStudentDashboard() {
 
 export async function kidsCreateSubmission(body: {
   assignment: number;
+  /** 1..assignment.submission_rounds */
+  round_number?: number;
   kind: 'steps' | 'video';
   steps_payload?: unknown;
   video_url?: string;
@@ -871,10 +975,16 @@ export async function kidsCreateSubmission(body: {
   return data as KidsSubmissionRecord;
 }
 
-/** Öğrenci: bu proje için kayıtlı son teslim (düzenleme / geri bildirim). */
-export async function kidsGetSubmissionForAssignment(
-  assignmentId: number,
-): Promise<KidsSubmissionRecord | null> {
+export type KidsAssignmentRoundSlot = {
+  round_number: number;
+  submission: KidsSubmissionRecord | null;
+};
+
+/** Öğrenci: bu konu için tüm turlar (Proje 1…N) ve her birinin teslimi. */
+export async function kidsGetSubmissionRoundsForAssignment(assignmentId: number): Promise<{
+  submission_rounds: number;
+  rounds: KidsAssignmentRoundSlot[];
+}> {
   const q = new URLSearchParams({ assignment_id: String(assignmentId) });
   const res = await kidsAuthorizedFetch(`/student/submissions/for-assignment/?${q}`, {
     method: 'GET',
@@ -883,8 +993,14 @@ export async function kidsGetSubmissionForAssignment(
   if (!res.ok) {
     throw new Error((data as ApiErrorBody)?.detail || 'Teslim bilgisi alınamadı');
   }
-  const sub = (data as { submission?: KidsSubmissionRecord | null }).submission;
-  return sub ?? null;
+  const payload = data as {
+    submission_rounds?: number;
+    rounds?: KidsAssignmentRoundSlot[];
+  };
+  return {
+    submission_rounds: payload.submission_rounds ?? 1,
+    rounds: Array.isArray(payload.rounds) ? payload.rounds : [],
+  };
 }
 
 /** Öğretmen: teslimi değerlendir (son teslimden sonra). */

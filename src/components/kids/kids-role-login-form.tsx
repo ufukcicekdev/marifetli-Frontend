@@ -38,9 +38,12 @@ export function KidsRoleLoginForm({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  /** Gömülü modalda toast üst katmanda kalır; hatalar burada gösterilir. */
+  const [loginInlineError, setLoginInlineError] = useState<string | null>(null);
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotSent, setForgotSent] = useState(false);
+  const [forgotInlineError, setForgotInlineError] = useState<string | null>(null);
 
   const homeHref = kidsHomeHref(pathPrefix);
   const idE = `kids-role-email-${fieldIdSuffix}`;
@@ -57,23 +60,31 @@ export function KidsRoleLoginForm({
   function closeForgotFlow() {
     setForgotOpen(false);
     setForgotSent(false);
+    setForgotInlineError(null);
+  }
+
+  function notifyLoginError(message: string) {
+    setLoginInlineError(message);
+    if (!embedded) toast.error(message);
   }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setLoginInlineError(null);
     setLoading(true);
     try {
       const u = await login(email, password);
       if (!allowedRoles.includes(u.role)) {
         logout();
-        toast.error('Bu sayfa seçtiğiniz hesap türü için değil.');
+        notifyLoginError('Bu sayfa seçtiğiniz hesap türü için değil.');
         return;
       }
       toast.success('Giriş yapıldı');
       router.push(`${pathPrefix}${redirectTo}`);
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Giriş başarısız');
+      const msg = err instanceof Error ? err.message : 'Giriş başarısız';
+      notifyLoginError(msg);
     } finally {
       setLoading(false);
     }
@@ -83,16 +94,21 @@ export function KidsRoleLoginForm({
     e.preventDefault();
     const em = email.trim();
     if (!em) {
-      toast.error('E-posta adresini yaz.');
+      const msg = 'E-posta adresini yaz.';
+      setForgotInlineError(msg);
+      if (!embedded) toast.error(msg);
       return;
     }
+    setForgotInlineError(null);
     setForgotLoading(true);
     try {
       await kidsRequestPasswordReset(em);
       setForgotSent(true);
       toast.success('İstek alındı — e-postanı kontrol et.');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Gönderilemedi');
+      const msg = err instanceof Error ? err.message : 'Gönderilemedi';
+      setForgotInlineError(msg);
+      if (!embedded) toast.error(msg);
     } finally {
       setForgotLoading(false);
     }
@@ -142,6 +158,14 @@ export function KidsRoleLoginForm({
               Kids hesabına kayıtlı e-postana tek kullanımlık bağlantı göndeririz (öğrenci veya öğretmen fark etmez).
             </p>
             <form className="mt-4 space-y-3" onSubmit={onForgotSubmit}>
+              {forgotInlineError ? (
+                <div
+                  role="alert"
+                  className="rounded-xl border border-rose-300 bg-rose-50 px-3 py-2 text-xs font-medium text-rose-900 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-100"
+                >
+                  {forgotInlineError}
+                </div>
+              ) : null}
               <div>
                 <label htmlFor={idE} className="text-xs font-bold text-slate-700 dark:text-gray-200">
                   E-posta
@@ -152,7 +176,10 @@ export function KidsRoleLoginForm({
                   autoComplete="email"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setForgotInlineError(null);
+                  }}
                   className={inputClass}
                   placeholder="ornek@email.com"
                 />
@@ -182,6 +209,14 @@ export function KidsRoleLoginForm({
         {subtitle}
       </p>
       <form className={embedded ? 'mt-4 space-y-3' : 'mt-6 space-y-4'} onSubmit={onSubmit}>
+        {loginInlineError ? (
+          <div
+            role="alert"
+            className="rounded-xl border border-rose-300 bg-rose-50 px-3 py-2.5 text-sm font-medium text-rose-900 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-100"
+          >
+            {loginInlineError}
+          </div>
+        ) : null}
         <div>
           <label htmlFor={idE} className="block text-sm font-medium text-slate-700 dark:text-gray-200">
             E-posta
@@ -192,7 +227,10 @@ export function KidsRoleLoginForm({
             autoComplete="email"
             required
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              setLoginInlineError(null);
+            }}
             className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-900 outline-none ring-amber-400 focus:ring-2 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
           />
         </div>
@@ -206,7 +244,10 @@ export function KidsRoleLoginForm({
             autoComplete="current-password"
             required
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              setLoginInlineError(null);
+            }}
             className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-900 outline-none ring-amber-400 focus:ring-2 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
           />
         </div>
@@ -226,6 +267,7 @@ export function KidsRoleLoginForm({
             onClick={() => {
               setForgotOpen(true);
               setForgotSent(false);
+              setForgotInlineError(null);
             }}
             className="text-sm font-bold text-violet-700 underline underline-offset-2 hover:text-fuchsia-600 dark:text-violet-300"
           >
@@ -283,6 +325,14 @@ export function KidsRoleLoginForm({
               Kayıtlı Kids e-postana sıfırlama bağlantısı gönderilir.
             </p>
             <form className="mt-6 space-y-4" onSubmit={onForgotSubmit}>
+              {forgotInlineError ? (
+                <div
+                  role="alert"
+                  className="rounded-xl border border-rose-300 bg-rose-50 px-3 py-2.5 text-sm font-medium text-rose-900 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-100"
+                >
+                  {forgotInlineError}
+                </div>
+              ) : null}
               <div>
                 <label htmlFor={`${idE}-full-forgot`} className="block text-sm font-medium text-slate-700 dark:text-gray-200">
                   E-posta
@@ -293,7 +343,10 @@ export function KidsRoleLoginForm({
                   autoComplete="email"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setForgotInlineError(null);
+                  }}
                   className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-900 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
                 />
               </div>

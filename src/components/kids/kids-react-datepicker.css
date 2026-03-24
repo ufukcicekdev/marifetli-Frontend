@@ -1,0 +1,256 @@
+/* react-datepicker — Marifetli Kids (açık + koyu).
+ * Takvim `portalId` ile document.body’e taşınmıyor: <dialog showModal()> açıkken body altındaki
+ * öğeler inert kalıyor; takvim tıklanamıyordu. Popper, formun içinde (fixed + bu z-index). */
+
+.kids-dp-popper.react-datepicker-popper {
+  z-index: 100101 !important;
+  line-height: normal;
+  /* Saat sütunu `position:absolute; right:-…` ile ana kutunun dışına taşar; kesilmesin */
+  overflow: visible !important;
+  max-width: none;
+}
+
+.kids-dp-popper .react-datepicker {
+  font-family: var(--font-outfit, system-ui, sans-serif);
+  font-size: 0.875rem;
+  border: 2px solid rgb(196 181 253 / 0.85);
+  border-radius: 1rem;
+  box-shadow:
+    0 25px 50px -12px rgb(109 40 217 / 0.35),
+    0 0 0 1px rgb(167 139 250 / 0.2);
+  /* Kütüphane: ay `float:left`, saat+Bugün modunda saat sütunu sağda mutlak konumda — flex kullanma */
+  display: inline-block;
+  position: relative;
+  overflow: visible;
+  background: #fff;
+  color: #0f172a;
+}
+
+.dark .kids-dp-popper .react-datepicker {
+  border-color: rgb(109 40 217 / 0.55);
+  background: rgb(17 24 39 / 0.98);
+  color: #f9fafb;
+  box-shadow:
+    0 25px 50px -12px rgb(0 0 0 / 0.6),
+    0 0 0 1px rgb(139 92 246 / 0.25);
+}
+
+.kids-dp-popper .react-datepicker__header {
+  background: linear-gradient(135deg, #7c3aed 0%, #c026d3 50%, #d97706 100%);
+  border-bottom: none;
+  padding-top: 0.65rem;
+  padding-bottom: 0.5rem;
+  border-radius: 0;
+}
+
+.dark .kids-dp-popper .react-datepicker__header {
+  background: linear-gradient(135deg, #5b21b6 0%, #86198f 55%, #92400e 100%);
+}
+
+.kids-dp-popper .react-datepicker__current-month,
+.kids-dp-popper .react-datepicker-time__header,
+.kids-dp-popper .react-datepicker-year-header {
+  color: #fff !important;
+  font-weight: 800;
+  font-size: 0.9rem;
+}
+
+.kids-dp-popper .react-datepicker__day-name {
+  color: rgb(255 255 255 / 0.9) !important;
+  font-weight: 700;
+  font-size: 0.7rem;
+  width: 2.15rem;
+  line-height: 2.15rem;
+  margin: 0.15rem;
+}
+
+.kids-dp-popper .react-datepicker__day {
+  color: #1e1b4b;
+  width: 2.15rem;
+  line-height: 2.15rem;
+  margin: 0.15rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+}
+
+.dark .kids-dp-popper .react-datepicker__day {
+  color: #e9d5ff;
+}
+
+.kids-dp-popper .react-datepicker__day:hover {
+  background: rgb(196 181 253 / 0.45) !important;
+  border-radius: 0.5rem;
+}
+
+.dark .kids-dp-popper .react-datepicker__day:hover {
+  background: rgb(109 40 217 / 0.45) !important;
+}
+
+.kids-dp-popper .react-datepicker__day--selected,
+.kids-dp-popper .react-datepicker__day--keyboard-selected {
+  background: linear-gradient(135deg, #7c3aed, #db2777) !important;
+  color: #fff !important;
+  font-weight: 800;
+  border-radius: 0.5rem;
+}
+
+.kids-dp-popper .react-datepicker__day--today {
+  font-weight: 800;
+  outline: 2px solid rgb(192 38 211 / 0.6);
+  outline-offset: 1px;
+}
+
+.kids-dp-popper .react-datepicker__day--outside-month {
+  opacity: 0.35;
+}
+
+.kids-dp-popper .react-datepicker__day--disabled {
+  color: #94a3b8 !important;
+  cursor: not-allowed;
+}
+
+.dark .kids-dp-popper .react-datepicker__day--disabled {
+  color: #57534e !important;
+}
+
+.kids-dp-popper .react-datepicker__navigation {
+  top: 0.55rem;
+}
+
+/* Saat sütunu genişliği 85px’ten büyük; ileri ok saat başlığıyla üst üste binmesin */
+.kids-dp-popper
+  .react-datepicker__navigation--next--with-time:not(.react-datepicker__navigation--next--with-today-button) {
+  right: 6.75rem;
+}
+
+.kids-dp-popper .react-datepicker__navigation-icon::before {
+  border-color: #fff !important;
+}
+
+.kids-dp-popper .react-datepicker__month-container {
+  float: left;
+  padding: 0.35rem 0.5rem 0.65rem;
+  background: inherit;
+}
+
+.kids-dp-popper .react-datepicker__time-container {
+  float: right;
+  border-left: 1px solid rgb(167 139 250 / 0.45);
+  width: 6.75rem;
+  min-width: 6.75rem;
+  box-sizing: border-box;
+}
+
+/* Bugün + saat: saat bloğu varsayılan olarak `right: -87px` (85px genişlik); genişliği eşle */
+.kids-dp-popper .react-datepicker__time-container--with-today-button {
+  right: calc(-6.75rem - 2px);
+}
+
+.dark .kids-dp-popper .react-datepicker__time-container {
+  border-left-color: rgb(88 28 135 / 0.7);
+}
+
+.kids-dp-popper .react-datepicker__time-container .react-datepicker__time {
+  background: rgb(250 245 255 / 0.85);
+}
+
+.dark .kids-dp-popper .react-datepicker__time-container .react-datepicker__time {
+  background: rgb(30 27 75 / 0.95);
+}
+
+.kids-dp-popper .react-datepicker__time-container .react-datepicker__time .react-datepicker__time-box {
+  width: 100%;
+}
+
+.kids-dp-popper
+  .react-datepicker__time-container
+  .react-datepicker__time
+  .react-datepicker__time-box
+  ul.react-datepicker__time-list {
+  height: 220px;
+  padding: 0.25rem 0;
+}
+
+.kids-dp-popper .react-datepicker__time-list-item {
+  color: #4c1d95 !important;
+  font-weight: 600;
+  font-size: 0.8rem;
+  height: 28px !important;
+  padding: 4px 6px !important;
+  border-radius: 0.35rem;
+  margin: 0 4px;
+}
+
+.dark .kids-dp-popper .react-datepicker__time-list-item {
+  color: #e9d5ff !important;
+}
+
+.kids-dp-popper .react-datepicker__time-list-item:hover {
+  background: rgb(196 181 253 / 0.5) !important;
+  cursor: pointer;
+}
+
+.dark .kids-dp-popper .react-datepicker__time-list-item:hover {
+  background: rgb(109 40 217 / 0.45) !important;
+}
+
+.kids-dp-popper .react-datepicker__time-list-item--selected {
+  background: linear-gradient(90deg, #7c3aed, #c026d3) !important;
+  color: #fff !important;
+  font-weight: 800;
+}
+
+.kids-dp-popper .react-datepicker__header--time {
+  padding-left: 0;
+  padding-right: 0;
+  background: linear-gradient(180deg, rgb(124 58 237 / 0.35), transparent);
+}
+
+.kids-dp-popper .react-datepicker-time__header {
+  font-size: 0.72rem !important;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  overflow: visible;
+  white-space: normal;
+  text-overflow: clip;
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+}
+
+.kids-dp-popper .react-datepicker__today-button {
+  background: rgb(250 245 255);
+  border-top: 1px solid rgb(196 181 253 / 0.6);
+  color: #6d28d9;
+  font-weight: 800;
+  font-size: 0.8rem;
+  padding: 0.5rem 0.75rem;
+  white-space: nowrap;
+}
+
+.dark .kids-dp-popper .react-datepicker__today-button {
+  background: rgb(30 27 75);
+  border-top-color: rgb(88 28 135 / 0.8);
+  color: #ddd6fe;
+}
+
+.kids-dp-popper .react-datepicker__triangle {
+  display: none;
+}
+
+/* Temizle (×) */
+.kids-dp-wrapper .react-datepicker__close-icon::after {
+  background: linear-gradient(135deg, #7c3aed, #db2777);
+}
+
+/* Girdi satırı — genişlik */
+.kids-dp-wrapper.react-datepicker-wrapper {
+  width: 100%;
+  display: block;
+}
+
+.kids-dp-wrapper .react-datepicker__input-container {
+  width: 100%;
+  display: block;
+  overflow: visible;
+  min-width: 0;
+}

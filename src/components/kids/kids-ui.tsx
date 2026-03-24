@@ -159,16 +159,19 @@ export function KidsTabs({
   tabs,
   active,
   onChange,
+  ariaLabel = 'Sekmeler',
 }: {
   tabs: TabDef[];
   active: string;
   onChange: (id: string) => void;
+  /** role="tablist" için erişilebilir ad */
+  ariaLabel?: string;
 }) {
   return (
     <div
       className="mb-6 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       role="tablist"
-      aria-label="Sınıf bölümleri"
+      aria-label={ariaLabel}
     >
       {tabs.map((t) => {
         const isOn = active === t.id;
@@ -403,6 +406,7 @@ export function KidsSelect({
         id={id}
         type="button"
         disabled={disabled}
+        title={selected?.label ?? undefined}
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => !disabled && setOpen((o) => !o)}

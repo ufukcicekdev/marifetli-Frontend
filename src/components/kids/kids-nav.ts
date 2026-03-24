@@ -15,6 +15,7 @@ export function kidsNavLinks(pathPrefix: string, role: KidsUserRole | null): Kid
   }
   if (role === 'student') {
     items.push({ href: `${p}/ogrenci/panel`, label: 'Öğrenci paneli', icon: '🎒' });
+    items.push({ href: `${p}/ogrenci/projeler`, label: 'Projeler', icon: '🎯' });
   }
   if (role) {
     items.push({ href: `${p}/bildirimler`, label: 'Bildirimler', icon: '🔔' });
