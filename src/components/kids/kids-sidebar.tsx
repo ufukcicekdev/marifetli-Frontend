@@ -8,7 +8,9 @@ import { ThemeToggle } from '@/src/components/theme-toggle';
 import { HEADER_HEIGHT_PX } from '@/src/components/header';
 import { isKidsNavActive, kidsNavLinks } from '@/src/components/kids/kids-nav';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
+import { useAuthStore } from '@/src/stores/auth-store';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
+import { marifetliKidsLegalPathOnKidsPortal } from '@/src/lib/marifetli-kids-legal-paths';
 
 const MAIN_SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.marifetli.com.tr';
 
@@ -31,10 +33,14 @@ export function KidsSidebar({ pathPrefix }: KidsSidebarProps) {
   const isOpen = useSidebarStore((s) => s.isOpen);
   const toggle = useSidebarStore((s) => s.toggle);
   const { user, loading } = useKidsAuth();
+  const siteAdmin = useAuthStore((s) => Boolean(s.user?.is_staff || s.user?.is_superuser));
 
   const items = useMemo(
-    () => kidsNavLinks(pathPrefix, loading ? null : user?.role ?? null),
-    [pathPrefix, user?.role, loading],
+    () =>
+      kidsNavLinks(pathPrefix, loading ? null : user?.role ?? null, {
+        siteAdmin,
+      }),
+    [pathPrefix, user?.role, loading, siteAdmin],
   );
 
   useEffect(() => setMounted(true), []);
@@ -141,20 +147,48 @@ export function KidsSidebar({ pathPrefix }: KidsSidebarProps) {
 
           {isOpen && (
             <div className="mt-8 border-t border-gray-200 px-3 pt-3 text-center dark:border-gray-800">
+              <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-violet-600/90 dark:text-violet-400/90">
+                Marifetli Kids yasal
+              </p>
               <div className="flex flex-col gap-1 text-xs text-gray-500 dark:text-gray-400">
+                <Link
+                  href={marifetliKidsLegalPathOnKidsPortal(pathPrefix, 'terms')}
+                  className="hover:text-brand hover:underline dark:hover:text-brand"
+                >
+                  Kullanım Şartları
+                </Link>
+                <Link
+                  href={marifetliKidsLegalPathOnKidsPortal(pathPrefix, 'privacy')}
+                  className="hover:text-brand hover:underline dark:hover:text-brand"
+                >
+                  Gizlilik Politikası
+                </Link>
+                <Link
+                  href={marifetliKidsLegalPathOnKidsPortal(pathPrefix, 'kvkk')}
+                  className="hover:text-brand hover:underline dark:hover:text-brand"
+                >
+                  Aydınlatma Metni
+                </Link>
+                <Link
+                  href={marifetliKidsLegalPathOnKidsPortal(pathPrefix, 'cookies')}
+                  className="hover:text-brand hover:underline dark:hover:text-brand"
+                >
+                  Çerez Politikası
+                </Link>
+                <span className="my-1 block text-[10px] text-gray-400 dark:text-gray-500">Marifetli ana site</span>
                 <a
                   href={`${MAIN_SITE_URL}/gizlilik-politikasi`}
                   className="hover:text-brand hover:underline dark:hover:text-brand"
                   rel="noopener noreferrer"
                 >
-                  Gizlilik Politikası
+                  Gizlilik (genel)
                 </a>
                 <a
                   href={`${MAIN_SITE_URL}/kullanim-sartlari`}
                   className="hover:text-brand hover:underline dark:hover:text-brand"
                   rel="noopener noreferrer"
                 >
-                  Kullanım Şartları
+                  Kullanım Şartları (genel)
                 </a>
               </div>
             </div>

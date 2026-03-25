@@ -8,6 +8,7 @@ import { KidsSidebar } from '@/src/components/kids/kids-sidebar';
 import { KidsFooter } from '@/src/components/kids/kids-footer';
 import { KidsAuthProvider } from '@/src/providers/kids-auth-provider';
 import { KidsPushHandler } from '@/src/components/kids/kids-push-handler';
+import { SiteAuthProfileSync } from '@/src/components/site-auth-profile-sync';
 
 type KidsShellProps = {
   pathPrefix: string;
@@ -19,6 +20,7 @@ export function KidsShell({ pathPrefix, children }: KidsShellProps) {
 
   return (
     <ThemeProvider>
+      <SiteAuthProfileSync />
       <KidsAuthProvider pathPrefix={pathPrefix}>
         <KidsPushHandler />
         <KidsHeader pathPrefix={pathPrefix} />

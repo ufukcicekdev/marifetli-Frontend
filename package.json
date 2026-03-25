@@ -9,7 +9,7 @@
     "last 2 Edge versions"
   ],
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --port 3000 --hostname 127.0.0.1",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

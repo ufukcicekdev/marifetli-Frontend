@@ -2,15 +2,83 @@ import {
   kidsApiUrl,
   KIDS_REFRESH_STORAGE_KEY,
   KIDS_TOKEN_STORAGE_KEY,
+  KIDS_UNIFIED_MAIN_AUTH_FLAG,
 } from '@/src/lib/kids-config';
+import { applyKidsSessionFromAuthResponse } from '@/src/lib/kids-session-storage';
+import { useAuthStore } from '@/src/stores/auth-store';
+import type { User as MainSiteUser } from '@/src/types';
 
-export type KidsUserRole = 'admin' | 'teacher' | 'student';
+/** Ana site `api` ile aynı kök (`/api` dahil). */
+const MAIN_SITE_API_BASE =
+  process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
+
+export type KidsUserRole = 'admin' | 'teacher' | 'parent' | 'student';
 
 /** Öğrenci için /auth/me yanıtında; öğretmende çoğunlukla null. */
 export type KidsGrowthStage = {
   code: string;
   title: string;
   subtitle: string;
+};
+
+export type KidsLinkedStudent = {
+  id: number;
+  first_name: string;
+  last_name: string;
+  student_login_name: string | null;
+};
+
+/** Veli paneli: çocuk başarı / proje özeti (`GET /parent/children-overview/`). */
+export type KidsParentBadge = {
+  key: string;
+  label: string;
+  earned_at: string;
+};
+
+export type KidsParentAssignmentRow = {
+  id: number;
+  title: string;
+  class_name: string;
+  submission_closes_at: string | null;
+  submission_rounds: number;
+  rounds_submitted: number;
+  has_submissions: boolean;
+  awaiting_teacher_feedback: boolean;
+  teacher_feedback_preview: string | null;
+  got_teacher_star: boolean;
+};
+
+export type KidsParentChallengeRow = {
+  title: string;
+  status: string;
+  class_name: string;
+  /** Sunucu yanıtında olabilir: serbest yarışmada `free_parent`. */
+  peer_scope?: string;
+  is_initiator: boolean;
+};
+
+export type KidsParentChildOverview = {
+  id: number;
+  first_name: string;
+  last_name: string;
+  student_login_name: string | null;
+  growth_points: number;
+  growth_stage: KidsGrowthStage | null;
+  classes: { id: number; name: string; school_name: string }[];
+  badges: KidsParentBadge[];
+  assignments_recent: KidsParentAssignmentRow[];
+  challenges: KidsParentChallengeRow[];
+  /** İleride medya onayı vb.; şimdilik boş dizi. */
+  pending_parent_actions: unknown[];
+};
+
+export type KidsAdminTeacher = {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  is_active: boolean;
+  created_at: string;
 };
 
 export type KidsUser = {
@@ -24,6 +92,10 @@ export type KidsUser = {
   /** Eski API yanıtlarında olmayabilir; öğrenci panelinde varsayılan 0 kullanılır. */
   growth_points?: number;
   growth_stage?: KidsGrowthStage | null;
+  /** Yalnızca kendi profilin için; çocuk giriş adı (e-posta yerine). */
+  student_login_name?: string | null;
+  phone?: string | null;
+  linked_students?: KidsLinkedStudent[] | null;
 };
 
 export type KidsSchool = {
@@ -133,7 +205,7 @@ export function kidsBuildStandardClassName(grade: string, section: string, suffi
 /** Görsel teslimde teknik üst sınır (öğretmen seçmez; backend ile aynı). */
 export const KIDS_MAX_IMAGES_PER_SUBMISSION = 1;
 
-/** Öğrenci: bu konu için gerekli tüm teslim turları gönderildi mi? (panel / projeler sekmeleri). */
+/** Öğrenci: bu konu için gerekli tüm teslim turları gönderildi mi? (panel / challenges sekmeleri). */
 export function kidsStudentAssignmentAllRoundsSubmitted(a: KidsAssignment): boolean {
   const total = Math.max(1, a.submission_rounds ?? 1);
   const rp = a.my_rounds_progress;
@@ -150,22 +222,22 @@ export type KidsAssignment = {
   video_max_seconds: 60 | 120 | 180;
   require_image: boolean;
   require_video: boolean;
-  /** Aynı konu başlığı altında kaç ayrı teslim (Proje 1…N). */
+  /** Aynı konu başlığı altında kaç ayrı teslim (Challenge 1…N). */
   submission_rounds?: number;
   is_published: boolean;
-  /** Öğrencilere “yeni proje” bildiriminin gittiği zaman (planlı projelerde başlangıçtan sonra dolur). */
+  /** Öğrencilere “yeni challenge” bildiriminin gittiği zaman (planlı challenge’larda başlangıçtan sonra dolur). */
   students_notified_at?: string | null;
   /** Boş veya null: yayınlandığı andan itibaren teslim (başlangıç kısıtı yok). ISO 8601. */
   submission_opens_at?: string | null;
-  /** Son teslim anı (ISO 8601). Yeni projelerde zorunlu. */
+  /** Son teslim anı (ISO 8601). Yeni challenge’larda zorunlu. */
   submission_closes_at?: string | null;
   created_at: string;
   updated_at: string;
-  /** Öğretmen listesi: bu projeye yapılan teslim sayısı. */
+  /** Öğretmen listesi: bu challenge’a yapılan teslim sayısı. */
   submission_count?: number | null;
   /** Öğretmen listesi: sınıftaki kayıtlı öğrenci sayısı (payda, örn. 3/20). */
   enrolled_student_count?: number | null;
-  /** Öğrenci paneli: bu projedeki son tesliminin özeti (öğretmen yanıtı / yıldız). */
+  /** Öğrenci paneli: bu challenge’daki son tesliminin özeti (öğretmen yanıtı / yıldız). */
   my_submission?: KidsStudentAssignmentSubmission | null;
   /** Öğrenci paneli: kaç tur teslim edildi / toplam tur. */
   my_rounds_progress?: { submitted: number; total: number } | null;
@@ -193,9 +265,9 @@ export type KidsEnrollment = {
     profile_picture: string | null;
   };
   created_at: string;
-  /** Bu sınıfta yayında olan proje sayısı (öğretmen öğrenci listesi). */
+  /** Bu sınıfta yayında olan challenge sayısı (öğretmen öğrenci listesi). */
   class_published_assignment_count?: number;
-  /** Öğrencinin bu sınıftaki yayınlanmış projelerden en az bir teslim gönderdiği proje sayısı. */
+  /** Öğrencinin bu sınıftaki yayınlanmış challenge’lardan en az bir teslim gönderdiği challenge sayısı. */
   assignments_submitted_count?: number;
 };
 
@@ -213,14 +285,7 @@ export type KidsInviteResponse = {
   email_error?: string | null;
 };
 
-export type KidsInvitePreview = {
-  class_name: string;
-  class_description: string;
-  teacher_display: string;
-  school_name: string;
-  requires_student_email: boolean;
-  expires_at: string;
-};
+export type { KidsInvitePreview } from '@/src/lib/kids-invite-public';
 
 export type KidsClassInviteLinkResponse = {
   invite: KidsInviteResponse;
@@ -341,35 +406,98 @@ function readJson<T>(text: string): T | null {
   }
 }
 
+/** Ana site API ile aynı localStorage anahtarı (auth-store). */
+const MAIN_SITE_ACCESS_STORAGE_KEY = 'access_token';
+
+/**
+ * Kids’te ana site JWT ile giriş sonrası: `access_token` yazılır ama Zustand (`marifetli-auth`)
+ * güncellenmez; ana site “giriş yok” gösterir. Bu fonksiyon GET /auth/me/ ile store’u doldurur.
+ */
+export async function kidsSyncMainSiteAuthStore(): Promise<boolean> {
+  if (typeof window === 'undefined') return false;
+  const access = localStorage.getItem(MAIN_SITE_ACCESS_STORAGE_KEY);
+  if (!access?.trim()) return false;
+  try {
+    const res = await fetch(`${MAIN_SITE_API_BASE}/auth/me/`, {
+      headers: { Authorization: `Bearer ${access.trim()}` },
+    });
+    if (!res.ok) return false;
+    const user = (await res.json()) as MainSiteUser;
+    useAuthStore.getState().setAuth(user, access.trim());
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** @see applyKidsSessionFromAuthResponse — geriye dönük isim. */
+export const kidsApplySessionFromAuthResponse = applyKidsSessionFromAuthResponse;
+
+/**
+ * Authorization: Kids öğrenci JWT veya birleşik oturumda `access_token`.
+ * Google/ana site ile girişte `marifetli_kids_unified_main_auth` bazen set olmaz; Kids token yoksa
+ * ana site `access_token` kullanılır (öğretmen/staff Kids paneli).
+ */
+function getEffectiveKidsAccessToken(): string {
+  if (typeof window === 'undefined') return '';
+  if (localStorage.getItem(KIDS_UNIFIED_MAIN_AUTH_FLAG) === '1') {
+    const m = (localStorage.getItem(MAIN_SITE_ACCESS_STORAGE_KEY) || '').trim();
+    if (m) return m;
+    return (localStorage.getItem(KIDS_TOKEN_STORAGE_KEY) || '').trim();
+  }
+  const kids = (localStorage.getItem(KIDS_TOKEN_STORAGE_KEY) || '').trim();
+  const main = (localStorage.getItem(MAIN_SITE_ACCESS_STORAGE_KEY) || '').trim();
+  if (kids) return kids;
+  return main;
+}
+
 async function tryRefresh(): Promise<boolean> {
-  const refresh = localStorage.getItem(KIDS_REFRESH_STORAGE_KEY);
+  const unified = localStorage.getItem(KIDS_UNIFIED_MAIN_AUTH_FLAG) === '1';
+  const refresh = (
+    unified ? localStorage.getItem('refresh_token') : localStorage.getItem(KIDS_REFRESH_STORAGE_KEY)
+  )?.trim();
   if (!refresh) return false;
-  const res = await fetch(kidsApiUrl('/auth/refresh/'), {
+
+  const url = unified ? `${MAIN_SITE_API_BASE}/auth/token/refresh/` : kidsApiUrl('/auth/refresh/');
+  const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ refresh }),
   });
   if (!res.ok) return false;
-  const data = (await res.json()) as { access?: string };
-  if (data.access) {
+  const data = (await res.json()) as { access?: string; refresh?: string };
+  if (!data.access) return false;
+
+  if (unified) {
+    localStorage.setItem(MAIN_SITE_ACCESS_STORAGE_KEY, data.access);
+    if (data.refresh) localStorage.setItem('refresh_token', data.refresh);
+    await kidsSyncMainSiteAuthStore();
+  } else {
     localStorage.setItem(KIDS_TOKEN_STORAGE_KEY, data.access);
-    return true;
+    if (data.refresh) localStorage.setItem(KIDS_REFRESH_STORAGE_KEY, data.refresh);
   }
-  return false;
+  return true;
 }
 
-export function kidsClearSession() {
-  localStorage.removeItem(KIDS_TOKEN_STORAGE_KEY);
-  localStorage.removeItem(KIDS_REFRESH_STORAGE_KEY);
-}
+type KidsOrMainFetchPhase = 'initial' | 'after_refresh' | 'main_fallback';
 
-/** Yetkili istek; 401’de bir kez refresh dener. */
-export async function kidsAuthorizedFetch(
+/**
+ * Önce Kids JWT, yoksa ana site JWT (staff/süper kullanıcı Kids yönetimi için).
+ * Diğer Kids uçlarında yalnızca Kids token kullanılmalı (kidsAuthorizedFetch).
+ *
+ * Eski/geçersiz `marifetli_kids_access` ana sitedeki geçerli `access_token`’ı gölgeler;
+ * 401/403 sonrası refresh başarısızsa ve iki token farklıysa bir kez yalnızca ana token ile yeniden dener.
+ */
+async function kidsFetchKidsOrMainAccess(
   path: string,
   init: RequestInit = {},
-  retried = false,
+  phase: KidsOrMainFetchPhase = 'initial',
 ): Promise<Response> {
-  const token = localStorage.getItem(KIDS_TOKEN_STORAGE_KEY);
+  const unified = localStorage.getItem(KIDS_UNIFIED_MAIN_AUTH_FLAG) === '1';
+  const kidsTok = (localStorage.getItem(KIDS_TOKEN_STORAGE_KEY) || '').trim();
+  const mainTok = (localStorage.getItem(MAIN_SITE_ACCESS_STORAGE_KEY) || '').trim();
+  const preferMainOnly = phase === 'main_fallback';
+  const token = (preferMainOnly ? mainTok : getEffectiveKidsAccessToken() || mainTok).trim();
   const headers = new Headers(init.headers);
   if (token) headers.set('Authorization', `Bearer ${token}`);
   if (
@@ -380,28 +508,236 @@ export async function kidsAuthorizedFetch(
     headers.set('Content-Type', 'application/json');
   }
   const res = await fetch(kidsApiUrl(path), { ...init, headers });
-  if (res.status === 401 && !retried) {
+  if (res.status === 401 && phase === 'initial' && token) {
     const ok = await tryRefresh();
-    if (ok) return kidsAuthorizedFetch(path, init, true);
+    if (ok) return kidsFetchKidsOrMainAccess(path, init, 'after_refresh');
     kidsClearSession();
+  }
+  // Kimlik uçlarında ana site token’ına düşme: veli → çocuk JWT geçişinde hem token’lar
+  // kısa süre depoda kalır; 403/401 sonrası /auth/me veli döner, öğrenci paneli girişe atar.
+  const isAuthMePath = /^\/auth\/me\/?(?:\?|$)/.test(path);
+  if (
+    !isAuthMePath &&
+    (res.status === 401 || res.status === 403) &&
+    phase !== 'main_fallback' &&
+    !unified &&
+    kidsTok &&
+    mainTok &&
+    kidsTok !== mainTok
+  ) {
+    return kidsFetchKidsOrMainAccess(path, init, 'main_fallback');
   }
   return res;
 }
 
-export async function kidsLogin(email: string, password: string) {
+export function kidsClearSession() {
+  const wasUnified = localStorage.getItem(KIDS_UNIFIED_MAIN_AUTH_FLAG) === '1';
+  localStorage.removeItem(KIDS_TOKEN_STORAGE_KEY);
+  localStorage.removeItem(KIDS_REFRESH_STORAGE_KEY);
+  localStorage.removeItem(KIDS_UNIFIED_MAIN_AUTH_FLAG);
+  if (wasUnified) {
+    useAuthStore.getState().logout();
+  }
+}
+
+/**
+ * Yetkili istek; 401’de bir kez refresh dener.
+ * Aynı tarayıcıda hem öğrenci Kids JWT hem ana site `access_token` varken (Google girişi + eski Kids
+ * oturumu), önce Kids token gider; öğretmen uçları 403 verir — ana site token ile bir kez yeniden dener.
+ */
+export async function kidsAuthorizedFetch(
+  path: string,
+  init: RequestInit = {},
+  retried = false,
+  mainFallback = false,
+): Promise<Response> {
+  const unified = localStorage.getItem(KIDS_UNIFIED_MAIN_AUTH_FLAG) === '1';
+  const kidsTok = (localStorage.getItem(KIDS_TOKEN_STORAGE_KEY) || '').trim();
+  const mainTok = (localStorage.getItem(MAIN_SITE_ACCESS_STORAGE_KEY) || '').trim();
+
+  const token = (mainFallback && mainTok ? mainTok : getEffectiveKidsAccessToken()).trim();
+  const headers = new Headers(init.headers);
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+  if (
+    init.body &&
+    !headers.has('Content-Type') &&
+    !(typeof FormData !== 'undefined' && init.body instanceof FormData)
+  ) {
+    headers.set('Content-Type', 'application/json');
+  }
+  const res = await fetch(kidsApiUrl(path), { ...init, headers });
+
+  if (res.status === 401 && !retried && token) {
+    const ok = await tryRefresh();
+    if (ok) return kidsAuthorizedFetch(path, init, true, mainFallback);
+    if (!mainFallback && !unified && mainTok && kidsTok && kidsTok !== mainTok) {
+      return kidsAuthorizedFetch(path, init, false, true);
+    }
+    kidsClearSession();
+    return res;
+  }
+
+  const isAuthMePath = /^\/auth\/me\/?(?:\?|$)/.test(path);
+  if (
+    !isAuthMePath &&
+    (res.status === 401 || res.status === 403) &&
+    !mainFallback &&
+    !unified &&
+    kidsTok &&
+    mainTok &&
+    kidsTok !== mainTok
+  ) {
+    return kidsAuthorizedFetch(path, init, retried, true);
+  }
+  return res;
+}
+
+export async function kidsLogin(identifier: string, password: string) {
+  const idTrim = identifier.trim();
   const res = await fetch(kidsApiUrl('/auth/login/'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ login: idTrim, email: idTrim, password }),
   });
   const text = await res.text();
   const data = readJson<{ access?: string; refresh?: string; user?: KidsUser } & ApiErrorBody>(text);
   if (!res.ok) {
     throw new Error(kidsFirstApiErrorMessage(data, 'Giriş başarısız'));
   }
-  if (data?.access) localStorage.setItem(KIDS_TOKEN_STORAGE_KEY, data.access);
-  if (data?.refresh) localStorage.setItem(KIDS_REFRESH_STORAGE_KEY, data.refresh);
-  return data as { access: string; refresh: string; user: KidsUser };
+  const tokenKind = (data as { token_kind?: string }).token_kind;
+  kidsApplySessionFromAuthResponse({
+    access: data?.access,
+    refresh: data?.refresh,
+    token_kind: tokenKind,
+  });
+  if (tokenKind === 'main_site' && data?.access) {
+    await kidsSyncMainSiteAuthStore();
+  }
+  return data as { access: string; refresh: string; user: KidsUser; token_kind?: string };
+}
+
+/** Veli / öğretmen / staff: ana site `/auth/login/` ile giriş; token hem Marifetli hem Kids API için aynı. */
+export async function kidsLoginViaMainSiteApi(email: string, password: string): Promise<KidsUser> {
+  const em = email.trim();
+  const res = await fetch(`${MAIN_SITE_API_BASE}/auth/login/`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: em, password }),
+  });
+  const text = await res.text();
+  const data = readJson<{ access?: string; refresh?: string; user?: MainSiteUser } & ApiErrorBody>(
+    text,
+  );
+  if (!res.ok) {
+    throw new Error(kidsFirstApiErrorMessage(data, 'Giriş başarısız'));
+  }
+  const access = data?.access;
+  const refresh = data?.refresh;
+  const mainUser = data?.user;
+  if (!access || !mainUser) {
+    throw new Error('Yanıt eksik');
+  }
+
+  useAuthStore.getState().setAuth(mainUser, access);
+  if (refresh) {
+    localStorage.setItem('refresh_token', refresh);
+  }
+  kidsApplySessionFromAuthResponse({
+    access,
+    refresh,
+    token_kind: 'main_site',
+  });
+
+  try {
+    return await kidsMe();
+  } catch {
+    kidsClearSession();
+    throw new Error(
+      'Bu hesapla Kids bölümüne giriş yetkiniz yok. Öğretmen veya veli ataması için yöneticiye danışın.',
+    );
+  }
+}
+
+/** Veli oturumu: bağlı çocuğun öğrenci JWT’sine geç (çocuğun e-postası / kullanıcı adı gerekmez). */
+export async function kidsParentSwitchToStudent(studentId: number): Promise<KidsUser> {
+  const res = await kidsAuthorizedFetch('/auth/parent/switch-student/', {
+    method: 'POST',
+    body: JSON.stringify({ student_id: studentId }),
+  });
+  const text = await res.text();
+  const data = readJson<{ access?: string; refresh?: string; user?: KidsUser } & ApiErrorBody>(text);
+  if (!res.ok) {
+    throw new Error(kidsFirstApiErrorMessage(data, 'Çocuk hesabına geçilemedi'));
+  }
+  kidsApplySessionFromAuthResponse({
+    access: data?.access,
+    refresh: data?.refresh,
+    token_kind: 'kids',
+  });
+  if (!data?.user) throw new Error('Yanıt eksik');
+  return data.user;
+}
+
+/** Veli paneli: tüm bağlı çocukların özetleri. */
+export async function kidsParentChildrenOverview(): Promise<{ children: KidsParentChildOverview[] }> {
+  const res = await kidsAuthorizedFetch('/parent/children-overview/', { method: 'GET' });
+  const text = await res.text();
+  const data = readJson<{ children?: KidsParentChildOverview[] } & ApiErrorBody>(text);
+  if (!res.ok) {
+    throw new Error(kidsFirstApiErrorMessage(data, 'Özet yüklenemedi'));
+  }
+  return { children: data?.children ?? [] };
+}
+
+export async function kidsAdminTeachersList(): Promise<KidsAdminTeacher[]> {
+  const res = await kidsFetchKidsOrMainAccess('/admin/teachers/', { method: 'GET' });
+  const text = await res.text();
+  const data = readJson<{ teachers?: KidsAdminTeacher[] } & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Öğretmen listesi alınamadı'));
+  return data?.teachers ?? [];
+}
+
+export async function kidsAdminPatchTeacher(
+  id: number,
+  payload: { is_active: boolean },
+): Promise<KidsAdminTeacher> {
+  const res = await kidsFetchKidsOrMainAccess(`/admin/teachers/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  });
+  const text = await res.text();
+  const data = readJson<{ teacher?: KidsAdminTeacher } & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Öğretmen güncellenemedi'));
+  if (!data?.teacher) throw new Error('Yanıt eksik');
+  return data.teacher;
+}
+
+export async function kidsAdminCreateTeacher(payload: {
+  email: string;
+  first_name?: string;
+  last_name?: string;
+}): Promise<{ teacher: KidsAdminTeacher; email_sent: boolean; email_error?: string | null; temporary_password?: string | null }> {
+  const res = await kidsFetchKidsOrMainAccess('/admin/teachers/', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  const text = await res.text();
+  const data = readJson<
+    {
+      teacher?: KidsAdminTeacher;
+      email_sent?: boolean;
+      email_error?: string | null;
+      temporary_password?: string | null;
+    } & ApiErrorBody
+  >(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Öğretmen oluşturulamadı'));
+  if (!data?.teacher) throw new Error('Yanıt eksik');
+  return {
+    teacher: data.teacher,
+    email_sent: Boolean(data.email_sent),
+    email_error: data.email_error ?? null,
+    temporary_password: data.temporary_password ?? null,
+  };
 }
 
 /** Kids hesabı (öğrenci/öğretmen) şifre sıfırlama isteği; yanıt her zaman aynı türde güvenlik mesajıdır. */
@@ -433,7 +769,7 @@ export async function kidsConfirmPasswordReset(token: string, newPassword: strin
 
 export type KidsTeacherAppConfig = {
   invite_email_enabled: boolean;
-  /** False iken öğretmen projede “video ile teslim” seçemez. */
+  /** False iken öğretmen challenge’da “video ile teslim” seçemez. */
   assignment_video_enabled: boolean;
 };
 
@@ -445,7 +781,7 @@ export async function kidsTeacherAppConfig(): Promise<KidsTeacherAppConfig> {
 }
 
 export async function kidsMe(): Promise<KidsUser> {
-  const res = await kidsAuthorizedFetch('/auth/me/', { method: 'GET' });
+  const res = await kidsFetchKidsOrMainAccess('/auth/me/', { method: 'GET' });
   if (!res.ok) {
     const t = await res.text();
     const err = readJson<ApiErrorBody>(t);
@@ -475,7 +811,7 @@ export async function kidsUploadProfilePhoto(file: File): Promise<KidsUser> {
   return data as KidsUser;
 }
 
-/** Öğrenci proje görseli (JPEG/PNG/WebP; boyut üst sınırı sunucuda, varsayılan ~25 MB). */
+/** Öğrenci challenge teslim görseli (JPEG/PNG/WebP; boyut üst sınırı sunucuda, varsayılan ~25 MB). */
 export async function kidsUploadSubmissionImage(file: File): Promise<{ url: string }> {
   const fd = new FormData();
   fd.append('image', file);
@@ -663,7 +999,7 @@ export async function kidsRemoveEnrollment(classId: number, enrollmentId: number
 
 export async function kidsListAssignments(classId: number): Promise<KidsAssignment[]> {
   const res = await kidsAuthorizedFetch(`/classes/${classId}/assignments/`, { method: 'GET' });
-  if (!res.ok) throw new Error('Projeler yüklenemedi');
+  if (!res.ok) throw new Error('Challenges yüklenemedi');
   return res.json() as Promise<KidsAssignment[]>;
 }
 
@@ -697,7 +1033,7 @@ export type KidsSubmissionRecord = {
   updated_at: string;
 };
 
-/** Öğretmen: sınıftaki öğrenci teslimleri (proje başlığı + içerik). */
+/** Öğretmen: sınıftaki öğrenci teslimleri (challenge başlığı + içerik). */
 export type KidsTeacherSubmission = {
   id: number;
   assignment: { id: number; title: string };
@@ -734,14 +1070,14 @@ export async function kidsListClassSubmissions(classId: number): Promise<KidsTea
   return res.json() as Promise<KidsTeacherSubmission[]>;
 }
 
-/** Öğretmen: tek proje özeti + teslim listesi. */
+/** Öğretmen: tek challenge özeti + teslim listesi. */
 export async function kidsGetAssignmentSubmissions(
   classId: number,
   assignmentId: number,
 ): Promise<{
   assignment: KidsAssignment;
   submissions: KidsTeacherSubmission[];
-  /** Bu projeye henüz teslim göndermemiş kayıtlı öğrenciler (öğretmen paneli). */
+  /** Bu challenge’a henüz teslim göndermemiş kayıtlı öğrenciler (öğretmen paneli). */
   not_submitted_students: KidsUser[];
   teacher_pick_limit: number;
   teacher_pick_count: number;
@@ -759,7 +1095,7 @@ export async function kidsGetAssignmentSubmissions(
     teacher_pick_count?: number;
   }>(text);
   if (!res.ok || !data?.assignment) {
-    throw new Error((data as ApiErrorBody)?.detail || 'Proje yüklenemedi');
+    throw new Error((data as ApiErrorBody)?.detail || 'Challenge yüklenemedi');
   }
   return {
     assignment: data.assignment,
@@ -854,7 +1190,7 @@ export async function kidsCreateAssignment(
   });
   const text = await res.text();
   const data = readJson<KidsAssignment & ApiErrorBody>(text);
-  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Proje oluşturulamadı'));
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Challenge oluşturulamadı'));
   return data as KidsAssignment;
 }
 
@@ -880,7 +1216,7 @@ export async function kidsPatchAssignment(
   const text = await res.text();
   const data = readJson<KidsAssignment & ApiErrorBody>(text);
   if (!res.ok) {
-    throw new Error(kidsFirstApiErrorMessage(data, 'Proje güncellenemedi'));
+    throw new Error(kidsFirstApiErrorMessage(data, 'Challenge güncellenemedi'));
   }
   return data as KidsAssignment;
 }
@@ -918,14 +1254,7 @@ export async function kidsCreateInvite(body: {
 }
 
 /** Davet sayfası: token ile sınıf / öğretmen bilgisi (giriş gerekmez). */
-export async function kidsInvitePreview(token: string): Promise<KidsInvitePreview> {
-  const q = new URLSearchParams({ token });
-  const res = await fetch(`${kidsApiUrl('/auth/invite-preview/')}?${q.toString()}`, { method: 'GET' });
-  const text = await res.text();
-  const data = readJson<KidsInvitePreview & ApiErrorBody>(text);
-  if (!res.ok) throw new Error(data?.detail || 'Davet bilgisi alınamadı');
-  return data as KidsInvitePreview;
-}
+export { fetchKidsInvitePreview as kidsInvitePreview } from '@/src/lib/kids-invite-public';
 
 /** Sınıfa özel paylaşılabilir davet linki (çok kullanımlı). */
 export async function kidsCreateClassInviteLink(
@@ -957,6 +1286,272 @@ export async function kidsStudentDashboard() {
   return res.json() as Promise<{ classes: KidsClass[]; assignments: KidsAssignment[] }>;
 }
 
+/** Sınıf içi arkadaş yarışması (KidsChallenge; öğretmen onayı + davet). Öğretmenin verdiği ödevlerden ayrı. */
+export type KidsPeerChallengeStatus =
+  | 'pending_teacher'
+  | 'pending_parent'
+  | 'rejected'
+  | 'active'
+  | 'ended';
+export type KidsPeerChallengeSource = 'student' | 'teacher';
+export type KidsPeerChallengeScope = 'class_peer' | 'free_parent';
+
+export type KidsPeerChallengeMember = {
+  id: number;
+  student: KidsUser;
+  is_initiator: boolean;
+  joined_at: string;
+};
+
+export type KidsPeerChallengeOutgoingInvite = {
+  id: number;
+  invitee: KidsUser;
+  created_at: string;
+};
+
+export type KidsPeerChallenge = {
+  id: number;
+  kids_class: number | null;
+  kids_class_name: string;
+  /** Eski yanıtlarda yok; varsayılan sınıf yarışması. */
+  peer_scope?: KidsPeerChallengeScope;
+  source: KidsPeerChallengeSource;
+  status: KidsPeerChallengeStatus;
+  title: string;
+  description: string;
+  rules_or_goal: string;
+  /** Öğretmen ödevindeki gibi: aynı konu altında 1–5 ayrı challenge adımı. */
+  submission_rounds?: number;
+  created_by_student: number | null;
+  teacher_rejection_note: string;
+  parent_rejection_note?: string;
+  reviewed_at: string | null;
+  activated_at: string | null;
+  ended_at: string | null;
+  /** Öğrenci önerisi: yarışma başlangıcı (ISO). */
+  starts_at: string | null;
+  /** Öğrenci önerisi: yarışma bitişi (ISO). */
+  ends_at: string | null;
+  created_at: string;
+  members: KidsPeerChallengeMember[];
+  /** Giriş yapan öğrencinin bu yarışmada gönderdiği bekleyen davetler (detay / liste). */
+  outgoing_pending_invites?: KidsPeerChallengeOutgoingInvite[];
+};
+
+export type KidsPeerChallengeInviteRow = {
+  id: number;
+  challenge: KidsPeerChallenge;
+  inviter: KidsUser;
+  personal_message: string;
+  status: string;
+  created_at: string;
+  responded_at: string | null;
+};
+
+export async function kidsStudentPeerChallengesList(): Promise<{
+  challenges: KidsPeerChallenge[];
+  pending_invites: KidsPeerChallengeInviteRow[];
+}> {
+  const res = await kidsAuthorizedFetch('/student/challenges/', { method: 'GET' });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Yarışmalar yüklenemedi');
+  const d = data as { challenges?: KidsPeerChallenge[]; pending_invites?: KidsPeerChallengeInviteRow[] };
+  return {
+    challenges: Array.isArray(d.challenges) ? d.challenges : [],
+    pending_invites: Array.isArray(d.pending_invites) ? d.pending_invites : [],
+  };
+}
+
+export async function kidsProposePeerChallenge(body: {
+  peer_scope?: KidsPeerChallengeScope;
+  kids_class_id?: number | null;
+  title: string;
+  description?: string;
+  rules_or_goal?: string;
+  submission_rounds?: number;
+  /** ISO 8601 (UTC önerilir) */
+  starts_at: string;
+  ends_at: string;
+}): Promise<KidsPeerChallenge> {
+  const scope = body.peer_scope ?? 'class_peer';
+  const payload: Record<string, unknown> = {
+    peer_scope: scope,
+    title: body.title.trim(),
+    description: (body.description ?? '').trim(),
+    rules_or_goal: (body.rules_or_goal ?? '').trim(),
+    submission_rounds: body.submission_rounds ?? 1,
+    starts_at: body.starts_at,
+    ends_at: body.ends_at,
+  };
+  if (scope === 'class_peer') {
+    payload.kids_class_id = body.kids_class_id;
+  }
+  const res = await kidsAuthorizedFetch('/student/challenges/', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Öneri gönderilemedi');
+  return data as KidsPeerChallenge;
+}
+
+export type KidsParentPendingFreeChallengeItem = {
+  challenge: KidsPeerChallenge;
+  child: { id: number; first_name: string; last_name: string } | null;
+};
+
+/** Veli: bekleyen + geçmiş (bu velinin onayladığı / reddettiği) serbest yarışmalar. */
+export async function kidsParentFreeChallengesOverview(): Promise<{
+  pending: KidsParentPendingFreeChallengeItem[];
+  history: KidsParentPendingFreeChallengeItem[];
+}> {
+  const res = await kidsAuthorizedFetch('/parent/free-challenges/', { method: 'GET' });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Serbest yarışmalar yüklenemedi');
+  const d = data as {
+    pending?: KidsParentPendingFreeChallengeItem[];
+    history?: KidsParentPendingFreeChallengeItem[];
+  };
+  return {
+    pending: Array.isArray(d.pending) ? d.pending : [],
+    history: Array.isArray(d.history) ? d.history : [],
+  };
+}
+
+/** Geriye dönük / hafif istemciler: yalnızca bekleyen liste. */
+export async function kidsParentPendingFreeChallenges(): Promise<{
+  items: KidsParentPendingFreeChallengeItem[];
+}> {
+  const { pending } = await kidsParentFreeChallengesOverview();
+  return { items: pending };
+}
+
+export async function kidsParentReviewFreeChallenge(
+  challengeId: number,
+  body: { decision: 'approve' | 'reject'; rejection_note?: string },
+): Promise<KidsPeerChallenge> {
+  const res = await kidsAuthorizedFetch(`/parent/free-challenges/${challengeId}/review/`, {
+    method: 'POST',
+    body: JSON.stringify({
+      decision: body.decision,
+      rejection_note: (body.rejection_note ?? '').trim(),
+    }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'İşlem yapılamadı');
+  return data as KidsPeerChallenge;
+}
+
+export async function kidsGetPeerChallenge(id: number): Promise<KidsPeerChallenge> {
+  const res = await kidsAuthorizedFetch(`/student/challenges/${id}/`, { method: 'GET' });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Yarışma bulunamadı');
+  return data as KidsPeerChallenge;
+}
+
+export async function kidsInvitePeerChallenge(
+  challengeId: number,
+  body: { invitee_user_id: number; personal_message?: string },
+): Promise<KidsPeerChallengeInviteRow> {
+  const res = await kidsAuthorizedFetch(`/student/challenges/${challengeId}/invite/`, {
+    method: 'POST',
+    body: JSON.stringify({
+      invitee_user_id: body.invitee_user_id,
+      personal_message: (body.personal_message ?? '').trim(),
+    }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Davet gönderilemedi');
+  return data as KidsPeerChallengeInviteRow;
+}
+
+export type KidsPeerChallengeBulkInviteResult = {
+  bulk: true;
+  invited_count: number;
+  skipped_already_in_challenge: number;
+  skipped_pending_invite: number;
+  skipped_other: number;
+};
+
+/** Aynı sınıftaki tüm arkadaşlara (kendin ve zaten üyeler hariç) davet bildirimi gönderir. */
+export async function kidsInviteAllClassmatesToPeerChallenge(
+  challengeId: number,
+  body: { personal_message?: string },
+): Promise<KidsPeerChallengeBulkInviteResult> {
+  const res = await kidsAuthorizedFetch(`/student/challenges/${challengeId}/invite/`, {
+    method: 'POST',
+    body: JSON.stringify({
+      invite_all_classmates: true,
+      personal_message: (body.personal_message ?? '').trim(),
+    }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error((data as ApiErrorBody)?.detail || 'Toplu davet gönderilemedi');
+  }
+  return data as KidsPeerChallengeBulkInviteResult;
+}
+
+export async function kidsRespondPeerChallengeInvite(
+  inviteId: number,
+  action: 'accept' | 'decline',
+): Promise<{ kind: 'declined' } | { kind: 'accepted'; challenge: KidsPeerChallenge }> {
+  const res = await kidsAuthorizedFetch(`/student/challenge-invites/${inviteId}/respond/`, {
+    method: 'POST',
+    body: JSON.stringify({ action }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Yanıt verilemedi');
+  if (action === 'decline' || (data as { status?: string }).status === 'declined') {
+    return { kind: 'declined' };
+  }
+  return { kind: 'accepted', challenge: data as KidsPeerChallenge };
+}
+
+/** Daveti gönderen öğrenci, karşı taraf kabul etmeden geri çeker. */
+export async function kidsRevokePeerChallengeInvite(inviteId: number): Promise<void> {
+  const res = await kidsAuthorizedFetch(`/student/challenge-invites/${inviteId}/revoke/`, { method: 'POST' });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Davet geri alınamadı');
+}
+
+export async function kidsClassmates(classId: number): Promise<KidsUser[]> {
+  const res = await kidsAuthorizedFetch(`/classes/${classId}/classmates/`, { method: 'GET' });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Sınıf arkadaşları yüklenemedi');
+  const d = data as { classmates?: KidsUser[] };
+  return Array.isArray(d.classmates) ? d.classmates : [];
+}
+
+export async function kidsTeacherClassPeerChallenges(
+  classId: number,
+  status?: string,
+): Promise<KidsPeerChallenge[]> {
+  const q = status ? `?status=${encodeURIComponent(status)}` : '';
+  const res = await kidsAuthorizedFetch(`/classes/${classId}/challenges/${q}`, { method: 'GET' });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Yarışmalar yüklenemedi');
+  const d = data as { challenges?: KidsPeerChallenge[] };
+  return Array.isArray(d.challenges) ? d.challenges : [];
+}
+
+export async function kidsTeacherReviewPeerChallenge(
+  classId: number,
+  challengeId: number,
+  body: { decision: 'approve' | 'reject'; rejection_note?: string },
+): Promise<KidsPeerChallenge> {
+  const res = await kidsAuthorizedFetch(`/classes/${classId}/challenges/${challengeId}/review/`, {
+    method: 'POST',
+    body: JSON.stringify({
+      decision: body.decision,
+      rejection_note: (body.rejection_note ?? '').trim(),
+    }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'İşlem yapılamadı');
+  return data as KidsPeerChallenge;
+}
+
 export async function kidsCreateSubmission(body: {
   assignment: number;
   /** 1..assignment.submission_rounds */
@@ -980,7 +1575,7 @@ export type KidsAssignmentRoundSlot = {
   submission: KidsSubmissionRecord | null;
 };
 
-/** Öğrenci: bu konu için tüm turlar (Proje 1…N) ve her birinin teslimi. */
+/** Öğrenci: bu konu için tüm turlar (Challenge 1…N) ve her birinin teslimi. */
 export async function kidsGetSubmissionRoundsForAssignment(assignmentId: number): Promise<{
   submission_rounds: number;
   rounds: KidsAssignmentRoundSlot[];
@@ -1067,16 +1662,25 @@ export async function kidsFreestyleCreate(body: {
   return data as Record<string, unknown>;
 }
 
-export type KidsNotificationType = 'kids_new_assignment' | 'kids_submission_received';
+export type KidsNotificationType =
+  | 'kids_new_assignment'
+  | 'kids_submission_received'
+  | 'kids_challenge_pending_teacher'
+  | 'kids_challenge_pending_parent'
+  | 'kids_challenge_approved'
+  | 'kids_challenge_rejected'
+  | 'kids_challenge_invite';
 
 export type KidsNotificationRow = {
   id: number;
-  notification_type: KidsNotificationType;
+  notification_type: KidsNotificationType | string;
   message: string;
   is_read: boolean;
   created_at: string;
   assignment: number | null;
   submission: number | null;
+  challenge?: number | null;
+  challenge_invite?: number | null;
   action_path: string;
 };
 

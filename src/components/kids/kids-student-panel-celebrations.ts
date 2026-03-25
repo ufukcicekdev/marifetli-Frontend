@@ -35,7 +35,7 @@ export function detectNewTeacherPicks(roadmap: KidsBadgeRoadmap): NewPickCelebra
   const fresh = roadmap.teacher_picks.filter((p) => !seen.has(p.key));
   if (fresh.length === 0) return null;
   writeStringArray(PICK_SEEN_KEYS, [...new Set([...seen, ...keys])]);
-  const labels = fresh.map((p) => p.label || `Proje #${p.assignment_id}`);
+  const labels = fresh.map((p) => p.label || `Challenge #${p.assignment_id}`);
   return { kind: 'pick', labels };
 }
 

@@ -43,11 +43,11 @@ export function KidsAssignmentRoundStepper({
   return (
     <div className="mt-4">
       <p className="text-xs font-bold text-violet-800 dark:text-violet-200">
-        Bu konu için {totalRounds} ayrı proje adımı var. Her adımı sırayla tamamlayıp kaydet; bir sonraki adım öncekine
+        Bu konu için {totalRounds} ayrı challenge adımı var. Her adımı sırayla tamamlayıp kaydet; bir sonraki adım öncekine
         bağlıdır.
       </p>
       <div className="mt-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:thin]">
-        <ol className="flex min-w-min list-none items-center gap-1 px-0.5 sm:gap-2" aria-label="Proje adımları">
+        <ol className="flex min-w-min list-none items-center gap-1 px-0.5 sm:gap-2" aria-label="Challenge adımları">
           {Array.from({ length: totalRounds }, (_, i) => i + 1).map((r, idx) => {
             const done = slotDone(roundSlots, r);
             const active = r === activeRound;

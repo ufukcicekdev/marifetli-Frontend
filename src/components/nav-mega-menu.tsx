@@ -55,7 +55,16 @@ export function NavMegaMenu() {
   });
 
   const navItems = useMemo((): MegaNavItem[] => {
-    const items: MegaNavItem[] = NAV_ITEMS_BASE.map((x) => ({ kind: 'link', ...x }));
+    const base = [...NAV_ITEMS_BASE];
+    if (user && (user.is_staff || user.is_superuser)) {
+      base.splice(1, 0, {
+        href: '/admin',
+        label: 'Yönetim',
+        icon: '🛠️',
+        description: 'Marifetli Kids öğretmenleri ve yönetim.',
+      });
+    }
+    const items: MegaNavItem[] = base.map((x) => ({ kind: 'link', ...x }));
     if (expertCfg?.enabled && expertCfg?.backend_ready) {
       const i = items.findIndex((x) => x.kind === 'link' && x.href === '/sorular');
       items.splice(i + 1, 0, {
@@ -66,7 +75,7 @@ export function NavMegaMenu() {
       });
     }
     return items;
-  }, [expertCfg?.enabled, expertCfg?.backend_ready]);
+  }, [expertCfg?.enabled, expertCfg?.backend_ready, user]);
 
   const categoriesTree = useMemo(() => {
     const raw = categoriesData as { results?: CategoryItem[] } | CategoryItem[] | undefined;
@@ -288,12 +297,46 @@ export function NavMegaMenu() {
         </div>
 
         {/* Alt: Footer linkleri */}
-        <div className="bg-white dark:bg-gray-900 px-4 md:px-6 py-3 border-t border-gray-100 dark:border-gray-800 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400 shrink-0">
-            <Link href="/iletisim" onClick={close} className="hover:text-brand dark:hover:text-brand">İletişim</Link>
-            <Link href="/hakkimizda" onClick={close} className="hover:text-brand dark:hover:text-brand">Hakkımızda</Link>
-            <Link href="/gizlilik-politikasi" onClick={close} className="hover:text-brand dark:hover:text-brand">Gizlilik Politikası</Link>
-            <Link href="/kullanim-sartlari" onClick={close} className="hover:text-brand dark:hover:text-brand">Kullanım Şartları</Link>
+        <div className="shrink-0 border-t border-gray-100 bg-white px-4 py-3 dark:border-gray-800 dark:bg-gray-900 md:px-6">
+          <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+            <Link href="/iletisim" onClick={close} className="hover:text-brand dark:hover:text-brand">
+              İletişim
+            </Link>
+            <Link href="/hakkimizda" onClick={close} className="hover:text-brand dark:hover:text-brand">
+              Hakkımızda
+            </Link>
+            <Link href="/gizlilik-politikasi" onClick={close} className="hover:text-brand dark:hover:text-brand">
+              Gizlilik Politikası
+            </Link>
+            <Link href="/kullanim-sartlari" onClick={close} className="hover:text-brand dark:hover:text-brand">
+              Kullanım Şartları
+            </Link>
             <span>© {new Date().getFullYear()} Marifetli</span>
+          </div>
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-x-2 gap-y-1 border-t border-gray-100 pt-2 text-[10px] text-gray-500 dark:border-gray-800 dark:text-gray-500">
+            <span className="font-semibold text-gray-600 dark:text-gray-400">Marifetli Kids</span>
+            <Link href="/marifetli-kids/kullanim-sartlari" onClick={close} className="hover:text-brand dark:hover:text-brand">
+              Kullanım Şartları
+            </Link>
+            <span aria-hidden className="text-gray-300 dark:text-gray-600">
+              |
+            </span>
+            <Link href="/marifetli-kids/gizlilik-politikasi" onClick={close} className="hover:text-brand dark:hover:text-brand">
+              Gizlilik
+            </Link>
+            <span aria-hidden className="text-gray-300 dark:text-gray-600">
+              |
+            </span>
+            <Link href="/marifetli-kids/kvkk-aydinlatma-metni" onClick={close} className="hover:text-brand dark:hover:text-brand">
+              Aydınlatma
+            </Link>
+            <span aria-hidden className="text-gray-300 dark:text-gray-600">
+              |
+            </span>
+            <Link href="/marifetli-kids/cerez-politikasi" onClick={close} className="hover:text-brand dark:hover:text-brand">
+              Çerez
+            </Link>
+          </div>
         </div>
       </div>
     </>

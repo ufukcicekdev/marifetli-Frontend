@@ -15,7 +15,7 @@ const MID_STEP_MESSAGES = [
 const FINAL_STEP_MESSAGES = [
   'Tüm adımları bitirdin! Sen bir yıldızsın — gurur duyabilirsin.',
   'Konuyu baştan sona tamamladın. Filiz bile alkışlıyor!',
-  'Son adım da sende! Bu projeyi taçlandırdın; süpersin.',
+  'Son adım da sende! Bu challenge’ı taçlandırdın; süpersin.',
 ];
 
 /** Yeni bir adım teslimi sonrası rastgele mesaj (güncelleme / tekrar gönderimde kullanılmaz). */
@@ -63,8 +63,8 @@ type Props = {
 };
 
 /**
- * Öğrenci bir proje adımını ilk kez teslim ettiğinde: maskot + motive metin.
- * Kapatınca üst bileşen navigasyonu (sonraki adım veya projeler listesi) yapar.
+ * Öğrenci bir challenge adımını ilk kez teslim ettiğinde: maskot + motive metin.
+ * Kapatınca üst bileşen navigasyonu (sonraki adım veya challenges listesi) yapar.
  */
 export function KidsStudentStepMotivationModal({ open, message, isFinalStep, onContinue }: Props) {
   if (!open) return null;
@@ -81,7 +81,7 @@ export function KidsStudentStepMotivationModal({ open, message, isFinalStep, onC
       maxWidthClass="max-w-md"
       footer={
         <KidsPrimaryButton type="button" className="w-full" onClick={onContinue}>
-          {isFinalStep ? 'Projelere dön' : 'Devam ediyorum!'}
+          {isFinalStep ? 'Challenges’a dön' : 'Devam ediyorum!'}
         </KidsPrimaryButton>
       }
     >

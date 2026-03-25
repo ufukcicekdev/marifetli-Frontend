@@ -1,28 +1,9 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
-import { Suspense } from 'react';
-import { headers } from 'next/headers';
 import { Inter, Outfit } from 'next/font/google';
 import { Toaster } from 'react-hot-toast';
 import { QueryProvider } from '@/src/providers/query-provider';
-import { ThemeProvider } from '@/src/components/theme-provider';
-import { Header } from '@/src/components/header';
-import { VerifyEmailBanner } from '@/src/components/verify-email-banner';
-import { OnboardingBanner } from '@/src/components/onboarding-banner';
-import { MainContentWrapper } from '@/src/components/main-content-wrapper';
-import { NavMegaMenu } from '@/src/components/nav-mega-menu';
-import { SidebarLayout } from '@/src/components/sidebar-layout';
-import { OnboardingGuard } from '@/src/components/onboarding-guard';
-import { SiteAnalytics } from '@/src/components/site-analytics';
-import { SiteFonts } from '@/src/components/site-fonts';
-import { CategoriesPrefetcher } from '@/src/components/categories-prefetcher';
-import { FirebasePushHandler } from '@/src/components/firebase-push-handler';
-import { CookieConsentBanner } from '@/src/components/cookie-consent-banner';
-import { SiteFooter } from '@/src/components/site-footer';
-import { AchievementUnlockedModal } from '@/src/components/achievement-unlocked-modal';
-import { GamificationRoadmapModal } from '@/src/components/gamification-roadmap-modal';
-import { RecentUnlockPoller } from '@/src/components/recent-unlock-poller';
-import { CategoryExpertChatPanel } from '@/src/components/category-expert-chat-panel';
+import { RootLayoutShell } from '@/src/components/root-layout-shell';
 
 // Canlıda NEXT_PUBLIC_SITE_URL deploy ortamında tanımlı olsun; yoksa production URL fallback
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.marifetli.com.tr';
@@ -140,23 +121,6 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const isKidsPortal = (await headers()).get('x-marifetli-kids') === '1';
-
-  if (isKidsPortal) {
-    return (
-      <html lang="tr" suppressHydrationWarning>
-        <body
-          className={`${inter.className} ${outfit.variable} min-h-screen bg-gradient-to-br from-violet-100/70 via-amber-50/80 to-sky-100/70 antialiased dark:from-violet-950/90 dark:via-slate-950 dark:to-sky-950/80`}
-        >
-          <QueryProvider>
-            {children}
-          </QueryProvider>
-          <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
-        </body>
-      </html>
-    );
-  }
-
   return (
     <html lang="tr" suppressHydrationWarning>
       <head>
@@ -182,43 +146,10 @@ export default async function RootLayout({
         <link rel="dns-prefetch" href="https://cekfisi.fra1.digitaloceanspaces.com" />
       </head>
       <body className={`${inter.className} ${outfit.variable}`}>
-        <ThemeProvider>
-          <QueryProvider>
-            <SiteAnalytics />
-            <SiteFonts />
-            <CategoriesPrefetcher />
-            <FirebasePushHandler />
-            <OnboardingGuard>
-              <Suspense fallback={<header className="fixed top-0 left-0 right-0 z-40 h-[104px] bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700" />}>
-                <Header />
-              </Suspense>
-              {USE_SIDEBAR ? (
-                <SidebarLayout>{children}</SidebarLayout>
-              ) : (
-                <>
-                  <NavMegaMenu />
-                  {/* İçerik + footer: footer her zaman en sonda render edilir */}
-                  <div className="flex min-h-screen pt-[104px] flex-col">
-                    <MainContentWrapper>
-                      <VerifyEmailBanner />
-                      <OnboardingBanner />
-                      {children}
-                    </MainContentWrapper>
-                    <div className="mt-auto shrink-0 relative z-10">
-                      <SiteFooter />
-                    </div>
-                  </div>
-                </>
-              )}
-            </OnboardingGuard>
-            <CategoryExpertChatPanel />
-            <AchievementUnlockedModal />
-            <GamificationRoadmapModal />
-            <RecentUnlockPoller />
-          </QueryProvider>
-        </ThemeProvider>
+        <QueryProvider>
+          <RootLayoutShell useSidebar={USE_SIDEBAR}>{children}</RootLayoutShell>
+        </QueryProvider>
         <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
-        <CookieConsentBanner />
       </body>
     </html>
   );

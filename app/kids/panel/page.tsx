@@ -20,7 +20,15 @@ export default function KidsPanelRedirectPage() {
       router.replace(`${pathPrefix}/ogrenci/panel`);
       return;
     }
-    if (user.role === 'teacher' || user.role === 'admin') {
+    if (user.role === 'parent') {
+      router.replace(`${pathPrefix}/veli/panel`);
+      return;
+    }
+    if (user.role === 'admin') {
+      router.replace(`${pathPrefix}/admin/panel`);
+      return;
+    }
+    if (user.role === 'teacher') {
       router.replace(`${pathPrefix}/ogretmen/panel`);
       return;
     }

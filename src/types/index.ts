@@ -11,6 +11,11 @@ export interface User {
   following_count: number;
   date_of_birth?: string;
   is_verified: boolean;
+  /** Ana site Django yönetimi (Kids yönetim girişi için aynı hesap kullanılabilir). */
+  is_staff?: boolean;
+  is_superuser?: boolean;
+  /** Yalnızca kendi `/auth/me/` kaydında; Kids veli/öğretmen — boşsa Kids API ana JWT ile kapalı. */
+  kids_portal_role?: string;
   /** İtibar puanına göre rütbe (forum etiketi vb.) */
   current_level_title?: string;
   /** Avatar köşesinde gösterilecek son kazanılan rozetler (en fazla 3) */

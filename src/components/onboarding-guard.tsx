@@ -6,7 +6,16 @@ import { useQuery } from '@tanstack/react-query';
 import api from '../lib/api';
 import { useAuthStore } from '../stores/auth-store';
 
-const SKIP_PATHS = ['/onboarding', '/giris', '/kayit', '/sifremi-unuttum', '/reset-password', '/ayarlar', '/soru-sor'];
+const SKIP_PATHS = [
+  '/onboarding',
+  '/giris',
+  '/kayit',
+  '/sifremi-unuttum',
+  '/reset-password',
+  '/ayarlar',
+  '/soru-sor',
+  '/marifetli-kids',
+];
 
 function isOwnProfilePath(pathname: string | null, currentUsername: string | undefined): boolean {
   if (!pathname?.startsWith('/profil/') || !currentUsername) return false;

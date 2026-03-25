@@ -139,7 +139,7 @@ export default function KidsStudentAssignmentPage() {
         hydrateForm(null, found);
       }
     } catch {
-      toast.error('Proje yüklenemedi');
+      toast.error('Challenge yüklenemedi');
     } finally {
       setLoading(false);
     }
@@ -369,9 +369,9 @@ export default function KidsStudentAssignmentPage() {
   if (!assignment) {
     return (
       <div className="mx-auto max-w-lg text-center">
-        <p className="text-gray-600 dark:text-gray-400">Bu proje bulunamadı veya sana atanmadı.</p>
+        <p className="text-gray-600 dark:text-gray-400">Bu challenge bulunamadı veya sana atanmadı.</p>
         <Link href={`${pathPrefix}/ogrenci/projeler`} className="mt-4 inline-block text-brand hover:underline">
-          Projelere dön
+          Challenges’a dön
         </Link>
       </div>
     );
@@ -386,12 +386,12 @@ export default function KidsStudentAssignmentPage() {
         href={`${pathPrefix}/ogrenci/projeler`}
         className="inline-flex text-sm font-bold text-fuchsia-700 hover:underline dark:text-fuchsia-300"
       >
-        ← Projeler
+        ← Challenges
       </Link>
       <div className="rounded-[1.75rem] border-4 border-white/90 bg-gradient-to-br from-violet-500 via-fuchsia-500 to-amber-400 p-1 shadow-xl shadow-fuchsia-500/20 dark:border-violet-900/50 dark:from-violet-800 dark:via-fuchsia-800 dark:to-amber-700">
         <div className="rounded-2xl bg-white/95 px-5 py-6 dark:bg-gray-950/95 sm:px-7 sm:py-7">
           <p className="text-xs font-black uppercase tracking-widest text-fuchsia-600 dark:text-fuchsia-400">
-            📌 Proje
+            📌 Challenge
           </p>
           <h1 className="font-logo mt-1 text-2xl font-black text-violet-950 dark:text-white">{assignment.title}</h1>
           {assignment.purpose ? (
@@ -436,7 +436,7 @@ export default function KidsStudentAssignmentPage() {
             ? 'Teslim dönemi henüz başlamadı. Başlangıç zamanından sonra bu sayfadan teslim edebilirsin.'
             : existingSubmission
               ? 'Teslim süresi sona erdi. Gönderdiğin içerik aşağıda salt okunur; yeni teslim veya düzenleme yapılamaz. Öğretmen geri bildirimin varsa yine görüntülenir.'
-              : 'Teslim süresi sona erdi. Artık bu projeye teslim gönderemez veya düzenleyemezsin.'}
+              : 'Teslim süresi sona erdi. Artık bu challenge’a teslim gönderemez veya düzenleyemezsin.'}
         </div>
       ) : null}
 
@@ -445,9 +445,9 @@ export default function KidsStudentAssignmentPage() {
           <p className="text-lg" aria-hidden>
             ⭐
           </p>
-          <p className="font-semibold">Proje yıldızı</p>
+          <p className="font-semibold">Challenge yıldızı</p>
           <p className="mt-1 leading-relaxed">
-            Öğretmen bu teslimi bu projede öne çıkardı. Rozet yolunda da görünecek.
+            Öğretmen bu teslimi bu challenge’da öne çıkardı. Rozet yolunda da görünecek.
           </p>
         </div>
       ) : null}
@@ -467,7 +467,7 @@ export default function KidsStudentAssignmentPage() {
 
       {submissionClosed && !existingSubmission ? (
         <p className="rounded-2xl border-2 border-rose-200 bg-gradient-to-r from-rose-50 to-amber-50 px-4 py-4 text-sm font-semibold text-rose-900 dark:border-rose-900 dark:from-rose-950/40 dark:to-amber-950/30 dark:text-rose-100">
-          Bu proje için süre dolmadan teslim göndermemişsin; artık teslim eklenemez.
+          Bu challenge için süre dolmadan teslim göndermemişsin; artık teslim eklenemez.
         </p>
       ) : showReadOnlySubmission && existingSubmission ? (
         <div className="rounded-[1.75rem] border-4 border-fuchsia-200/90 bg-gradient-to-br from-violet-200/40 via-fuchsia-100/50 to-amber-100/40 p-1 shadow-xl dark:border-fuchsia-900/50 dark:from-violet-950/40 dark:via-fuchsia-950/30 dark:to-amber-950/20">
@@ -590,11 +590,11 @@ export default function KidsStudentAssignmentPage() {
             </div>
           ) : submissionMode === 'video_only' ? (
             <p className="rounded-xl bg-sky-100/80 px-3 py-2 text-sm font-bold text-sky-900 dark:bg-sky-950/50 dark:text-sky-100">
-              Bu proje için video teslimi gerekir.
+              Bu challenge için video teslimi gerekir.
             </p>
           ) : (
             <p className="rounded-xl bg-violet-100/80 px-3 py-2 text-sm font-bold text-violet-900 dark:bg-violet-950/50 dark:text-violet-100">
-              Bu proje için adım adım yazılı teslim gerekir.
+              Bu challenge için adım adım yazılı teslim gerekir.
             </p>
           )}
 

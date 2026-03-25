@@ -41,7 +41,7 @@ function assignmentSummaryBits(
     bits.push(`🖼 her turda 1 görsel`);
   }
   if (a.require_image || a.require_video) {
-    bits.push(`📋 ${a.submission_rounds ?? 1} ayrı proje teslimi`);
+    bits.push(`📋 ${a.submission_rounds ?? 1} ayrı challenge teslimi`);
   }
   if (wl) bits.push(`📅 ${wl}`);
   if (!gate.ok) {
@@ -60,7 +60,7 @@ function assignmentPlayState(
   }
   const s = a.my_submission;
   if (!s) return { emoji: '🚀', label: 'Hadi başla', tone: 'violet' };
-  if (s.is_teacher_pick) return { emoji: '⭐', label: 'Yıldızlı proje', tone: 'amber' };
+  if (s.is_teacher_pick) return { emoji: '⭐', label: 'Yıldızlı challenge', tone: 'amber' };
   if (!s.teacher_reviewed_at) return { emoji: '📬', label: 'Öğretmen inceliyor', tone: 'sky' };
   if (s.teacher_review_positive === true) return { emoji: '🌟', label: 'Süper geri bildirim', tone: 'emerald' };
   if (s.teacher_review_positive === false) return { emoji: '💪', label: 'Biraz daha', tone: 'rose' };
@@ -78,6 +78,7 @@ export type KidsStudentProjectsPanelProps = {
 const PROJECT_TABS = [
   { id: 'ongoing', label: 'Devam eden', icon: '🏃' },
   { id: 'done', label: 'Tamamlanan', icon: '✅' },
+  { id: 'expired', label: 'Süresi bitenler', icon: '⏱️' },
 ] as const;
 
 export function KidsStudentProjectsPanel({
@@ -86,31 +87,38 @@ export function KidsStudentProjectsPanel({
   loading,
   showBackToPanel,
 }: KidsStudentProjectsPanelProps) {
-  const { ongoing, done } = useMemo(() => {
+  const { ongoing, expired, done } = useMemo(() => {
     const o: KidsAssignment[] = [];
+    const e: KidsAssignment[] = [];
     const d: KidsAssignment[] = [];
     for (const a of assignments) {
-      if (kidsStudentAssignmentAllRoundsSubmitted(a)) d.push(a);
-      else o.push(a);
+      if (kidsStudentAssignmentAllRoundsSubmitted(a)) {
+        d.push(a);
+        continue;
+      }
+      const gate = kidsAssignmentSubmissionGate(a);
+      if (!gate.ok && gate.phase === 'closed') {
+        e.push(a);
+        continue;
+      }
+      o.push(a);
     }
-    return { ongoing: o, done: d };
+    return { ongoing: o, expired: e, done: d };
   }, [assignments]);
 
   const [tab, setTab] = useState<string>(() => 'ongoing');
 
   const tabsWithCounts = useMemo(
     () =>
-      PROJECT_TABS.map((t) => ({
-        ...t,
-        label:
-          t.id === 'ongoing'
-            ? `${t.label} (${ongoing.length})`
-            : `${t.label} (${done.length})`,
-      })),
-    [ongoing.length, done.length],
+      PROJECT_TABS.map((t) => {
+        const n =
+          t.id === 'ongoing' ? ongoing.length : t.id === 'done' ? done.length : expired.length;
+        return { ...t, label: `${t.label} (${n})` };
+      }),
+    [ongoing.length, expired.length, done.length],
   );
 
-  const visible = tab === 'done' ? done : ongoing;
+  const visible = tab === 'expired' ? expired : tab === 'done' ? done : ongoing;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -124,7 +132,7 @@ export function KidsStudentProjectsPanel({
       ) : null}
       <section className="rounded-3xl border-2 border-violet-200 bg-gradient-to-b from-violet-50/50 to-white p-5 shadow-lg dark:border-violet-900/50 dark:from-violet-950/20 dark:to-gray-950/80">
         <h1 className="font-logo flex items-center gap-2 text-xl font-black text-violet-900 dark:text-violet-100 sm:text-2xl">
-          <span aria-hidden>🎯</span> Projeler
+          <span aria-hidden>🎯</span> Challenges
         </h1>
         <p className="mt-1 text-xs font-medium text-violet-800/70 dark:text-violet-200/70">
           Her kart bir macera — adım adım teslim et, geri bildirim al, yıldız topla.
@@ -132,31 +140,37 @@ export function KidsStudentProjectsPanel({
         {loading ? (
           <p className="mt-4 animate-pulse text-sm text-gray-500">Yükleniyor…</p>
         ) : assignments.length === 0 ? (
-          <p className="mt-4 text-sm font-medium text-gray-600 dark:text-gray-400">Şu an yayında proje yok.</p>
+          <p className="mt-4 text-sm font-medium text-gray-600 dark:text-gray-400">Şu an yayında challenge yok.</p>
         ) : (
           <>
             <KidsTabs
               tabs={tabsWithCounts}
               active={tab}
               onChange={setTab}
-              ariaLabel="Proje listesi"
+              ariaLabel="Challenge listesi"
             />
             {visible.length === 0 ? (
               tab === 'ongoing' ? (
                 <KidsEmptyState
                   emoji="🎉"
-                  title="Devam eden proje yok"
+                  title="Devam eden challenge yok"
                   description={
                     done.length > 0
-                      ? 'Tüm yayınlanan projelerde gerekli teslimleri tamamlamışsın. Tamamlananlar sekmesinden özetlere bakabilirsin.'
-                      : 'Henüz üzerinde çalışman gereken bir proje görünmüyor.'
+                      ? 'Tüm yayınlanan challenge’larda gerekli teslimleri tamamlamışsın. Tamamlananlar sekmesinden özetlere bakabilirsin.'
+                      : 'Henüz üzerinde çalışman gereken bir challenge görünmüyor.'
                   }
+                />
+              ) : tab === 'done' ? (
+                <KidsEmptyState
+                  emoji="📝"
+                  title="Tamamlanan challenge yok"
+                  description="Gerekli tüm adımları gönderdiğin challenge’lar burada listelenir. Devam eden sekmesinden teslim etmeye başlayabilirsin."
                 />
               ) : (
                 <KidsEmptyState
-                  emoji="📝"
-                  title="Tamamlanan proje yok"
-                  description="Gerekli tüm adımları gönderdiğin projeler burada listelenir. Devam eden sekmesinden teslim etmeye başlayabilirsin."
+                  emoji="✨"
+                  title="Süresi biten challenge yok"
+                  description="Son teslim tarihi geçmiş ama eksik bıraktığın challenge’lar burada listelenir."
                 />
               )
             ) : (
@@ -174,7 +188,9 @@ export function KidsStudentProjectsPanel({
                   const shellIdx =
                     tab === 'done'
                       ? done.findIndex((x) => x.id === a.id)
-                      : ongoing.findIndex((x) => x.id === a.id);
+                      : tab === 'expired'
+                        ? expired.findIndex((x) => x.id === a.id)
+                        : ongoing.findIndex((x) => x.id === a.id);
                   const si = shellIdx >= 0 ? shellIdx : i;
                   return (
                     <li key={a.id}>
@@ -201,7 +217,7 @@ export function KidsStudentProjectsPanel({
                           ) : null}
                           {a.my_rounds_progress && a.my_rounds_progress.total > 1 ? (
                             <p className="mt-1 text-xs font-black text-fuchsia-800 dark:text-fuchsia-200">
-                              İlerleme: {a.my_rounds_progress.submitted}/{a.my_rounds_progress.total} proje tamamlandı
+                              İlerleme: {a.my_rounds_progress.submitted}/{a.my_rounds_progress.total} challenge tamamlandı
                             </p>
                           ) : null}
                           {a.my_submission?.review_hint_title && gate.ok ? (

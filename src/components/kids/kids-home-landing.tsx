@@ -6,7 +6,7 @@ import { KidsRoleLoginForm } from '@/src/components/kids/kids-role-login-form';
 import { KidsCenteredModal, KidsPrimaryButton, KidsSecondaryButton } from '@/src/components/kids/kids-ui';
 import { kidsHomeHref } from '@/src/lib/kids-config';
 
-type LoginTab = 'student' | 'teacher';
+type LoginTab = 'student' | 'teacher' | 'parent';
 
 export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
   const router = useRouter();
@@ -33,6 +33,9 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
       setLoginOpen(true);
     } else if (g === 'ogretmen') {
       setTab('teacher');
+      setLoginOpen(true);
+    } else if (g === 'veli') {
+      setTab('parent');
       setLoginOpen(true);
     } else if (g === '1') {
       setLoginOpen(true);
@@ -94,14 +97,14 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
                 Marifetli Kids
               </p>
               <h1 className="font-logo mt-3 text-center text-4xl font-black leading-tight text-violet-950 dark:text-white sm:text-6xl">
-                Renkli projeler,
+                Renkli challenges,
                 <br />
                 <span className="bg-gradient-to-r from-fuchsia-600 to-amber-500 bg-clip-text text-transparent dark:from-fuchsia-400 dark:to-amber-400">
                   senin köşen!
                 </span>
               </h1>
               <p className="mx-auto mt-5 max-w-lg text-center text-base font-medium leading-relaxed text-slate-600 dark:text-gray-300 sm:text-lg">
-                Öğretmeninin verdiği projeleri tamamla, serbest kürsüde parla, rozet yolunda ilerle — hepsi tek yerde,
+                Öğretmeninin verdiği challenge’ları tamamla, serbest kürsüde parla, rozet yolunda ilerle — hepsi tek yerde,
                 çocuk dostu ve güvenli.
               </p>
 
@@ -132,7 +135,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
             <span className="text-3xl transition group-hover:scale-110" aria-hidden>
               🎒
             </span>
-            <h2 className="font-logo mt-2 text-lg font-bold text-sky-900 dark:text-sky-100">Projeler</h2>
+            <h2 className="font-logo mt-2 text-lg font-bold text-sky-900 dark:text-sky-100">Challenges</h2>
             <p className="mt-1.5 text-sm leading-relaxed text-sky-900/80 dark:text-sky-100/80">
               Metin, görsel veya video ile teslim; öğretmen geri bildirimi hemen panelinde.
             </p>
@@ -188,7 +191,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
               <h2 className="font-logo text-xl font-bold text-emerald-900 dark:text-emerald-100">Öğretmen misin?</h2>
             </div>
             <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-gray-300">
-              Sınıf ve proje yönetimi, davetler ve haftanın yıldızı — hesabın yönetici tarafından açılır.
+              Sınıf ve challenge yönetimi, davetler ve haftanın yıldızı — hesabın yönetici tarafından açılır.
             </p>
             <button
               type="button"
@@ -221,7 +224,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
           panelClassName="max-h-[88dvh]"
         >
           <p className="text-sm text-slate-600 dark:text-gray-400">
-            Sekmeyi seç, e-posta ve şifreni yaz — ayrı giriş sayfası yok.
+            Sekmeyi seç, giriş bilgilerini yaz — ayrı giriş sayfası yok.
           </p>
 
           <div
@@ -230,7 +233,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
             role="tablist"
             aria-label="Giriş türü"
           >
-            <div className="grid grid-cols-2 gap-1">
+            <div className="grid grid-cols-3 gap-1">
               <button
                 type="button"
                 role="tab"
@@ -238,7 +241,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
                 aria-selected={tab === 'student'}
                 aria-controls={`${tabListId}-panel-student`}
                 onClick={() => setTab('student')}
-                className={`rounded-xl px-3 py-3 text-sm font-black transition sm:py-3.5 ${
+                className={`rounded-xl px-2 py-3 text-xs font-black transition sm:px-3 sm:text-sm sm:py-3.5 ${
                   tab === 'student'
                     ? 'bg-white text-violet-950 shadow-md ring-2 ring-fuchsia-400/60 dark:bg-gray-950 dark:text-white dark:ring-fuchsia-500/40'
                     : 'text-violet-900/80 hover:bg-white/70 dark:text-violet-100/80 dark:hover:bg-violet-950/40'
@@ -252,11 +255,29 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
               <button
                 type="button"
                 role="tab"
+                id={`${tabListId}-parent`}
+                aria-selected={tab === 'parent'}
+                aria-controls={`${tabListId}-panel-parent`}
+                onClick={() => setTab('parent')}
+                className={`rounded-xl px-2 py-3 text-xs font-black transition sm:px-3 sm:text-sm sm:py-3.5 ${
+                  tab === 'parent'
+                    ? 'bg-white text-amber-950 shadow-md ring-2 ring-amber-400/60 dark:bg-gray-950 dark:text-amber-50 dark:ring-amber-500/40'
+                    : 'text-amber-900/80 hover:bg-white/70 dark:text-amber-100/80 dark:hover:bg-amber-950/30'
+                }`}
+              >
+                <span className="mr-1" aria-hidden>
+                  👪
+                </span>
+                Veli
+              </button>
+              <button
+                type="button"
+                role="tab"
                 id={`${tabListId}-teacher`}
                 aria-selected={tab === 'teacher'}
                 aria-controls={`${tabListId}-panel-teacher`}
                 onClick={() => setTab('teacher')}
-                className={`rounded-xl px-3 py-3 text-sm font-black transition sm:py-3.5 ${
+                className={`rounded-xl px-2 py-3 text-xs font-black transition sm:px-3 sm:text-sm sm:py-3.5 ${
                   tab === 'teacher'
                     ? 'bg-white text-emerald-950 shadow-md ring-2 ring-emerald-400/60 dark:bg-gray-950 dark:text-emerald-50 dark:ring-emerald-500/40'
                     : 'text-emerald-900/80 hover:bg-white/70 dark:text-emerald-100/80 dark:hover:bg-emerald-950/30'
@@ -281,6 +302,8 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
                 <div className="rounded-2xl border-2 border-sky-200 bg-sky-50/80 p-3 dark:border-sky-800/60 dark:bg-sky-950/35">
                   <p className="text-xs leading-relaxed text-sky-900/90 dark:text-sky-100/90">
                     Hesabın yoksa öğretmeninden gelen <strong className="font-semibold">davet linkiyle</strong> kayıt olursun.
+                    Kendi e-postan olmasa bile: veli <strong>Veli</strong> sekmesinden giriş yapıp seni{' '}
+                    <strong>çocuk paneline</strong> yönlendirebilir. İstersen kullanıcı adı + çocuk şifresi de kullanılır.
                   </p>
                 </div>
               ) : null}
@@ -289,8 +312,36 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
                 fieldIdSuffix="student"
                 title="Öğrenci girişi"
                 subtitle="Kayıt yalnızca öğretmen davetiyle yapılır."
+                identifierLabel="E-posta veya kullanıcı adı"
+                identifierPlaceholder="ornek@email.com veya ayse_yilmaz_ab12"
+                identifierInputType="text"
                 allowedRoles={['student']}
                 redirectTo="/ogrenci/panel"
+                onEmbeddedForgotPhaseChange={setModalAuthPhase}
+              />
+            </div>
+          ) : tab === 'parent' ? (
+            <div
+              id={`${tabListId}-panel-parent`}
+              role="tabpanel"
+              aria-labelledby={`${tabListId}-parent`}
+              className="mt-5 space-y-4"
+            >
+              {modalAuthPhase === 'login' ? (
+                <div className="rounded-2xl border-2 border-amber-200 bg-amber-50/80 p-3 dark:border-amber-800/60 dark:bg-amber-950/35">
+                  <p className="text-xs leading-relaxed text-amber-900/90 dark:text-amber-100/90">
+                    Veli hesabın, sınıf davetiyle kayıt sırasında oluşturduğun <strong>e-posta ve şifre</strong> ile açılır.
+                    Çocuk onayları ve bağlı hesaplar burada görünecek.
+                  </p>
+                </div>
+              ) : null}
+              <KidsRoleLoginForm
+                embedded
+                fieldIdSuffix="parent"
+                title="Veli girişi"
+                subtitle="Davet formunda belirlediğin veli e-postası ve şifre."
+                allowedRoles={['parent']}
+                redirectTo="/veli/panel"
                 onEmbeddedForgotPhaseChange={setModalAuthPhase}
               />
             </div>
@@ -312,7 +363,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
                 embedded
                 fieldIdSuffix="teacher"
                 title="Öğretmen girişi"
-                subtitle="E-posta ve şifrenle sınıf ve proje yönetimine gir."
+                subtitle="E-posta ve şifrenle sınıf ve challenge yönetimine gir."
                 allowedRoles={['teacher', 'admin']}
                 redirectTo="/ogretmen/panel"
                 onEmbeddedForgotPhaseChange={setModalAuthPhase}

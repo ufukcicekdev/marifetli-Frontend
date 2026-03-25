@@ -19,10 +19,15 @@ function isSidebarNavActive(pathname: string | null, href: string) {
   const p = normalizePath(pathname);
   const h = normalizePath(href);
   if (h === '/' || h === '') return p === '/' || p === '';
+  if (h === '/admin') {
+    return p === '/admin' || p.startsWith('/kids/admin');
+  }
   return p === h || p.startsWith(`${h}/`) || p.startsWith(`${h}?`);
 }
 
-const SIDEBAR_NAV_BASE = [
+type SidebarNavItem = { href: string; label: string; icon: string };
+
+const SIDEBAR_NAV_BASE: SidebarNavItem[] = [
   { href: '/', label: 'Anasayfa', icon: '🏠' },
   { href: '/sorular', label: 'Sorular', icon: '💬' },
   { href: '/kategoriler', label: 'Kategoriler', icon: '📁' },
@@ -32,7 +37,7 @@ const SIDEBAR_NAV_BASE = [
   { href: '/t/populer', label: 'Popüler', icon: '🔥' },
   { href: '/t/tum', label: 'Tümü', icon: '📋' },
   { href: '/iletisim', label: 'İletişim', icon: '✉️' },
-] as const;
+];
 
 const SIDEBAR_PLACEHOLDER = (
   <aside
@@ -47,10 +52,17 @@ export function AppSidebar() {
   const pathname = usePathname();
   const isOpen = useSidebarStore((s) => s.isOpen);
   const toggle = useSidebarStore((s) => s.toggle);
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, user } = useAuthStore();
   const openAuth = useAuthModalStore((s) => s.open);
 
-  const sidebarNavItems = useMemo(() => [...SIDEBAR_NAV_BASE], []);
+  const sidebarNavItems = useMemo(() => {
+    const base = [...SIDEBAR_NAV_BASE];
+    const siteAdmin = Boolean(user?.is_staff || user?.is_superuser);
+    if (siteAdmin) {
+      base.splice(1, 0, { href: '/admin', label: 'Yönetim', icon: '🛠️' });
+    }
+    return base;
+  }, [user]);
 
   const closeSidebarOnMobile = () => {
     if (typeof window !== 'undefined' && !window.matchMedia('(min-width: 1024px)').matches) {
@@ -183,13 +195,51 @@ export function AppSidebar() {
           </div>
 
           {isOpen && (
-            <div className="mt-8 border-t border-gray-200 dark:border-gray-800 pt-3 px-3 flex flex-col items-center gap-1 text-center">
+            <div className="mt-8 border-t border-gray-200 dark:border-gray-800 pt-3 px-3 flex flex-col items-center gap-2 text-center">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                Marifetli Kids
+              </p>
+              <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-[11px]">
+                <Link
+                  href="/marifetli-kids/kullanim-sartlari"
+                  className="text-gray-500 dark:text-gray-400 hover:text-brand dark:hover:text-brand hover:underline"
+                >
+                  Kullanım Şartları
+                </Link>
+                <span className="text-gray-300 dark:text-gray-600" aria-hidden>
+                  ·
+                </span>
+                <Link
+                  href="/marifetli-kids/gizlilik-politikasi"
+                  className="text-gray-500 dark:text-gray-400 hover:text-brand dark:hover:text-brand hover:underline"
+                >
+                  Gizlilik
+                </Link>
+                <span className="text-gray-300 dark:text-gray-600" aria-hidden>
+                  ·
+                </span>
+                <Link
+                  href="/marifetli-kids/kvkk-aydinlatma-metni"
+                  className="text-gray-500 dark:text-gray-400 hover:text-brand dark:hover:text-brand hover:underline"
+                >
+                  Aydınlatma
+                </Link>
+                <span className="text-gray-300 dark:text-gray-600" aria-hidden>
+                  ·
+                </span>
+                <Link
+                  href="/marifetli-kids/cerez-politikasi"
+                  className="text-gray-500 dark:text-gray-400 hover:text-brand dark:hover:text-brand hover:underline"
+                >
+                  Çerez
+                </Link>
+              </div>
               <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-xs">
                 <Link
                   href="/gizlilik-politikasi"
                   className="text-gray-500 dark:text-gray-400 hover:text-brand dark:hover:text-brand hover:underline"
                 >
-                  Gizlilik Politikası
+                  Gizlilik (genel)
                 </Link>
                 <span className="text-gray-300 dark:text-gray-600" aria-hidden>
                   ·
@@ -198,10 +248,10 @@ export function AppSidebar() {
                   href="/kullanim-sartlari"
                   className="text-gray-500 dark:text-gray-400 hover:text-brand dark:hover:text-brand hover:underline"
                 >
-                  Kullanım Şartları
+                  Kullanım (genel)
                 </Link>
               </div>
-              <p className="text-[11px] text-gray-500 dark:text-gray-500">© 2026 Marifetli</p>
+              <p className="text-[11px] text-gray-500 dark:text-gray-500">© {new Date().getFullYear()} Marifetli</p>
             </div>
           )}
         </nav>

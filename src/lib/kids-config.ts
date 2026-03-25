@@ -1,18 +1,10 @@
 /** Kids arayüzünün kamuya açık kök adresi (davet linkleri, paylaşım) */
 export const KIDS_SITE_URL =
-  process.env.NEXT_PUBLIC_KIDS_SITE_URL || 'https://cocuk.marifetli.com.tr';
+  process.env.NEXT_PUBLIC_KIDS_SITE_URL || 'https://marifetli.com.tr/kids';
 
-/** Ana sitede `/kids/...`, cocuk alt alan adında kök `/...` */
+/** Kids her zaman ana site altında: `/kids/...` */
 export function kidsPathPrefixFromHost(host: string): string {
-  const h = host.split(':')[0].toLowerCase();
-  if (h === 'cocuk.marifetli.com.tr') return '';
-  const custom = process.env.NEXT_PUBLIC_KIDS_HOST?.trim().toLowerCase();
-  if (custom && h === custom) return '';
-  const extras = (process.env.NEXT_PUBLIC_KIDS_EXTRA_HOSTS ?? '')
-    .split(',')
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
-  if (extras.includes(h)) return '';
+  void host;
   return '/kids';
 }
 
@@ -34,6 +26,8 @@ export function kidsApiUrl(path: string): string {
 
 export const KIDS_TOKEN_STORAGE_KEY = 'marifetli_kids_access';
 export const KIDS_REFRESH_STORAGE_KEY = 'marifetli_kids_refresh';
+/** Veli/öğretmen: Kids girişi ana site SimpleJWT döndürdü; refresh'te ana anahtarlar da güncellenir. */
+export const KIDS_UNIFIED_MAIN_AUTH_FLAG = 'marifetli_kids_unified_main_auth';
 
 /** Kids kök yolu (alt alan adında boş → `/`). */
 export function kidsHomeHref(pathPrefix: string): string {
@@ -41,10 +35,14 @@ export function kidsHomeHref(pathPrefix: string): string {
 }
 
 /**
- * Giriş modali anasayfada açılır; `giris=1` varsayılan sekme, `ogrenci` / `ogretmen` ilgili sekmeyi seçer.
+ * Giriş modali anasayfada açılır; `giris=1` varsayılan sekme, `ogrenci` / `ogretmen` / `veli` sekmeleri.
  */
-export function kidsLoginPortalHref(pathPrefix: string, tab?: 'ogrenci' | 'ogretmen'): string {
+export function kidsLoginPortalHref(
+  pathPrefix: string,
+  tab?: 'ogrenci' | 'ogretmen' | 'veli',
+): string {
   const base = kidsHomeHref(pathPrefix);
-  const slug = tab === 'ogrenci' ? 'ogrenci' : tab === 'ogretmen' ? 'ogretmen' : '1';
+  const slug =
+    tab === 'ogrenci' ? 'ogrenci' : tab === 'ogretmen' ? 'ogretmen' : tab === 'veli' ? 'veli' : '1';
   return `${base}?giris=${slug}`;
 }

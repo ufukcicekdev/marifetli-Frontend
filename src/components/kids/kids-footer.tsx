@@ -1,5 +1,8 @@
 'use client';
 
+import { MarifetliKidsFooterBlock } from '@/src/components/legal/marifetli-kids-footer-block';
+import { marifetliKidsLegalPathOnKidsPortal } from '@/src/lib/marifetli-kids-legal-paths';
+
 const MAIN_SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.marifetli.com.tr';
 
 type KidsFooterProps = {
@@ -7,7 +10,6 @@ type KidsFooterProps = {
 };
 
 export function KidsFooter({ pathPrefix }: KidsFooterProps) {
-  const year = new Date().getFullYear();
   const kidsHome = pathPrefix || '/';
 
   return (
@@ -16,10 +18,10 @@ export function KidsFooter({ pathPrefix }: KidsFooterProps) {
         className="h-1 w-full bg-gradient-to-r from-violet-500 via-amber-400 to-sky-500"
         aria-hidden
       />
-      <div className="container mx-auto flex flex-col items-center justify-center gap-3 px-3 py-6 text-center text-sm text-violet-900/80 dark:text-violet-100/80 sm:px-4">
+      <div className="container mx-auto flex flex-col items-center justify-center gap-4 px-3 py-6 text-center text-sm text-violet-900/80 dark:text-violet-100/80 sm:px-4">
         <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1" aria-label="Kids sayfaları">
           <a href={kidsHome} className="transition-colors hover:text-brand dark:hover:text-brand">
-            Kids ana sayfa
+            Kids Anasayfa
           </a>
           <a
             href={MAIN_SITE}
@@ -35,18 +37,14 @@ export function KidsFooter({ pathPrefix }: KidsFooterProps) {
           >
             İletişim
           </a>
-          <a
-            href={`${MAIN_SITE}/gizlilik-politikasi`}
-            rel="noopener noreferrer"
-            className="transition-colors hover:text-brand dark:hover:text-brand"
-          >
-            Gizlilik
-          </a>
         </nav>
-        <span>
-          © {year} Marifetli Kids —{' '}
-          <span className="text-gray-500 dark:text-gray-500">marifetli.com.tr ailesi</span>
-        </span>
+        <MarifetliKidsFooterBlock
+          variant="kids"
+          termsHref={marifetliKidsLegalPathOnKidsPortal(pathPrefix, 'terms')}
+          privacyHref={marifetliKidsLegalPathOnKidsPortal(pathPrefix, 'privacy')}
+          kvkkHref={marifetliKidsLegalPathOnKidsPortal(pathPrefix, 'kvkk')}
+          cookiesHref={marifetliKidsLegalPathOnKidsPortal(pathPrefix, 'cookies')}
+        />
       </div>
     </footer>
   );

@@ -16,10 +16,18 @@ import {
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 import { canRequestPush, getFCMTokenAndRegister } from '@/src/lib/firebase-messaging';
 
-function typeLabel(t: KidsNotificationRow['notification_type']): string {
-  if (t === 'kids_new_assignment') return 'Yeni proje';
-  if (t === 'kids_submission_received') return 'Teslim';
-  return t;
+const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
+  kids_new_assignment: 'Yeni challenge',
+  kids_submission_received: 'Teslim alındı',
+  kids_challenge_pending_teacher: 'Yarışma onayda',
+  kids_challenge_pending_parent: 'Serbest yarışma (veli onayı)',
+  kids_challenge_approved: 'Yarışma onaylandı',
+  kids_challenge_rejected: 'Yarışma reddedildi',
+  kids_challenge_invite: 'Yarışma daveti',
+};
+
+function typeLabel(t: string): string {
+  return NOTIFICATION_TYPE_LABELS[t] ?? t.replace(/^kids_/, '').replace(/_/g, ' ');
 }
 
 export default function KidsBildirimlerPage() {
@@ -98,7 +106,7 @@ export default function KidsBildirimlerPage() {
       </div>
 
       <p className="text-sm text-slate-600 dark:text-slate-400">
-        Yeni projeler ve öğrenci teslimleri burada listelenir. Tarayıcı bildirimleri için izin vermen yeterli.
+        Yeni challenge’lar ve öğrenci teslimleri burada listelenir. Tarayıcı bildirimleri için izin vermen yeterli.
       </p>
 
       {isLoading ? (
@@ -125,7 +133,7 @@ export default function KidsBildirimlerPage() {
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
-                  <span className="shrink-0 rounded-full bg-violet-200/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-900 dark:bg-violet-800 dark:text-violet-100">
+                  <span className="shrink-0 rounded-full bg-violet-200/80 px-2 py-0.5 text-[10px] font-bold tracking-wide text-violet-900 dark:bg-violet-800 dark:text-violet-100">
                     {typeLabel(n.notification_type)}
                   </span>
                   <time className="text-[11px] text-slate-500 dark:text-slate-400" dateTime={n.created_at}>

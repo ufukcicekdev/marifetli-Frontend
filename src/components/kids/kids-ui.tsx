@@ -4,17 +4,42 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+function isScrollableOverflowAxis(v: string): boolean {
+  return /(auto|scroll|overlay)/.test(v);
+}
+
+/**
+ * Portal + fixed panel için: sayfa ve iç içe kaydırılabilir tüm üst öğeler.
+ * Önceki sürüm `body`’yi hiç dolaşmıyordu; birçok düzende kaydırma `body`/`html` üzerinde olur.
+ */
 function scrollableAncestors(el: HTMLElement | null): HTMLElement[] {
   const out: HTMLElement[] = [];
-  let p: HTMLElement | null = el?.parentElement ?? null;
-  while (p && p !== document.body) {
-    const s = getComputedStyle(p);
+  const seen = new Set<HTMLElement>();
+  const add = (node: HTMLElement) => {
+    if (!seen.has(node)) {
+      seen.add(node);
+      out.push(node);
+    }
+  };
+
+  let cur: HTMLElement | null = el;
+  while (cur) {
+    const s = getComputedStyle(cur);
     const ox = s.overflowX;
     const oy = s.overflowY;
-    if (/(auto|scroll|overlay)/.test(ox) || /(auto|scroll|overlay)/.test(oy)) out.push(p);
-    p = p.parentElement;
+    if (isScrollableOverflowAxis(ox) || isScrollableOverflowAxis(oy)) {
+      add(cur);
+    } else if (ox === 'clip' || oy === 'clip') {
+      const canScrollY = cur.scrollHeight > cur.clientHeight + 1;
+      const canScrollX = cur.scrollWidth > cur.clientWidth + 1;
+      if (canScrollY || canScrollX) add(cur);
+    }
+    cur = cur.parentElement;
   }
-  out.push(document.documentElement);
+
+  add(document.documentElement);
+  if (document.body) add(document.body);
+
   return out;
 }
 
@@ -28,7 +53,8 @@ export const kidsLabelClass =
   'text-sm font-bold text-slate-800 dark:text-gray-100';
 
 export function KidsPanelMax({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <div className={`mx-auto w-full max-w-5xl ${className}`}>{children}</div>;
+  const widthClass = /\bmax-w-/.test(className) ? '' : 'max-w-5xl';
+  return <div className={`mx-auto w-full ${widthClass} ${className}`.trim()}>{children}</div>;
 }
 
 export function KidsPageHeader({
@@ -292,13 +318,37 @@ export function KidsSelect({
 
   useEffect(() => {
     if (!open || disabled) return;
-    const onScrollOrResize = () => updatePosition();
+
+    let raf = 0;
+    const onScrollOrResize = () => {
+      if (raf !== 0) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        updatePosition();
+      });
+    };
+
     const parents = scrollableAncestors(rootRef.current);
-    parents.forEach((p) => p.addEventListener('scroll', onScrollOrResize, true));
-    window.addEventListener('resize', onScrollOrResize);
+    const scrollOpts: AddEventListenerOptions = { capture: true, passive: true };
+    parents.forEach((p) => p.addEventListener('scroll', onScrollOrResize, scrollOpts));
+    window.addEventListener('scroll', onScrollOrResize, scrollOpts);
+    window.addEventListener('resize', onScrollOrResize, { passive: true });
+
+    const vv = typeof window !== 'undefined' ? window.visualViewport : null;
+    if (vv) {
+      vv.addEventListener('scroll', onScrollOrResize, scrollOpts);
+      vv.addEventListener('resize', onScrollOrResize, { passive: true });
+    }
+
     return () => {
-      parents.forEach((p) => p.removeEventListener('scroll', onScrollOrResize, true));
+      if (raf !== 0) cancelAnimationFrame(raf);
+      parents.forEach((p) => p.removeEventListener('scroll', onScrollOrResize, scrollOpts));
+      window.removeEventListener('scroll', onScrollOrResize, scrollOpts);
       window.removeEventListener('resize', onScrollOrResize);
+      if (vv) {
+        vv.removeEventListener('scroll', onScrollOrResize, scrollOpts);
+        vv.removeEventListener('resize', onScrollOrResize);
+      }
     };
   }, [open, disabled, updatePosition]);
 

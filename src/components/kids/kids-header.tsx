@@ -9,7 +9,6 @@ import { HEADER_HEIGHT_PX } from '@/src/components/header';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import { KidsNotificationBell } from '@/src/components/kids/kids-notification-bell';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
-
 type KidsHeaderProps = {
   pathPrefix: string;
 };
@@ -18,6 +17,8 @@ export function KidsHeader({ pathPrefix }: KidsHeaderProps) {
   const sidebarToggle = useSidebarStore((s) => s.toggle);
   const homeHref = pathPrefix || '/';
   const { user, logout } = useKidsAuth();
+  const isKidsAdmin = user?.role === 'admin';
+  const brandHref = homeHref;
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -79,7 +80,7 @@ export function KidsHeader({ pathPrefix }: KidsHeaderProps) {
           <span className="hidden md:inline-flex">
             <ThemeToggle />
           </span>
-          <KidsNotificationBell pathPrefix={pathPrefix} />
+          {user ? <KidsNotificationBell pathPrefix={pathPrefix} /> : null}
           {user ? (
             <div className="relative flex shrink-0 items-center" ref={menuRef}>
               <button
@@ -126,6 +127,9 @@ export function KidsHeader({ pathPrefix }: KidsHeaderProps) {
                     </p>
                     {[user.first_name, user.last_name].filter(Boolean).join(' ').trim() ? (
                       <p className="truncate text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
+                    ) : null}
+                    {isKidsAdmin ? (
+                      <p className="mt-1 text-xs font-medium text-violet-600 dark:text-violet-300">Yönetici</p>
                     ) : null}
                   </div>
                   <Link
@@ -174,7 +178,7 @@ export function KidsHeader({ pathPrefix }: KidsHeaderProps) {
         <div className="w-full max-w-2xl">
           <div className="flex items-center justify-center gap-2 rounded-full border-2 border-amber-300/70 bg-gradient-to-r from-amber-100/95 via-white to-sky-100/95 px-4 py-2 text-center text-sm font-semibold text-amber-950 shadow-sm dark:border-amber-600/40 dark:from-amber-950/60 dark:via-gray-900/90 dark:to-sky-950/60 dark:text-amber-50">
             <span aria-hidden>✨</span>
-            <span>Çocuklar için renkli, güvenli proje dünyası</span>
+            <span>Çocuklar için renkli, güvenli challenge dünyası</span>
             <span aria-hidden>🎨</span>
           </div>
         </div>

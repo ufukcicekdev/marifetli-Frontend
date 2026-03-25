@@ -40,7 +40,7 @@ function submissionMetaLine(sub: KidsTeacherSubmission) {
 }
 
 /**
- * Öğretmen proje teslim listesinde: öğrenci başına tek satır,
+ * Öğretmen challenge teslim listesinde: öğrenci başına tek satır,
  * her teslim (tur) yan yana kompakt kutularda.
  * Sol blokta tıklanınca tüm turların metin + küçük görsel özeti (abartısız boyut).
  * Mobil (768px altı): her tur `details` accordion; geniş ekranda grid.
@@ -115,7 +115,7 @@ export function KidsTeacherStudentSubmissionsRow({
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-3 text-left [&::-webkit-details-marker]:hidden">
                     <div className="min-w-0 flex-1">
                       <p className="font-logo text-sm font-black text-violet-950 dark:text-white">
-                        Proje {sub.round_number ?? 1}
+                        Challenge {sub.round_number ?? 1}
                       </p>
                       <p className="mt-0.5 text-[11px] font-medium leading-snug text-violet-700 dark:text-violet-300">
                         {submissionMetaLine(sub)}
@@ -179,7 +179,7 @@ export function KidsTeacherStudentSubmissionsRow({
                 >
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <h4 className="font-logo text-base font-bold text-violet-950 dark:text-white">
-                      Proje {sub.round_number ?? 1}
+                      Challenge {sub.round_number ?? 1}
                     </h4>
                     {reviewed ? (
                       <span className="rounded-full bg-emerald-500 px-2 py-0.5 text-[11px] font-bold text-white">

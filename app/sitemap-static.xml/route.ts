@@ -17,6 +17,10 @@ const fixedRoutes: { path: string; changefreq: string; priority: string }[] = [
   { path: '/hakkimizda', changefreq: 'monthly', priority: '0.5' },
   { path: '/gizlilik-politikasi', changefreq: 'monthly', priority: '0.4' },
   { path: '/kullanim-sartlari', changefreq: 'monthly', priority: '0.4' },
+  { path: '/marifetli-kids/kullanim-sartlari', changefreq: 'monthly', priority: '0.35' },
+  { path: '/marifetli-kids/gizlilik-politikasi', changefreq: 'monthly', priority: '0.35' },
+  { path: '/marifetli-kids/kvkk-aydinlatma-metni', changefreq: 'monthly', priority: '0.35' },
+  { path: '/marifetli-kids/cerez-politikasi', changefreq: 'monthly', priority: '0.35' },
   { path: '/t/populer', changefreq: 'weekly', priority: '0.7' },
   { path: '/t/tum', changefreq: 'weekly', priority: '0.7' },
 ];

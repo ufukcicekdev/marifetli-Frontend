@@ -1,68 +1,9 @@
-/**
- * Ana siteden (www.marifetli.com.tr) Kids’e çıkış adresi.
- *
- * Öncelik (canlıda genelde yalnızca 1. yeterli):
- * 1) NEXT_PUBLIC_KIDS_HOST — örn. cocuk.marifetli.com.tr → https://cocuk.marifetli.com.tr
- *    Yerelde cocuk.localhost → http://cocuk.localhost:PORT (PORT: NEXT_PUBLIC_KIDS_DEV_PORT veya
- *    NEXT_PUBLIC_SITE_URL’deki port veya 3000). İstersen doğrudan cocuk.localhost:3000 veya
- *    http://cocuk.localhost:3000 da verebilirsin.
- * 2) NEXT_PUBLIC_KIDS_SITE_URL — tam taban, örn. https://cocuk.marifetli.com.tr
- * 3) Yoksa aynı origin /kids (path üzerinden Kids, çoğunlukla localhost)
- */
-
-function isLocalKidsHost(hostLower: string): boolean {
-  if (hostLower === 'localhost' || hostLower.startsWith('localhost:')) return true;
-  if (hostLower.endsWith('.localhost')) return true;
-  if (hostLower.includes('.localhost:')) return true;
-  return false;
-}
-
-/** Yerel Kids linkinde port: açık env → ana site URL → 3000 */
-function defaultLocalKidsPort(): string {
-  const explicit = (process.env.NEXT_PUBLIC_KIDS_DEV_PORT ?? '').trim();
-  if (/^\d+$/.test(explicit)) return explicit;
-  const site = (process.env.NEXT_PUBLIC_SITE_URL ?? '').trim();
-  if (site) {
-    try {
-      const p = new URL(site).port;
-      if (p) return p;
-    } catch {
-      /* ignore */
-    }
-  }
-  return '3000';
-}
-
-/** HOST / SITE_URL’den tek bir kök URL (path yok, sondaki / yok). */
+/** Ana siteden Kids'e geçiş adresi: her zaman `/kids` tabanlı. */
 function computeSiteKidsHref(): string {
-  const rawHost = (process.env.NEXT_PUBLIC_KIDS_HOST ?? '').trim();
-  if (rawHost) {
-    if (/^https?:\/\//i.test(rawHost)) {
-      try {
-        return new URL(rawHost).origin;
-      } catch {
-        return rawHost.replace(/\/+$/, '');
-      }
-    }
-    const hostOnly = rawHost.split('/')[0].trim();
-    const h = hostOnly.toLowerCase();
-    const proto = isLocalKidsHost(h) ? 'http' : 'https';
-    const needsPort =
-      proto === 'http' && isLocalKidsHost(h) && !/]:\d+$/.test(hostOnly) && !/:\d+$/.test(hostOnly);
-    const hostWithPort = needsPort ? `${hostOnly}:${defaultLocalKidsPort()}` : hostOnly;
-    return `${proto}://${hostWithPort}`;
-  }
-
-  const siteUrl = (process.env.NEXT_PUBLIC_KIDS_SITE_URL ?? '').trim();
-  if (siteUrl) {
-    try {
-      return new URL(siteUrl).origin;
-    } catch {
-      const base = siteUrl.replace(/\/+$/, '');
-      return base || '/kids';
-    }
-  }
-
+  const kidsSite = (process.env.NEXT_PUBLIC_KIDS_SITE_URL ?? '').trim();
+  if (kidsSite) return kidsSite.replace(/\/+$/, '');
+  const site = (process.env.NEXT_PUBLIC_SITE_URL ?? '').trim().replace(/\/+$/, '');
+  if (site) return `${site}/kids`;
   return '/kids';
 }
 

@@ -92,7 +92,7 @@ export default function KidsStudentRoadmapPage() {
         </Link>
         <h1 className="mt-4 text-2xl font-bold text-slate-900 dark:text-white">Rozet yolu</h1>
         <p className="mt-2 text-sm text-slate-600 dark:text-gray-400">
-          Duolingo tarzı bir yol: her düğüm bir rozet. Puanların düşmez; proje yıldızları ayrıca birikir.
+          Duolingo tarzı bir yol: her düğüm bir rozet. Puanların düşmez; challenge yıldızları ayrıca birikir.
         </p>
         {data ? (
           <p className="mt-2 text-sm font-semibold text-emerald-800 dark:text-emerald-200">
@@ -118,10 +118,10 @@ export default function KidsStudentRoadmapPage() {
 
           <section className="rounded-2xl border border-violet-200 bg-violet-50/80 p-6 dark:border-violet-900 dark:bg-violet-950/35">
             <h2 className="text-sm font-bold uppercase tracking-wide text-violet-800 dark:text-violet-200">
-              Proje yıldızları
+              Challenge yıldızları
             </h2>
             <p className="mt-1 text-xs text-violet-900/80 dark:text-violet-200/80">
-              Öğretmenin işaretlediği öne çıkan teslimler. Proje başına en fazla {data.teacher_pick_limit} yıldız.
+              Öğretmenin işaretlediği öne çıkan teslimler. Challenge başına en fazla {data.teacher_pick_limit} yıldız.
             </p>
             {data.teacher_picks.length === 0 ? (
               <p className="mt-4 text-sm text-violet-900/70 dark:text-violet-200/70">

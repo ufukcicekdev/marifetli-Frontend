@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
-import { kidsRequestPasswordReset, type KidsUserRole } from '@/src/lib/kids-api';
+import { type KidsUserRole } from '@/src/lib/kids-api';
+import { kidsRequestPasswordReset } from '@/src/lib/kids-student-auth';
 import { kidsHomeHref, kidsLoginPortalHref } from '@/src/lib/kids-config';
+import api from '@/src/lib/api';
 
 type Props = {
   title: string;
@@ -13,6 +15,11 @@ type Props = {
   /** Bu sayfadan girişe izin verilen roller */
   allowedRoles: KidsUserRole[];
   redirectTo: string;
+  /** Giriş kimliği alanı etiketi (öğrenci: kullanıcı adı + e-posta). */
+  identifierLabel?: string;
+  identifierPlaceholder?: string;
+  /** `text`: kullanıcı adı; `email`: yalnızca e-posta */
+  identifierInputType?: 'email' | 'text';
   /** Mod içi: çerçevesiz, küçük başlık */
   embedded?: boolean;
   /** Aynı ekranda iki form için benzersiz input id */
@@ -28,6 +35,9 @@ export function KidsRoleLoginForm({
   subtitle,
   allowedRoles,
   redirectTo,
+  identifierLabel = 'E-posta',
+  identifierPlaceholder = 'ornek@email.com',
+  identifierInputType = 'email',
   embedded = false,
   fieldIdSuffix = 'default',
   forgotPasswordEnabled,
@@ -49,6 +59,8 @@ export function KidsRoleLoginForm({
   const idE = `kids-role-email-${fieldIdSuffix}`;
   const idP = `kids-role-password-${fieldIdSuffix}`;
   const showForgot = forgotPasswordEnabled !== undefined ? forgotPasswordEnabled : embedded;
+  /** Yalnızca öğrenci: Kids `/auth/login/`; veli/öğretmen: ana site `/auth/login/` (aynı JWT). */
+  const studentOnly = allowedRoles.length === 1 && allowedRoles[0] === 'student';
 
   useEffect(() => {
     if (!embedded || !showForgot || !onEmbeddedForgotPhaseChange) return;
@@ -73,7 +85,7 @@ export function KidsRoleLoginForm({
     setLoginInlineError(null);
     setLoading(true);
     try {
-      const u = await login(email, password);
+      const u = await login(email, password, { useMainSitePortal: !studentOnly });
       if (!allowedRoles.includes(u.role)) {
         logout();
         notifyLoginError('Bu sayfa seçtiğiniz hesap türü için değil.');
@@ -102,7 +114,11 @@ export function KidsRoleLoginForm({
     setForgotInlineError(null);
     setForgotLoading(true);
     try {
-      await kidsRequestPasswordReset(em);
+      if (studentOnly) {
+        await kidsRequestPasswordReset(em);
+      } else {
+        await api.requestPasswordReset(em);
+      }
       setForgotSent(true);
       toast.success('İstek alındı — e-postanı kontrol et.');
     } catch (err) {
@@ -155,7 +171,9 @@ export function KidsRoleLoginForm({
             </button>
             <h3 className="font-logo text-lg font-bold text-violet-950 dark:text-white">Şifre sıfırlama</h3>
             <p className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-gray-300">
-              Kids hesabına kayıtlı e-postana tek kullanımlık bağlantı göndeririz (öğrenci veya öğretmen fark etmez).
+              {studentOnly
+                ? 'Kids öğrenci hesabına kayıtlı e-postana tek kullanımlık bağlantı göndeririz.'
+                : 'Marifetli hesabına kayıtlı e-postana (ana site ile aynı) şifre sıfırlama bağlantısı göndeririz.'}
             </p>
             <form className="mt-4 space-y-3" onSubmit={onForgotSubmit}>
               {forgotInlineError ? (
@@ -168,12 +186,12 @@ export function KidsRoleLoginForm({
               ) : null}
               <div>
                 <label htmlFor={idE} className="text-xs font-bold text-slate-700 dark:text-gray-200">
-                  E-posta
+                  {identifierLabel}
                 </label>
                 <input
                   id={idE}
-                  type="email"
-                  autoComplete="email"
+                  type={identifierInputType === 'email' ? 'email' : 'text'}
+                  autoComplete={identifierInputType === 'email' ? 'email' : 'username'}
                   required
                   value={email}
                   onChange={(e) => {
@@ -181,7 +199,7 @@ export function KidsRoleLoginForm({
                     setForgotInlineError(null);
                   }}
                   className={inputClass}
-                  placeholder="ornek@email.com"
+                  placeholder={identifierPlaceholder}
                 />
               </div>
               <button
@@ -219,12 +237,12 @@ export function KidsRoleLoginForm({
         ) : null}
         <div>
           <label htmlFor={idE} className="block text-sm font-medium text-slate-700 dark:text-gray-200">
-            E-posta
+            {identifierLabel}
           </label>
           <input
             id={idE}
-            type="email"
-            autoComplete="email"
+            type={identifierInputType === 'email' ? 'email' : 'text'}
+            autoComplete={identifierInputType === 'email' ? 'email' : 'username'}
             required
             value={email}
             onChange={(e) => {
@@ -232,6 +250,7 @@ export function KidsRoleLoginForm({
               setLoginInlineError(null);
             }}
             className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-900 outline-none ring-amber-400 focus:ring-2 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+            placeholder={identifierPlaceholder}
           />
         </div>
         <div>
@@ -320,9 +339,11 @@ export function KidsRoleLoginForm({
             >
               ← Girişe dön
             </button>
-            <h2 className="mt-4 text-xl font-bold text-slate-900 dark:text-white">Şifre sıfırlama (Kids)</h2>
+            <h2 className="mt-4 text-xl font-bold text-slate-900 dark:text-white">Şifre sıfırlama</h2>
             <p className="mt-1 text-sm text-slate-600 dark:text-gray-400">
-              Kayıtlı Kids e-postana sıfırlama bağlantısı gönderilir.
+              {studentOnly
+                ? 'Kids öğrenci e-postana sıfırlama bağlantısı gönderilir.'
+                : 'Marifetli hesap e-postana sıfırlama bağlantısı gönderilir (ana site ile ortak).'}
             </p>
             <form className="mt-6 space-y-4" onSubmit={onForgotSubmit}>
               {forgotInlineError ? (

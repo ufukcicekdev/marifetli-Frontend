@@ -80,7 +80,7 @@ export default function KidsStudentPanelPage() {
             <p className="mt-1 text-xs font-semibold text-emerald-800 dark:text-emerald-200">
               {titles.length === 1
                 ? `“${titles[0]}” için çok güzel demiş.`
-                : `${titles.length} projende harika geri bildirim var.`}
+                : `${titles.length} challenge’ında harika geri bildirim var.`}
             </p>
           </div>
         </div>

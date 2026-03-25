@@ -19,7 +19,7 @@ export default function KidsStudentProjectsPage() {
       const data = await kidsStudentDashboard();
       setAssignments(data.assignments);
     } catch {
-      toast.error('Projeler yüklenemedi');
+      toast.error('Challenges yüklenemedi');
     } finally {
       setLoading(false);
     }

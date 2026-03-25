@@ -43,7 +43,7 @@ export default function KidsTeacherProjectDetailPage() {
       setNotSubmittedStudents(data.not_submitted_students);
       setPickSlots({ used: data.teacher_pick_count, limit: data.teacher_pick_limit });
     } catch {
-      toast.error('Proje veya teslimler yüklenemedi');
+      toast.error('Challenge veya teslimler yüklenemedi');
       if (!silent) router.replace(`${pathPrefix}/ogretmen/sinif/${classId}`);
     } finally {
       if (!silent) setLoading(false);
@@ -202,7 +202,7 @@ export default function KidsTeacherProjectDetailPage() {
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-xs font-bold uppercase tracking-wide text-fuchsia-600 dark:text-fuchsia-400">
-              Proje
+              Challenge
             </p>
             <h1 className="font-logo mt-1 text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">
               {assignment.title}
@@ -232,16 +232,16 @@ export default function KidsTeacherProjectDetailPage() {
 
         <details className="mt-4 rounded-xl border border-violet-100 bg-violet-50/40 open:bg-violet-50/60 dark:border-violet-900/40 dark:bg-violet-950/20 dark:open:bg-violet-950/35">
           <summary className="cursor-pointer list-none px-3 py-2 text-sm font-bold text-violet-800 marker:hidden dark:text-violet-200 [&::-webkit-details-marker]:hidden">
-            Proje detayı — amaç, malzeme, teslim türü (tıkla)
+            Challenge detayı — amaç, malzeme, teslim türü (tıkla)
           </summary>
           <div className="border-t border-violet-100 px-3 pb-3 pt-2 text-sm dark:border-violet-900/50">
             <p className="text-xs text-slate-500 dark:text-gray-400">
               {assignment.require_video && assignment.require_image
-                ? `Görsel veya video · video en fazla ${assignment.video_max_seconds} sn · ${assignment.submission_rounds ?? 1} ayrı proje`
+                ? `Görsel veya video · video en fazla ${assignment.video_max_seconds} sn · ${assignment.submission_rounds ?? 1} ayrı challenge`
                 : assignment.require_video
-                  ? `Video · en fazla ${assignment.video_max_seconds} sn · ${assignment.submission_rounds ?? 1} ayrı proje`
+                  ? `Video · en fazla ${assignment.video_max_seconds} sn · ${assignment.submission_rounds ?? 1} ayrı challenge`
                   : assignment.require_image
-                    ? `Görsel · ${assignment.submission_rounds ?? 1} ayrı proje · tur başına 1 görsel`
+                    ? `Görsel · ${assignment.submission_rounds ?? 1} ayrı challenge · tur başına 1 görsel`
                     : 'Teslim türü serbest'}
             </p>
             {assignment.purpose ? (
@@ -271,7 +271,7 @@ export default function KidsTeacherProjectDetailPage() {
               Mobilde her tur dar bir satırda; üzerine dokununca açılır (accordion). Geniş ekranda turlar yan yana
               grid’de. Öğrenci sol bloka tıklayınca tüm turların özeti (küçük görseller + metin). Karttaki görsele
               tıklayınca tam ekran. Kaydettiğinde sırada bekleyen varsa sonraki teslim açılır. «Teslim etmeyenler» bu
-              projeye hiç teslim göndermemiş kayıtlı öğrencileri gösterir.
+              challenge’a hiç teslim göndermemiş kayıtlı öğrencileri gösterir.
             </p>
           </div>
           <div
@@ -304,7 +304,7 @@ export default function KidsTeacherProjectDetailPage() {
             <p className="mt-6 text-center text-sm text-slate-500 dark:text-gray-400">
               {(assignment.enrolled_student_count ?? 0) === 0
                 ? 'Bu sınıfta kayıtlı öğrenci yok.'
-                : 'Bu projeye henüz teslim göndermemiş öğrenci kalmadı; kayıtlı herkes en az bir teslim yapmış görünüyor.'}
+                : 'Bu challenge’a henüz teslim göndermemiş öğrenci kalmadı; kayıtlı herkes en az bir teslim yapmış görünüyor.'}
             </p>
           ) : (
             <ul className="mt-5 space-y-2">

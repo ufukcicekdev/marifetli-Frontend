@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useId, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import {
@@ -32,9 +32,13 @@ import {
   kidsFormatAssignmentWindowTr,
   kidsIsoToDatetimeLocal,
   kidsWeeklyChampion,
+  kidsTeacherClassPeerChallenges,
+  kidsTeacherReviewPeerChallenge,
   type KidsAssignment,
   type KidsClass,
   type KidsEnrollment,
+  type KidsPeerChallenge,
+  type KidsPeerChallengeStatus,
   type KidsSchool,
   type KidsUser,
 } from '@/src/lib/kids-api';
@@ -63,11 +67,11 @@ const VIDEO_DURATION_OPTIONS: KidsSelectOption[] = [
 ];
 
 const SUBMISSION_ROUNDS_OPTIONS: KidsSelectOption[] = [
-  { value: '1', label: '1 proje' },
-  { value: '2', label: '2 proje' },
-  { value: '3', label: '3 proje' },
-  { value: '4', label: '4 proje' },
-  { value: '5', label: '5 proje' },
+  { value: '1', label: '1 challenge' },
+  { value: '2', label: '2 challenge' },
+  { value: '3', label: '3 challenge' },
+  { value: '4', label: '4 challenge' },
+  { value: '5', label: '5 challenge' },
 ];
 
 const INVITE_DAYS_OPTIONS: KidsSelectOption[] = [
@@ -77,22 +81,46 @@ const INVITE_DAYS_OPTIONS: KidsSelectOption[] = [
   { value: '30', label: '30 gün' },
 ];
 
-type TabId = 'general' | 'invite' | 'students' | 'assignments' | 'stars';
+type TabId = 'general' | 'invite' | 'students' | 'assignments' | 'peer' | 'stars';
+
+const TAB_IDS: TabId[] = ['general', 'invite', 'students', 'assignments', 'peer', 'stars'];
+
+function tabFromSearchParam(raw: string | null): TabId | null {
+  if (!raw) return null;
+  return TAB_IDS.includes(raw as TabId) ? (raw as TabId) : null;
+}
 
 const TABS: { id: TabId; label: string; icon: string }[] = [
   { id: 'general', label: 'Sınıf', icon: '⚙️' },
   { id: 'invite', label: 'Davet', icon: '✉️' },
   { id: 'students', label: 'Öğrenciler', icon: '🧒' },
-  { id: 'assignments', label: 'Projeler', icon: '📝' },
+  { id: 'assignments', label: 'Challenges', icon: '📝' },
+  { id: 'peer', label: 'Yarışmalar', icon: '🏆' },
   { id: 'stars', label: 'Haftanın yıldızı', icon: '⭐' },
 ];
+
+function peerRowStatusTr(s: KidsPeerChallengeStatus): string {
+  switch (s) {
+    case 'pending_teacher':
+      return 'Onay bekliyor';
+    case 'rejected':
+      return 'Reddedildi';
+    case 'active':
+      return 'Devam ediyor';
+    case 'ended':
+      return 'Sona erdi';
+    default:
+      return s;
+  }
+}
 
 export default function KidsTeacherClassPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const classId = Number(params.id);
   const { user, loading: authLoading, pathPrefix } = useKidsAuth();
-  const [tab, setTab] = useState<TabId>('general');
+  const [tab, setTab] = useState<TabId>(() => tabFromSearchParam(searchParams.get('tab')) ?? 'general');
 
   const [cls, setCls] = useState<KidsClass | null>(null);
   const [schools, setSchools] = useState<KidsSchool[]>([]);
@@ -102,6 +130,9 @@ export default function KidsTeacherClassPage() {
     week_start: string;
     top: { student: KidsUser; submission_count: number }[];
   } | null>(null);
+  const [peerChallenges, setPeerChallenges] = useState<KidsPeerChallenge[]>([]);
+  const [peerLoading, setPeerLoading] = useState(false);
+  const [rejectNoteById, setRejectNoteById] = useState<Record<number, string>>({});
 
   const [editName, setEditName] = useState('');
   const [editClassNonStandard, setEditClassNonStandard] = useState(false);
@@ -120,14 +151,14 @@ export default function KidsTeacherClassPage() {
   const [creatingClassLink, setCreatingClassLink] = useState(false);
   /** Sunucu `KIDS_INVITE_EMAIL_ENABLED` — kapalıyken e-posta davet formu gösterilmez. */
   const [inviteEmailEnabled, setInviteEmailEnabled] = useState(true);
-  /** Sunucu `KIDS_ASSIGNMENT_VIDEO_ENABLED` — kapalıyken projede video teslim seçeneği yok. */
+  /** Sunucu `KIDS_ASSIGNMENT_VIDEO_ENABLED` — kapalıyken challenge’da video teslim seçeneği yok. */
   const [assignmentVideoEnabled, setAssignmentVideoEnabled] = useState(true);
 
   const [asgTitle, setAsgTitle] = useState('');
   const [asgPurpose, setAsgPurpose] = useState('');
   const [asgMaterials, setAsgMaterials] = useState('');
   const [asgVideoSec, setAsgVideoSec] = useState<60 | 120 | 180>(120);
-  /** Aynı konu altında öğrencinin teslim edeceği ayrı proje sayısı (1–5). */
+  /** Aynı konu altında öğrencinin teslim edeceği ayrı challenge sayısı (1–5). */
   const [asgSubmissionRounds, setAsgSubmissionRounds] = useState<1 | 2 | 3 | 4 | 5>(1);
   /** Öğrenci teslim türü: görsel/adım adım veya video (ikisi birden değil). */
   const [asgMediaType, setAsgMediaType] = useState<'image' | 'video'>('image');
@@ -170,6 +201,11 @@ export default function KidsTeacherClassPage() {
   useEffect(() => {
     setAsgCloseAt((v) => v || kidsDatetimeLocalDefaultClose(7));
   }, []);
+
+  useEffect(() => {
+    const t = tabFromSearchParam(searchParams.get('tab'));
+    if (t) setTab(t);
+  }, [searchParams]);
 
   const loadAll = useCallback(async () => {
     if (!Number.isFinite(classId)) return;
@@ -255,7 +291,25 @@ export default function KidsTeacherClassPage() {
     }
   }, [assignmentVideoEnabled, editMediaType]);
 
-  /** Planlanmış / yayından kalkmış: tüm alanlar. Yayındaki: başlangıç + proje tur sayısı kilitli (backend ile aynı mantık). */
+  const loadPeerChallenges = useCallback(async () => {
+    if (!Number.isFinite(classId)) return;
+    setPeerLoading(true);
+    try {
+      const list = await kidsTeacherClassPeerChallenges(classId);
+      setPeerChallenges(list);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Yarışmalar yüklenemedi');
+    } finally {
+      setPeerLoading(false);
+    }
+  }, [classId]);
+
+  useEffect(() => {
+    if (tab !== 'peer' || !cls) return;
+    void loadPeerChallenges();
+  }, [tab, cls, loadPeerChallenges]);
+
+  /** Planlanmış / yayından kalkmış: tüm alanlar. Yayındaki: başlangıç + challenge tur sayısı kilitli (backend ile aynı mantık). */
   function isAssignmentEditFullyFree(a: KidsAssignment): boolean {
     if (!a.is_published) return true;
     const raw = a.submission_opens_at;
@@ -321,11 +375,11 @@ export default function KidsTeacherClassPage() {
           ) : null}
           <p className="mt-1 text-xs text-slate-500 dark:text-gray-400">
             {a.require_video && a.require_image
-              ? `Görsel veya video · video en fazla ${a.video_max_seconds} sn · ${a.submission_rounds ?? 1} ayrı proje`
+              ? `Görsel veya video · video en fazla ${a.video_max_seconds} sn · ${a.submission_rounds ?? 1} ayrı challenge`
               : a.require_video
-                ? `Video teslimi · en fazla ${a.video_max_seconds} sn · ${a.submission_rounds ?? 1} ayrı proje`
+                ? `Video teslimi · en fazla ${a.video_max_seconds} sn · ${a.submission_rounds ?? 1} ayrı challenge`
                 : a.require_image
-                  ? `Görsel teslim · ${a.submission_rounds ?? 1} ayrı proje`
+                  ? `Görsel teslim · ${a.submission_rounds ?? 1} ayrı challenge`
                   : 'Teslim türü serbest'}
           </p>
           {winLabel ? (
@@ -481,7 +535,7 @@ export default function KidsTeacherClassPage() {
   async function createAssignment(e: React.FormEvent) {
     e.preventDefault();
     if (!asgTitle.trim()) {
-      toast.error('Proje başlığı zorunludur.');
+      toast.error('Challenge başlığı zorunludur.');
       return;
     }
     const closeIso = kidsDatetimeLocalToIso(asgCloseAt);
@@ -520,11 +574,11 @@ export default function KidsTeacherClassPage() {
       const plannedLater = new Date(openIso).getTime() > Date.now();
       toast.success(
         plannedLater
-          ? 'Proje planlandı. Öğrenciler başlangıç saatine kadar görmeyecek; saat gelince kısa süre içinde haberdar edilirler.'
-          : 'Proje öğrencilere açıldı; panelde görebilirler.',
+          ? 'Challenge planlandı. Öğrenciler başlangıç saatine kadar görmeyecek; saat gelince kısa süre içinde haberdar edilirler.'
+          : 'Challenge öğrencilere açıldı; panelde görebilirler.',
       );
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Proje eklenemedi');
+      toast.error(err instanceof Error ? err.message : 'Challenge eklenemedi');
     } finally {
       setAsgSaving(false);
     }
@@ -535,7 +589,7 @@ export default function KidsTeacherClassPage() {
     setEditAssignmentError(null);
     if (!editAssignment) return;
     if (!editTitle.trim()) {
-      setEditAssignmentError('Proje başlığı zorunludur.');
+      setEditAssignmentError('Challenge başlığı zorunludur.');
       return;
     }
     const closeIso = kidsDatetimeLocalToIso(editCloseAt);
@@ -572,7 +626,7 @@ export default function KidsTeacherClassPage() {
       setAssignments((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
       setEditAssignment(null);
       setEditAssignmentError(null);
-      toast.success('Proje güncellendi.');
+      toast.success('Challenge güncellendi.');
     } catch (err) {
       setEditAssignmentError(err instanceof Error ? err.message : 'Güncellenemedi');
     } finally {
@@ -589,10 +643,35 @@ export default function KidsTeacherClassPage() {
     }
   }
 
+  async function reviewPeerChallengeRow(chId: number, decision: 'approve' | 'reject') {
+    try {
+      await kidsTeacherReviewPeerChallenge(classId, chId, {
+        decision,
+        rejection_note: rejectNoteById[chId] ?? '',
+      });
+      toast.success(decision === 'approve' ? 'Yarışma onaylandı.' : 'Öneri reddedildi.');
+      setRejectNoteById((prev) => {
+        const next = { ...prev };
+        delete next[chId];
+        return next;
+      });
+      await loadPeerChallenges();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'İşlem yapılamadı');
+    }
+  }
+
+  function peerStarterLabel(ch: KidsPeerChallenge) {
+    if (!ch.created_by_student) return '—';
+    const en = students.find((e) => e.student.id === ch.created_by_student);
+    if (!en) return `Öğrenci #${ch.created_by_student}`;
+    return [en.student.first_name, en.student.last_name].filter(Boolean).join(' ') || en.student.email;
+  }
+
   async function removeStudentFromClass(en: KidsEnrollment) {
     const label = [en.student.first_name, en.student.last_name].filter(Boolean).join(' ').trim() || en.student.email;
     const ok = window.confirm(
-      `${label} bu sınıftan çıkarılsın mı? Bu sınıfa ait proje teslimleri de silinir; öğrenci hesabı silinmez.`,
+      `${label} bu sınıftan çıkarılsın mı? Bu sınıfa ait challenge teslimleri de silinir; öğrenci hesabı silinmez.`,
     );
     if (!ok) return;
     setRemovingEnrollmentId(en.id);
@@ -602,7 +681,7 @@ export default function KidsTeacherClassPage() {
       try {
         setAssignments(await kidsListAssignments(classId));
       } catch {
-        /* proje özetleri güncellenemedi */
+        /* challenge özetleri güncellenemedi */
       }
       toast.success('Öğrenci sınıftan çıkarıldı');
     } catch (err) {
@@ -615,7 +694,7 @@ export default function KidsTeacherClassPage() {
   async function deleteEntireClass() {
     if (!cls) return;
     const ok = window.confirm(
-      `“${cls.name}” sınıfı kalıcı olarak silinsin mi? Öğrenci kayıtları, projeler ve teslimler silinir. Geri alınamaz.`,
+      `“${cls.name}” sınıfı kalıcı olarak silinsin mi? Öğrenci kayıtları, challenge’lar ve teslimler silinir. Geri alınamaz.`,
     );
     if (!ok) return;
     setDeletingClass(true);
@@ -649,7 +728,7 @@ export default function KidsTeacherClassPage() {
   const classLocationLine = kidsClassLocationLine(cls);
 
   return (
-    <KidsPanelMax className={tab === 'assignments' ? '!max-w-6xl' : ''}>
+    <KidsPanelMax className={tab === 'assignments' || tab === 'peer' ? '!max-w-6xl' : ''}>
       <div className="mb-6">
         <Link
           href={`${pathPrefix}/ogretmen/panel`}
@@ -688,7 +767,7 @@ export default function KidsTeacherClassPage() {
             🧒 {students.length} öğrenci
           </span>
           <span className="rounded-2xl bg-amber-100 px-3 py-2 font-bold text-amber-900 dark:bg-amber-950/60 dark:text-amber-100">
-            📝 {assignments.length} proje
+            📝 {assignments.length} challenge
           </span>
         </div>
       </div>
@@ -843,7 +922,7 @@ export default function KidsTeacherClassPage() {
           <div className="mt-10 border-t border-rose-200/80 pt-6 dark:border-rose-900/50">
             <h3 className="font-logo text-base font-bold text-rose-900 dark:text-rose-100">Tehlikeli bölge</h3>
             <p className="mt-2 text-sm text-slate-600 dark:text-gray-400">
-              Sınıfı silersen bu sınıfa bağlı tüm öğrenci kayıtları, projeler ve teslimler kalıcı olarak kaldırılır.
+              Sınıfı silersen bu sınıfa bağlı tüm öğrenci kayıtları, challenge’lar ve teslimler kalıcı olarak kaldırılır.
             </p>
             <KidsSecondaryButton
               type="button"
@@ -862,8 +941,9 @@ export default function KidsTeacherClassPage() {
           <h2 className="font-logo text-lg font-bold text-sky-950 dark:text-sky-50">Veli daveti</h2>
           <p className="mt-2 text-sm leading-relaxed text-sky-900/85 dark:text-sky-100/85">
             Velilerden tek tek e-posta istemek yerine <strong>sınıfa özel bir kayıt linki</strong> oluşturup
-            WhatsApp, SMS veya sınıf grubunda paylaşabilirsin. Veli linke tıklayınca hangi öğretmenin hangi
-            sınıfa davet ettiği görünür; öğrenci e-postası ve ad-soyad kendileri girer.
+            WhatsApp, SMS veya sınıf grubunda paylaşabilirsin. Linke tıklayan veli kendi e-postası, adı-soyadı,
+            telefonu ve <strong>veli şifresini</strong> girer; ardından çocuğun adı-soyadı ve{' '}
+            <strong>çocuk şifresi</strong> tanımlanır. Çocuk paneline kullanıcı adı veya e-posta ile giriş yapılır.
           </p>
 
           <div className="mt-6 space-y-4 rounded-2xl border-2 border-sky-200/80 bg-white/70 p-5 dark:border-sky-800/50 dark:bg-sky-950/20">
@@ -955,8 +1035,8 @@ export default function KidsTeacherClassPage() {
           <h2 className="font-logo text-lg font-bold text-amber-950 dark:text-amber-50">Kayıtlı öğrenciler</h2>
           {students.length > 0 ? (
             <p className="mt-2 text-xs text-amber-900/85 dark:text-amber-100/85">
-              Her satırda, bu sınıfta yayında kaç proje olduğu ve öğrencinin bunlardan kaçına en az bir teslim gönderdiği gösterilir
-              (aynı projeye birden fazla teslim yine tek sayılır).
+              Her satırda, bu sınıfta yayında kaç challenge olduğu ve öğrencinin bunlardan kaçına en az bir teslim gönderdiği gösterilir
+              (aynı challenge’a birden fazla teslim yine tek sayılır).
             </p>
           ) : null}
           {students.length === 0 ? (
@@ -981,7 +1061,7 @@ export default function KidsTeacherClassPage() {
                     <p className="text-sm text-slate-600 dark:text-gray-400">{en.student.email}</p>
                     {typeof en.class_published_assignment_count === 'number' ? (
                       <p className="mt-2 text-xs font-semibold text-violet-800 dark:text-violet-200">
-                        Yayınlanan proje: {en.class_published_assignment_count}
+                        Yayınlanan challenge: {en.class_published_assignment_count}
                         {' · '}
                         Teslim edilen: {en.assignments_submitted_count ?? 0}
                         <span className="font-black text-fuchsia-700 dark:text-fuchsia-300">
@@ -1014,12 +1094,12 @@ export default function KidsTeacherClassPage() {
       {tab === 'assignments' && (
         <div className="flex min-h-0 flex-col gap-3 lg:max-h-[min(720px,calc(100dvh-13rem))] lg:min-h-[380px]">
           <p className="text-sm text-slate-600 dark:text-gray-400 lg:hidden">
-            Solda yeni proje, sağda özet ve teslim oranı (ör. 3/20). Detay için projeye gir.
+            Solda yeni challenge, sağda özet ve teslim oranı (ör. 3/20). Detay için challenge’a gir.
           </p>
           <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-2 lg:gap-6 lg:overflow-hidden">
             <KidsCard className="flex min-h-[260px] flex-col overflow-hidden lg:min-h-0">
               <div className="shrink-0">
-                <h2 className="font-logo text-lg font-bold text-slate-900 dark:text-white">Yeni proje</h2>
+                <h2 className="font-logo text-lg font-bold text-slate-900 dark:text-white">Yeni challenge</h2>
                 <p className="mt-1 text-sm text-slate-600 dark:text-gray-400">
                   Görsel teslimde öğrenci her tur için 1 görsel yükler.
                   {assignmentVideoEnabled
@@ -1062,7 +1142,7 @@ export default function KidsTeacherClassPage() {
                 id={asgOpenAtId}
                 label="Teslime başlangıç tarihi ve saati"
                 required
-                hint="Başlangıç zamanı şu andan sonraysa proje planlanmış listede durur; öğrenciler o saate kadar görmez, saat gelince haberdar edilir. Şimdiki veya geçmiş bir saat seçersen proje öğrencilere hemen açık sayılır."
+                hint="Başlangıç zamanı şu andan sonraysa challenge planlanmış listede durur; öğrenciler o saate kadar görmez, saat gelince haberdar edilir. Şimdiki veya geçmiş bir saat seçersen challenge öğrencilere hemen açık sayılır."
               >
                 <KidsDateTimeField
                   id={asgOpenAtId}
@@ -1091,7 +1171,7 @@ export default function KidsTeacherClassPage() {
                   Kurallar
                 </legend>
                 <p className="mt-2 text-sm text-slate-600 dark:text-gray-400">
-                  Öğrenci projesini nasıl teslim etsin?
+                  Öğrenci challenge’ını nasıl teslim etsin?
                 </p>
                 <div
                   className={`mt-3 grid gap-3 ${assignmentVideoEnabled ? 'sm:grid-cols-2' : 'sm:grid-cols-1'}`}
@@ -1112,7 +1192,7 @@ export default function KidsTeacherClassPage() {
                       Görsel / adım adım
                     </span>
                     <span className="mt-1 block text-xs text-slate-600 dark:text-gray-400">
-                      Metin ve görselle teslim; her proje turunda 1 görsel.
+                      Metin ve görselle teslim; her challenge turunda 1 görsel.
                     </span>
                   </button>
                   {assignmentVideoEnabled ? (
@@ -1155,10 +1235,10 @@ export default function KidsTeacherClassPage() {
                 ) : null}
                 <div className="mt-4">
                   <label htmlFor="asg-submission-rounds" className={`${kidsLabelClass} block`}>
-                    Bu konu için kaç ayrı proje teslim edilsin?
+                    Bu konu için kaç ayrı challenge teslim edilsin?
                   </label>
                   <p className="mb-2 text-xs text-slate-500 dark:text-gray-400">
-                    Öğrenci panelinde &quot;Proje 1&quot;, &quot;Proje 2&quot; şeklinde görünür (1–5).
+                    Öğrenci panelinde &quot;Challenge 1&quot;, &quot;Challenge 2&quot; şeklinde görünür (1–5).
                   </p>
                   <KidsSelect
                     id="asg-submission-rounds"
@@ -1169,7 +1249,7 @@ export default function KidsTeacherClassPage() {
                 </div>
               </fieldset>
               <KidsPrimaryButton type="submit" disabled={asgSaving}>
-                {asgSaving ? 'Kaydediliyor…' : 'Projeyi yayınla'}
+                {asgSaving ? 'Kaydediliyor…' : 'Challenge’ı yayınla'}
               </KidsPrimaryButton>
                 </form>
               </div>
@@ -1177,9 +1257,9 @@ export default function KidsTeacherClassPage() {
 
             <KidsCard className="flex min-h-[280px] flex-col overflow-hidden lg:min-h-0">
               <div className="shrink-0">
-                <h2 className="font-logo text-lg font-bold text-slate-900 dark:text-white">Projeler</h2>
+                <h2 className="font-logo text-lg font-bold text-slate-900 dark:text-white">Challenges</h2>
                 <p className="mt-1 text-xs text-slate-500 dark:text-gray-400">
-                  <strong className="font-semibold text-slate-700 dark:text-gray-300">Planlanmış</strong> projeler
+                  <strong className="font-semibold text-slate-700 dark:text-gray-300">Planlanmış</strong> challenge’lar
                   öğrencilere başlangıç saatinde görünür.{' '}
                   <strong className="font-semibold text-slate-700 dark:text-gray-300">Öğrencilere açık</strong> olanlar
                   şu an öğrenci panelinde. Her kartta soldaki sayı teslim eden, sağdaki sayı sınıftaki öğrenci adedi.
@@ -1187,7 +1267,7 @@ export default function KidsTeacherClassPage() {
               </div>
               <div className="mt-3 min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain pr-1 [-webkit-overflow-scrolling:touch]">
                 {assignments.length === 0 ? (
-                  <p className="text-sm text-slate-500 dark:text-gray-400">Henüz proje yok.</p>
+                  <p className="text-sm text-slate-500 dark:text-gray-400">Henüz challenge yok.</p>
                 ) : (
                   <>
                     <div>
@@ -1198,7 +1278,7 @@ export default function KidsTeacherClassPage() {
                         Başlangıç saati gelince öğrencilere haber gider; nadiren birkaç dakika gecikebilir.
                       </p>
                       {plannedAssignments.length === 0 ? (
-                        <p className="mt-2 text-sm text-slate-500 dark:text-gray-400">Şu an planlanmış proje yok.</p>
+                        <p className="mt-2 text-sm text-slate-500 dark:text-gray-400">Şu an planlanmış challenge yok.</p>
                       ) : (
                         <ul className="mt-2 space-y-3">
                           {plannedAssignments.map((a) => (
@@ -1237,6 +1317,131 @@ export default function KidsTeacherClassPage() {
             </KidsCard>
           </div>
         </div>
+      )}
+
+      {tab === 'peer' && (
+        <KidsCard tone="emerald">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h2 className="font-logo text-lg font-bold text-emerald-950 dark:text-emerald-50">
+                Sınıf yarışmaları
+              </h2>
+              <p className="mt-1 text-sm text-emerald-900/85 dark:text-emerald-100/85">
+                Öğrencilerin arkadaş yarışması önerileri burada. Onaylayınca başlatan sınıf arkadaşlarına davet
+                gönderebilir. (Öğretmen ödevleri &quot;Challenges&quot; sekmesinde.)
+              </p>
+            </div>
+            <KidsSecondaryButton type="button" disabled={peerLoading} onClick={() => void loadPeerChallenges()}>
+              {peerLoading ? 'Yükleniyor…' : 'Yenile'}
+            </KidsSecondaryButton>
+          </div>
+          {peerLoading && peerChallenges.length === 0 ? (
+            <p className="mt-6 text-sm text-emerald-800 dark:text-emerald-200">Yükleniyor…</p>
+          ) : peerChallenges.length === 0 ? (
+            <p className="mt-6 text-sm text-emerald-800/80 dark:text-emerald-200/90">
+              Bu sınıfta henüz yarışma kaydı yok.
+            </p>
+          ) : (
+            <div className="mt-6 space-y-8">
+              {(() => {
+                const pending = peerChallenges.filter(
+                  (c) => c.status === 'pending_teacher' && c.source === 'student',
+                );
+                const pendingIds = new Set(pending.map((c) => c.id));
+                const other = peerChallenges.filter((c) => !pendingIds.has(c.id));
+                return (
+                  <>
+                    {pending.length > 0 ? (
+                      <div className="space-y-4">
+                        <h3 className="text-xs font-black uppercase tracking-wide text-amber-800 dark:text-amber-200">
+                          Onay bekleyen öğrenci önerileri ({pending.length})
+                        </h3>
+                        <ul className="space-y-4">
+                          {pending.map((ch) => (
+                            <li
+                              key={ch.id}
+                              className="rounded-2xl border-2 border-amber-200/90 bg-amber-50/90 p-4 dark:border-amber-800 dark:bg-amber-950/40"
+                            >
+                              <p className="font-logo text-lg font-bold text-amber-950 dark:text-amber-50">{ch.title}</p>
+                              <p className="mt-1 text-xs font-semibold text-amber-900 dark:text-amber-200">
+                                Başlatan: {peerStarterLabel(ch)}
+                              </p>
+                              <p className="mt-1 text-xs text-amber-900/90 dark:text-amber-100/85">
+                                Challenge adımı sayısı: {Math.max(1, ch.submission_rounds ?? 1)}
+                              </p>
+                              {ch.starts_at || ch.ends_at ? (
+                                <p className="mt-1 text-xs font-semibold text-amber-900 dark:text-amber-100">
+                                  {ch.starts_at
+                                    ? `Başlangıç: ${new Date(ch.starts_at).toLocaleString('tr-TR')}`
+                                    : null}
+                                  {ch.starts_at && ch.ends_at ? ' · ' : null}
+                                  {ch.ends_at
+                                    ? `Bitiş: ${new Date(ch.ends_at).toLocaleString('tr-TR')}`
+                                    : null}
+                                </p>
+                              ) : null}
+                              {ch.description ? (
+                                <p className="mt-2 whitespace-pre-wrap text-sm text-amber-950/90 dark:text-amber-100/90">
+                                  {ch.description}
+                                </p>
+                              ) : null}
+                              {ch.rules_or_goal ? (
+                                <p className="mt-2 whitespace-pre-wrap text-sm text-amber-900/85 dark:text-amber-100/85">
+                                  <span className="font-bold">Hedef / kurallar:</span> {ch.rules_or_goal}
+                                </p>
+                              ) : null}
+                              <label className="mt-3 block text-xs font-bold text-amber-900 dark:text-amber-200">
+                                Red nedeni (isteğe bağlı)
+                                <textarea
+                                  value={rejectNoteById[ch.id] ?? ''}
+                                  onChange={(e) =>
+                                    setRejectNoteById((prev) => ({ ...prev, [ch.id]: e.target.value }))
+                                  }
+                                  className={`${kidsTextareaClass} mt-1 min-h-[72px]`}
+                                  maxLength={600}
+                                  placeholder="Öğrenciye görünür kısa not"
+                                />
+                              </label>
+                              <div className="mt-3 flex flex-wrap gap-2">
+                                <KidsPrimaryButton type="button" onClick={() => void reviewPeerChallengeRow(ch.id, 'approve')}>
+                                  Onayla
+                                </KidsPrimaryButton>
+                                <KidsSecondaryButton type="button" onClick={() => void reviewPeerChallengeRow(ch.id, 'reject')}>
+                                  Reddet
+                                </KidsSecondaryButton>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                    {other.length > 0 ? (
+                      <div className="space-y-3">
+                        <h3 className="text-xs font-black uppercase tracking-wide text-emerald-800 dark:text-emerald-200">
+                          Diğer kayıtlar
+                        </h3>
+                        <ul className="space-y-2">
+                          {other.map((ch) => (
+                            <li
+                              key={ch.id}
+                              className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-200/80 bg-white/80 px-3 py-2 dark:border-emerald-900 dark:bg-emerald-950/20"
+                            >
+                              <span className="font-semibold text-emerald-950 dark:text-emerald-50">{ch.title}</span>
+                              <span className="text-xs font-bold text-emerald-800 dark:text-emerald-200">
+                                {peerRowStatusTr(ch.status)}
+                                {ch.source === 'teacher' ? ' · Öğretmen' : ''}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                  </>
+                );
+              })()}
+            </div>
+          )}
+        </KidsCard>
       )}
 
       {tab === 'stars' && (
@@ -1297,7 +1502,7 @@ export default function KidsTeacherClassPage() {
 
       {editAssignment ? (
         <KidsCenteredModal
-          title="Projeyi düzenle"
+          title="Challenge’ı düzenle"
           onClose={() => {
             if (!editSaving) {
               setEditAssignment(null);
@@ -1313,8 +1518,8 @@ export default function KidsTeacherClassPage() {
               <>
                 <p className="mb-4 text-sm text-slate-600 dark:text-gray-400">
                   {editFullyFree
-                    ? 'Planlanmış veya taslak projede tüm alanları değiştirebilirsin.'
-                    : 'Öğrencilere açık projede teslim başlangıcı ve proje (tur) sayısı sabittir; diğer alanları güncelleyebilirsin.'}
+                    ? 'Planlanmış veya taslak challenge’da tüm alanları değiştirebilirsin.'
+                    : 'Öğrencilere açık challenge’da teslim başlangıcı ve challenge (tur) sayısı sabittir; diğer alanları güncelleyebilirsin.'}
                 </p>
                 {editAssignmentError ? (
                   <div
@@ -1358,8 +1563,8 @@ export default function KidsTeacherClassPage() {
                     required={editFullyFree}
                     hint={
                       editFullyFree
-                        ? 'Planlanmış projede başlangıç ve son teslim zorunludur; başlangıç, son teslimden önce olmalıdır.'
-                        : 'Bu proje öğrencilere açık; başlangıç tarihini değiştirmek için projenin planlanmış olması gerekir.'
+                        ? 'Planlanmış challenge’da başlangıç ve son teslim zorunludur; başlangıç, son teslimden önce olmalıdır.'
+                        : 'Bu challenge öğrencilere açık; başlangıç tarihini değiştirmek için challenge’ın planlanmış olması gerekir.'
                     }
                   >
                     <KidsDateTimeField
@@ -1369,7 +1574,7 @@ export default function KidsTeacherClassPage() {
                       disabled={!editFullyFree}
                       required={editFullyFree}
                       placeholder={
-                        editFullyFree ? 'Başlangıç tarih ve saatini seç' : 'Kilitli — planlanmış projede düzenlenebilir'
+                        editFullyFree ? 'Başlangıç tarih ve saatini seç' : 'Kilitli — planlanmış challenge’da düzenlenebilir'
                       }
                     />
                   </KidsFormField>
@@ -1392,7 +1597,7 @@ export default function KidsTeacherClassPage() {
                       Kurallar
                     </legend>
                     <p className="mt-2 text-sm text-slate-600 dark:text-gray-400">
-                      Öğrenci projesini nasıl teslim etsin?
+                      Öğrenci challenge’ını nasıl teslim etsin?
                     </p>
                     <div
                       className={`mt-3 grid gap-3 ${assignmentVideoEnabled ? 'sm:grid-cols-2' : 'sm:grid-cols-1'}`}
@@ -1456,12 +1661,12 @@ export default function KidsTeacherClassPage() {
                     ) : null}
                     <div className="mt-4">
                       <label htmlFor="edit-asg-submission-rounds" className={`${kidsLabelClass} block`}>
-                        Bu konu için kaç ayrı proje teslim edilsin?
+                        Bu konu için kaç ayrı challenge teslim edilsin?
                       </label>
                       <p className="mb-2 text-xs text-slate-500 dark:text-gray-400">
                         {editFullyFree
-                          ? 'Öğrenci panelinde Proje 1, Proje 2 şeklinde görünür (1–5).'
-                          : 'Yayındaki projede bu sayı değiştirilemez.'}
+                          ? 'Öğrenci panelinde Challenge 1, Challenge 2 şeklinde görünür (1–5).'
+                          : 'Yayındaki challenge’da bu sayı değiştirilemez.'}
                       </p>
                       <KidsSelect
                         id="edit-asg-submission-rounds"

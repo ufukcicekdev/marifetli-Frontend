@@ -74,7 +74,7 @@ export default function KidsFreestylePage() {
     <div className="mx-auto max-w-3xl space-y-10">
       <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Serbest kürsü</h1>
-        <p className="text-slate-600 dark:text-gray-300">Sınıf projelerinden ayrı, kendi çalışmalarını burada paylaş.</p>
+        <p className="text-slate-600 dark:text-gray-300">Sınıf challenge’larından ayrı, kendi çalışmalarını burada paylaş.</p>
       </div>
 
       <section className="rounded-2xl border border-amber-200 bg-white p-6 dark:border-amber-800/50 dark:bg-gray-900/80">

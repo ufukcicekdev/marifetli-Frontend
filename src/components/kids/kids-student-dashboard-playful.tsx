@@ -111,7 +111,7 @@ export function KidsStudentDashboardPlayful({
             Merhaba {user.first_name || 'kahraman'}! 👋
           </h1>
           <p className="mx-auto mt-2 max-w-md text-center text-sm font-medium text-slate-600 dark:text-gray-300">
-            Rozet yolunu takip et, projelerini ayrı sayfadan yönet — öğretmenin yıldızı seninle.
+            Rozet yolunu takip et, challenge’larını ayrı sayfadan yönet — öğretmenin yıldızı seninle.
           </p>
 
           {stage ? (
@@ -174,16 +174,16 @@ export function KidsStudentDashboardPlayful({
       <section className="rounded-3xl border-2 border-violet-300/80 bg-gradient-to-br from-violet-100/90 via-fuchsia-50/80 to-amber-50/70 p-1 shadow-lg dark:border-violet-800 dark:from-violet-950/50 dark:via-fuchsia-950/30 dark:to-amber-950/20">
         <div className="rounded-[1.35rem] bg-white/95 px-5 py-5 dark:bg-gray-950/90">
           <h2 className="font-logo flex items-center gap-2 text-lg font-black text-violet-900 dark:text-violet-100">
-            <span aria-hidden>🎯</span> Projeler
+            <span aria-hidden>🎯</span> Challenges
           </h2>
           <p className="mt-1 text-sm font-medium text-slate-600 dark:text-gray-300">
-            Çok adımlı projelerde her teslim ayrı kaydedilir. Tüm listeyi ve ilerlemeni buradan aç.
+            Çok adımlı challenge’larda her teslim ayrı kaydedilir. Tüm listeyi ve ilerlemeni buradan aç.
           </p>
           <Link
             href={`${pathPrefix}/ogrenci/projeler`}
             className="mt-4 flex min-h-12 w-full items-center justify-center rounded-2xl bg-gradient-to-r from-violet-600 via-fuchsia-600 to-amber-500 px-6 py-3 text-center text-sm font-black text-white shadow-md shadow-fuchsia-500/25 transition hover:brightness-105"
           >
-            Projelerime git →
+            Challenges’a git →
           </Link>
         </div>
       </section>

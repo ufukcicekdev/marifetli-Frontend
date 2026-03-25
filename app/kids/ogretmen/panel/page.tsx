@@ -143,7 +143,7 @@ export default function KidsTeacherPanelPage() {
       <KidsPageHeader
         emoji="👩‍🏫"
         title={`Merhaba, ${firstName}!`}
-        subtitle="Önce okulunu tanımla, sonra sınıf açarken o okulu seç. Davet ve projeler sınıf sayfasından yönetilir."
+        subtitle="Önce okulunu tanımla, sonra sınıf açarken o okulu seç. Davet ve challenge’lar sınıf sayfasından yönetilir."
       />
 
       <div className="grid gap-8 lg:grid-cols-12 lg:gap-10">
@@ -336,7 +336,7 @@ export default function KidsTeacherPanelPage() {
                       {creating ? 'Oluşturuluyor…' : 'Sınıfı oluştur'}
                     </KidsPrimaryButton>
                     <p className="text-center text-xs text-emerald-800/70 dark:text-emerald-200/70 sm:max-w-[14rem] sm:text-left">
-                      Sonra sınıfa tıklayıp veli daveti ve projeleri ekleyebilirsin.
+                      Sonra sınıfa tıklayıp veli daveti ve challenge’ları ekleyebilirsin.
                     </p>
                   </div>
                 </form>

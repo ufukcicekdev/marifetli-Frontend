@@ -33,7 +33,7 @@ const VALUE_ITEMS = [
   },
   {
     title: 'Marifetli Kids',
-    description: 'Okul projeleri, rozet yolu — öğretmen ve öğrenciler için güvenli alan.',
+    description: 'Okul challenge’ları, rozet yolu — öğretmen ve öğrenciler için güvenli alan.',
     href: SITE_KIDS_HREF,
     icon: '🎒',
   },
@@ -80,10 +80,10 @@ export function HomeHero() {
             </span>
             <div className="min-w-0">
               <p className="text-sm font-bold text-gray-900 dark:text-white sm:text-base">
-                Marifetli Kids — okul projeleri ve rozetler
+                Marifetli Kids — okul challenge’ları ve rozetler
               </p>
               <p className="mt-0.5 text-xs text-gray-600 dark:text-gray-400 sm:text-sm">
-                Öğretmen ve öğrenci hesaplarıyla güvenli proje alanı; giriş ve davetler Kids ana sayfasından.
+                Öğretmen ve öğrenci hesaplarıyla güvenli challenge alanı; giriş ve davetler Kids ana sayfasından.
               </p>
             </div>
           </div>

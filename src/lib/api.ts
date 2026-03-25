@@ -95,6 +95,15 @@ class ApiService {
 
             const { access } = response.data;
             localStorage.setItem('access_token', access);
+            try {
+              const { useAuthStore } = await import('../stores/auth-store');
+              const s = useAuthStore.getState();
+              if (s.isAuthenticated && s.user) {
+                useAuthStore.setState({ accessToken: access });
+              }
+            } catch {
+              /* */
+            }
 
             originalRequest.headers.Authorization = `Bearer ${access}`;
             return this.axiosInstance(originalRequest);

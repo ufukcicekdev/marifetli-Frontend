@@ -5,7 +5,7 @@ import { KidsPrimaryButton } from '@/src/components/kids/kids-ui';
 
 type Props = {
   open: boolean;
-  /** Kutlanan proje / yıldız etiketleri */
+  /** Kutlanan challenge / yıldız etiketleri */
   labels: string[];
   onClose: () => void;
 };
@@ -56,7 +56,7 @@ export function KidsStudentStarOverlay({ open, labels, onClose }: Props) {
             Öğretmen yıldızı!
           </h2>
           <p className="mt-2 text-sm font-semibold text-violet-900/90 dark:text-violet-100/90">
-            Bu projede öne çıkan teslimlerden birisin — aferin!
+            Bu challenge’da öne çıkan teslimlerden birisin — aferin!
           </p>
           {labels.length > 0 ? (
             <ul className="mt-4 space-y-1 text-left text-sm font-bold text-fuchsia-900 dark:text-fuchsia-200">

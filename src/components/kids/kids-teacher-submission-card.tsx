@@ -233,7 +233,7 @@ export function KidsTeacherSubmissionCard({
     sub.is_teacher_pick,
   ]);
 
-  /** Proje yıldızı ile “kurallara uymuyor” bir arada olamaz */
+  /** Challenge yıldızı ile “kurallara uymuyor” bir arada olamaz */
   useEffect(() => {
     if (!pickOn || valid) return;
     setValid(true);
@@ -274,7 +274,7 @@ export function KidsTeacherSubmissionCard({
     }
 
     if (pickOn && !valid) {
-      toast.error('Proje yıldızı verildiğinde teslim kurallara uygun (Evet) sayılır.');
+      toast.error('Challenge yıldızı verildiğinde teslim kurallara uygun (Evet) sayılır.');
       return;
     }
 
@@ -354,7 +354,7 @@ export function KidsTeacherSubmissionCard({
       <KidsTeacherModalShell
         title={
           <span className="flex items-center gap-2">
-            <span>📖</span> {name} — Proje {sub.round_number ?? 1} · teslim detayı
+            <span>📖</span> {name} — Challenge {sub.round_number ?? 1} · teslim detayı
           </span>
         }
         onClose={() => setDetailOpen(false)}
@@ -406,7 +406,7 @@ export function KidsTeacherSubmissionCard({
       <KidsTeacherModalShell
         title={
           <span className="flex items-center gap-2">
-            <span>✨</span> {name} — Proje {sub.round_number ?? 1}
+            <span>✨</span> {name} — Challenge {sub.round_number ?? 1}
           </span>
         }
         onClose={() => setEvaluateOpen(false)}
@@ -542,7 +542,7 @@ export function KidsTeacherSubmissionCard({
               }}
             />
             <span className="text-sm font-bold text-amber-950 dark:text-amber-100">
-              ⭐ Proje yıldızı ({pickSlots.used}/{pickSlots.limit} kullanıldı)
+              ⭐ Challenge yıldızı ({pickSlots.used}/{pickSlots.limit} kullanıldı)
             </span>
           </label>
           <p className="mt-1 pl-8 text-xs text-amber-900/90 dark:text-amber-200/90">
@@ -646,7 +646,7 @@ export function KidsTeacherSubmissionCard({
         <div className="flex items-start justify-between gap-2 border-b border-violet-100 bg-gradient-to-r from-violet-50/90 to-fuchsia-50/50 px-2.5 py-2 dark:border-violet-900 dark:from-violet-950/70 dark:to-fuchsia-950/40">
           <div className="min-w-0 flex-1">
             <span className="font-logo text-sm font-black text-violet-950 dark:text-white">
-              Proje {sub.round_number ?? 1}
+              Challenge {sub.round_number ?? 1}
             </span>
             <span className="mt-0.5 block text-[10px] font-medium leading-snug text-violet-700/90 dark:text-violet-300">
               {new Date(sub.created_at).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}
@@ -675,7 +675,7 @@ export function KidsTeacherSubmissionCard({
           <div className="min-w-0 flex-1">
             <p className="truncate font-logo text-base font-bold text-violet-950 dark:text-white">{name}</p>
             <p className="text-xs font-medium text-violet-700/90 dark:text-violet-300">
-              Proje {sub.round_number ?? 1}
+              Challenge {sub.round_number ?? 1}
               {' · '}
               {new Date(sub.created_at).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}
               {sub.kind === 'video' ? ' · 🎬 Video' : ` · 📝 ${stepCount} adım`}
