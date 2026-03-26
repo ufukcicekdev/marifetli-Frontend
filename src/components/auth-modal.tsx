@@ -113,8 +113,17 @@ export function AuthModal() {
       setForgotSent(true);
       toast.success('Şifre sıfırlama linki e-posta adresinize gönderildi.');
     } catch (err: unknown) {
-      const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      setError(msg || 'Bir hata oluştu. Lütfen tekrar deneyin.');
+      const e = err as {
+        response?: { status?: number; data?: { error?: string; detail?: string } };
+      };
+      const msg = e?.response?.data?.error || e?.response?.data?.detail;
+      const fallback =
+        e?.response?.status === 404
+          ? 'Kayıtlı e-posta bulunamadı. Lütfen e-posta adresinizi kontrol edin.'
+          : 'Bir hata oluştu. Lütfen tekrar deneyin.';
+      const finalMsg = msg || fallback;
+      setError(finalMsg);
+      toast.error(finalMsg);
     } finally {
       setLoading(false);
     }
@@ -241,6 +250,11 @@ export function AuthModal() {
                 </>
               ) : (
                 <form onSubmit={handleForgotPassword} className="space-y-4">
+                  {error && (
+                    <div className="p-3 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm">
+                      {error}
+                    </div>
+                  )}
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     Kayıtlı e-posta adresinizi girin, size şifre sıfırlama linki gönderelim.
                   </p>
