@@ -160,6 +160,46 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
           </div>
         </div>
 
+        {/* Oyun merkezi tanıtımı */}
+        <div className="rounded-3xl border-2 border-fuchsia-200 bg-gradient-to-br from-fuchsia-50 via-violet-50 to-sky-50 p-6 shadow-md dark:border-fuchsia-800/50 dark:from-fuchsia-950/30 dark:via-violet-950/30 dark:to-sky-950/30">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="max-w-2xl">
+              <p className="inline-flex items-center gap-1 rounded-full border border-fuchsia-300 bg-white/80 px-2.5 py-1 text-xs font-black text-fuchsia-700 dark:border-fuchsia-700 dark:bg-fuchsia-950/40 dark:text-fuchsia-200">
+                🎮 Yeni: Oyun merkezi
+              </p>
+              <h2 className="font-logo mt-3 text-2xl font-black text-violet-950 dark:text-violet-50 sm:text-3xl">
+                Oyunlarla daha kolay öğrenin
+              </h2>
+              <p className="mt-3 text-sm leading-relaxed text-slate-700 dark:text-slate-200 sm:text-base">
+                Hafıza, toplama, çıkarma, çarpma ve bölme oyunlarıyla eğlenerek öğren.
+                Seviye atla, combo yap, günlük görevleri tamamla ve rozet kazan.
+              </p>
+            </div>
+            <div className="text-5xl sm:text-6xl" aria-hidden>
+              🧠🔢🏆
+            </div>
+          </div>
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+            <KidsPrimaryButton
+              type="button"
+              className="min-h-12 rounded-2xl"
+              onClick={() => router.push(`${pathPrefix}/ogrenci/oyun-merkezi`)}
+            >
+              Oyunu keşfet
+            </KidsPrimaryButton>
+            <KidsSecondaryButton
+              type="button"
+              className="min-h-12 rounded-2xl"
+              onClick={() => {
+                setTab('student');
+                setLoginOpen(true);
+              }}
+            >
+              Öğrenci olarak giriş yap
+            </KidsSecondaryButton>
+          </div>
+        </div>
+
         {/* Öğrenci / öğretmen özet kartları */}
         <div className="grid gap-5 sm:grid-cols-2">
           <div className="rounded-3xl border-2 border-sky-200/90 bg-white/80 p-6 dark:border-sky-800/60 dark:bg-gray-900/70">

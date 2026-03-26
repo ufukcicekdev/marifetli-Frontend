@@ -689,6 +689,197 @@ export async function kidsParentChildrenOverview(): Promise<{ children: KidsPare
   return { children: data?.children ?? [] };
 }
 
+export type KidsGame = {
+  id: number;
+  title: string;
+  slug: string;
+  description: string;
+  instructions: string;
+  min_grade: number;
+  max_grade: number;
+  difficulty: 'easy' | 'medium' | 'hard';
+  is_active: boolean;
+  sort_order: number;
+  progress?: {
+    current_difficulty: 'easy' | 'medium' | 'hard';
+    streak_count: number;
+    best_score: number;
+    daily_quest_completed_today: boolean;
+    daily_quest_target_score: number;
+  };
+};
+
+export type KidsParentGamePolicy = {
+  student: number;
+  daily_minutes_limit: number;
+  allowed_start_time: string | null;
+  allowed_end_time: string | null;
+  blocked_game_ids: number[];
+  updated_at: string;
+};
+
+export type KidsGameSession = {
+  id: number;
+  game: KidsGame;
+  grade_level: number;
+  difficulty: 'easy' | 'medium' | 'hard';
+  started_at: string;
+  ended_at: string | null;
+  duration_seconds: number;
+  score: number;
+  progress_percent: number;
+  status: 'active' | 'completed' | 'aborted';
+  created_at: string;
+};
+
+export async function kidsStudentGamesOverview(): Promise<{
+  grade_level: number;
+  policy: KidsParentGamePolicy;
+  today_minutes_played: number;
+  games: KidsGame[];
+  progresses: {
+    game: number;
+    current_difficulty: 'easy' | 'medium' | 'hard';
+    streak_count: number;
+    last_played_on: string | null;
+    daily_quest_completed_on: string | null;
+    best_score: number;
+  }[];
+  daily_quests: {
+    game_id: number;
+    difficulty: 'easy' | 'medium' | 'hard';
+    score_target: number;
+    completed_today: boolean;
+    streak_count: number;
+  }[];
+}> {
+  const res = await kidsAuthorizedFetch('/student/games/', { method: 'GET' });
+  const text = await res.text();
+  const data = readJson<{
+    grade_level?: number;
+    policy?: KidsParentGamePolicy;
+    today_minutes_played?: number;
+    games?: KidsGame[];
+    progresses?: {
+      game: number;
+      current_difficulty: 'easy' | 'medium' | 'hard';
+      streak_count: number;
+      last_played_on: string | null;
+      daily_quest_completed_on: string | null;
+      best_score: number;
+    }[];
+    daily_quests?: {
+      game_id: number;
+      difficulty: 'easy' | 'medium' | 'hard';
+      score_target: number;
+      completed_today: boolean;
+      streak_count: number;
+    }[];
+  } & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Oyunlar yuklenemedi'));
+  return {
+    grade_level: Number(data?.grade_level ?? 1),
+    policy: (data?.policy as KidsParentGamePolicy) ?? {
+      student: 0,
+      daily_minutes_limit: 30,
+      allowed_start_time: null,
+      allowed_end_time: null,
+      blocked_game_ids: [],
+      updated_at: '',
+    },
+    today_minutes_played: Number(data?.today_minutes_played ?? 0),
+    games: Array.isArray(data?.games) ? data.games : [],
+    progresses: Array.isArray(data?.progresses) ? data.progresses : [],
+    daily_quests: Array.isArray(data?.daily_quests) ? data.daily_quests : [],
+  };
+}
+
+export async function kidsGetParentGamePolicy(studentId: number): Promise<KidsParentGamePolicy> {
+  const res = await kidsAuthorizedFetch(`/parent/game-policies/${studentId}/`, { method: 'GET' });
+  const text = await res.text();
+  const data = readJson<KidsParentGamePolicy & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Kontrol kurali yuklenemedi'));
+  return data as KidsParentGamePolicy;
+}
+
+export async function kidsParentGamesList(studentId?: number): Promise<{ student_id: number | null; grade_level: number; games: KidsGame[] }> {
+  const q =
+    typeof studentId === 'number' && Number.isFinite(studentId) && studentId > 0
+      ? `?student_id=${encodeURIComponent(String(studentId))}`
+      : '';
+  const res = await kidsAuthorizedFetch(`/parent/games/${q}`, { method: 'GET' });
+  const text = await res.text();
+  const data = readJson<{
+    student_id?: number | null;
+    grade_level?: number;
+    games?: (KidsGame & {
+      progress?: {
+        current_difficulty: 'easy' | 'medium' | 'hard';
+        streak_count: number;
+        best_score: number;
+        daily_quest_completed_today: boolean;
+        daily_quest_target_score: number;
+      };
+    })[];
+  } & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Oyunlar yuklenemedi'));
+  return {
+    student_id: data?.student_id ?? null,
+    grade_level: Number(data?.grade_level ?? 1),
+    games: Array.isArray(data?.games) ? data.games : [],
+  };
+}
+
+export async function kidsUpdateParentGamePolicy(
+  studentId: number,
+  body: Partial<Pick<KidsParentGamePolicy, 'daily_minutes_limit' | 'allowed_start_time' | 'allowed_end_time' | 'blocked_game_ids'>>,
+): Promise<KidsParentGamePolicy> {
+  const res = await kidsAuthorizedFetch(`/parent/game-policies/${studentId}/`, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  const data = readJson<KidsParentGamePolicy & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Kontrol kurali kaydedilemedi'));
+  return data as KidsParentGamePolicy;
+}
+
+export async function kidsStartGameSession(
+  gameId: number,
+  body?: { grade_level?: number; difficulty?: 'easy' | 'medium' | 'hard' },
+): Promise<KidsGameSession> {
+  const res = await kidsAuthorizedFetch(`/student/games/${gameId}/sessions/start/`, {
+    method: 'POST',
+    body: JSON.stringify(body ?? {}),
+  });
+  const text = await res.text();
+  const data = readJson<KidsGameSession & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Oyun baslatilamadi'));
+  return data as KidsGameSession;
+}
+
+export async function kidsCompleteGameSession(
+  sessionId: number,
+  body?: { score?: number; progress_percent?: number; status?: 'completed' | 'aborted' },
+): Promise<KidsGameSession> {
+  const res = await kidsAuthorizedFetch(`/student/game-sessions/${sessionId}/complete/`, {
+    method: 'POST',
+    body: JSON.stringify(body ?? {}),
+  });
+  const text = await res.text();
+  const data = readJson<KidsGameSession & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Oturum kapatilamadi'));
+  return data as KidsGameSession;
+}
+
+export async function kidsMyGameSessions(): Promise<{ sessions: KidsGameSession[] }> {
+  const res = await kidsAuthorizedFetch('/student/game-sessions/me/', { method: 'GET' });
+  const text = await res.text();
+  const data = readJson<{ sessions?: KidsGameSession[] } & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Oyun gecmisi yuklenemedi'));
+  return { sessions: Array.isArray(data?.sessions) ? data.sessions : [] };
+}
+
 export async function kidsAdminTeachersList(): Promise<KidsAdminTeacher[]> {
   const res = await kidsFetchKidsOrMainAccess('/admin/teachers/', { method: 'GET' });
   const text = await res.text();

@@ -189,12 +189,20 @@ export function KidsStudentDashboardPlayful({
       </section>
 
       <div className="flex justify-center">
-        <Link
-          href={`${pathPrefix}/ogrenci/yol`}
-          className="inline-flex min-h-12 w-full max-w-sm items-center justify-center rounded-2xl border-2 border-violet-300 bg-violet-50 px-6 py-3 text-sm font-black text-violet-900 transition hover:bg-violet-100 dark:border-violet-700 dark:bg-violet-950/60 dark:text-violet-100 dark:hover:bg-violet-900/60 sm:w-auto"
-        >
-          🗺 Rozet yolu
-        </Link>
+        <div className="flex w-full max-w-xl flex-col gap-2 sm:flex-row sm:justify-center">
+          <Link
+            href={`${pathPrefix}/ogrenci/yol`}
+            className="inline-flex min-h-12 w-full items-center justify-center rounded-2xl border-2 border-violet-300 bg-violet-50 px-6 py-3 text-sm font-black text-violet-900 transition hover:bg-violet-100 dark:border-violet-700 dark:bg-violet-950/60 dark:text-violet-100 dark:hover:bg-violet-900/60 sm:w-auto"
+          >
+            🗺 Rozet yolu
+          </Link>
+          <Link
+            href={`${pathPrefix}/ogrenci/oyun-merkezi`}
+            className="inline-flex min-h-12 w-full items-center justify-center rounded-2xl border-2 border-emerald-300 bg-emerald-50 px-6 py-3 text-sm font-black text-emerald-900 transition hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-100 dark:hover:bg-emerald-900/50 sm:w-auto"
+          >
+            🎮 Oyun merkezi
+          </Link>
+        </div>
       </div>
     </div>
   );

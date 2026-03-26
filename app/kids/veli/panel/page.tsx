@@ -157,6 +157,22 @@ export default function KidsParentPanelPage() {
           </Link>
         </div>
       </KidsCard>
+      <KidsCard tone="emerald" className="mt-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="font-logo text-base font-bold text-emerald-950 dark:text-emerald-50">Oyun suresi kontrolu</h2>
+            <p className="mt-2 text-sm text-emerald-900/85 dark:text-emerald-100/85">
+              Gunluk dakika limiti, saat araligi ve oyun bazli izinleri cocuk bazinda ayarla.
+            </p>
+          </div>
+          <Link
+            href={`${pathPrefix}/veli/ebeveyn-kontrolleri`}
+            className="inline-flex min-h-12 w-full shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 px-8 text-sm font-bold text-white shadow-lg transition hover:from-emerald-500 hover:to-teal-500 sm:w-auto"
+          >
+            Ebeveyn kontrolleri
+          </Link>
+        </div>
+      </KidsCard>
 
       {overviewError ? (
         <p className="mt-4 rounded-xl border border-amber-300/80 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100">

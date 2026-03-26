@@ -41,10 +41,12 @@ export function kidsNavLinks(
     items.push({ href: `${p}/ogrenci/panel`, label: 'Öğrenci paneli', icon: '🎒' });
     items.push({ href: `${p}/ogrenci/projeler`, label: 'Challenges', icon: '🎯' });
     items.push({ href: `${p}/ogrenci/yarismalar`, label: 'Yarışmalar', icon: '🏆' });
+    items.push({ href: `${p}/ogrenci/oyun-merkezi`, label: 'Oyun merkezi', icon: '🎮' });
   }
   if (role === 'parent') {
     items.push({ href: `${p}/veli/panel`, label: 'Veli paneli', icon: '👪' });
     items.push({ href: `${p}/veli/yarismalar`, label: 'Serbest yarışmalar', icon: '🏆' });
+    items.push({ href: `${p}/veli/ebeveyn-kontrolleri`, label: 'Ebeveyn kontrolleri', icon: '⏱️' });
   }
   if (role) {
     items.push({ href: `${p}/bildirimler`, label: 'Bildirimler', icon: '🔔' });
