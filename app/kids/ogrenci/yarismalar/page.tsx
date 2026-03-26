@@ -73,6 +73,7 @@ export default function KidsStudentPeerChallengesPage() {
   const [classes, setClasses] = useState<KidsClass[]>([]);
   const [challenges, setChallenges] = useState<KidsPeerChallenge[]>([]);
   const [invites, setInvites] = useState<KidsPeerChallengeInviteRow[]>([]);
+  const [allowFreeChallenge, setAllowFreeChallenge] = useState(true);
   const [loading, setLoading] = useState(true);
   const [competitionMode, setCompetitionMode] = useState<'class' | 'free'>('class');
   const [classId, setClassId] = useState<string>('');
@@ -102,12 +103,19 @@ export default function KidsStudentPeerChallengesPage() {
       setClasses(dash.classes);
       setChallenges(peer.challenges);
       setInvites(peer.pending_invites);
+      setAllowFreeChallenge(peer.allow_free_parent_challenge !== false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Liste yüklenemedi');
     } finally {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (competitionMode === 'free' && !allowFreeChallenge) {
+      setCompetitionMode('class');
+    }
+  }, [competitionMode, allowFreeChallenge]);
 
   useEffect(() => {
     if (competitionMode !== 'class') return;
@@ -253,8 +261,15 @@ export default function KidsStudentPeerChallengesPage() {
         <p className="mt-2 max-w-2xl text-slate-600 dark:text-gray-300">
           <strong className="font-semibold text-slate-800 dark:text-gray-200">Sınıf yarışması:</strong> öğretmen
           onayından sonra sınıf arkadaşlarına davet.{' '}
-          <strong className="font-semibold text-slate-800 dark:text-gray-200">Serbest yarışma:</strong> sınıfa bağlı
-          değil; veli hesabının onayıyla yalnızca sen katılırsın. (Öğretmen ödevleri menüdeki Challenges sayfasında.)
+          {allowFreeChallenge ? (
+            <>
+              <strong className="font-semibold text-slate-800 dark:text-gray-200">Serbest yarışma:</strong> sınıfa bağlı
+              değil; veli hesabının onayıyla yalnızca sen katılırsın.
+            </>
+          ) : (
+            <span className="font-semibold text-amber-800 dark:text-amber-200">Serbest yarışma şu anda kapalı.</span>
+          )}{' '}
+          (Öğretmen ödevleri menüdeki Challenges sayfasında.)
         </p>
       </header>
 
@@ -346,17 +361,19 @@ export default function KidsStudentPeerChallengesPage() {
                 >
                   Sınıf yarışması
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setCompetitionMode('free')}
-                  className={`rounded-full px-4 py-2 text-sm font-bold transition ${
-                    competitionMode === 'free'
-                      ? 'bg-fuchsia-600 text-white shadow-md dark:bg-fuchsia-500'
-                      : 'border-2 border-fuchsia-300/80 bg-white/80 text-fuchsia-950 hover:bg-fuchsia-50 dark:border-fuchsia-700 dark:bg-fuchsia-950/30 dark:text-fuchsia-50'
-                  }`}
-                >
-                  Serbest yarışma
-                </button>
+                {allowFreeChallenge ? (
+                  <button
+                    type="button"
+                    onClick={() => setCompetitionMode('free')}
+                    className={`rounded-full px-4 py-2 text-sm font-bold transition ${
+                      competitionMode === 'free'
+                        ? 'bg-fuchsia-600 text-white shadow-md dark:bg-fuchsia-500'
+                        : 'border-2 border-fuchsia-300/80 bg-white/80 text-fuchsia-950 hover:bg-fuchsia-50 dark:border-fuchsia-700 dark:bg-fuchsia-950/30 dark:text-fuchsia-50'
+                    }`}
+                  >
+                    Serbest yarışma
+                  </button>
+                ) : null}
               </div>
               {competitionMode === 'class' && classes.length === 0 ? (
                 <p className="mt-4 text-sm font-semibold text-amber-900 dark:text-amber-100">

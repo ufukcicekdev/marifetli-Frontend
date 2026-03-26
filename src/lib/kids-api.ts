@@ -104,6 +104,10 @@ export type KidsSchool = {
   province: string;
   district: string;
   neighborhood: string;
+  lifecycle_stage: 'demo' | 'sales';
+  demo_start_at?: string | null;
+  demo_end_at?: string | null;
+  student_user_cap: number;
   created_at: string;
   updated_at: string;
 };
@@ -157,7 +161,7 @@ export function kidsAcademicYearStart(d = new Date()): number {
 /** Eğitim-öğretim yılı dropdown seçenekleri; `value: ''` = seçilmedi. */
 export function kidsAcademicYearSelectOptions(
   yearsBack = 4,
-  yearsForward = 1,
+  yearsForward = 2,
   d = new Date(),
 ): { value: string; label: string }[] {
   const base = kidsAcademicYearStart(d);
@@ -903,10 +907,166 @@ export async function kidsAdminPatchTeacher(
   return data.teacher;
 }
 
+export type KidsAdminSchoolYearProfile = {
+  id: number;
+  academic_year: string;
+  contracted_student_count: number;
+  enrolled_student_count: number;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type KidsAdminSchoolTeacherRow = {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  joined_at: string;
+};
+
+export type KidsAdminSchoolDetail = KidsSchool & {
+  year_profiles: KidsAdminSchoolYearProfile[];
+  teachers: KidsAdminSchoolTeacherRow[];
+  enrolled_distinct_student_count?: number;
+  capacity_remaining?: number;
+  demo_is_active?: boolean;
+};
+
+export async function kidsAdminSchoolsList(): Promise<KidsAdminSchoolDetail[]> {
+  const res = await kidsFetchKidsOrMainAccess('/admin/schools/', { method: 'GET' });
+  const text = await res.text();
+  const data = readJson<{ schools?: KidsAdminSchoolDetail[] } & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Okul listesi alınamadı'));
+  return data?.schools ?? [];
+}
+
+export async function kidsAdminCreateSchool(body: {
+  name: string;
+  province?: string;
+  district?: string;
+  neighborhood?: string;
+  lifecycle_stage?: 'demo' | 'sales';
+  demo_start_at?: string | null;
+  demo_end_at?: string | null;
+  student_user_cap: number;
+  year_profiles?: { academic_year: string; contracted_student_count: number; notes?: string }[];
+}): Promise<KidsAdminSchoolDetail> {
+  const res = await kidsFetchKidsOrMainAccess('/admin/schools/', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  const data = readJson<KidsAdminSchoolDetail & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Okul oluşturulamadı'));
+  return data as KidsAdminSchoolDetail;
+}
+
+export async function kidsAdminPatchSchool(
+  id: number,
+  body: Partial<
+    Pick<
+      KidsSchool,
+      | 'name'
+      | 'province'
+      | 'district'
+      | 'neighborhood'
+      | 'lifecycle_stage'
+      | 'demo_start_at'
+      | 'demo_end_at'
+      | 'student_user_cap'
+    >
+  >,
+): Promise<KidsAdminSchoolDetail> {
+  const res = await kidsFetchKidsOrMainAccess(`/admin/schools/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  const data = readJson<KidsAdminSchoolDetail & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Okul güncellenemedi'));
+  return data as KidsAdminSchoolDetail;
+}
+
+export async function kidsAdminDeleteSchool(id: number): Promise<void> {
+  const res = await kidsFetchKidsOrMainAccess(`/admin/schools/${id}/`, { method: 'DELETE' });
+  if (res.status === 204) return;
+  const text = await res.text();
+  const data = readJson<ApiErrorBody>(text);
+  throw new Error(kidsFirstApiErrorMessage(data, 'Okul silinemedi'));
+}
+
+export async function kidsAdminAddSchoolYearProfile(
+  schoolId: number,
+  body: { academic_year: string; contracted_student_count: number; notes?: string },
+): Promise<KidsAdminSchoolYearProfile> {
+  const res = await kidsFetchKidsOrMainAccess(`/admin/schools/${schoolId}/year-profiles/`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  const data = readJson<KidsAdminSchoolYearProfile & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Yıl profili eklenemedi'));
+  return data as KidsAdminSchoolYearProfile;
+}
+
+export async function kidsAdminPatchSchoolYearProfile(
+  profileId: number,
+  body: Partial<Pick<KidsAdminSchoolYearProfile, 'academic_year' | 'contracted_student_count' | 'notes'>>,
+): Promise<KidsAdminSchoolYearProfile> {
+  const res = await kidsFetchKidsOrMainAccess(`/admin/school-year-profiles/${profileId}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  const data = readJson<KidsAdminSchoolYearProfile & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Kota güncellenemedi'));
+  return data as KidsAdminSchoolYearProfile;
+}
+
+export async function kidsAdminDeleteSchoolYearProfile(profileId: number): Promise<void> {
+  const res = await kidsFetchKidsOrMainAccess(`/admin/school-year-profiles/${profileId}/`, {
+    method: 'DELETE',
+  });
+  if (res.status === 204) return;
+  const text = await res.text();
+  const data = readJson<ApiErrorBody>(text);
+  throw new Error(kidsFirstApiErrorMessage(data, 'Profil silinemedi'));
+}
+
+export async function kidsAdminAssignSchoolTeacher(
+  schoolId: number,
+  teacherUserId: number,
+): Promise<KidsAdminSchoolDetail> {
+  const res = await kidsFetchKidsOrMainAccess(`/admin/schools/${schoolId}/teachers/`, {
+    method: 'POST',
+    body: JSON.stringify({ teacher_user_id: teacherUserId }),
+  });
+  const text = await res.text();
+  const data = readJson<KidsAdminSchoolDetail & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Öğretmen atanamadı'));
+  return data as KidsAdminSchoolDetail;
+}
+
+export async function kidsAdminRemoveSchoolTeacher(
+  schoolId: number,
+  teacherUserId: number,
+): Promise<KidsAdminSchoolDetail> {
+  const res = await kidsFetchKidsOrMainAccess(`/admin/schools/${schoolId}/teachers/${teacherUserId}/`, {
+    method: 'DELETE',
+  });
+  const text = await res.text();
+  const data = readJson<KidsAdminSchoolDetail & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Öğretmen çıkarılamadı'));
+  return data as KidsAdminSchoolDetail;
+}
+
 export async function kidsAdminCreateTeacher(payload: {
   email: string;
   first_name?: string;
   last_name?: string;
+  /** Bu okul kimliklerine üyelik eklenir (öğretmen oluşturulurken). */
+  school_ids?: number[];
 }): Promise<{ teacher: KidsAdminTeacher; email_sent: boolean; email_error?: string | null; temporary_password?: string | null }> {
   const res = await kidsFetchKidsOrMainAccess('/admin/teachers/', {
     method: 'POST',
@@ -1079,6 +1239,35 @@ export type MebSchoolPick = {
   district: string;
   line_full?: string;
 };
+
+export async function kidsAdminCreateMebSchool(body: {
+  province: string;
+  district: string;
+  name: string;
+}): Promise<{ school: MebSchoolPick; created: boolean }> {
+  const res = await kidsAuthorizedFetch('/admin/meb-schools/manual/', {
+    method: 'POST',
+    body: JSON.stringify({
+      province: body.province.trim(),
+      district: body.district.trim(),
+      name: body.name.trim(),
+    }),
+  });
+  const text = await res.text();
+  const data = readJson<
+    { school?: MebSchoolPick; created?: boolean; detail?: string } & ApiErrorBody
+  >(text);
+  if (!res.ok) {
+    throw new Error(
+      (typeof data?.detail === 'string' && data.detail) ||
+        'MEB listesine okul eklenemedi',
+    );
+  }
+  if (!data?.school) {
+    throw new Error('MEB okul kaydı yanıtı eksik');
+  }
+  return { school: data.school, created: Boolean(data.created) };
+}
 
 export async function kidsMebProvinces(): Promise<string[]> {
   const res = await kidsAuthorizedFetch('/meb-schools/provinces/', { method: 'GET' });
@@ -1542,14 +1731,20 @@ export type KidsPeerChallengeInviteRow = {
 export async function kidsStudentPeerChallengesList(): Promise<{
   challenges: KidsPeerChallenge[];
   pending_invites: KidsPeerChallengeInviteRow[];
+  allow_free_parent_challenge: boolean;
 }> {
   const res = await kidsAuthorizedFetch('/student/challenges/', { method: 'GET' });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Yarışmalar yüklenemedi');
-  const d = data as { challenges?: KidsPeerChallenge[]; pending_invites?: KidsPeerChallengeInviteRow[] };
+  const d = data as {
+    challenges?: KidsPeerChallenge[];
+    pending_invites?: KidsPeerChallengeInviteRow[];
+    allow_free_parent_challenge?: boolean;
+  };
   return {
     challenges: Array.isArray(d.challenges) ? d.challenges : [],
     pending_invites: Array.isArray(d.pending_invites) ? d.pending_invites : [],
+    allow_free_parent_challenge: d.allow_free_parent_challenge !== false,
   };
 }
 

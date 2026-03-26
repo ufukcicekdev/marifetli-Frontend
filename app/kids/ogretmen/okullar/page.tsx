@@ -390,6 +390,8 @@ export default function KidsTeacherSchoolsPage() {
     );
   }
 
+  const isTeacherOnly = user.role === 'teacher';
+
   return (
     <KidsPanelMax>
       <div className="mb-6">
@@ -404,14 +406,30 @@ export default function KidsTeacherSchoolsPage() {
       <KidsPageHeader
         emoji="🏫"
         title="Okullarım"
-        subtitle="MEB dizininden okulunu seçip kaydet; listede yoksa okul ekle ile elle ekleyebilirsin. İl ve ilçe her iki yolda da sistemdeki MEB verisiyle aynı kalır."
+        subtitle={
+          isTeacherOnly
+            ? 'Okullar yönetim tarafından tanımlanır ve size atanır. Aşağıda atandığınız okulları görebilir, gerekirse ad ve adres bilgisini düzenleyebilirsiniz; yeni okul eklemek için yönetimle iletişime geçin.'
+            : 'MEB dizininden okulunu seçip kaydet; listede yoksa okul ekle ile elle ekleyebilirsin. İl ve ilçe her iki yolda da sistemdeki MEB verisiyle aynı kalır.'
+        }
       />
 
       <div className="grid gap-8 lg:grid-cols-12">
         <div className="lg:col-span-5">
           <KidsCard tone="sky" className="lg:sticky lg:top-28">
-            <h2 className="font-logo text-xl font-bold text-sky-950 dark:text-sky-50">Okul ekle</h2>
+            <h2 className="font-logo text-xl font-bold text-sky-950 dark:text-sky-50">
+              {isTeacherOnly ? 'Okul ataması' : 'Okul ekle'}
+            </h2>
+            {isTeacherOnly ? (
+              <div className="mt-4 rounded-2xl border border-sky-200/80 bg-white/70 p-4 text-sm text-sky-900 dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-100">
+                <p>
+                  Yeni okul kaydı ve kota yönetimi yalnızca <strong>Yönetim</strong> panelinden yapılır. Size atanmış
+                  okullar sağdaki listede görünür.
+                </p>
+              </div>
+            ) : null}
             <div className="mt-4 space-y-4 text-sm text-sky-900/80 dark:text-sky-100/80">
+              {!isTeacherOnly ? (
+                <>
               <p>
                 Önce il ve ilçeyi seç, listeden okulunu bul. Bulamazsan{' '}
                 <span className="font-semibold text-sky-950 dark:text-sky-50">Okul ekle</span> ile modalda
@@ -522,6 +540,8 @@ export default function KidsTeacherSchoolsPage() {
                   İl ve ilçe yine veritabanındaki MEB listesinden seçilir; sadece okul adını sen yazarsın.
                 </p>
               </div>
+                </>
+              ) : null}
             </div>
           </KidsCard>
         </div>
@@ -536,7 +556,11 @@ export default function KidsTeacherSchoolsPage() {
             <KidsEmptyState
               emoji="📍"
               title="Henüz okul yok"
-              description="Soldan MEB’den seç veya Okul ekle ile kayıt oluştur; ardından sınıf açarken bu okulu seç."
+              description={
+                isTeacherOnly
+                  ? 'Size atanmış okul görünmüyorsa yönetimle iletişime geçin.'
+                  : 'Soldan MEB’den seç veya Okul ekle ile kayıt oluştur; ardından sınıf açarken bu okulu seç.'
+              }
             />
           ) : (
             <ul className="space-y-3">
@@ -607,14 +631,16 @@ export default function KidsTeacherSchoolsPage() {
                           <KidsSecondaryButton type="button" onClick={() => startEdit(s)}>
                             Düzenle
                           </KidsSecondaryButton>
-                          <button
-                            type="button"
-                            onClick={() => onDelete(s.id)}
-                            disabled={deletingId === s.id}
-                            className="inline-flex min-h-10 items-center justify-center rounded-full border-2 border-red-200 px-4 text-sm font-bold text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40"
-                          >
-                            {deletingId === s.id ? '…' : 'Sil'}
-                          </button>
+                          {!isTeacherOnly ? (
+                            <button
+                              type="button"
+                              onClick={() => onDelete(s.id)}
+                              disabled={deletingId === s.id}
+                              className="inline-flex min-h-10 items-center justify-center rounded-full border-2 border-red-200 px-4 text-sm font-bold text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40"
+                            >
+                              {deletingId === s.id ? '…' : 'Sil'}
+                            </button>
+                          ) : null}
                         </div>
                       </div>
                     )}
