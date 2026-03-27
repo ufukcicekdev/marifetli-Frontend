@@ -1,3 +1,6 @@
+/** Ana site `app/layout.tsx` ile aynı: sol sidebar ve içerik `pl-64`/`pl-16` kayması. */
+export const KIDS_USE_SIDEBAR = process.env.NEXT_PUBLIC_USE_SIDEBAR === 'true';
+
 /** Kids arayüzünün kamuya açık kök adresi (davet linkleri, paylaşım) */
 export const KIDS_SITE_URL =
   process.env.NEXT_PUBLIC_KIDS_SITE_URL || 'https://marifetli.com.tr/kids';

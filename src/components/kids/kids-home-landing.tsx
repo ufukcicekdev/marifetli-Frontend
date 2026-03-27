@@ -1,12 +1,153 @@
 'use client';
 
+import {
+  ArrowRight,
+  CalendarDays,
+  Images,
+  MessageCircle,
+  Rocket,
+  Wand2,
+} from 'lucide-react';
+import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useId, useState } from 'react';
+import { useCallback, useEffect, useId, useState, type ReactNode } from 'react';
 import { KidsRoleLoginForm } from '@/src/components/kids/kids-role-login-form';
 import { KidsCenteredModal, KidsPrimaryButton, KidsSecondaryButton } from '@/src/components/kids/kids-ui';
 import { kidsHomeHref } from '@/src/lib/kids-config';
 
 type LoginTab = 'student' | 'teacher' | 'parent';
+
+function KidsLandingRolePickCard({
+  label,
+  emoji,
+  circleClass,
+  onPick,
+}: {
+  label: string;
+  emoji: string;
+  circleClass: string;
+  onPick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onPick}
+      aria-label={`${label} olarak giriş yap`}
+      className="group flex min-h-0 w-full min-w-0 flex-col items-center gap-2 rounded-3xl border border-slate-200/90 bg-white/95 px-2 py-4 shadow-sm transition hover:-translate-y-0.5 hover:border-sky-300/90 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 sm:gap-3 sm:px-4 sm:py-6 dark:border-slate-600/80 dark:bg-gray-900/90 dark:hover:border-sky-600/70"
+    >
+      <span
+        className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-[1.65rem] shadow-inner sm:h-[4.5rem] sm:w-[4.5rem] sm:text-[2.25rem] ${circleClass}`}
+        aria-hidden
+      >
+        {emoji}
+      </span>
+      <span className="font-logo text-center text-xs font-black leading-tight text-slate-900 sm:text-base dark:text-white">
+        {label}
+      </span>
+      <ArrowRight
+        className="h-4 w-4 shrink-0 text-sky-500 transition group-hover:translate-x-1 sm:h-5 sm:w-5 dark:text-sky-400"
+        strokeWidth={2.5}
+        aria-hidden
+      />
+    </button>
+  );
+}
+
+/** `frontend/public/kids/landing/` → her zaman kökten `/kids/landing/...` */
+const KIDS_LANDING_IMAGE = (file: string) => `/kids/landing/${file}`;
+
+/** Üretilen PNG’ler 16:10; grid içinde `fill` yerine sabit oran kullanıyoruz (yükseme sıfır hatası). */
+const KIDS_LANDING_IMG_WIDTH = 1600;
+const KIDS_LANDING_IMG_HEIGHT = 1000;
+
+/** Görsel–metin zig-zag: `imageFirst` true → solda görsel; false → solda metin (md+). */
+function KidsLandingZigzagRow({
+  title,
+  body,
+  imageSrc,
+  imageAlt,
+  iconWrapClass,
+  icon,
+  imageFirst,
+  imageBackdropClass,
+}: {
+  title: string;
+  body: string;
+  imageSrc: string;
+  imageAlt: string;
+  iconWrapClass: string;
+  icon: ReactNode;
+  imageFirst: boolean;
+  /** Yumuşak “blob” leke (örn. lime veya pembe) — referans görseldeki gibi */
+  imageBackdropClass?: string;
+}) {
+  const imageFrame = (
+    <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white/90 shadow-lg shadow-slate-200/40 dark:border-slate-600/60 dark:bg-slate-900/80 dark:shadow-black/20">
+      <Image
+        src={imageSrc}
+        alt={imageAlt}
+        width={KIDS_LANDING_IMG_WIDTH}
+        height={KIDS_LANDING_IMG_HEIGHT}
+        className="h-auto w-full object-cover"
+        sizes="(max-width: 767px) 100vw, 50vw"
+        priority={false}
+      />
+    </div>
+  );
+
+  const imageCol = (
+    <div className="w-full min-w-0 md:max-w-none">
+      {imageBackdropClass ? (
+        <div className="relative isolate py-2 md:py-4">
+          <div
+            className={`pointer-events-none absolute left-1/2 top-[55%] z-0 h-[95%] w-[98%] -translate-x-1/2 -translate-y-1/2 scale-[1.06] rounded-[42%_58%_50%_50%/48%_52%_55%_45%] opacity-95 blur-[0.5px] ${imageBackdropClass}`}
+            aria-hidden
+          />
+          <div className="relative z-10">{imageFrame}</div>
+        </div>
+      ) : (
+        imageFrame
+      )}
+    </div>
+  );
+
+  const textCol = (
+    <div className="flex min-w-0 flex-col gap-4">
+      <div className="flex items-start gap-4 sm:gap-5">
+        <div
+          className={`mt-1 shrink-0 inline-flex h-11 w-11 items-center justify-center rounded-full text-white shadow-md sm:h-12 sm:w-12 ${iconWrapClass}`}
+          aria-hidden
+        >
+          {icon}
+        </div>
+        <div className="min-w-0 flex-1 space-y-3">
+          <h2 className="font-logo text-xl font-black leading-tight text-slate-900 dark:text-white sm:text-2xl lg:text-3xl">
+            {title}
+          </h2>
+          <p className="max-w-xl text-base font-medium leading-relaxed text-slate-600 dark:text-gray-300">
+            {body}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="grid gap-8 md:grid-cols-2 md:items-start md:gap-10 lg:gap-14">
+      {imageFirst ? (
+        <>
+          {imageCol}
+          {textCol}
+        </>
+      ) : (
+        <>
+          {textCol}
+          {imageCol}
+        </>
+      )}
+    </div>
+  );
+}
 
 export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
   const router = useRouter();
@@ -108,6 +249,56 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
                 çocuk dostu ve güvenli.
               </p>
 
+              <div className="mx-auto mt-10 w-full max-w-3xl px-0 sm:px-2">
+                <p className="text-center text-lg font-black text-slate-900 dark:text-white sm:text-xl">
+                  Şunlardan hangisisiniz?
+                </p>
+                <div className="mt-6 grid w-full grid-cols-3 gap-2 sm:gap-4 md:gap-5">
+                  <KidsLandingRolePickCard
+                    label="Öğretmen"
+                    emoji="💖"
+                    circleClass="bg-amber-300/90 text-rose-600 dark:bg-amber-400/40 dark:text-rose-200"
+                    onPick={() => {
+                      setTab('teacher');
+                      setLoginOpen(true);
+                    }}
+                  />
+                  <KidsLandingRolePickCard
+                    label="Veli"
+                    emoji="🏠"
+                    circleClass="bg-sky-200/95 text-sky-800 dark:bg-sky-900/50 dark:text-sky-100"
+                    onPick={() => {
+                      setTab('parent');
+                      setLoginOpen(true);
+                    }}
+                  />
+                  <KidsLandingRolePickCard
+                    label="Öğrenci"
+                    emoji="🎒"
+                    circleClass="bg-lime-300/90 text-emerald-800 dark:bg-lime-900/40 dark:text-lime-100"
+                    onPick={() => {
+                      setTab('student');
+                      setLoginOpen(true);
+                    }}
+                  />
+                </div>
+                <div
+                  className="mt-8 flex flex-col items-center justify-center gap-2 sm:flex-row sm:gap-4"
+                  aria-label="Güven ve topluluk"
+                >
+                  <div className="flex items-center gap-0.5 text-amber-400" aria-hidden>
+                    <span className="text-xl leading-none sm:text-2xl">★</span>
+                    <span className="text-xl leading-none sm:text-2xl">★</span>
+                    <span className="text-xl leading-none sm:text-2xl">★</span>
+                    <span className="text-xl leading-none sm:text-2xl">★</span>
+                    <span className="text-xl leading-none text-amber-400/45 sm:text-2xl">★</span>
+                  </div>
+                  <p className="text-center text-sm font-medium text-slate-500 dark:text-slate-400">
+                    Veli onaylı kayıt · Güvenli sınıf ortamı
+                  </p>
+                </div>
+              </div>
+
               <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
                 <KidsPrimaryButton
                   type="button"
@@ -160,8 +351,69 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
           </div>
         </div>
 
-        {/* Oyun merkezi tanıtımı */}
-        <div className="rounded-3xl border-2 border-fuchsia-200 bg-gradient-to-br from-fuchsia-50 via-violet-50 to-sky-50 p-6 shadow-md dark:border-fuchsia-800/50 dark:from-fuchsia-950/30 dark:via-violet-950/30 dark:to-sky-950/30">
+        {/* Zig-zag + Oyun merkezi + öğrenci/öğretmen kartları; orta çizgi aynı relative blokta (yarım kalmaması için) */}
+        <div className="relative space-y-10">
+          <section
+            className="relative py-10 sm:py-14"
+            aria-labelledby="kids-landing-features-heading"
+          >
+            <h2 id="kids-landing-features-heading" className="sr-only">
+              Marifetli Kids özellikleri
+            </h2>
+
+            <div className="relative flex flex-col gap-16 sm:gap-20 md:gap-28 lg:gap-32">
+            <KidsLandingZigzagRow
+              imageFirst
+              title="Hemen bağlantı kurun"
+              body="Öğretmen, veli ve öğrenci rolleriyle panelde bir aradasınız: challenge geri bildirimleri, onaylar ve bildirimler tek akışta — sınıfı kaçırmadan takip edin 🌎"
+              imageSrc={KIDS_LANDING_IMAGE('kids-landing-messages.png')}
+              imageAlt="Sohbet balonları ve okul iletişimi illüstrasyonu"
+              iconWrapClass="bg-sky-500 ring-4 ring-sky-100 dark:ring-sky-900/50"
+              icon={<MessageCircle className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={2.25} aria-hidden />}
+            />
+            <KidsLandingZigzagRow
+              imageFirst={false}
+              title="Onun dünyasına açılan bir pencere sunun"
+              body="Challenge teslimleri ve serbest kürsü paylaşımlarıyla sınıf enerjisini yakalayın; veliler çocuklarının üretimini güvenli, kontrollü bir ortamda görebilir ✨"
+              imageSrc={KIDS_LANDING_IMAGE('kids-landing-stories.png')}
+              imageAlt="Sınıf anlarını gösteren kartlar illüstrasyonu"
+              iconWrapClass="bg-amber-500 ring-4 ring-amber-100 dark:ring-amber-900/50"
+              icon={<Images className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={2.25} aria-hidden />}
+            />
+            <KidsLandingZigzagRow
+              imageFirst
+              title="Duyduk, duymadık demeyin!"
+              body="Yaklaşan teslim tarihleri, duyurular ve etkinlikleri takvim mantığıyla düşünün: herkes ne zaman ne yapacağını bilir; hatırlatıcılarla iş düşmez 🗓️"
+              imageSrc={KIDS_LANDING_IMAGE('kids-landing-events.png')}
+              imageAlt="Etkinlik kartları ve takvim illüstrasyonu"
+              iconWrapClass="bg-violet-600 ring-4 ring-violet-100 dark:ring-violet-900/50"
+              icon={<CalendarDays className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={2.25} aria-hidden />}
+            />
+            <KidsLandingZigzagRow
+              imageFirst={false}
+              title="Kendi yöntemleriyle büyümelerine yardımcı olun"
+              body="Rozet yolu, challenge ilerlemesi ve oyun merkezi skorlarıyla çocuklar kendi hızında ilerler; küçük kutlamalar motivasyonu tazeliyor — renkli, güvenli bir challenge dünyası 🎨"
+              imageSrc={KIDS_LANDING_IMAGE('kids-landing-grow.png')}
+              imageAlt="Rozet ve gelişim illüstrasyonu: sevimli maskotlar ve rozetler"
+              iconWrapClass="bg-lime-500 ring-4 ring-lime-100 dark:ring-lime-900/50"
+              icon={<Rocket className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={2.25} aria-hidden />}
+              imageBackdropClass="bg-lime-200/55 dark:bg-emerald-900/35"
+            />
+            <KidsLandingZigzagRow
+              imageFirst
+              title="Şimdiye kadarki en iyi sınıfı oluşturun"
+              body="Davet linkleri, sınıf ve challenge yönetimi, teslimleri değerlendirme ve haftanın yıldızı gibi parçalar tek öğretmen panelinde — sınıfınızı toparlayın, zaman kazanın 🌱"
+              imageSrc={KIDS_LANDING_IMAGE('kids-landing-toolkit.png')}
+              imageAlt="Öğretmen araçları illüstrasyonu: sınıf maskotu ve araç ikonları"
+              iconWrapClass="bg-rose-500 ring-4 ring-rose-100 dark:ring-rose-900/50"
+              icon={<Wand2 className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={2.25} aria-hidden />}
+              imageBackdropClass="bg-rose-200/50 dark:bg-rose-950/30"
+            />
+            </div>
+          </section>
+
+          {/* Oyun merkezi tanıtımı */}
+          <div className="relative z-[3] rounded-3xl border-2 border-fuchsia-200 bg-gradient-to-br from-fuchsia-50 via-violet-50 to-sky-50 p-6 shadow-md dark:border-fuchsia-800/50 dark:from-fuchsia-950/30 dark:via-violet-950/30 dark:to-sky-950/30">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="max-w-2xl">
               <p className="inline-flex items-center gap-1 rounded-full border border-fuchsia-300 bg-white/80 px-2.5 py-1 text-xs font-black text-fuchsia-700 dark:border-fuchsia-700 dark:bg-fuchsia-950/40 dark:text-fuchsia-200">
@@ -198,51 +450,65 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
               Öğrenci olarak giriş yap
             </KidsSecondaryButton>
           </div>
-        </div>
-
-        {/* Öğrenci / öğretmen özet kartları */}
-        <div className="grid gap-5 sm:grid-cols-2">
-          <div className="rounded-3xl border-2 border-sky-200/90 bg-white/80 p-6 dark:border-sky-800/60 dark:bg-gray-900/70">
-            <div className="flex items-center gap-3">
-              <span className="text-3xl" aria-hidden>
-                🧒
-              </span>
-              <h2 className="font-logo text-xl font-bold text-sky-900 dark:text-sky-100">Öğrenci misin?</h2>
-            </div>
-            <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-gray-300">
-              Davet linkiyle kayıt ol, sınıfına katıl. Giriş için aşağıdaki düğmeyi veya modalı kullan.
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setTab('student');
-                setLoginOpen(true);
-              }}
-              className="mt-4 text-sm font-bold text-sky-700 underline underline-offset-2 hover:text-fuchsia-600 dark:text-sky-300"
-            >
-              Öğrenci girişi →
-            </button>
           </div>
-          <div className="rounded-3xl border-2 border-emerald-200/90 bg-white/80 p-6 dark:border-emerald-800/60 dark:bg-gray-900/70">
-            <div className="flex items-center gap-3">
-              <span className="text-3xl" aria-hidden>
-                👩‍🏫
-              </span>
-              <h2 className="font-logo text-xl font-bold text-emerald-900 dark:text-emerald-100">Öğretmen misin?</h2>
+
+          {/* Öğrenci / öğretmen — aynı blokta orta çizgi sütun aralığına kadar uzanır */}
+          <div className="relative z-[1] grid gap-5 sm:grid-cols-2">
+            <div className="rounded-3xl border-2 border-sky-200/90 bg-white/80 p-6 dark:border-sky-800/60 dark:bg-gray-900/70">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl" aria-hidden>
+                  🧒
+                </span>
+                <h2 className="font-logo text-xl font-bold text-sky-900 dark:text-sky-100">Öğrenci misin?</h2>
+              </div>
+              <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-gray-300">
+                Davet linkiyle kayıt ol, sınıfına katıl. Giriş için aşağıdaki düğmeyi veya modalı kullan.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setTab('student');
+                  setLoginOpen(true);
+                }}
+                className="mt-4 text-sm font-bold text-sky-700 underline underline-offset-2 hover:text-fuchsia-600 dark:text-sky-300"
+              >
+                Öğrenci girişi →
+              </button>
             </div>
-            <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-gray-300">
-              Sınıf ve challenge yönetimi, davetler ve haftanın yıldızı — hesabın yönetici tarafından açılır.
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setTab('teacher');
-                setLoginOpen(true);
-              }}
-              className="mt-4 text-sm font-bold text-emerald-700 underline underline-offset-2 hover:text-fuchsia-600 dark:text-emerald-300"
-            >
-              Öğretmen girişi →
-            </button>
+            <div className="rounded-3xl border-2 border-emerald-200/90 bg-white/80 p-6 dark:border-emerald-800/60 dark:bg-gray-900/70">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl" aria-hidden>
+                  👩‍🏫
+                </span>
+                <h2 className="font-logo text-xl font-bold text-emerald-900 dark:text-emerald-100">Öğretmen misin?</h2>
+              </div>
+              <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-gray-300">
+                Sınıf ve challenge yönetimi, davetler ve haftanın yıldızı — hesabın yönetici tarafından açılır.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setTab('teacher');
+                  setLoginOpen(true);
+                }}
+                className="mt-4 text-sm font-bold text-emerald-700 underline underline-offset-2 hover:text-fuchsia-600 dark:text-emerald-300"
+              >
+                Öğretmen girişi →
+              </button>
+            </div>
+          </div>
+
+          {/* md+: net görünen kıvrımlı orta çizgi */}
+          <div className="pointer-events-none absolute left-1/2 top-6 bottom-6 z-[2] hidden w-8 -translate-x-1/2 md:block dark:opacity-90" aria-hidden>
+            <svg className="h-full w-full" viewBox="0 0 28 240" preserveAspectRatio="none">
+              <path
+                d="M14 0 C 3 16, 25 32, 14 48 C 3 64, 25 80, 14 96 C 3 112, 25 128, 14 144 C 3 160, 25 176, 14 192 C 3 208, 25 224, 14 240"
+                fill="none"
+                stroke="rgb(14 165 233 / 0.84)"
+                strokeWidth="3"
+                strokeLinecap="round"
+              />
+            </svg>
           </div>
         </div>
 

@@ -5,10 +5,12 @@ import { HEADER_HEIGHT_PX } from '@/src/components/header';
 import { useSidebarStore } from '@/src/stores/sidebar-store';
 import { KidsHeader } from '@/src/components/kids/kids-header';
 import { KidsSidebar } from '@/src/components/kids/kids-sidebar';
+import { KidsNavMegaMenu } from '@/src/components/kids/kids-nav-mega-menu';
 import { KidsFooter } from '@/src/components/kids/kids-footer';
 import { KidsAuthProvider } from '@/src/providers/kids-auth-provider';
 import { KidsPushHandler } from '@/src/components/kids/kids-push-handler';
 import { SiteAuthProfileSync } from '@/src/components/site-auth-profile-sync';
+import { KIDS_USE_SIDEBAR } from '@/src/lib/kids-config';
 
 type KidsShellProps = {
   pathPrefix: string;
@@ -25,10 +27,14 @@ export function KidsShell({ pathPrefix, children }: KidsShellProps) {
         <KidsPushHandler />
         <KidsHeader pathPrefix={pathPrefix} />
         <div className="flex min-h-screen" style={{ paddingTop: HEADER_HEIGHT_PX }}>
-          <KidsSidebar pathPrefix={pathPrefix} />
+          {KIDS_USE_SIDEBAR ? (
+            <KidsSidebar pathPrefix={pathPrefix} />
+          ) : (
+            <KidsNavMegaMenu pathPrefix={pathPrefix} />
+          )}
           <div
             className={`flex min-w-0 flex-1 flex-col transition-[padding] duration-200 ${
-              isOpen ? 'lg:pl-64' : 'lg:pl-16'
+              KIDS_USE_SIDEBAR ? (isOpen ? 'lg:pl-64' : 'lg:pl-16') : ''
             }`}
           >
             <main className="relative flex-1 min-w-0 overflow-x-clip px-3 py-6 sm:px-5 sm:py-8">
