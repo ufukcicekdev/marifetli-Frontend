@@ -13,7 +13,6 @@ self.addEventListener('message', (event) => {
     firebaseConfig = event.data.config;
     if (firebaseConfig && !firebase.apps.length) {
       firebase.initializeApp(firebaseConfig);
-      console.log('✅ Firebase initialized in service worker');
     }
   }
 });
@@ -28,16 +27,12 @@ const getMessagingInstance = () => {
 
 // Handle background messages
 self.addEventListener('push', (event) => {
-  console.log('📨 Push event received');
-  
   if (!event.data) {
-    console.log('No data in push event');
     return;
   }
 
   try {
     const payload = event.data.json();
-    console.log('Push payload:', payload);
     
     const notificationTitle = payload.notification?.title || payload.data?.title || 'New Notification';
     const notificationBody = payload.notification?.body || payload.data?.body || 'You have a new notification';
@@ -73,8 +68,6 @@ self.addEventListener('push', (event) => {
 
 // Handle notification click — her zaman tam URL ile aç (PWA kapalı veya açık)
 self.addEventListener('notificationclick', (event) => {
-  console.log('🖱️ Notification clicked:', event.action);
-
   event.notification.close();
 
   if (event.action === 'close') {
@@ -104,11 +97,9 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 self.addEventListener('install', (event) => {
-  console.log('🔧 Service Worker installing...');
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
-  console.log('✅ Service Worker activated');
   event.waitUntil(clients.claim());
 });

@@ -7,7 +7,6 @@ import toast from 'react-hot-toast';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import {
   kidsParentChildrenOverview,
-  kidsParentFreeChallengesOverview,
   kidsParentSwitchToStudent,
   type KidsParentChildOverview,
 } from '@/src/lib/kids-api';
@@ -32,9 +31,6 @@ export default function KidsParentPanelPage() {
   const [overview, setOverview] = useState<KidsParentChildOverview[] | null>(null);
   const [overviewLoading, setOverviewLoading] = useState(false);
   const [overviewError, setOverviewError] = useState<string | null>(null);
-  const [freePendingCount, setFreePendingCount] = useState(0);
-  const [freeHistoryCount, setFreeHistoryCount] = useState(0);
-  const [freeOverviewLoading, setFreeOverviewLoading] = useState(false);
 
   const loadOverview = useCallback(async () => {
     setOverviewLoading(true);
@@ -47,19 +43,6 @@ export default function KidsParentPanelPage() {
       setOverview(null);
     } finally {
       setOverviewLoading(false);
-    }
-  }, []);
-
-  const loadFreeOverview = useCallback(async () => {
-    setFreeOverviewLoading(true);
-    try {
-      const { pending, history } = await kidsParentFreeChallengesOverview();
-      setFreePendingCount(pending.length);
-      setFreeHistoryCount(history.length);
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Serbest yarışma özeti yüklenemedi');
-    } finally {
-      setFreeOverviewLoading(false);
     }
   }, []);
 
@@ -80,8 +63,7 @@ export default function KidsParentPanelPage() {
       return;
     }
     void loadOverview();
-    void loadFreeOverview();
-  }, [user, loading, pathPrefix, router, loadOverview, loadFreeOverview]);
+  }, [user, loading, pathPrefix, router, loadOverview]);
 
   async function goToChildPanel(studentId: number) {
     setSwitchingId(studentId);
@@ -121,42 +103,14 @@ export default function KidsParentPanelPage() {
         </div>
         <KidsSecondaryButton
           type="button"
-          disabled={overviewLoading && freeOverviewLoading}
+          disabled={overviewLoading}
           onClick={() => {
             void loadOverview();
-            void loadFreeOverview();
           }}
         >
-          {overviewLoading || freeOverviewLoading ? 'Yenileniyor…' : 'Özeti yenile'}
+          {overviewLoading ? 'Yenileniyor…' : 'Özeti yenile'}
         </KidsSecondaryButton>
       </div>
-
-      <KidsCard tone="sky" className="mt-6">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="font-logo text-base font-bold text-sky-950 dark:text-sky-50">Serbest yarışmalar</h2>
-            <p className="mt-2 text-sm text-sky-900/85 dark:text-sky-100/85">
-              Çocuğun sınıf dışı yarışma önerilerini onayla; geçmiş kararları ayrı sayfada iki sütun veya sekmelerle
-              görürsün.
-            </p>
-            {freeOverviewLoading ? (
-              <p className="mt-2 text-xs font-medium text-sky-800 dark:text-sky-200">Yükleniyor…</p>
-            ) : (
-              <p className="mt-2 text-sm font-semibold text-sky-950 dark:text-sky-50">
-                Bekleyen: {freePendingCount}
-                <span className="mx-2 text-sky-600 dark:text-sky-400">·</span>
-                Geçmiş kayıt: {freeHistoryCount}
-              </p>
-            )}
-          </div>
-          <Link
-            href={`${pathPrefix}/veli/yarismalar`}
-            className="inline-flex min-h-12 w-full shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 px-8 text-sm font-bold text-white shadow-lg shadow-fuchsia-500/25 transition hover:from-violet-500 hover:to-fuchsia-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-500 dark:shadow-fuchsia-900/40 sm:w-auto"
-          >
-            Serbest yarışmaları aç
-          </Link>
-        </div>
-      </KidsCard>
       <KidsCard tone="emerald" className="mt-4">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>

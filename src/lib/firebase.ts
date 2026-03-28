@@ -119,7 +119,6 @@ export const onMessageListener = () =>
   new Promise((resolve) => {
     if (messaging) {
       onMessage(messaging, (payload) => {
-        if (isDev) console.log('Message received in foreground:', payload);
         resolve(payload);
       });
     }

@@ -294,7 +294,7 @@ export default function KidsConversationDetailPage() {
               <div>
                 <h1 className="font-logo text-xl font-bold text-violet-950 dark:text-violet-50">{title}</h1>
                 <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  {wsConnected ? 'Canlı bağlantı açık' : 'Canlı bağlantı kapalı (otomatik yenilenir)'}
+                  {wsConnected ? 'Canlı mesajlaşma aktif' : 'Canlı bağlantı kuruluyor...'}
                 </p>
               </div>
             </div>
@@ -315,7 +315,7 @@ export default function KidsConversationDetailPage() {
                 }`}
               >
                 {wsConnected ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}
-                {wsConnected ? 'Online' : 'Offline'}
+                {wsConnected ? 'Canlı' : 'Bağlanıyor'}
               </div>
             </div>
           </div>
