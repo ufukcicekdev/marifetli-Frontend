@@ -93,7 +93,7 @@ export default function KidsTeacherSchoolsPage() {
       router.replace(kidsLoginPortalHref(pathPrefix, 'ogretmen'));
       return;
     }
-    load();
+    router.replace(`${pathPrefix}/ogretmen/panel`);
   }, [authLoading, user, router, pathPrefix, load]);
 
   useEffect(() => {

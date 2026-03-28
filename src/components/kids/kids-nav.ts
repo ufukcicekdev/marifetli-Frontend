@@ -21,7 +21,6 @@ export function kidsNavLinks(
       { href: kidsHomeHref(p), label: 'Anasayfa', icon: '🏠' },
       { href: KIDS_SITE_MANAGEMENT_HREF, label: 'Yönetim', icon: '🛠️' },
       { href: `${p}/ogretmen/panel`, label: 'Öğretmen paneli', icon: '👩‍🏫' },
-      { href: `${p}/ogretmen/okullar`, label: 'Okullarım', icon: '🏫' },
       { href: `${p}/bildirimler`, label: 'Bildirimler', icon: '🔔' },
       { href: `${p}/profil`, label: 'Profilim', icon: '👤' },
     ];
@@ -35,7 +34,6 @@ export function kidsNavLinks(
 
   if (role === 'teacher') {
     items.push({ href: `${p}/ogretmen/panel`, label: 'Öğretmen paneli', icon: '👩‍🏫' });
-    items.push({ href: `${p}/ogretmen/okullar`, label: 'Okullarım', icon: '🏫' });
   }
   if (role === 'student') {
     items.push({ href: `${p}/ogrenci/panel`, label: 'Öğrenci paneli', icon: '🎒' });
@@ -49,6 +47,8 @@ export function kidsNavLinks(
     items.push({ href: `${p}/veli/ebeveyn-kontrolleri`, label: 'Ebeveyn kontrolleri', icon: '⏱️' });
   }
   if (role) {
+    items.push({ href: `${p}/mesajlar`, label: 'Mesajlar', icon: '💬' });
+    items.push({ href: `${p}/duyurular`, label: 'Duyurular', icon: '📣' });
     items.push({ href: `${p}/bildirimler`, label: 'Bildirimler', icon: '🔔' });
     items.push({ href: `${p}/profil`, label: 'Profilim', icon: '👤' });
   }

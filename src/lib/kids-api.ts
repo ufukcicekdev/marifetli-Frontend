@@ -235,6 +235,14 @@ export type KidsAssignment = {
   submission_opens_at?: string | null;
   /** Son teslim anı (ISO 8601). Yeni challenge’larda zorunlu. */
   submission_closes_at?: string | null;
+  recurrence_type?: 'none' | 'daily' | 'weekly';
+  recurrence_interval?: number;
+  recurrence_until?: string | null;
+  allow_late_submissions?: boolean;
+  late_grace_hours?: number;
+  late_penalty_percent?: number;
+  rubric_schema?: { id?: string; label: string; max_points: number; weight?: number }[];
+  due_soon_notified_at?: string | null;
   created_at: string;
   updated_at: string;
   /** Öğretmen listesi: bu challenge’a yapılan teslim sayısı. */
@@ -1402,6 +1410,10 @@ export type KidsSubmissionRecord = {
   } | null;
   video_url: string;
   caption: string;
+  is_late_submission?: boolean;
+  rubric_scores?: { criterion_id: string; points: number; note?: string }[];
+  rubric_total_score?: number | null;
+  rubric_feedback?: string;
   teacher_review_valid: boolean | null;
   teacher_review_positive: boolean | null;
   teacher_note_to_student: string;
@@ -1433,6 +1445,10 @@ export type KidsTeacherSubmission = {
   } | null;
   video_url: string;
   caption: string;
+  is_late_submission?: boolean;
+  rubric_scores?: { criterion_id: string; points: number; note?: string }[];
+  rubric_total_score?: number | null;
+  rubric_feedback?: string;
   teacher_review_valid: boolean | null;
   teacher_review_positive: boolean | null;
   teacher_note_to_student: string;
@@ -1563,6 +1579,13 @@ export async function kidsCreateAssignment(
       require_image: body.require_image ?? false,
       require_video: body.require_video ?? false,
       submission_rounds: body.submission_rounds ?? 1,
+      recurrence_type: body.recurrence_type ?? 'none',
+      recurrence_interval: body.recurrence_interval ?? 1,
+      recurrence_until: body.recurrence_until ?? null,
+      allow_late_submissions: body.allow_late_submissions ?? false,
+      late_grace_hours: body.late_grace_hours ?? 0,
+      late_penalty_percent: body.late_penalty_percent ?? 0,
+      rubric_schema: body.rubric_schema ?? [],
       is_published: body.is_published ?? true,
       submission_opens_at: body.submission_opens_at,
       submission_closes_at: body.submission_closes_at,
@@ -1587,6 +1610,13 @@ export async function kidsPatchAssignment(
     submission_rounds: number;
     submission_opens_at: string | null;
     submission_closes_at: string | null;
+    recurrence_type: 'none' | 'daily' | 'weekly';
+    recurrence_interval: number;
+    recurrence_until: string | null;
+    allow_late_submissions: boolean;
+    late_grace_hours: number;
+    late_penalty_percent: number;
+    rubric_schema: { id?: string; label: string; max_points: number; weight?: number }[];
   }>,
 ): Promise<KidsAssignment> {
   const res = await kidsAuthorizedFetch(`/classes/${classId}/assignments/${assignmentId}/`, {
@@ -1992,6 +2022,8 @@ export async function kidsPatchTeacherSubmissionReview(
     teacher_review_valid: boolean;
     teacher_review_positive?: boolean | null;
     teacher_note_to_student?: string;
+    rubric_scores?: { criterion_id: string; points: number; note?: string }[];
+    rubric_feedback?: string;
   },
 ): Promise<KidsTeacherSubmission> {
   const res = await kidsAuthorizedFetch(
@@ -2055,7 +2087,12 @@ export type KidsNotificationType =
   | 'kids_challenge_pending_parent'
   | 'kids_challenge_approved'
   | 'kids_challenge_rejected'
-  | 'kids_challenge_invite';
+  | 'kids_challenge_invite'
+  | 'kids_new_message'
+  | 'kids_new_announcement'
+  | 'kids_assignment_due_soon'
+  | 'kids_assignment_late_submitted'
+  | 'kids_assignment_graded_with_rubric';
 
 export type KidsNotificationRow = {
   id: number;
@@ -2067,8 +2104,142 @@ export type KidsNotificationRow = {
   submission: number | null;
   challenge?: number | null;
   challenge_invite?: number | null;
+  conversation?: number | null;
+  message_record?: number | null;
+  announcement?: number | null;
   action_path: string;
 };
+
+export type KidsConversation = {
+  id: number;
+  kids_class: number | null;
+  student: number;
+  parent_user: number;
+  teacher_user: number;
+  topic: string;
+  last_message_at: string | null;
+  created_at: string;
+  updated_at: string;
+  unread_count: number;
+};
+
+export type KidsMessage = {
+  id: number;
+  conversation: number;
+  sender_student: number | null;
+  sender_user: number | null;
+  body: string;
+  edited_at: string | null;
+  created_at: string;
+};
+
+export type KidsAnnouncement = {
+  id: number;
+  scope: 'class' | 'school';
+  kids_class: number | null;
+  school: number | null;
+  target_role: 'all' | 'parent' | 'student' | 'teacher';
+  title: string;
+  body: string;
+  is_pinned: boolean;
+  is_published: boolean;
+  published_at: string | null;
+  expires_at: string | null;
+  created_by: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export async function kidsListConversations(): Promise<KidsConversation[]> {
+  const res = await kidsAuthorizedFetch('/messages/', { method: 'GET' });
+  const data = await res.json().catch(() => []);
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Mesaj kutusu yüklenemedi');
+  return Array.isArray(data) ? (data as KidsConversation[]) : [];
+}
+
+export async function kidsCreateConversation(body: {
+  student_id: number;
+  teacher_user_id?: number;
+  kids_class_id?: number;
+  topic?: string;
+  message?: string;
+}): Promise<KidsConversation> {
+  const res = await kidsAuthorizedFetch('/messages/', { method: 'POST', body: JSON.stringify(body) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Konuşma açılamadı');
+  return data as KidsConversation;
+}
+
+export async function kidsGetConversation(conversationId: number): Promise<KidsConversation> {
+  const res = await kidsAuthorizedFetch(`/messages/${conversationId}/`, { method: 'GET' });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Konuşma bulunamadı');
+  return data as KidsConversation;
+}
+
+export async function kidsListConversationMessages(conversationId: number): Promise<KidsMessage[]> {
+  const res = await kidsAuthorizedFetch(`/messages/${conversationId}/items/`, { method: 'GET' });
+  const data = await res.json().catch(() => []);
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Mesajlar yüklenemedi');
+  return Array.isArray(data) ? (data as KidsMessage[]) : [];
+}
+
+export async function kidsSendConversationMessage(
+  conversationId: number,
+  body: string,
+): Promise<KidsMessage> {
+  const res = await kidsAuthorizedFetch(`/messages/${conversationId}/items/`, {
+    method: 'POST',
+    body: JSON.stringify({ body }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Mesaj gönderilemedi');
+  return data as KidsMessage;
+}
+
+export async function kidsListAnnouncements(): Promise<KidsAnnouncement[]> {
+  const res = await kidsAuthorizedFetch('/announcements/', { method: 'GET' });
+  const data = await res.json().catch(() => []);
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Duyurular yüklenemedi');
+  return Array.isArray(data) ? (data as KidsAnnouncement[]) : [];
+}
+
+export async function kidsCreateAnnouncement(body: {
+  scope: 'class' | 'school';
+  kids_class?: number | null;
+  school?: number | null;
+  target_role?: 'all' | 'parent' | 'student' | 'teacher';
+  title: string;
+  body: string;
+  is_pinned?: boolean;
+  is_published?: boolean;
+  expires_at?: string | null;
+}): Promise<KidsAnnouncement> {
+  const res = await kidsAuthorizedFetch('/announcements/', { method: 'POST', body: JSON.stringify(body) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Duyuru oluşturulamadı');
+  return data as KidsAnnouncement;
+}
+
+export async function kidsPatchAnnouncement(
+  announcementId: number,
+  body: Partial<{
+    title: string;
+    body: string;
+    is_pinned: boolean;
+    is_published: boolean;
+    expires_at: string | null;
+    target_role: 'all' | 'parent' | 'student' | 'teacher';
+  }>,
+): Promise<KidsAnnouncement> {
+  const res = await kidsAuthorizedFetch(`/announcements/${announcementId}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Duyuru güncellenemedi');
+  return data as KidsAnnouncement;
+}
 
 export async function kidsNotificationUnreadCount(): Promise<number> {
   const res = await kidsAuthorizedFetch('/notifications/unread-count/', { method: 'GET' });

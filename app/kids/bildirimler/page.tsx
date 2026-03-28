@@ -24,6 +24,11 @@ const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
   kids_challenge_approved: 'Yarışma onaylandı',
   kids_challenge_rejected: 'Yarışma reddedildi',
   kids_challenge_invite: 'Yarışma daveti',
+  kids_new_message: 'Yeni mesaj',
+  kids_new_announcement: 'Yeni duyuru',
+  kids_assignment_due_soon: 'Son teslim yaklaşıyor',
+  kids_assignment_late_submitted: 'Geç teslim alındı',
+  kids_assignment_graded_with_rubric: 'Rubrik değerlendirmesi',
 };
 
 function typeLabel(t: string): string {

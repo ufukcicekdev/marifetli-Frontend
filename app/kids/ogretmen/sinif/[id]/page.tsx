@@ -8,6 +8,7 @@ import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import {
   kidsAuthorizedFetch,
   kidsCreateAssignment,
+  kidsCreateConversation,
   kidsCreateClassInviteLink,
   kidsCreateInvite,
   kidsDeleteClass,
@@ -661,6 +662,21 @@ export default function KidsTeacherClassPage() {
     }
   }
 
+  async function startParentConversation(en: KidsEnrollment) {
+    try {
+      const display = `${en.student.first_name} ${en.student.last_name}`.trim() || en.student.email;
+      const conv = await kidsCreateConversation({
+        student_id: en.student.id,
+        kids_class_id: classId,
+        topic: `${display} · ${cls?.name || 'Sınıf'}`,
+      });
+      toast.success('Konuşma açıldı');
+      router.push(`${pathPrefix}/mesajlar/${conv.id}`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Konuşma açılamadı');
+    }
+  }
+
   function peerStarterLabel(ch: KidsPeerChallenge) {
     if (!ch.created_by_student) return '—';
     const en = students.find((e) => e.student.id === ch.created_by_student);
@@ -783,14 +799,7 @@ export default function KidsTeacherClassPage() {
         <KidsCard>
           <h2 className="font-logo text-lg font-bold text-slate-900 dark:text-white">Sınıf bilgileri</h2>
           <p className="mt-1 text-sm text-slate-600 dark:text-gray-400">
-            Sınıf adı, açıklama ve bağlı okulu güncelle. Yeni okul eklemek için{' '}
-            <Link
-              href={`${pathPrefix}/ogretmen/okullar`}
-              className="font-bold text-violet-700 underline underline-offset-2 hover:text-fuchsia-600 dark:text-violet-300"
-            >
-              Okullarım
-            </Link>{' '}
-            sayfasını kullan.
+            Sınıf adı, açıklama ve bağlı okulu güncelle. Okul atamaları yönetim panelinden yapılır.
           </p>
           <form className="mt-6 space-y-5" onSubmit={saveClass}>
             <KidsFormField
@@ -1075,6 +1084,12 @@ export default function KidsTeacherClassPage() {
                     <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">
                       Kayıt: {new Date(en.created_at).toLocaleDateString('tr-TR')}
                     </span>
+                    <KidsSecondaryButton
+                      type="button"
+                      onClick={() => void startParentConversation(en)}
+                    >
+                      Veliyle mesaj başlat
+                    </KidsSecondaryButton>
                     <KidsSecondaryButton
                       type="button"
                       className="border-rose-200 text-rose-700 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/40"

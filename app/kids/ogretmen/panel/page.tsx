@@ -134,10 +134,6 @@ export default function KidsTeacherPanelPage() {
   }
 
   const firstName = user.first_name?.trim() || 'Öğretmen';
-  const okullarHref = `${pathPrefix}/ogretmen/okullar`;
-  const primaryLinkClass =
-    'inline-flex min-h-12 w-full items-center justify-center rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 px-8 text-sm font-bold text-white shadow-lg shadow-fuchsia-500/25 transition hover:from-violet-500 hover:to-fuchsia-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-500 dark:shadow-fuchsia-900/40 sm:w-auto';
-
   return (
     <KidsPanelMax>
       <KidsPageHeader
@@ -173,8 +169,8 @@ export default function KidsTeacherPanelPage() {
                       Önce okul eklemen gerekiyor
                     </h2>
                     <p className="mt-1 text-sm leading-relaxed text-emerald-900/85 dark:text-emerald-100/85">
-                      Sınıf, mutlaka bir okula bağlıdır. Okul adı ve varsa adres (il, ilçe, mahalle) yalnızca okul
-                      kaydında tutulur; burada sınıf için ayrı adres istenmez.
+                      Bu hesap için henüz yönetim tarafından okul ataması yapılmamış görünüyor. Sınıf, mutlaka bir okula
+                      bağlıdır.
                     </p>
                   </div>
                 </div>
@@ -184,28 +180,19 @@ export default function KidsTeacherPanelPage() {
                     <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-xs font-black text-white">
                       1
                     </span>
-                    <span>
-                      Aşağıdaki düğmeyle <strong>Okullarım</strong> sayfasına git; okulunu kaydet.
-                    </span>
+                    <span>Yönetim panelinden öğretmeni bir okula atayın.</span>
                   </li>
                   <li className="flex gap-3">
                     <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-xs font-black text-white">
                       2
                     </span>
-                    <span>
-                      Bu sayfaya dön; solda <strong>okulunu seçip</strong> sınıf adını yazarak sınıfını oluştur.
-                    </span>
+                    <span>Atama sonrası bu sayfada okul seçimi açılır ve sınıf oluşturabilirsin.</span>
                   </li>
                 </ol>
 
-                <div className="flex flex-col gap-3">
-                  <Link href={okullarHref} className={primaryLinkClass}>
-                    Okul eklemeye git →
-                  </Link>
-                  <p className="text-center text-xs text-emerald-800/75 dark:text-emerald-200/75">
-                    Okul kaydını tamamladıktan sonra öğretmen paneline yeniden gelmen yeterli.
-                  </p>
-                </div>
+                <p className="text-center text-xs text-emerald-800/75 dark:text-emerald-200/75">
+                  Okul yönetimi geçici olarak yalnızca yönetim panelinden yapılır.
+                </p>
               </>
             ) : (
               <>
@@ -222,14 +209,7 @@ export default function KidsTeacherPanelPage() {
                     </h2>
                     <p className="mt-1 text-sm leading-relaxed text-emerald-900/80 dark:text-emerald-100/80">
                       Okulunu seç, sınıf adını yaz ve kaydet. Her eğitim-öğretim yılı için ayrı sınıf kaydı
-                      açıp isteğe bağlı yıl etiketi kullanabilirsin. Yeni okul eklemek için{' '}
-                      <Link
-                        href={okullarHref}
-                        className="font-bold text-emerald-800 underline decoration-emerald-400/80 underline-offset-2 hover:text-emerald-950 dark:text-emerald-100 dark:hover:text-white"
-                      >
-                        Okullarım
-                      </Link>
-                      .
+                      açıp isteğe bağlı yıl etiketi kullanabilirsin.
                     </p>
                   </div>
                 </div>

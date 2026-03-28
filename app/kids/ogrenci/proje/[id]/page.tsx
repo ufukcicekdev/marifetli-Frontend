@@ -177,7 +177,6 @@ export default function KidsStudentAssignmentPage() {
     () => (assignment ? kidsFormatAssignmentWindowTr(assignment) : ''),
     [assignment],
   );
-
   const canSubmit = useMemo(() => {
     if (!assignment) return false;
     if (showVideo) {
