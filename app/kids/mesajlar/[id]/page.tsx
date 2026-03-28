@@ -8,6 +8,7 @@ import {
   kidsGetConversation,
   kidsListConversations,
   kidsListConversationMessages,
+  kidsParentVerifyPassword,
   kidsSendConversationMessage,
   type KidsConversation,
   type KidsMessage,
@@ -17,7 +18,16 @@ import {
   KIDS_UNIFIED_MAIN_AUTH_FLAG,
   kidsLoginPortalHref,
 } from '@/src/lib/kids-config';
-import { KidsPrimaryButton, kidsTextareaClass } from '@/src/components/kids/kids-ui';
+import {
+  kidsParentMessagesHasRecentUnlock,
+  kidsParentMessagesMarkUnlockedNow,
+} from '@/src/lib/kids-parent-message-gate';
+import {
+  KidsCenteredModal,
+  KidsPrimaryButton,
+  KidsSecondaryButton,
+  kidsTextareaClass,
+} from '@/src/components/kids/kids-ui';
 import { MessageCircle, Send, Smile, Sparkles, UserCircle2, Users, Wifi, WifiOff } from 'lucide-react';
 
 const QUICK_EMOJIS = ['😀', '😂', '😍', '👏', '👍', '🙏', '🎉', '🔥', '❤️', '🌟'] as const;
@@ -35,6 +45,10 @@ export default function KidsConversationDetailPage() {
   const [listLoading, setListLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [wsConnected, setWsConnected] = useState(false);
+  const [accessReady, setAccessReady] = useState(false);
+  const [password, setPassword] = useState('');
+  const [passwordBusy, setPasswordBusy] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const reconnectTimerRef = useRef<number | null>(null);
@@ -76,13 +90,23 @@ export default function KidsConversationDetailPage() {
       router.replace(kidsLoginPortalHref(pathPrefix));
       return;
     }
+    if (user.role === 'parent') {
+      setAccessReady(kidsParentMessagesHasRecentUnlock());
+      return;
+    }
+    setAccessReady(true);
+  }, [authLoading, user, pathPrefix, router]);
+
+  useEffect(() => {
+    if (!accessReady) return;
+    if (!user) return;
     if (!Number.isFinite(conversationId) || conversationId <= 0) {
       router.replace(`${pathPrefix}/mesajlar`);
       return;
     }
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authLoading, user, conversationId, pathPrefix, router]);
+  }, [accessReady, user, conversationId, pathPrefix, router]);
 
   const title = useMemo(
     () => conversation?.topic?.trim() || `Konuşma #${conversation?.id ?? ''}`,
@@ -124,6 +148,7 @@ export default function KidsConversationDetailPage() {
   }
 
   useEffect(() => {
+    if (!accessReady) return;
     if (!user || !conversationId) return;
     const token = realtimeToken();
     if (!token) return;
@@ -183,7 +208,7 @@ export default function KidsConversationDetailPage() {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, conversationId]);
+  }, [accessReady, user, conversationId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -232,7 +257,27 @@ export default function KidsConversationDetailPage() {
     return c.topic?.trim() || `Konuşma #${c.id}`;
   }
 
-  if (authLoading || !user || loading) {
+  async function verifyPasswordAndUnlock() {
+    const pass = password.trim();
+    setPasswordError(null);
+    if (!pass) {
+      setPasswordError('Lütfen şifreni gir.');
+      return;
+    }
+    setPasswordBusy(true);
+    try {
+      await kidsParentVerifyPassword(pass);
+      kidsParentMessagesMarkUnlockedNow();
+      setAccessReady(true);
+      setPassword('');
+    } catch (e) {
+      setPasswordError(e instanceof Error ? e.message : 'Şifre doğrulanamadı');
+    } finally {
+      setPasswordBusy(false);
+    }
+  }
+
+  if (authLoading || !user || (accessReady && loading)) {
     return <p className="text-center text-sm text-violet-800 dark:text-violet-200">Yükleniyor…</p>;
   }
 
@@ -407,6 +452,47 @@ export default function KidsConversationDetailPage() {
           </div>
         </section>
       </div>
+      {user.role === 'parent' && !accessReady ? (
+        <KidsCenteredModal title="Mesajlar için şifre doğrulaması" onClose={() => router.replace(`${pathPrefix}/veli/panel`)}>
+          <p className="text-sm text-slate-700 dark:text-slate-300">
+            Veli mesajlarını görüntülemek için hesabının şifresini gir. Bu doğrulama 15 dakika boyunca geçerli olur.
+          </p>
+          <label className="mt-4 block text-xs font-bold uppercase tracking-wide text-violet-800 dark:text-violet-200">
+            Hesap şifren
+          </label>
+          <input
+            type="password"
+            autoFocus
+            value={password}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              if (passwordError) setPasswordError(null);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                if (!passwordBusy) void verifyPasswordAndUnlock();
+              }
+            }}
+            disabled={passwordBusy}
+            className="mt-2 w-full rounded-xl border-2 border-violet-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-400/25 dark:border-violet-700 dark:bg-gray-800 dark:text-white"
+            placeholder="••••••••"
+          />
+          {passwordError ? (
+            <p className="mt-2 rounded-lg border border-rose-300 bg-rose-50 px-2.5 py-1.5 text-xs font-medium text-rose-800 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200">
+              {passwordError}
+            </p>
+          ) : null}
+          <div className="mt-4 flex justify-end gap-2">
+            <KidsSecondaryButton type="button" disabled={passwordBusy} onClick={() => router.replace(`${pathPrefix}/veli/panel`)}>
+              Vazgeç
+            </KidsSecondaryButton>
+            <KidsPrimaryButton type="button" disabled={passwordBusy} onClick={() => void verifyPasswordAndUnlock()}>
+              {passwordBusy ? 'Doğrulanıyor…' : 'Devam et'}
+            </KidsPrimaryButton>
+          </div>
+        </KidsCenteredModal>
+      ) : null}
     </div>
   );
 }

@@ -64,7 +64,13 @@ export type KidsParentChildOverview = {
   student_login_name: string | null;
   growth_points: number;
   growth_stage: KidsGrowthStage | null;
-  classes: { id: number; name: string; school_name: string }[];
+  classes: {
+    id: number;
+    name: string;
+    school_name: string;
+    teacher_user_id: number;
+    teacher_display: string;
+  }[];
   badges: KidsParentBadge[];
   assignments_recent: KidsParentAssignmentRow[];
   challenges: KidsParentChallengeRow[];
@@ -688,6 +694,18 @@ export async function kidsParentSwitchToStudent(studentId: number): Promise<Kids
   });
   if (!data?.user) throw new Error('Yanıt eksik');
   return data.user;
+}
+
+export async function kidsParentVerifyPassword(password: string): Promise<void> {
+  const res = await kidsAuthorizedFetch('/auth/parent/verify-password/', {
+    method: 'POST',
+    body: JSON.stringify({ password }),
+  });
+  const text = await res.text();
+  const data = readJson<ApiErrorBody>(text);
+  if (!res.ok) {
+    throw new Error(kidsFirstApiErrorMessage(data, 'Şifre doğrulanamadı'));
+  }
 }
 
 /** Veli paneli: tüm bağlı çocukların özetleri. */

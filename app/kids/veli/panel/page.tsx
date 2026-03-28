@@ -6,23 +6,20 @@ import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import {
+  kidsCreateConversation,
   kidsParentChildrenOverview,
   kidsParentSwitchToStudent,
+  kidsParentVerifyPassword,
   type KidsParentChildOverview,
 } from '@/src/lib/kids-api';
-import { KidsCard, KidsPanelMax, KidsPrimaryButton, KidsSecondaryButton } from '@/src/components/kids/kids-ui';
+import {
+  KidsCard,
+  KidsCenteredModal,
+  KidsPanelMax,
+  KidsPrimaryButton,
+  KidsSecondaryButton,
+} from '@/src/components/kids/kids-ui';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
-
-function challengeStatusTr(status: string): string {
-  const m: Record<string, string> = {
-    pending_teacher: 'Öğretmen onayı bekliyor',
-    pending_parent: 'Veli onayı bekliyor',
-    rejected: 'Reddedildi',
-    active: 'Devam ediyor',
-    ended: 'Sona erdi',
-  };
-  return m[status] ?? status;
-}
 
 export default function KidsParentPanelPage() {
   const router = useRouter();
@@ -31,6 +28,17 @@ export default function KidsParentPanelPage() {
   const [overview, setOverview] = useState<KidsParentChildOverview[] | null>(null);
   const [overviewLoading, setOverviewLoading] = useState(false);
   const [overviewError, setOverviewError] = useState<string | null>(null);
+  const [chatTarget, setChatTarget] = useState<{
+    studentId: number;
+    studentName: string;
+    classId: number;
+    className: string;
+    teacherUserId: number;
+    teacherDisplay: string;
+  } | null>(null);
+  const [chatPassword, setChatPassword] = useState('');
+  const [chatStarting, setChatStarting] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
 
   const loadOverview = useCallback(async () => {
     setOverviewLoading(true);
@@ -77,6 +85,37 @@ export default function KidsParentPanelPage() {
       toast.error(e instanceof Error ? e.message : 'Geçiş yapılamadı');
     } finally {
       setSwitchingId(null);
+    }
+  }
+
+  async function startTeacherChat() {
+    if (!chatTarget) return;
+    const password = chatPassword.trim();
+    setChatError(null);
+    if (typeof kidsParentVerifyPassword !== 'function') {
+      setChatError('Uygulama güncellemesi tamamlanmadı. Sayfayı yenileyip tekrar deneyin.');
+      return;
+    }
+    if (!password) {
+      setChatError('Lütfen şifreni gir.');
+      return;
+    }
+    setChatStarting(true);
+    try {
+      await kidsParentVerifyPassword(password);
+      const conv = await kidsCreateConversation({
+        student_id: chatTarget.studentId,
+        teacher_user_id: chatTarget.teacherUserId,
+        kids_class_id: chatTarget.classId,
+      });
+      setChatTarget(null);
+      setChatPassword('');
+      toast.success('Mesajlaşma açıldı.');
+      router.push(`${pathPrefix}/mesajlar/${conv.id}`);
+    } catch (e) {
+      setChatError(e instanceof Error ? e.message : 'Mesajlaşma başlatılamadı');
+    } finally {
+      setChatStarting(false);
     }
   }
 
@@ -222,16 +261,43 @@ export default function KidsParentPanelPage() {
               {c.classes.length > 0 ? (
                 <div className="mt-5">
                   <p className="text-xs font-bold uppercase tracking-wide text-amber-800 dark:text-amber-200">Sınıflar</p>
-                  <ul className="mt-2 flex flex-wrap gap-2">
+                  <ul className="mt-2 space-y-2">
                     {c.classes.map((cl) => (
                       <li
                         key={cl.id}
-                        className="rounded-full border border-amber-200/90 bg-white/90 px-3 py-1 text-xs font-medium text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-50"
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200/90 bg-white/90 px-3 py-2 text-xs font-medium text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-50"
                       >
-                        {cl.name}
-                        {cl.school_name ? (
-                          <span className="text-amber-800/80 dark:text-amber-200/70"> · {cl.school_name}</span>
-                        ) : null}
+                        <span>
+                          {cl.name}
+                          {cl.school_name ? (
+                            <span className="text-amber-800/80 dark:text-amber-200/70"> · {cl.school_name}</span>
+                          ) : null}
+                          {cl.teacher_display ? (
+                            <span className="text-amber-800/80 dark:text-amber-200/70">
+                              {' '}
+                              · Öğretmen: {cl.teacher_display}
+                            </span>
+                          ) : null}
+                        </span>
+                        <KidsSecondaryButton
+                          type="button"
+                          className="!min-h-9 !px-4 !text-xs"
+                          disabled={chatStarting}
+                          onClick={() => {
+                            setChatTarget({
+                              studentId: c.id,
+                              studentName: `${c.first_name} ${c.last_name}`.trim(),
+                              classId: cl.id,
+                              className: cl.name,
+                              teacherUserId: cl.teacher_user_id,
+                              teacherDisplay: cl.teacher_display,
+                            });
+                            setChatPassword('');
+                            setChatError(null);
+                          }}
+                        >
+                          Öğretmene mesaj başlat
+                        </KidsSecondaryButton>
                       </li>
                     ))}
                   </ul>
@@ -258,26 +324,6 @@ export default function KidsParentPanelPage() {
               ) : (
                 <p className="mt-4 text-xs text-amber-900/70 dark:text-amber-200/60">Henüz rozet yok.</p>
               )}
-
-              {c.challenges.length > 0 ? (
-                <div className="mt-5">
-                  <p className="text-xs font-bold uppercase tracking-wide text-amber-800 dark:text-amber-200">
-                    Yarışmalar
-                  </p>
-                  <ul className="mt-2 space-y-1.5 text-sm text-slate-800 dark:text-gray-200">
-                    {c.challenges.map((ch, idx) => (
-                      <li key={`${ch.title}-${idx}`}>
-                        <span className="font-medium">{ch.title}</span>
-                        <span className="text-slate-600 dark:text-gray-400">
-                          {' '}
-                          ({ch.class_name}) — {challengeStatusTr(ch.status)}
-                          {ch.is_initiator ? ' · Öneren' : ''}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ) : null}
 
               <div className="mt-5">
                 <p className="text-xs font-bold uppercase tracking-wide text-amber-800 dark:text-amber-200">
@@ -330,6 +376,66 @@ export default function KidsParentPanelPage() {
           );
         })}
       </div>
+      {chatTarget ? (
+        <KidsCenteredModal
+          title="Öğretmen mesajlaşma doğrulaması"
+          onClose={() => {
+            if (chatStarting) return;
+            setChatTarget(null);
+            setChatPassword('');
+            setChatError(null);
+          }}
+          footer={
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <KidsSecondaryButton
+                type="button"
+                disabled={chatStarting}
+                onClick={() => {
+                  setChatTarget(null);
+                  setChatPassword('');
+                  setChatError(null);
+                }}
+              >
+                Vazgeç
+              </KidsSecondaryButton>
+              <KidsPrimaryButton type="button" disabled={chatStarting} onClick={() => void startTeacherChat()}>
+                {chatStarting ? 'Doğrulanıyor…' : 'Mesajlaşmayı aç'}
+              </KidsPrimaryButton>
+            </div>
+          }
+        >
+          <p className="text-sm text-slate-700 dark:text-gray-300">
+            <strong>{chatTarget.studentName}</strong> için <strong>{chatTarget.teacherDisplay}</strong> öğretmeniyle (
+            {chatTarget.className}) mesajlaşma başlatılacak.
+          </p>
+          <label className="mt-4 block text-xs font-bold uppercase tracking-wide text-violet-800 dark:text-violet-200">
+            Hesap şifren
+          </label>
+          <input
+            type="password"
+            className="mt-2 w-full rounded-xl border-2 border-violet-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-400/25 dark:border-violet-700 dark:bg-gray-800 dark:text-white"
+            autoFocus
+            value={chatPassword}
+            onChange={(e) => {
+              setChatPassword(e.target.value);
+              if (chatError) setChatError(null);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                if (!chatStarting) void startTeacherChat();
+              }
+            }}
+            placeholder="••••••••"
+            disabled={chatStarting}
+          />
+          {chatError ? (
+            <p className="mt-2 rounded-lg border border-rose-300 bg-rose-50 px-2.5 py-1.5 text-xs font-medium text-rose-800 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200">
+              {chatError}
+            </p>
+          ) : null}
+        </KidsCenteredModal>
+      ) : null}
     </KidsPanelMax>
   );
 }

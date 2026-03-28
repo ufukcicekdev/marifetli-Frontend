@@ -43,7 +43,6 @@ export function kidsNavLinks(
   }
   if (role === 'parent') {
     items.push({ href: `${p}/veli/panel`, label: 'Veli paneli', icon: '👪' });
-    items.push({ href: `${p}/veli/yarismalar`, label: 'Serbest yarışmalar', icon: '🏆' });
     items.push({ href: `${p}/veli/ebeveyn-kontrolleri`, label: 'Ebeveyn kontrolleri', icon: '⏱️' });
   }
   if (role) {
