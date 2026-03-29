@@ -1,9 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { MarifetliKidsFooterBlock } from '@/src/components/legal/marifetli-kids-footer-block';
 import { marifetliKidsLegalPathOnKidsPortal } from '@/src/lib/marifetli-kids-legal-paths';
-
-const MAIN_SITE = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.marifetli.com.tr';
 
 type KidsFooterProps = {
   pathPrefix: string;
@@ -20,23 +19,15 @@ export function KidsFooter({ pathPrefix }: KidsFooterProps) {
       />
       <div className="container mx-auto flex flex-col items-center justify-center gap-4 px-3 py-6 text-center text-sm text-violet-900/80 dark:text-violet-100/80 sm:px-4">
         <nav className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1" aria-label="Kids sayfaları">
-          <a href={kidsHome} className="transition-colors hover:text-brand dark:hover:text-brand">
+          <Link href={kidsHome} className="transition-colors hover:text-brand dark:hover:text-brand">
             Kids Anasayfa
-          </a>
-          <a
-            href={MAIN_SITE}
-            rel="noopener noreferrer"
-            className="transition-colors hover:text-brand dark:hover:text-brand"
-          >
+          </Link>
+          <Link href="/" className="transition-colors hover:text-brand dark:hover:text-brand">
             Marifetli
-          </a>
-          <a
-            href={`${MAIN_SITE}/iletisim`}
-            rel="noopener noreferrer"
-            className="transition-colors hover:text-brand dark:hover:text-brand"
-          >
+          </Link>
+          <Link href="/iletisim" className="transition-colors hover:text-brand dark:hover:text-brand">
             İletişim
-          </a>
+          </Link>
         </nav>
         <MarifetliKidsFooterBlock
           variant="kids"

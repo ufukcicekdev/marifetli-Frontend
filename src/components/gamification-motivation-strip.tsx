@@ -7,6 +7,8 @@ import api from '@/src/lib/api';
 import { useAuthStore } from '@/src/stores/auth-store';
 import { useGamificationRoadmapModalStore } from '@/src/stores/gamification-roadmap-modal-store';
 import { SITE_KIDS_BTN_SOFT, SITE_KIDS_HREF } from '@/src/lib/site-kids';
+import { NavIcon } from '@/src/components/nav-icon';
+import { Compass, Gift } from 'lucide-react';
 
 export const gamificationRoadmapQueryKey = ['gamification-roadmap'] as const;
 
@@ -45,7 +47,7 @@ export function GamificationMotivationStrip() {
         <div className="container mx-auto px-3 sm:px-4 max-w-6xl py-2.5 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 min-w-0">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <span className="text-lg shrink-0" aria-hidden>
-              🎁
+              <Gift className="h-5 w-5 text-amber-500" />
             </span>
             <div className="min-w-0">
               <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
@@ -65,7 +67,7 @@ export function GamificationMotivationStrip() {
               Ödül sistemini gör
             </button>
             <Link href={SITE_KIDS_HREF} className={SITE_KIDS_BTN_SOFT}>
-              🎒 Kids
+              <NavIcon name="student" className="h-4 w-4" /> Kids
             </Link>
           </div>
         </div>
@@ -82,7 +84,7 @@ export function GamificationMotivationStrip() {
       <div className="container mx-auto px-3 sm:px-4 max-w-6xl py-2.5 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 min-w-0">
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <span className="text-lg shrink-0" aria-hidden>
-            🧭
+            <Compass className="h-5 w-5 text-violet-500" />
           </span>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{data.headline}</p>

@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { headers } from 'next/headers';
 import { kidsPathPrefixFromHost } from '@/src/lib/kids-config';
 import { KidsShell } from '@/src/components/kids/kids-shell';
 
@@ -16,8 +15,8 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function KidsLayout({ children }: { children: React.ReactNode }) {
-  const host = (await headers()).get('host') ?? '';
+export default function KidsLayout({ children }: { children: React.ReactNode }) {
+  const host = '';
   const pathPrefix = kidsPathPrefixFromHost(host);
 
   return <KidsShell pathPrefix={pathPrefix}>{children}</KidsShell>;

@@ -1,9 +1,6 @@
 /** Ana siteden Kids'e geçiş adresi: her zaman `/kids` tabanlı. */
 function computeSiteKidsHref(): string {
-  const kidsSite = (process.env.NEXT_PUBLIC_KIDS_SITE_URL ?? '').trim();
-  if (kidsSite) return kidsSite.replace(/\/+$/, '');
-  const site = (process.env.NEXT_PUBLIC_SITE_URL ?? '').trim().replace(/\/+$/, '');
-  if (site) return `${site}/kids`;
+  // Mobil app (Capacitor) + web tutarlılığı için Kids geçişini her zaman internal route tut.
   return '/kids';
 }
 

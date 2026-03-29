@@ -11,8 +11,7 @@ import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import { useAuthStore } from '@/src/stores/auth-store';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 import { marifetliKidsLegalPathOnKidsPortal } from '@/src/lib/marifetli-kids-legal-paths';
-
-const MAIN_SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.marifetli.com.tr';
+import { NavIcon } from '@/src/components/nav-icon';
 
 const SIDEBAR_PLACEHOLDER = (
   <aside
@@ -127,22 +126,25 @@ export function KidsSidebar({ pathPrefix }: KidsSidebarProps) {
                   }`}
                   title={!isOpen ? item.label : undefined}
                 >
-                  <span className="shrink-0 text-base">{item.icon}</span>
+                  <span className="shrink-0 text-base">
+                    <NavIcon name={item.icon} />
+                  </span>
                   {isOpen && <span>{item.label}</span>}
                 </Link>
               );
             })}
 
-            <a
-              href={MAIN_SITE_URL}
-              rel="noopener noreferrer"
+            <Link
+              href="/"
               className={`mt-2 flex w-full items-center rounded-lg border border-gray-200 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800 ${
                 isOpen ? 'gap-3 px-3 py-2.5' : 'justify-center p-2.5'
               }`}
             >
-              <span className="shrink-0 text-base">🌐</span>
+              <span className="shrink-0 text-base">
+                <NavIcon name="site" />
+              </span>
               {isOpen && <span>Marifetli ana site</span>}
-            </a>
+            </Link>
           </div>
 
           {isOpen && (
@@ -176,20 +178,18 @@ export function KidsSidebar({ pathPrefix }: KidsSidebarProps) {
                   Çerez Politikası
                 </Link>
                 <span className="my-1 block text-[10px] text-gray-400 dark:text-gray-500">Marifetli ana site</span>
-                <a
-                  href={`${MAIN_SITE_URL}/gizlilik-politikasi`}
+                <Link
+                  href="/gizlilik-politikasi"
                   className="hover:text-brand hover:underline dark:hover:text-brand"
-                  rel="noopener noreferrer"
                 >
                   Gizlilik (genel)
-                </a>
-                <a
-                  href={`${MAIN_SITE_URL}/kullanim-sartlari`}
+                </Link>
+                <Link
+                  href="/kullanim-sartlari"
                   className="hover:text-brand hover:underline dark:hover:text-brand"
-                  rel="noopener noreferrer"
                 >
                   Kullanım Şartları (genel)
-                </a>
+                </Link>
               </div>
             </div>
           )}

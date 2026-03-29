@@ -297,7 +297,7 @@ export function KidsTeacherSubmissionCard({
       if (pickDirty) {
         await kidsPatchSubmissionHighlight(classId, sub.id, pickOn);
       }
-      toast.success('Kaydedildi! 🎉');
+      toast.success('Kaydedildi!');
 
       if (reviewFlow && savedFullReview) {
         const q = reviewFlow.pendingQueue;
@@ -354,7 +354,7 @@ export function KidsTeacherSubmissionCard({
       <KidsTeacherModalShell
         title={
           <span className="flex items-center gap-2">
-            <span>📖</span> {name} — Challenge {sub.round_number ?? 1} · teslim detayı
+            <span>Detay</span> {name} — Challenge {sub.round_number ?? 1} · teslim detayı
           </span>
         }
         onClose={() => setDetailOpen(false)}
@@ -406,7 +406,7 @@ export function KidsTeacherSubmissionCard({
       <KidsTeacherModalShell
         title={
           <span className="flex items-center gap-2">
-            <span>✨</span> {name} — Challenge {sub.round_number ?? 1}
+            <span>Degerlendir</span> {name} — Challenge {sub.round_number ?? 1}
           </span>
         }
         onClose={() => setEvaluateOpen(false)}
@@ -432,7 +432,7 @@ export function KidsTeacherSubmissionCard({
                 onClick={() => void onSave()}
                 className="w-full sm:w-auto"
               >
-                {saving ? 'Kaydediliyor…' : 'Kaydet 🌟'}
+                {saving ? 'Kaydediliyor…' : 'Kaydet'}
               </KidsPrimaryButton>
             </div>
           </div>
@@ -456,7 +456,7 @@ export function KidsTeacherSubmissionCard({
         >
           <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-3 font-logo text-sm font-bold text-sky-950 dark:text-sky-50 [&::-webkit-details-marker]:hidden">
             <span className="flex min-w-0 items-center gap-2">
-              <span aria-hidden>📷</span>
+              <span aria-hidden>Gorseller</span>
               <span>Görseller ve teslim detayı</span>
             </span>
             <span className="shrink-0 text-[11px] font-semibold text-sky-700 dark:text-sky-300">
@@ -542,7 +542,7 @@ export function KidsTeacherSubmissionCard({
               }}
             />
             <span className="text-sm font-bold text-amber-950 dark:text-amber-100">
-              ⭐ Challenge yıldızı ({pickSlots.used}/{pickSlots.limit} kullanıldı)
+              Challenge yildizi ({pickSlots.used}/{pickSlots.limit} kullanildi)
             </span>
           </label>
           <p className="mt-1 pl-8 text-xs text-amber-900/90 dark:text-amber-200/90">
@@ -582,7 +582,7 @@ export function KidsTeacherSubmissionCard({
               </div>
               {pickOn ? (
                 <p className="mt-2 text-xs font-medium text-amber-800 dark:text-amber-200/90">
-                  ⭐ Yıldız açıkken bu teslim kurallara uyuyor sayılır; “Hayır / kısmen” kapalıdır.
+                  Yildiz acikken bu teslim kurallara uyuyor sayilir; “Hayir / kismen” kapalida.
                 </p>
               ) : null}
             </div>
@@ -595,14 +595,14 @@ export function KidsTeacherSubmissionCard({
                     className={positive === true ? choiceOn : choiceOff}
                     onClick={() => setPositive(true)}
                   >
-                    Çok iyi 🎉
+                    Cok iyi
                   </button>
                   <button
                     type="button"
                     className={positive === false ? choiceOn : choiceOff}
                     onClick={() => setPositive(false)}
                   >
-                    Gelişim 💪
+                    Gelisim
                   </button>
                 </div>
               </div>
@@ -650,8 +650,8 @@ export function KidsTeacherSubmissionCard({
             </span>
             <span className="mt-0.5 block text-[10px] font-medium leading-snug text-violet-700/90 dark:text-violet-300">
               {new Date(sub.created_at).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}
-              {sub.kind === 'video' ? ' · 🎬' : ` · 📝${stepCount}`}
-              {images.length ? ` · 🖼${images.length}` : ''}
+              {sub.kind === 'video' ? ' · video' : ` · adim:${stepCount}`}
+              {images.length ? ` · gorsel:${images.length}` : ''}
             </span>
           </div>
           <div className="flex shrink-0 flex-col items-end gap-0.5">
@@ -664,7 +664,7 @@ export function KidsTeacherSubmissionCard({
                 Bekliyor
               </span>
             )}
-            {pickOn || serverPick ? <span className="text-base leading-none">⭐</span> : null}
+            {pickOn || serverPick ? <span className="text-base leading-none">Yildiz</span> : null}
           </div>
         </div>
       ) : !isRow ? (
@@ -678,8 +678,8 @@ export function KidsTeacherSubmissionCard({
               Challenge {sub.round_number ?? 1}
               {' · '}
               {new Date(sub.created_at).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}
-              {sub.kind === 'video' ? ' · 🎬 Video' : ` · 📝 ${stepCount} adım`}
-              {images.length ? ` · 🖼 ${images.length}` : ''}
+              {sub.kind === 'video' ? ' · video' : ` · adim ${stepCount}`}
+              {images.length ? ` · gorsel ${images.length}` : ''}
             </p>
           </div>
           {reviewed ? (
@@ -691,7 +691,7 @@ export function KidsTeacherSubmissionCard({
               Bekliyor
             </span>
           )}
-          {pickOn || serverPick ? <span className="text-lg">⭐</span> : null}
+          {pickOn || serverPick ? <span className="text-xs font-bold text-amber-600">Yildiz</span> : null}
         </div>
       ) : null}
 
@@ -739,14 +739,14 @@ export function KidsTeacherSubmissionCard({
               onClick={() => setDetailOpen(true)}
               className={isRow ? 'min-h-9 px-3 text-[11px]' : 'min-h-10 px-4 text-xs sm:text-sm'}
             >
-              📖 Detay
+              Detay
             </KidsSecondaryButton>
             <KidsPrimaryButton
               type="button"
               onClick={() => setEvaluateOpen(true)}
               className={isRow ? 'min-h-9 px-3 text-[11px]' : 'min-h-10 px-5 text-xs sm:text-sm'}
             >
-              ✨ Değerlendir
+              Degerlendir
             </KidsPrimaryButton>
           </div>
           {!canReview && (

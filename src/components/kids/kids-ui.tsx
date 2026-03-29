@@ -227,17 +227,19 @@ export function KidsTabs({
 
 export function KidsEmptyState({
   emoji,
+  icon,
   title,
   description,
 }: {
-  emoji: string;
+  emoji?: string;
+  icon?: ReactNode;
   title: string;
   description: string;
 }) {
   return (
     <div className="flex flex-col items-center rounded-3xl border-2 border-dashed border-violet-200 bg-violet-50/50 px-6 py-12 text-center dark:border-violet-900/50 dark:bg-violet-950/20">
       <span className="text-5xl" aria-hidden>
-        {emoji}
+        {icon ?? emoji ?? '•'}
       </span>
       <p className="mt-4 font-logo text-lg font-bold text-slate-800 dark:text-white">{title}</p>
       <p className="mt-2 max-w-sm text-sm text-slate-600 dark:text-gray-400">{description}</p>

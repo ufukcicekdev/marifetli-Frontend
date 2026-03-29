@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { Sparkles as SparklesIcon, Sprout } from 'lucide-react';
 import { KidsCenteredModal, KidsPrimaryButton } from '@/src/components/kids/kids-ui';
 
 const MID_STEP_MESSAGES = [
@@ -27,8 +28,7 @@ export function kidsPickStepMotivationMessage(isFinalStep: boolean): string {
 function Sparkles() {
   const pieces = useMemo(
     () =>
-      ['✨', '⭐', '💫', '✨', '🌟'].map((ch, i) => ({
-        ch,
+      [...Array(5)].map((_, i) => ({
         left: `${12 + i * 18}%`,
         delay: `${i * 0.12}s`,
         dur: `${1.1 + (i % 3) * 0.15}s`,
@@ -47,7 +47,7 @@ function Sparkles() {
             ['--confetti-dur' as string]: p.dur,
           }}
         >
-          {p.ch}
+          <SparklesIcon className="h-4 w-4 text-amber-400" />
         </span>
       ))}
     </div>
@@ -73,7 +73,7 @@ export function KidsStudentStepMotivationModal({ open, message, isFinalStep, onC
     <KidsCenteredModal
       title={
         <span className="flex items-center gap-2">
-          <span aria-hidden>🌱</span>
+          <Sprout className="h-4 w-4 text-emerald-500" aria-hidden />
           Filiz diyor ki…
         </span>
       }
@@ -94,9 +94,7 @@ export function KidsStudentStepMotivationModal({ open, message, isFinalStep, onC
               aria-hidden
             />
             <div className="kids-mascot-wiggle relative flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-violet-400 via-fuchsia-400 to-amber-300 shadow-xl ring-4 ring-white/90 dark:ring-violet-950/80 sm:h-32 sm:w-32">
-              <span className="text-[3.5rem] leading-none sm:text-[4rem]" aria-hidden>
-                🌱
-              </span>
+              <Sprout className="h-14 w-14 text-white sm:h-16 sm:w-16" aria-hidden />
             </div>
           </div>
         </div>

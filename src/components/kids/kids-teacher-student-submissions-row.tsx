@@ -35,8 +35,8 @@ function submissionMetaLine(sub: KidsTeacherSubmission) {
   const steps = sub.steps_payload?.steps?.filter((x) => (x.text || '').trim()).length ?? 0;
   const imgN = sub.steps_payload?.image_urls?.length ?? 0;
   return `${new Date(sub.created_at).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}${
-    sub.kind === 'video' ? ' · 🎬' : ` · 📝${steps}`
-  }${imgN ? ` · 🖼${imgN}` : ''}`;
+    sub.kind === 'video' ? ' · video' : ` · adim:${steps}`
+  }${imgN ? ` · gorsel:${imgN}` : ''}`;
 }
 
 /**

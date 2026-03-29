@@ -11,8 +11,7 @@ import { useAuthStore } from '@/src/stores/auth-store';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 import { isKidsNavActive, kidsNavLinks, type KidsNavItem } from '@/src/components/kids/kids-nav';
 import { marifetliKidsLegalPathOnKidsPortal } from '@/src/lib/marifetli-kids-legal-paths';
-
-const MAIN_SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.marifetli.com.tr';
+import { NavIcon } from '@/src/components/nav-icon';
 
 function navDescription(item: KidsNavItem): string {
   const d: Record<string, string> = {
@@ -99,7 +98,9 @@ export function KidsNavMegaMenu({ pathPrefix }: KidsNavMegaMenuProps) {
                     onClick={close}
                     className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 py-3 text-sm font-bold text-white shadow-md hover:from-violet-500 hover:to-fuchsia-500"
                   >
-                    <span aria-hidden>🔑</span>
+                  <span aria-hidden>
+                    <NavIcon name="login" className="h-4 w-4 text-white" />
+                  </span>
                     Giriş yap
                   </Link>
                 )}
@@ -120,7 +121,7 @@ export function KidsNavMegaMenu({ pathPrefix }: KidsNavMegaMenuProps) {
                       }`}
                     >
                       <span className="shrink-0 text-2xl" aria-hidden>
-                        {item.icon}
+                        <NavIcon name={item.icon} className="h-5 w-5" />
                       </span>
                       <div className="min-w-0">
                         <span className="block font-medium">{item.label}</span>
@@ -133,20 +134,21 @@ export function KidsNavMegaMenu({ pathPrefix }: KidsNavMegaMenuProps) {
                 })}
               </div>
 
-              <a
-                href={MAIN_SITE_URL}
-                rel="noopener noreferrer"
+              <Link
+                href="/"
                 onClick={close}
                 className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-violet-200/80 p-4 font-medium text-violet-800 dark:border-violet-800 dark:text-violet-200 md:hidden"
               >
                 <span className="flex items-center gap-2">
-                  <span aria-hidden>🌐</span>
+                  <span aria-hidden>
+                    <NavIcon name="site" className="h-4 w-4" />
+                  </span>
                   Marifetli ana site
                 </span>
                 <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                 </svg>
-              </a>
+              </Link>
             </div>
 
             <div className="hidden w-[300px] min-w-[300px] shrink-0 flex-col border-l border-violet-100 bg-violet-50/40 p-4 dark:border-violet-900/50 dark:bg-gray-800/30 md:flex md:p-6">
@@ -191,14 +193,13 @@ export function KidsNavMegaMenu({ pathPrefix }: KidsNavMegaMenuProps) {
                   </Link>
                 </li>
               </ul>
-              <a
-                href={MAIN_SITE_URL}
-                rel="noopener noreferrer"
+              <Link
+                href="/"
                 onClick={close}
                 className="mt-4 shrink-0 rounded-xl border border-violet-200/80 px-3 py-2.5 text-center text-sm font-medium text-violet-800 hover:bg-white/60 dark:border-violet-800 dark:text-violet-200 dark:hover:bg-gray-800/50"
               >
-                🌐 Ana siteye git
-              </a>
+                Ana siteye git
+              </Link>
             </div>
           </div>
         </div>

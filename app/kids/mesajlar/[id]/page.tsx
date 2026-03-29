@@ -90,6 +90,10 @@ export default function KidsConversationDetailPage() {
       router.replace(kidsLoginPortalHref(pathPrefix));
       return;
     }
+    if (user.role === 'student') {
+      router.replace(`${pathPrefix}/ogrenci/panel`);
+      return;
+    }
     if (user.role === 'parent') {
       setAccessReady(kidsParentMessagesHasRecentUnlock());
       return;

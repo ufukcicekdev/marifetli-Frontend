@@ -5,12 +5,13 @@ import { useQuery } from '@tanstack/react-query';
 import api from '@/src/lib/api';
 import { RichTextEditor } from '@/src/components/rich-text-editor';
 import { CategoryDropdown, buildCategoriesTree } from '@/src/components/category-dropdown';
+import { FileImage, FileText, Link2 } from 'lucide-react';
 
 const TITLE_MAX = 300;
 const POST_TYPES = [
-  { id: 'text', label: 'Metin', icon: '📝', disabled: false },
-  { id: 'media', label: 'Görsel & Video', icon: '🖼️', disabled: false },
-  { id: 'link', label: 'Link', icon: '🔗', disabled: false },
+  { id: 'text', label: 'Metin', icon: <FileText className="h-3.5 w-3.5" />, disabled: false },
+  { id: 'media', label: 'Görsel & Video', icon: <FileImage className="h-3.5 w-3.5" />, disabled: false },
+  { id: 'link', label: 'Link', icon: <Link2 className="h-3.5 w-3.5" />, disabled: false },
 ];
 
 export type QuestionFormPayload = {
@@ -471,7 +472,9 @@ export function QuestionForm({
               <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 sm:p-12 text-center hover:border-brand transition-colors">
                 <input type="file" accept="image/*" onChange={handleMediaChange} className="hidden" id="media-upload" />
                 <label htmlFor="media-upload" className="cursor-pointer block">
-                  <span className="text-4xl mb-2 block">🖼️</span>
+                  <span className="mb-2 block">
+                    <FileImage className="mx-auto h-8 w-8 text-slate-500" />
+                  </span>
                   <span className="text-sm text-gray-600 dark:text-gray-400">Görsel yüklemek için tıklayın veya sürükleyip bırakın</span>
                   <span className="block text-xs text-gray-500 mt-1">PNG, JPG, GIF (en fazla 5 görsel)</span>
                 </label>

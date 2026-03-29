@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { Backpack, Gamepad2, Leaf, Map, Sparkles, Sprout, Star, Target, TreePine } from 'lucide-react';
 import {
   kidsClassLocationLine,
   type KidsBadgeRoadmap,
@@ -8,14 +9,12 @@ import {
   type KidsRoadmapMilestone,
   type KidsUser,
 } from '@/src/lib/kids-api';
-function milestoneEmoji(icon: string): string {
-  const m: Record<string, string> = {
-    seed: '🌱',
-    sprout: '🌿',
-    tree: '🌳',
-    star_tree: '✨',
-  };
-  return m[icon] ?? '⭐';
+function milestoneIcon(icon: string): JSX.Element {
+  if (icon === 'seed') return <Sprout className="h-6 w-6" aria-hidden />;
+  if (icon === 'sprout') return <Leaf className="h-6 w-6" aria-hidden />;
+  if (icon === 'tree') return <TreePine className="h-6 w-6" aria-hidden />;
+  if (icon === 'star_tree') return <Sparkles className="h-6 w-6" aria-hidden />;
+  return <Star className="h-6 w-6" aria-hidden />;
 }
 
 function growthBarFraction(points: number): number {
@@ -71,7 +70,7 @@ function RoadmapStrip({
             }
           >
             <span className="text-2xl leading-none" aria-hidden>
-              {milestoneEmoji(m.icon)}
+              {milestoneIcon(m.icon)}
             </span>
             <span className="mt-1 line-clamp-2 block leading-tight">{m.title}</span>
           </li>
@@ -108,7 +107,7 @@ export function KidsStudentDashboardPlayful({
             Senin köşen
           </p>
           <h1 className="font-logo mt-2 text-center text-3xl font-black text-violet-950 dark:text-white sm:text-4xl">
-            Merhaba {user.first_name || 'kahraman'}! 👋
+            Merhaba {user.first_name || 'kahraman'}!
           </h1>
           <p className="mx-auto mt-2 max-w-md text-center text-sm font-medium text-slate-600 dark:text-gray-300">
             Rozet yolunu takip et, challenge’larını ayrı sayfadan yönet — öğretmenin yıldızı seninle.
@@ -118,7 +117,7 @@ export function KidsStudentDashboardPlayful({
             <div className="mt-5 rounded-2xl border-2 border-emerald-300/80 bg-gradient-to-r from-emerald-50 to-teal-50 p-4 dark:border-emerald-800 dark:from-emerald-950/50 dark:to-teal-950/40">
               <div className="flex flex-wrap items-center gap-3">
                 <span className="text-4xl" aria-hidden>
-                  🌿
+                  <Leaf className="h-8 w-8" />
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="font-logo text-lg font-black text-emerald-900 dark:text-emerald-100">{stage.title}</p>
@@ -143,7 +142,7 @@ export function KidsStudentDashboardPlayful({
 
       <section className="rounded-3xl border-2 border-fuchsia-200 bg-white/90 p-5 shadow-lg dark:border-fuchsia-900/40 dark:bg-gray-950/80">
         <h2 className="font-logo flex items-center gap-2 text-xl font-black text-fuchsia-900 dark:text-fuchsia-100">
-          <span aria-hidden>🎒</span> Sınıflarım
+          <Backpack className="h-5 w-5" aria-hidden /> Sınıflarım
         </h2>
         {loading ? (
           <p className="mt-3 animate-pulse text-sm font-medium text-gray-500">Yükleniyor…</p>
@@ -174,7 +173,7 @@ export function KidsStudentDashboardPlayful({
       <section className="rounded-3xl border-2 border-violet-300/80 bg-gradient-to-br from-violet-100/90 via-fuchsia-50/80 to-amber-50/70 p-1 shadow-lg dark:border-violet-800 dark:from-violet-950/50 dark:via-fuchsia-950/30 dark:to-amber-950/20">
         <div className="rounded-[1.35rem] bg-white/95 px-5 py-5 dark:bg-gray-950/90">
           <h2 className="font-logo flex items-center gap-2 text-lg font-black text-violet-900 dark:text-violet-100">
-            <span aria-hidden>🎯</span> Challenges
+            <Target className="h-5 w-5" aria-hidden /> Challenges
           </h2>
           <p className="mt-1 text-sm font-medium text-slate-600 dark:text-gray-300">
             Çok adımlı challenge’larda her teslim ayrı kaydedilir. Tüm listeyi ve ilerlemeni buradan aç.
@@ -194,13 +193,13 @@ export function KidsStudentDashboardPlayful({
             href={`${pathPrefix}/ogrenci/yol`}
             className="inline-flex min-h-12 w-full items-center justify-center rounded-2xl border-2 border-violet-300 bg-violet-50 px-6 py-3 text-sm font-black text-violet-900 transition hover:bg-violet-100 dark:border-violet-700 dark:bg-violet-950/60 dark:text-violet-100 dark:hover:bg-violet-900/60 sm:w-auto"
           >
-            🗺 Rozet yolu
+            <Map className="mr-1 h-4 w-4" aria-hidden /> Rozet yolu
           </Link>
           <Link
             href={`${pathPrefix}/ogrenci/oyun-merkezi`}
             className="inline-flex min-h-12 w-full items-center justify-center rounded-2xl border-2 border-emerald-300 bg-emerald-50 px-6 py-3 text-sm font-black text-emerald-900 transition hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-100 dark:hover:bg-emerald-900/50 sm:w-auto"
           >
-            🎮 Oyun merkezi
+            <Gamepad2 className="mr-1 h-4 w-4" aria-hidden /> Oyun merkezi
           </Link>
         </div>
       </div>

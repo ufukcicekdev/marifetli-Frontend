@@ -1,8 +1,19 @@
 'use client';
 
 import {
+  Backpack,
   ArrowRight,
   CalendarDays,
+  DoorOpen,
+  GraduationCap,
+  Mic2,
+  PartyPopper,
+  ShieldCheck,
+  Sparkles,
+  Star,
+  Target,
+  Trophy,
+  Users,
   Images,
   MessageCircle,
   Rocket,
@@ -19,12 +30,12 @@ type LoginTab = 'student' | 'teacher' | 'parent';
 
 function KidsLandingRolePickCard({
   label,
-  emoji,
+  icon,
   circleClass,
   onPick,
 }: {
   label: string;
-  emoji: string;
+  icon: ReactNode;
   circleClass: string;
   onPick: () => void;
 }) {
@@ -36,10 +47,10 @@ function KidsLandingRolePickCard({
       className="group flex min-h-0 w-full min-w-0 flex-col items-center gap-2 rounded-3xl border border-slate-200/90 bg-white/95 px-2 py-4 shadow-sm transition hover:-translate-y-0.5 hover:border-sky-300/90 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 sm:gap-3 sm:px-4 sm:py-6 dark:border-slate-600/80 dark:bg-gray-900/90 dark:hover:border-sky-600/70"
     >
       <span
-        className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-[1.65rem] shadow-inner sm:h-[4.5rem] sm:w-[4.5rem] sm:text-[2.25rem] ${circleClass}`}
+        className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full shadow-inner sm:h-[4.5rem] sm:w-[4.5rem] ${circleClass}`}
         aria-hidden
       >
-        {emoji}
+        {icon}
       </span>
       <span className="font-logo text-center text-xs font-black leading-tight text-slate-900 sm:text-base dark:text-white">
         {label}
@@ -207,30 +218,18 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
         {/* Üst şerit */}
         <div className="flex flex-wrap items-center justify-center gap-2 text-center">
           <span className="inline-flex items-center gap-1.5 rounded-full border-2 border-violet-200 bg-white/90 px-3 py-1 text-xs font-bold text-violet-800 shadow-sm dark:border-violet-800 dark:bg-violet-950/60 dark:text-violet-100">
-            <span className="inline-block animate-pulse" aria-hidden>
-              ✨
-            </span>
+            <Sparkles className="inline-block h-3.5 w-3.5 animate-pulse" aria-hidden />
             Güvenli alan
           </span>
           <span className="inline-flex items-center gap-1 rounded-full border-2 border-amber-200 bg-amber-50/90 px-3 py-1 text-xs font-bold text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-100">
-            🌈 Eğlenerek öğren
+            <ShieldCheck className="h-3.5 w-3.5" aria-hidden /> Eğlenerek öğren
           </span>
         </div>
 
         {/* Ana kahraman */}
         <div className="relative">
-          <p
-            className="pointer-events-none absolute -top-2 right-4 animate-bounce text-4xl sm:right-12 sm:text-5xl"
-            aria-hidden
-          >
-            🎈
-          </p>
-          <p
-            className="pointer-events-none absolute bottom-8 left-2 animate-pulse text-3xl sm:left-8 sm:text-4xl"
-            aria-hidden
-          >
-            ⭐
-          </p>
+          <PartyPopper className="pointer-events-none absolute -top-2 right-4 h-8 w-8 animate-bounce text-fuchsia-400 sm:right-12 sm:h-10 sm:w-10" aria-hidden />
+          <Star className="pointer-events-none absolute bottom-8 left-2 h-7 w-7 animate-pulse text-amber-400 sm:left-8 sm:h-8 sm:w-8" aria-hidden />
 
           <div className="rounded-[2rem] border-4 border-white/90 bg-gradient-to-br from-violet-500 via-fuchsia-500 to-amber-400 p-1.5 shadow-2xl shadow-fuchsia-500/30 dark:border-violet-900/60 dark:from-violet-800 dark:via-fuchsia-800 dark:to-amber-700">
             <div className="rounded-[1.65rem] bg-white/95 px-6 py-10 dark:bg-gray-950/95 sm:px-12 sm:py-14">
@@ -256,7 +255,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
                 <div className="mt-6 grid w-full grid-cols-3 gap-2 sm:gap-4 md:gap-5">
                   <KidsLandingRolePickCard
                     label="Öğretmen"
-                    emoji="💖"
+                    icon={<GraduationCap className="h-7 w-7 text-rose-600 sm:h-8 sm:w-8 dark:text-rose-200" />}
                     circleClass="bg-amber-300/90 text-rose-600 dark:bg-amber-400/40 dark:text-rose-200"
                     onPick={() => {
                       setTab('teacher');
@@ -265,7 +264,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
                   />
                   <KidsLandingRolePickCard
                     label="Veli"
-                    emoji="🏠"
+                    icon={<Users className="h-7 w-7 text-sky-800 sm:h-8 sm:w-8 dark:text-sky-100" />}
                     circleClass="bg-sky-200/95 text-sky-800 dark:bg-sky-900/50 dark:text-sky-100"
                     onPick={() => {
                       setTab('parent');
@@ -274,7 +273,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
                   />
                   <KidsLandingRolePickCard
                     label="Öğrenci"
-                    emoji="🎒"
+                    icon={<Backpack className="h-7 w-7 text-emerald-800 sm:h-8 sm:w-8 dark:text-lime-100" />}
                     circleClass="bg-lime-300/90 text-emerald-800 dark:bg-lime-900/40 dark:text-lime-100"
                     onPick={() => {
                       setTab('student');
@@ -305,7 +304,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
                   className="min-h-14 w-full max-w-xs rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 text-base font-black shadow-lg shadow-fuchsia-500/35 ring-4 ring-fuchsia-200/50 hover:from-violet-500 hover:to-fuchsia-500 dark:ring-fuchsia-900/40"
                   onClick={() => setLoginOpen(true)}
                 >
-                  🚀 Giriş yap
+                  <Rocket className="h-4 w-4" aria-hidden /> Giriş yap
                 </KidsPrimaryButton>
                 <KidsSecondaryButton
                   type="button"
@@ -324,7 +323,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="group rounded-3xl border-2 border-sky-200 bg-gradient-to-br from-sky-50 to-white p-5 shadow-md transition hover:-translate-y-0.5 hover:shadow-lg dark:border-sky-800/50 dark:from-sky-950/40 dark:to-gray-900/90">
             <span className="text-3xl transition group-hover:scale-110" aria-hidden>
-              🎒
+              <Target className="h-7 w-7 text-sky-600" />
             </span>
             <h2 className="font-logo mt-2 text-lg font-bold text-sky-900 dark:text-sky-100">Challenges</h2>
             <p className="mt-1.5 text-sm leading-relaxed text-sky-900/80 dark:text-sky-100/80">
@@ -333,7 +332,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
           </div>
           <div className="group rounded-3xl border-2 border-amber-200 bg-gradient-to-br from-amber-50 to-white p-5 shadow-md transition hover:-translate-y-0.5 hover:shadow-lg dark:border-amber-800/50 dark:from-amber-950/40 dark:to-gray-900/90">
             <span className="text-3xl transition group-hover:rotate-6" aria-hidden>
-              🎤
+              <Mic2 className="h-7 w-7 text-amber-600" />
             </span>
             <h2 className="font-logo mt-2 text-lg font-bold text-amber-900 dark:text-amber-100">Serbest kürsü</h2>
             <p className="mt-1.5 text-sm leading-relaxed text-amber-900/80 dark:text-amber-100/80">
@@ -342,7 +341,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
           </div>
           <div className="group rounded-3xl border-2 border-violet-200 bg-gradient-to-br from-violet-50 to-white p-5 shadow-md transition hover:-translate-y-0.5 hover:shadow-lg dark:border-violet-800/50 dark:from-violet-950/40 dark:to-gray-900/90 sm:col-span-1">
             <span className="text-3xl transition group-hover:scale-110" aria-hidden>
-              🏅
+              <Trophy className="h-7 w-7 text-violet-600" />
             </span>
             <h2 className="font-logo mt-2 text-lg font-bold text-violet-900 dark:text-violet-100">Rozet yolu</h2>
             <p className="mt-1.5 text-sm leading-relaxed text-violet-900/80 dark:text-violet-100/80">
@@ -365,7 +364,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
             <KidsLandingZigzagRow
               imageFirst
               title="Hemen bağlantı kurun"
-              body="Öğretmen, veli ve öğrenci rolleriyle panelde bir aradasınız: challenge geri bildirimleri, onaylar ve bildirimler tek akışta — sınıfı kaçırmadan takip edin 🌎"
+              body="Öğretmen, veli ve öğrenci rolleriyle panelde bir aradasınız: challenge geri bildirimleri, onaylar ve bildirimler tek akışta — sınıfı kaçırmadan takip edin."
               imageSrc={KIDS_LANDING_IMAGE('kids-landing-messages.png')}
               imageAlt="Sohbet balonları ve okul iletişimi illüstrasyonu"
               iconWrapClass="bg-sky-500 ring-4 ring-sky-100 dark:ring-sky-900/50"
@@ -374,7 +373,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
             <KidsLandingZigzagRow
               imageFirst={false}
               title="Onun dünyasına açılan bir pencere sunun"
-              body="Challenge teslimleri ve serbest kürsü paylaşımlarıyla sınıf enerjisini yakalayın; veliler çocuklarının üretimini güvenli, kontrollü bir ortamda görebilir ✨"
+              body="Challenge teslimleri ve serbest kürsü paylaşımlarıyla sınıf enerjisini yakalayın; veliler çocuklarının üretimini güvenli, kontrollü bir ortamda görebilir."
               imageSrc={KIDS_LANDING_IMAGE('kids-landing-stories.png')}
               imageAlt="Sınıf anlarını gösteren kartlar illüstrasyonu"
               iconWrapClass="bg-amber-500 ring-4 ring-amber-100 dark:ring-amber-900/50"
@@ -383,7 +382,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
             <KidsLandingZigzagRow
               imageFirst
               title="Duyduk, duymadık demeyin!"
-              body="Yaklaşan teslim tarihleri, duyurular ve etkinlikleri takvim mantığıyla düşünün: herkes ne zaman ne yapacağını bilir; hatırlatıcılarla iş düşmez 🗓️"
+              body="Yaklaşan teslim tarihleri, duyurular ve etkinlikleri takvim mantığıyla düşünün: herkes ne zaman ne yapacağını bilir; hatırlatıcılarla iş düşmez."
               imageSrc={KIDS_LANDING_IMAGE('kids-landing-events.png')}
               imageAlt="Etkinlik kartları ve takvim illüstrasyonu"
               iconWrapClass="bg-violet-600 ring-4 ring-violet-100 dark:ring-violet-900/50"
@@ -392,7 +391,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
             <KidsLandingZigzagRow
               imageFirst={false}
               title="Kendi yöntemleriyle büyümelerine yardımcı olun"
-              body="Rozet yolu, challenge ilerlemesi ve oyun merkezi skorlarıyla çocuklar kendi hızında ilerler; küçük kutlamalar motivasyonu tazeliyor — renkli, güvenli bir challenge dünyası 🎨"
+              body="Rozet yolu, challenge ilerlemesi ve oyun merkezi skorlarıyla çocuklar kendi hızında ilerler; küçük kutlamalar motivasyonu tazeliyor — renkli, güvenli bir challenge dünyası."
               imageSrc={KIDS_LANDING_IMAGE('kids-landing-grow.png')}
               imageAlt="Rozet ve gelişim illüstrasyonu: sevimli maskotlar ve rozetler"
               iconWrapClass="bg-lime-500 ring-4 ring-lime-100 dark:ring-lime-900/50"
@@ -402,7 +401,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
             <KidsLandingZigzagRow
               imageFirst
               title="Şimdiye kadarki en iyi sınıfı oluşturun"
-              body="Davet linkleri, sınıf ve challenge yönetimi, teslimleri değerlendirme ve haftanın yıldızı gibi parçalar tek öğretmen panelinde — sınıfınızı toparlayın, zaman kazanın 🌱"
+              body="Davet linkleri, sınıf ve challenge yönetimi, teslimleri değerlendirme ve haftanın yıldızı gibi parçalar tek öğretmen panelinde — sınıfınızı toparlayın, zaman kazanın."
               imageSrc={KIDS_LANDING_IMAGE('kids-landing-toolkit.png')}
               imageAlt="Öğretmen araçları illüstrasyonu: sınıf maskotu ve araç ikonları"
               iconWrapClass="bg-rose-500 ring-4 ring-rose-100 dark:ring-rose-900/50"
@@ -417,7 +416,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="max-w-2xl">
               <p className="inline-flex items-center gap-1 rounded-full border border-fuchsia-300 bg-white/80 px-2.5 py-1 text-xs font-black text-fuchsia-700 dark:border-fuchsia-700 dark:bg-fuchsia-950/40 dark:text-fuchsia-200">
-                🎮 Yeni: Oyun merkezi
+                <Backpack className="h-3.5 w-3.5" aria-hidden /> Yeni: Oyun merkezi
               </p>
               <h2 className="font-logo mt-3 text-2xl font-black text-violet-950 dark:text-violet-50 sm:text-3xl">
                 Oyunlarla daha kolay öğrenin
@@ -428,7 +427,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
               </p>
             </div>
             <div className="text-5xl sm:text-6xl" aria-hidden>
-              🧠🔢🏆
+              <Trophy className="h-10 w-10 text-amber-500" />
             </div>
           </div>
           <div className="mt-5 flex flex-col gap-3 sm:flex-row">
@@ -457,7 +456,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
             <div className="rounded-3xl border-2 border-sky-200/90 bg-white/80 p-6 dark:border-sky-800/60 dark:bg-gray-900/70">
               <div className="flex items-center gap-3">
                 <span className="text-3xl" aria-hidden>
-                  🧒
+                  <Backpack className="h-7 w-7 text-sky-600" />
                 </span>
                 <h2 className="font-logo text-xl font-bold text-sky-900 dark:text-sky-100">Öğrenci misin?</h2>
               </div>
@@ -478,7 +477,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
             <div className="rounded-3xl border-2 border-emerald-200/90 bg-white/80 p-6 dark:border-emerald-800/60 dark:bg-gray-900/70">
               <div className="flex items-center gap-3">
                 <span className="text-3xl" aria-hidden>
-                  👩‍🏫
+                  <GraduationCap className="h-7 w-7 text-emerald-600" />
                 </span>
                 <h2 className="font-logo text-xl font-bold text-emerald-900 dark:text-emerald-100">Öğretmen misin?</h2>
               </div>
@@ -513,7 +512,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
         </div>
 
         <p className="text-center text-sm font-semibold text-violet-800/90 dark:text-violet-200/90">
-          Veli onaylı kayıt · Kişisel verine saygı · 🌟 İyi eğlenceler
+          Veli onaylı kayıt · Kişisel verine saygı · İyi eğlenceler
         </p>
       </div>
 
@@ -521,7 +520,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
         <KidsCenteredModal
           title={
             <span className="flex items-center gap-2">
-              <span aria-hidden>🚪</span>
+              <DoorOpen className="h-4 w-4" aria-hidden />
               Giriş
             </span>
           }
@@ -554,7 +553,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
                 }`}
               >
                 <span className="mr-1" aria-hidden>
-                  🎒
+                  <Backpack className="inline h-3.5 w-3.5" />
                 </span>
                 Öğrenci
               </button>
@@ -572,7 +571,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
                 }`}
               >
                 <span className="mr-1" aria-hidden>
-                  👪
+                  <Users className="inline h-3.5 w-3.5" />
                 </span>
                 Veli
               </button>
@@ -590,7 +589,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
                 }`}
               >
                 <span className="mr-1" aria-hidden>
-                  🍎
+                  <GraduationCap className="inline h-3.5 w-3.5" />
                 </span>
                 Öğretmen
               </button>

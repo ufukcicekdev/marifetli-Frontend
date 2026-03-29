@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { MailCheck } from 'lucide-react';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import { type KidsUserRole } from '@/src/lib/kids-api';
 import { kidsRequestPasswordReset } from '@/src/lib/kids-student-auth';
@@ -143,7 +144,7 @@ export function KidsRoleLoginForm({
         {forgotSent ? (
           <div className={forgotPanelClass}>
             <p className="text-center text-2xl" aria-hidden>
-              📬
+              <MailCheck className="mx-auto h-8 w-8 text-violet-600" />
             </p>
             <h3 className="mt-2 text-center font-logo text-base font-bold text-violet-950 dark:text-violet-100">
               E-postanı kontrol et
@@ -316,7 +317,7 @@ export function KidsRoleLoginForm({
         {forgotSent ? (
           <div className="text-center">
             <p className="text-4xl" aria-hidden>
-              📬
+              <MailCheck className="mx-auto h-10 w-10 text-amber-500" />
             </p>
             <h2 className="mt-3 text-xl font-bold text-slate-900 dark:text-white">E-postanı kontrol et</h2>
             <p className="mt-2 text-sm text-slate-600 dark:text-gray-400">

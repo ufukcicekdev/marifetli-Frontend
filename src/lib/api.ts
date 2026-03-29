@@ -1,4 +1,5 @@
 import axios, { AxiosInstance } from 'axios';
+import { Capacitor } from '@capacitor/core';
 import toast from 'react-hot-toast';
 import {
   User,
@@ -15,7 +16,24 @@ import {
   CategoryExpertHistoryItem,
 } from '../types';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
+function resolveApiBaseUrl(): string {
+  const fallback = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
+  if (typeof window === 'undefined') return fallback;
+  if (!Capacitor.isNativePlatform()) return fallback;
+  if (Capacitor.getPlatform() !== 'android') return fallback;
+  try {
+    const u = new URL(fallback);
+    if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') {
+      u.hostname = '10.0.2.2';
+      return u.toString().replace(/\/$/, '');
+    }
+  } catch {
+    // Keep fallback if env URL is not parseable.
+  }
+  return fallback;
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 class ApiService {
   private axiosInstance: AxiosInstance;

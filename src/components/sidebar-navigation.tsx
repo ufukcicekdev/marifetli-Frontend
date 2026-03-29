@@ -8,6 +8,7 @@ import { useAuthStore } from '../stores/auth-store';
 import { useAuthModalStore } from '../stores/auth-modal-store';
 import { ThemeToggle } from './theme-toggle';
 import { UzmanFullPageLink } from './uzman-full-page-link';
+import { NavIcon, type NavIconName } from './nav-icon';
 
 function normalizePath(p: string) {
   if (p.length > 1 && p.endsWith('/')) return p.slice(0, -1);
@@ -25,18 +26,18 @@ function isSidebarNavActive(pathname: string | null, href: string) {
   return p === h || p.startsWith(`${h}/`) || p.startsWith(`${h}?`);
 }
 
-type SidebarNavItem = { href: string; label: string; icon: string };
+type SidebarNavItem = { href: string; label: string; icon: NavIconName };
 
 const SIDEBAR_NAV_BASE: SidebarNavItem[] = [
-  { href: '/', label: 'Anasayfa', icon: '🏠' },
-  { href: '/sorular', label: 'Sorular', icon: '💬' },
-  { href: '/kategoriler', label: 'Kategoriler', icon: '📁' },
-  { href: '/blog', label: 'Blog', icon: '📝' },
-  { href: '/tasarimlar', label: 'Tasarımlar', icon: '🎨' },
-  { href: '/topluluklar', label: 'Toplulukları Keşfet', icon: '🔍' },
-  { href: '/t/populer', label: 'Popüler', icon: '🔥' },
-  { href: '/t/tum', label: 'Tümü', icon: '📋' },
-  { href: '/iletisim', label: 'İletişim', icon: '✉️' },
+  { href: '/', label: 'Anasayfa', icon: 'home' },
+  { href: '/sorular', label: 'Sorular', icon: 'questions' },
+  { href: '/kategoriler', label: 'Kategoriler', icon: 'categories' },
+  { href: '/blog', label: 'Blog', icon: 'blog' },
+  { href: '/tasarimlar', label: 'Tasarımlar', icon: 'designs' },
+  { href: '/topluluklar', label: 'Toplulukları Keşfet', icon: 'discover' },
+  { href: '/t/populer', label: 'Popüler', icon: 'popular' },
+  { href: '/t/tum', label: 'Tümü', icon: 'all' },
+  { href: '/iletisim', label: 'İletişim', icon: 'contact' },
 ];
 
 const SIDEBAR_PLACEHOLDER = (
@@ -59,7 +60,7 @@ export function AppSidebar() {
     const base = [...SIDEBAR_NAV_BASE];
     const siteAdmin = Boolean(user?.is_staff || user?.is_superuser);
     if (siteAdmin) {
-      base.splice(1, 0, { href: '/admin', label: 'Yönetim', icon: '🛠️' });
+      base.splice(1, 0, { href: '/admin', label: 'Yönetim', icon: 'admin' });
     }
     return base;
   }, [user]);
@@ -177,7 +178,9 @@ export function AppSidebar() {
                   }`}
                   title={!isOpen ? item.label : undefined}
                 >
-                  <span className="text-base shrink-0">{item.icon}</span>
+                  <span className="text-base shrink-0">
+                    <NavIcon name={item.icon} />
+                  </span>
                   {isOpen && <span>{item.label}</span>}
                 </Link>
               );
@@ -189,7 +192,9 @@ export function AppSidebar() {
                 isOpen ? 'gap-3 px-3 py-2.5 mt-2' : 'justify-center p-2.5 mt-2'
               }`}
             >
-              <span className="text-base shrink-0">🧠</span>
+              <span className="text-base shrink-0">
+                <NavIcon name="expert" />
+              </span>
               {isOpen && <span>Uzmana sor</span>}
             </UzmanFullPageLink>
           </div>

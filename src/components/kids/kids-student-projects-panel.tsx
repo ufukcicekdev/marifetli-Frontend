@@ -9,6 +9,7 @@ import {
   type KidsAssignment,
 } from '@/src/lib/kids-api';
 import { KidsEmptyState, KidsTabs } from '@/src/components/kids/kids-ui';
+import { BadgeCheck, Clock3, Lock, MailOpen, PartyPopper, Rocket, Star, Target } from 'lucide-react';
 
 const projectShells = [
   'from-violet-500/20 via-fuchsia-500/15 to-amber-400/20 ring-violet-400/40 hover:ring-fuchsia-400/60',
@@ -35,15 +36,15 @@ function assignmentSummaryBits(
 ): string[] {
   const bits: string[] = [];
   if (a.require_video) {
-    bits.push(`🎬 en fazla ${a.video_max_seconds} sn`);
+    bits.push(`video: en fazla ${a.video_max_seconds} sn`);
   }
   if (a.require_image) {
-    bits.push(`🖼 her turda 1 görsel`);
+    bits.push('gorsel: her turda 1');
   }
   if (a.require_image || a.require_video) {
-    bits.push(`📋 ${a.submission_rounds ?? 1} ayrı challenge teslimi`);
+    bits.push(`${a.submission_rounds ?? 1} ayri challenge teslimi`);
   }
-  if (wl) bits.push(`📅 ${wl}`);
+  if (wl) bits.push(`takvim: ${wl}`);
   if (!gate.ok) {
     bits.push(gate.phase === 'not_yet' ? 'teslim henüz başlamadı' : 'teslim kapandı');
   }
@@ -55,16 +56,16 @@ function assignmentPlayState(
   gate: ReturnType<typeof kidsAssignmentSubmissionGate>,
 ): { emoji: string; label: string; tone: PlayTone } {
   if (!gate.ok) {
-    if (gate.phase === 'not_yet') return { emoji: '⏳', label: 'Çok yakında', tone: 'slate' };
-    return { emoji: '🔒', label: 'Süre doldu', tone: 'slate' };
+    if (gate.phase === 'not_yet') return { emoji: 'time', label: 'Çok yakında', tone: 'slate' };
+    return { emoji: 'lock', label: 'Süre doldu', tone: 'slate' };
   }
   const s = a.my_submission;
-  if (!s) return { emoji: '🚀', label: 'Hadi başla', tone: 'violet' };
-  if (s.is_teacher_pick) return { emoji: '⭐', label: 'Yıldızlı challenge', tone: 'amber' };
-  if (!s.teacher_reviewed_at) return { emoji: '📬', label: 'Öğretmen inceliyor', tone: 'sky' };
-  if (s.teacher_review_positive === true) return { emoji: '🌟', label: 'Süper geri bildirim', tone: 'emerald' };
-  if (s.teacher_review_positive === false) return { emoji: '💪', label: 'Biraz daha', tone: 'rose' };
-  return { emoji: '✓', label: 'Gönderildi', tone: 'sky' };
+  if (!s) return { emoji: 'rocket', label: 'Hadi başla', tone: 'violet' };
+  if (s.is_teacher_pick) return { emoji: 'star', label: 'Yıldızlı challenge', tone: 'amber' };
+  if (!s.teacher_reviewed_at) return { emoji: 'mail', label: 'Öğretmen inceliyor', tone: 'sky' };
+  if (s.teacher_review_positive === true) return { emoji: 'star', label: 'Süper geri bildirim', tone: 'emerald' };
+  if (s.teacher_review_positive === false) return { emoji: 'rocket', label: 'Biraz daha', tone: 'rose' };
+  return { emoji: 'ok', label: 'Gönderildi', tone: 'sky' };
 }
 
 export type KidsStudentProjectsPanelProps = {
@@ -76,9 +77,9 @@ export type KidsStudentProjectsPanelProps = {
 };
 
 const PROJECT_TABS = [
-  { id: 'ongoing', label: 'Devam eden', icon: '🏃' },
-  { id: 'done', label: 'Tamamlanan', icon: '✅' },
-  { id: 'expired', label: 'Süresi bitenler', icon: '⏱️' },
+  { id: 'ongoing', label: 'Devam eden', icon: '▶' },
+  { id: 'done', label: 'Tamamlanan', icon: '✓' },
+  { id: 'expired', label: 'Süresi bitenler', icon: '⏱' },
 ] as const;
 
 export function KidsStudentProjectsPanel({
@@ -132,7 +133,7 @@ export function KidsStudentProjectsPanel({
       ) : null}
       <section className="rounded-3xl border-2 border-violet-200 bg-gradient-to-b from-violet-50/50 to-white p-5 shadow-lg dark:border-violet-900/50 dark:from-violet-950/20 dark:to-gray-950/80">
         <h1 className="font-logo flex items-center gap-2 text-xl font-black text-violet-900 dark:text-violet-100 sm:text-2xl">
-          <span aria-hidden>🎯</span> Challenges
+          <Target className="h-5 w-5" aria-hidden /> Challenges
         </h1>
         <p className="mt-1 text-xs font-medium text-violet-800/70 dark:text-violet-200/70">
           Her kart bir macera — adım adım teslim et, geri bildirim al, yıldız topla.
@@ -152,7 +153,7 @@ export function KidsStudentProjectsPanel({
             {visible.length === 0 ? (
               tab === 'ongoing' ? (
                 <KidsEmptyState
-                  emoji="🎉"
+                  icon={<PartyPopper className="h-12 w-12 text-amber-500" />}
                   title="Devam eden challenge yok"
                   description={
                     done.length > 0
@@ -162,13 +163,13 @@ export function KidsStudentProjectsPanel({
                 />
               ) : tab === 'done' ? (
                 <KidsEmptyState
-                  emoji="📝"
+                  icon={<BadgeCheck className="h-12 w-12 text-emerald-500" />}
                   title="Tamamlanan challenge yok"
                   description="Gerekli tüm adımları gönderdiğin challenge’lar burada listelenir. Devam eden sekmesinden teslim etmeye başlayabilirsin."
                 />
               ) : (
                 <KidsEmptyState
-                  emoji="✨"
+                  icon={<Clock3 className="h-12 w-12 text-violet-500" />}
                   title="Süresi biten challenge yok"
                   description="Son teslim tarihi geçmiş ama eksik bıraktığın challenge’lar burada listelenir."
                 />
@@ -206,7 +207,14 @@ export function KidsStudentProjectsPanel({
                             <span
                               className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-black ${toneChip[play.tone]}`}
                             >
-                              <span aria-hidden>{play.emoji}</span>
+                              <span aria-hidden>
+                                {play.emoji === 'time' ? <Clock3 className="h-3.5 w-3.5" /> : null}
+                                {play.emoji === 'lock' ? <Lock className="h-3.5 w-3.5" /> : null}
+                                {play.emoji === 'rocket' ? <Rocket className="h-3.5 w-3.5" /> : null}
+                                {play.emoji === 'star' ? <Star className="h-3.5 w-3.5" /> : null}
+                                {play.emoji === 'mail' ? <MailOpen className="h-3.5 w-3.5" /> : null}
+                                {play.emoji === 'ok' ? <BadgeCheck className="h-3.5 w-3.5" /> : null}
+                              </span>
                               {play.label}
                             </span>
                           </div>
@@ -222,7 +230,7 @@ export function KidsStudentProjectsPanel({
                           ) : null}
                           {a.my_submission?.review_hint_title && gate.ok ? (
                             <p className="mt-2 rounded-xl bg-violet-50 px-3 py-2 text-xs font-semibold text-violet-900 dark:bg-violet-950/50 dark:text-violet-100">
-                              💬 {a.my_submission.review_hint_title}
+                              {a.my_submission.review_hint_title}
                             </p>
                           ) : null}
                         </div>

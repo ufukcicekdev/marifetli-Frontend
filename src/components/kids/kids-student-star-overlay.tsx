@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { PartyPopper, Sparkles, Star } from 'lucide-react';
 import { KidsPrimaryButton } from '@/src/components/kids/kids-ui';
 
 type Props = {
@@ -41,14 +42,12 @@ export function KidsStudentStarOverlay({ open, labels, onClose }: Props) {
                 animationDelay: `${i * 0.12}s`,
               }}
             >
-              ✨
+              <Sparkles className="h-5 w-5 text-amber-300" />
             </span>
           ))}
         </div>
         <div className="relative">
-          <p className="text-5xl drop-shadow-md" aria-hidden>
-            ⭐
-          </p>
+          <Star className="mx-auto h-12 w-12 text-amber-400 drop-shadow-md" aria-hidden />
           <h2
             id="kids-star-celebration-title"
             className="mt-4 font-logo text-2xl font-black text-violet-950 dark:text-amber-100"
@@ -62,7 +61,10 @@ export function KidsStudentStarOverlay({ open, labels, onClose }: Props) {
             <ul className="mt-4 space-y-1 text-left text-sm font-bold text-fuchsia-900 dark:text-fuchsia-200">
               {labels.map((l) => (
                 <li key={l} className="rounded-xl bg-white/70 px-3 py-2 dark:bg-white/10">
-                  🎉 {l}
+                  <span className="inline-flex items-center gap-2">
+                    <PartyPopper className="h-4 w-4 text-fuchsia-600" aria-hidden />
+                    {l}
+                  </span>
                 </li>
               ))}
             </ul>

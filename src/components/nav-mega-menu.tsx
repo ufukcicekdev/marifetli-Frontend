@@ -11,6 +11,7 @@ import { useAuthModalStore } from '../stores/auth-modal-store';
 import { ThemeToggle } from './theme-toggle';
 import { UzmanFullPageLink } from './uzman-full-page-link';
 import api from '../lib/api';
+import { NavIcon, type NavIconName } from './nav-icon';
 
 type CategoryItem = { id: number; name: string; slug: string; subcategories?: CategoryItem[] };
 
@@ -20,20 +21,20 @@ function isNavActive(pathname: string | null | undefined, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`) || pathname.startsWith(`${href}?`);
 }
 
-const NAV_ITEMS_BASE: { href: string; label: string; icon: string; description: string }[] = [
-  { href: '/', label: 'Anasayfa', icon: '🏠', description: 'Keşfet, kategoriler ve hızlı başlangıç.' },
-  { href: '/sorular', label: 'Sorular', icon: '💬', description: 'Gönderi akışı, sıralama ve arama.' },
-  { href: '/topluluklar', label: 'Toplulukları Keşfet', icon: '🔍', description: 'Kategorilere göz at, topluluklara katıl.' },
-  { href: '/t/populer', label: 'Popüler', icon: '🔥', description: 'Günün çok konuşulanlarına göz at.' },
-  { href: '/t/tum', label: 'Tümü', icon: '📋', description: 'Tüm soruları listele.' },
-  { href: '/blog', label: 'Blog', icon: '📝', description: 'Makaleler ve rehberler.' },
-  { href: '/tasarimlar', label: 'Tasarımlar', icon: '🎨', description: 'Topluluk tasarımlarını keşfet.' },
-  { href: '/iletisim', label: 'İletişim', icon: '✉️', description: 'Bizimle iletişime geçin.' },
+const NAV_ITEMS_BASE: { href: string; label: string; icon: NavIconName; description: string }[] = [
+  { href: '/', label: 'Anasayfa', icon: 'home', description: 'Keşfet, kategoriler ve hızlı başlangıç.' },
+  { href: '/sorular', label: 'Sorular', icon: 'questions', description: 'Gönderi akışı, sıralama ve arama.' },
+  { href: '/topluluklar', label: 'Toplulukları Keşfet', icon: 'discover', description: 'Kategorilere göz at, topluluklara katıl.' },
+  { href: '/t/populer', label: 'Popüler', icon: 'popular', description: 'Günün çok konuşulanlarına göz at.' },
+  { href: '/t/tum', label: 'Tümü', icon: 'all', description: 'Tüm soruları listele.' },
+  { href: '/blog', label: 'Blog', icon: 'blog', description: 'Makaleler ve rehberler.' },
+  { href: '/tasarimlar', label: 'Tasarımlar', icon: 'designs', description: 'Topluluk tasarımlarını keşfet.' },
+  { href: '/iletisim', label: 'İletişim', icon: 'contact', description: 'Bizimle iletişime geçin.' },
 ];
 
 type MegaNavItem =
-  | { kind: 'link'; href: string; label: string; icon: string; description: string }
-  | { kind: 'expert'; label: string; icon: string; description: string };
+  | { kind: 'link'; href: string; label: string; icon: NavIconName; description: string }
+  | { kind: 'expert'; label: string; icon: NavIconName; description: string };
 
 export function NavMegaMenu() {
   const pathname = usePathname();
@@ -60,7 +61,7 @@ export function NavMegaMenu() {
       base.splice(1, 0, {
         href: '/admin',
         label: 'Yönetim',
-        icon: '🛠️',
+        icon: 'admin',
         description: 'Marifetli Kids öğretmenleri ve yönetim.',
       });
     }
@@ -70,7 +71,7 @@ export function NavMegaMenu() {
       items.splice(i + 1, 0, {
         kind: 'expert',
         label: 'Uzmana sor',
-        icon: '🧠',
+        icon: 'expert',
         description: 'Sağdaki panelden kategori seçip uzmanla yazışın.',
       });
     }
@@ -177,7 +178,7 @@ export function NavMegaMenu() {
                         }`}
                       >
                         <span className="text-2xl shrink-0" aria-hidden>
-                          {item.icon}
+                          <NavIcon name={item.icon} className="h-5 w-5" />
                         </span>
                         <div className="min-w-0">
                           <span className="font-medium block">{item.label}</span>
@@ -198,7 +199,9 @@ export function NavMegaMenu() {
                           : 'hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-800 dark:text-gray-200'
                       }`}
                     >
-                      <span className="text-2xl shrink-0" aria-hidden>{item.icon}</span>
+                      <span className="text-2xl shrink-0" aria-hidden>
+                        <NavIcon name={item.icon} className="h-5 w-5" />
+                      </span>
                       <div className="min-w-0">
                         <span className="font-medium block">{item.label}</span>
                         <span className="text-xs text-gray-500 dark:text-gray-400 block mt-0.5">{item.description}</span>
@@ -214,7 +217,9 @@ export function NavMegaMenu() {
                 className="md:hidden flex items-center justify-between gap-3 p-4 rounded-xl bg-brand-pink/80 dark:bg-brand/10 text-brand-hover font-medium mt-2 border border-brand/10 dark:border-brand/30/50"
               >
                 <span className="flex items-center gap-2">
-                  <span className="text-xl" aria-hidden>📁</span>
+                  <span className="text-xl" aria-hidden>
+                    <NavIcon name="categories" className="h-5 w-5" />
+                  </span>
                   Kategoriler
                 </span>
                 <svg className="w-5 h-5 shrink-0 text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">

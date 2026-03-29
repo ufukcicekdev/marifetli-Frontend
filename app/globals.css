@@ -59,6 +59,7 @@ html {
 :root {
   --font-body: "Nunito", ui-sans-serif, system-ui, sans-serif;
   --font-heading: "TT Octosquares", var(--font-body);
+  --font-emoji: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Noto Emoji", sans-serif;
 }
 
 @theme inline {
@@ -99,7 +100,7 @@ body {
   position: relative;
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-body);
+  font-family: var(--font-body), var(--font-emoji);
   transition: background-color 0.2s, color 0.2s;
   overflow-x: hidden;
   min-width: 0;
@@ -107,7 +108,14 @@ body {
 
 /* Başlıklar: admin’den font_heading gelirse uygulanır */
 h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-heading);
+  font-family: var(--font-heading), var(--font-emoji);
+}
+
+/* Emoji ikonların (özellikle iOS WebView) kutu '?' fallback'ine düşmemesi için */
+.emoji-icon {
+  font-family: var(--font-emoji) !important;
+  font-style: normal;
+  font-variant-emoji: emoji;
 }
 
 /* Soluk baloncuklu arka plan + hafif hareket */

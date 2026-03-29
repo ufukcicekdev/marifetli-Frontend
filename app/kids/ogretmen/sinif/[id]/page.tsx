@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useId, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useId, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
@@ -115,7 +115,7 @@ function peerRowStatusTr(s: KidsPeerChallengeStatus): string {
   }
 }
 
-export default function KidsTeacherClassPage() {
+function KidsTeacherClassPageContent() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -1714,5 +1714,13 @@ export default function KidsTeacherClassPage() {
         </KidsCenteredModal>
       ) : null}
     </KidsPanelMax>
+  );
+}
+
+export default function KidsTeacherClassPage() {
+  return (
+    <Suspense fallback={<p className="text-center text-sm text-violet-800 dark:text-violet-200">Yükleniyor…</p>}>
+      <KidsTeacherClassPageContent />
+    </Suspense>
   );
 }

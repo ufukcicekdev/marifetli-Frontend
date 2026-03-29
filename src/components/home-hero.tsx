@@ -5,52 +5,54 @@ import { useQuery } from '@tanstack/react-query';
 import api from '@/src/lib/api';
 import { UzmanFullPageLink } from '@/src/components/uzman-full-page-link';
 import { SITE_KIDS_BTN_PRIMARY, SITE_KIDS_HREF } from '@/src/lib/site-kids';
+import { NavIcon, type NavIconName } from '@/src/components/nav-icon';
+import { Sparkles } from 'lucide-react';
 
 const VALUE_ITEMS = [
   {
     title: 'Soru sor',
     description: 'Merak ettiğin her şeyi topluluğa sor.',
     href: '/soru-sor',
-    icon: '💬',
+    icon: 'questions' as NavIconName,
   },
   {
     title: 'Cevapla',
     description: 'Bildiklerini paylaş, başkalarına ilham ver.',
     href: '/sorular',
-    icon: '✨',
+    icon: 'popular' as NavIconName,
   },
   {
     title: 'Topluluklara katıl',
     description: 'El işleri, yemek, müzik, sanat… İlgi alanına göre keşfet.',
     href: '/topluluklar',
-    icon: '👥',
+    icon: 'discover' as NavIconName,
   },
   {
     title: 'Tasarım paylaş',
     description: 'El emeği ürünlerini toplulukla paylaş.',
     href: '/tasarimlar',
-    icon: '🎨',
+    icon: 'designs' as NavIconName,
   },
   {
     title: 'Marifetli Kids',
     description: 'Okul challenge’ları, rozet yolu — öğretmen ve öğrenciler için güvenli alan.',
     href: SITE_KIDS_HREF,
-    icon: '🎒',
+    icon: 'student' as NavIconName,
   },
 ];
 
-const CATEGORY_ACCENT: Record<string, { icon: string; bg: string; border: string }> = {
-  'el-isleri': { icon: '🧵', bg: 'bg-rose-50 dark:bg-rose-950/30', border: 'border-rose-200 dark:border-rose-800' },
-  'dikis-moda': { icon: '👗', bg: 'bg-violet-50 dark:bg-violet-950/30', border: 'border-violet-200 dark:border-violet-800' },
-  'ev-dekorasyonu': { icon: '🏠', bg: 'bg-amber-50 dark:bg-amber-950/30', border: 'border-amber-200 dark:border-amber-800' },
-  'yemek-marifetleri': { icon: '🍳', bg: 'bg-orange-50 dark:bg-orange-950/30', border: 'border-orange-200 dark:border-orange-800' },
-  'muzik': { icon: '🎵', bg: 'bg-blue-50 dark:bg-blue-950/30', border: 'border-blue-200 dark:border-blue-800' },
-  'sanat': { icon: '🎨', bg: 'bg-pink-50 dark:bg-pink-950/30', border: 'border-pink-200 dark:border-pink-800' },
-  'fotograf-video': { icon: '📷', bg: 'bg-slate-100 dark:bg-slate-800/50', border: 'border-slate-200 dark:border-slate-700' },
-  'hobiler': { icon: '🌱', bg: 'bg-emerald-50 dark:bg-emerald-950/30', border: 'border-emerald-200 dark:border-emerald-800' },
-  'dijital-beceriler': { icon: '💻', bg: 'bg-cyan-50 dark:bg-cyan-950/30', border: 'border-cyan-200 dark:border-cyan-800' },
+const CATEGORY_ACCENT: Record<string, { icon: NavIconName; bg: string; border: string }> = {
+  'el-isleri': { icon: 'designs', bg: 'bg-rose-50 dark:bg-rose-950/30', border: 'border-rose-200 dark:border-rose-800' },
+  'dikis-moda': { icon: 'designs', bg: 'bg-violet-50 dark:bg-violet-950/30', border: 'border-violet-200 dark:border-violet-800' },
+  'ev-dekorasyonu': { icon: 'home', bg: 'bg-amber-50 dark:bg-amber-950/30', border: 'border-amber-200 dark:border-amber-800' },
+  'yemek-marifetleri': { icon: 'popular', bg: 'bg-orange-50 dark:bg-orange-950/30', border: 'border-orange-200 dark:border-orange-800' },
+  'muzik': { icon: 'popular', bg: 'bg-blue-50 dark:bg-blue-950/30', border: 'border-blue-200 dark:border-blue-800' },
+  'sanat': { icon: 'designs', bg: 'bg-pink-50 dark:bg-pink-950/30', border: 'border-pink-200 dark:border-pink-800' },
+  'fotograf-video': { icon: 'discover', bg: 'bg-slate-100 dark:bg-slate-800/50', border: 'border-slate-200 dark:border-slate-700' },
+  'hobiler': { icon: 'discover', bg: 'bg-emerald-50 dark:bg-emerald-950/30', border: 'border-emerald-200 dark:border-emerald-800' },
+  'dijital-beceriler': { icon: 'categories', bg: 'bg-cyan-50 dark:bg-cyan-950/30', border: 'border-cyan-200 dark:border-cyan-800' },
 };
-const defaultAccent = { icon: '📁', bg: 'bg-gray-100 dark:bg-gray-800', border: 'border-gray-200 dark:border-gray-700' };
+const defaultAccent = { icon: 'categories' as NavIconName, bg: 'bg-gray-100 dark:bg-gray-800', border: 'border-gray-200 dark:border-gray-700' };
 function getCategoryAccent(slug: string) {
   return CATEGORY_ACCENT[slug] ?? defaultAccent;
 }
@@ -76,7 +78,7 @@ export function HomeHero() {
         <div className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-6 sm:px-6 sm:py-4">
           <div className="flex min-w-0 flex-1 items-start gap-3">
             <span className="text-2xl shrink-0 sm:text-3xl" aria-hidden>
-              🎒
+              <NavIcon name="student" className="h-7 w-7 sm:h-8 sm:w-8" />
             </span>
             <div className="min-w-0">
               <p className="text-sm font-bold text-gray-900 dark:text-white sm:text-base">
@@ -126,11 +128,15 @@ export function HomeHero() {
               <span aria-hidden>→</span>
             </Link>
             <UzmanFullPageLink className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-violet-600 to-brand hover:opacity-95 text-white shadow-sm transition-opacity">
-              <span aria-hidden>🧠</span>
+              <span aria-hidden>
+                <NavIcon name="expert" className="h-4 w-4 text-white" />
+              </span>
               Uzmana sor
             </UzmanFullPageLink>
             <Link href={SITE_KIDS_HREF} className={SITE_KIDS_BTN_PRIMARY}>
-              <span aria-hidden>🎒</span>
+              <span aria-hidden>
+                <NavIcon name="student" className="h-4 w-4 text-white" />
+              </span>
               Marifetli Kids
             </Link>
           </div>
@@ -146,7 +152,11 @@ export function HomeHero() {
             className="group rounded-xl border border-gray-200/80 bg-white p-4 transition-all hover:border-brand/40 hover:shadow-md dark:border-gray-800 dark:bg-gray-900 sm:p-5"
           >
             <span className="mb-2 block text-2xl sm:text-3xl" aria-hidden>
-              {item.icon}
+              {item.icon === 'popular' ? (
+                <Sparkles className="h-6 w-6 text-amber-500 sm:h-7 sm:w-7" />
+              ) : (
+                <NavIcon name={item.icon} className="h-6 w-6 sm:h-7 sm:w-7" />
+              )}
             </span>
             <h2 className="text-sm font-semibold text-gray-900 transition-colors group-hover:text-brand dark:text-white">
               {item.title}
@@ -181,7 +191,9 @@ export function HomeHero() {
                     href={`/t/${c.slug}`}
                     className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium border transition-all hover:shadow-md hover:scale-[1.02] ${style.bg} ${style.border} text-gray-800 dark:text-gray-200 hover:border-brand/50 dark:hover:border-brand/50`}
                   >
-                    <span className="text-base leading-none" aria-hidden>{style.icon}</span>
+                    <span className="text-base leading-none" aria-hidden>
+                      <NavIcon name={style.icon} className="h-4 w-4" />
+                    </span>
                     {c.name}
                   </Link>
                 );
@@ -191,7 +203,7 @@ export function HomeHero() {
                 className="inline-flex items-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm font-semibold text-gray-800 transition-all hover:scale-[1.02] hover:border-brand-sky hover:shadow-md dark:border-sky-700 dark:bg-sky-950/35 dark:text-gray-100 dark:hover:border-brand-sky"
               >
                 <span className="text-base leading-none" aria-hidden>
-                  🎒
+                  <NavIcon name="student" className="h-4 w-4" />
                 </span>
                 Marifetli Kids
               </Link>
