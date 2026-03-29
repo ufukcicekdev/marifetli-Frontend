@@ -26,7 +26,6 @@ import {
   kidsBuildStandardClassName,
   kidsParseStandardClassName,
   kidsSchoolLocationLine,
-  kidsSuggestedAcademicYearLabel,
   kidsTeacherAppConfig,
   kidsDatetimeLocalDefaultClose,
   kidsDatetimeLocalToIso,
@@ -139,7 +138,6 @@ function KidsTeacherClassPageContent() {
   const [editClassNonStandard, setEditClassNonStandard] = useState(false);
   const [editClassGrade, setEditClassGrade] = useState('4');
   const [editClassSection, setEditClassSection] = useState('A');
-  const [editClassNameSuffix, setEditClassNameSuffix] = useState('');
   const [editAcademicYear, setEditAcademicYear] = useState('');
   const [editDesc, setEditDesc] = useState('');
   const [editSchoolId, setEditSchoolId] = useState<string>('');
@@ -186,7 +184,6 @@ function KidsTeacherClassPageContent() {
   const editNameId = useId();
   const editClassGradeId = useId();
   const editClassSectionId = useId();
-  const editClassSuffixId = useId();
   const editAcademicYearId = useId();
   const editDescId = useId();
   const editSchoolSelectId = useId();
@@ -230,13 +227,11 @@ function KidsTeacherClassPageContent() {
         setEditClassNonStandard(false);
         setEditClassGrade(p.grade);
         setEditClassSection(p.section);
-        setEditClassNameSuffix(p.suffix || '');
         setEditName(c.name);
       } else {
         setEditClassNonStandard(true);
         setEditClassGrade('4');
         setEditClassSection('A');
-        setEditClassNameSuffix('');
         setEditName(c.name);
       }
       setEditAcademicYear((c.academic_year_label || '').trim());
@@ -438,7 +433,9 @@ function KidsTeacherClassPageContent() {
       return;
     }
     let nameToSave: string;
-    if (editClassNonStandard) {
+    if (!canEditClassIdentity) {
+      nameToSave = cls.name;
+    } else if (editClassNonStandard) {
       nameToSave = editName.trim();
       if (!nameToSave) {
         toast.error('Sınıf adı zorunludur.');
@@ -449,13 +446,13 @@ function KidsTeacherClassPageContent() {
         toast.error('Sınıf düzeyi ve şube harfini seçmelisin.');
         return;
       }
-      nameToSave = kidsBuildStandardClassName(editClassGrade, editClassSection, editClassNameSuffix);
+      nameToSave = kidsBuildStandardClassName(editClassGrade, editClassSection);
     }
     setSavingClass(true);
     try {
       const updated = await kidsPatchClass(cls.id, {
         name: nameToSave,
-        academic_year_label: editAcademicYear.trim(),
+        academic_year_label: canEditClassIdentity ? editAcademicYear.trim() : (cls.academic_year_label || '').trim(),
         description: editDesc.trim(),
         school_id: sid,
       });
@@ -742,6 +739,7 @@ function KidsTeacherClassPageContent() {
   }
 
   const classLocationLine = kidsClassLocationLine(cls);
+  const canEditClassIdentity = user.role === 'admin';
 
   return (
     <KidsPanelMax className={tab === 'assignments' || tab === 'peer' ? '!max-w-6xl' : ''}>
@@ -832,6 +830,7 @@ function KidsTeacherClassPageContent() {
                   onChange={(e) => setEditName(e.target.value)}
                   className={kidsInputClass}
                   maxLength={200}
+                  disabled={!canEditClassIdentity}
                 />
               </KidsFormField>
             ) : (
@@ -844,6 +843,7 @@ function KidsTeacherClassPageContent() {
                       onChange={setEditClassGrade}
                       options={KIDS_CLASS_GRADE_OPTIONS}
                       searchable={false}
+                      disabled={!canEditClassIdentity}
                     />
                   </KidsFormField>
                   <KidsFormField id={editClassSectionId} label="Şube (harf)" required hint="A–Z.">
@@ -853,27 +853,14 @@ function KidsTeacherClassPageContent() {
                       onChange={setEditClassSection}
                       options={KIDS_CLASS_SECTION_OPTIONS}
                       searchable
+                      disabled={!canEditClassIdentity}
                     />
                   </KidsFormField>
                 </div>
-                <KidsFormField
-                  id={editClassSuffixId}
-                  label="Ek metin (isteğe bağlı)"
-                  hint='Örn. "Sınıfı" — kayıtlı ad: düzey + şube + bu metin.'
-                >
-                  <input
-                    id={editClassSuffixId}
-                    value={editClassNameSuffix}
-                    onChange={(e) => setEditClassNameSuffix(e.target.value)}
-                    className={kidsInputClass}
-                    maxLength={120}
-                    placeholder="Örn. Sınıfı"
-                  />
-                </KidsFormField>
                 <p className="text-sm text-slate-600 dark:text-gray-400">
                   Önizleme:{' '}
                   <strong className="font-logo text-slate-900 dark:text-white">
-                    {kidsBuildStandardClassName(editClassGrade, editClassSection, editClassNameSuffix)}
+                    {kidsBuildStandardClassName(editClassGrade, editClassSection)}
                   </strong>
                 </p>
               </>
@@ -881,7 +868,7 @@ function KidsTeacherClassPageContent() {
             <KidsFormField
               id={editAcademicYearId}
               label="Eğitim-öğretim yılı"
-              hint={`Listelerde ayırt etmek için. «Seçilmedi» bırakılabilir. Önerilen: ${kidsSuggestedAcademicYearLabel()}.`}
+              hint="Bu alan yönetim panelinden belirlenir; öğretmen panelinde sadece görüntülenir."
             >
               <KidsSelect
                 id={editAcademicYearId}
@@ -889,6 +876,7 @@ function KidsTeacherClassPageContent() {
                 onChange={setEditAcademicYear}
                 options={editAcademicYearOptions}
                 searchable={false}
+                disabled
               />
             </KidsFormField>
             <KidsFormField id={editDescId} label="Açıklama" hint="Öğrenci ve velilere kısa bilgi.">
