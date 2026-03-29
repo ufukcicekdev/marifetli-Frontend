@@ -201,9 +201,18 @@ export function KidsStudentProjectsPanel({
                       >
                         <div className="flex flex-col rounded-[0.9rem] bg-white/95 px-4 py-4 dark:bg-gray-950/95">
                           <div className="flex flex-wrap items-start justify-between gap-2">
-                            <span className="font-logo text-lg font-black text-violet-950 dark:text-white">
-                              {a.title}
-                            </span>
+                            <div className="min-w-0">
+                              <span className="font-logo text-lg font-black text-violet-950 dark:text-white">
+                                {a.title}
+                              </span>
+                              {(a.class_name || a.teacher_display) ? (
+                                <p className="mt-0.5 line-clamp-1 text-xs font-medium text-violet-800/80 dark:text-violet-200/80">
+                                  {[a.class_name, a.teacher_display ? `${a.teacher_display}${a.teacher_subject ? ` (${a.teacher_subject})` : ''}` : '']
+                                    .filter(Boolean)
+                                    .join(' · ')}
+                                </p>
+                              ) : null}
+                            </div>
                             <span
                               className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-black ${toneChip[play.tone]}`}
                             >

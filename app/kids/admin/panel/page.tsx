@@ -1,10 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useId, useMemo, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useState, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import {
+  kidsAddClassTeacher,
+  kidsAdminCreateSubject,
   kidsAdminAddSchoolYearProfile,
   kidsAdminAssignSchoolTeacher,
   kidsAdminCreateMebSchool,
@@ -12,16 +14,25 @@ import {
   kidsAdminCreateTeacher,
   kidsAdminDeleteSchool,
   kidsAdminPatchSchool,
+  kidsAdminPatchSubject,
   kidsAdminPatchTeacher,
+  kidsAdminResendTeacherWelcome,
   kidsAdminRemoveSchoolTeacher,
   kidsAdminSchoolsList,
+  kidsAdminSubjectsList,
   kidsAdminTeachersList,
   kidsAcademicYearSelectOptions,
   kidsMebDistricts,
   kidsMebProvinces,
   kidsMebSchoolsPick,
+  kidsListClasses,
+  kidsListClassTeachers,
+  kidsRemoveClassTeacher,
   kidsSuggestedAcademicYearLabel,
+  type KidsClass,
+  type KidsAdminSubject,
   type KidsAdminSchoolDetail,
+  type KidsClassTeacherAssignment,
   type KidsAdminTeacher,
   type MebSchoolPick,
 } from '@/src/lib/kids-api';
@@ -142,8 +153,12 @@ export default function KidsAdminPanelPage() {
   const [email, setEmail] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [teacherSubject, setTeacherSubject] = useState('');
   const [teacherSchoolIds, setTeacherSchoolIds] = useState<number[]>([]);
   const [toggleId, setToggleId] = useState<number | null>(null);
+  const [resendMailId, setResendMailId] = useState<number | null>(null);
+  const [subjectUpdateId, setSubjectUpdateId] = useState<number | null>(null);
+  const [teacherSubjectDrafts, setTeacherSubjectDrafts] = useState<Record<number, string>>({});
 
   // MEB cascading dropdown state
   const [mebProvinces, setMebProvinces] = useState<string[]>([]);
@@ -195,6 +210,16 @@ export default function KidsAdminPanelPage() {
   const [editDemoEndAt, setEditDemoEndAt] = useState('');
   const [editSalesYear, setEditSalesYear] = useState(kidsSuggestedAcademicYearLabel());
   const [schoolEditSavingId, setSchoolEditSavingId] = useState<number | null>(null);
+  const [classes, setClasses] = useState<KidsClass[]>([]);
+  const [selectedClassId, setSelectedClassId] = useState<string>('');
+  const [classTeachers, setClassTeachers] = useState<KidsClassTeacherAssignment[]>([]);
+  const [classTeacherId, setClassTeacherId] = useState<string>('');
+  const [classTeacherLoading, setClassTeacherLoading] = useState(false);
+  const [classTeacherSaving, setClassTeacherSaving] = useState(false);
+  const [subjects, setSubjects] = useState<KidsAdminSubject[]>([]);
+  const [newSubjectName, setNewSubjectName] = useState('');
+  const [subjectSaving, setSubjectSaving] = useState(false);
+  const [showPassiveSubjects, setShowPassiveSubjects] = useState(false);
 
   const load = useCallback(async () => {
     setListLoading(true);
@@ -218,6 +243,31 @@ export default function KidsAdminPanelPage() {
     }
   }, []);
 
+  const loadClasses = useCallback(async () => {
+    try {
+      const list = await kidsListClasses();
+      setClasses(list);
+      if (!selectedClassId && list.length > 0) {
+        setSelectedClassId(String(list[0].id));
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Sınıflar alınamadı');
+    }
+  }, [selectedClassId]);
+
+  const loadSubjects = useCallback(async () => {
+    try {
+      const list = await kidsAdminSubjectsList();
+      setSubjects(list);
+      if (!teacherSubject) {
+        const firstActive = list.find((s) => s.is_active);
+        if (firstActive) setTeacherSubject(firstActive.name);
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Branşlar alınamadı');
+    }
+  }, [teacherSubject]);
+
   useEffect(() => {
     if (loading) return;
     if (!user) {
@@ -230,7 +280,9 @@ export default function KidsAdminPanelPage() {
     }
     void load();
     void loadSchools();
-  }, [user, loading, pathPrefix, router, load, loadSchools]);
+    void loadClasses();
+    void loadSubjects();
+  }, [user, loading, pathPrefix, router, load, loadSchools, loadClasses, loadSubjects]);
 
   // Load MEB provinces on mount
   useEffect(() => {
@@ -384,18 +436,25 @@ export default function KidsAdminPanelPage() {
 
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
+    const subject = teacherSubject.trim();
+    if (!subject) {
+      toast.error('Öğretmen branşı seçin.');
+      return;
+    }
     setSaving(true);
     try {
       const res = await kidsAdminCreateTeacher({
         email: email.trim(),
         first_name: firstName.trim(),
         last_name: lastName.trim(),
+        subject,
         school_ids: teacherSchoolIds.length ? teacherSchoolIds : undefined,
       });
       setTeachers((prev) => [res.teacher, ...prev]);
       setEmail('');
       setFirstName('');
       setLastName('');
+      setTeacherSubject(subject);
       setTeacherSchoolIds([]);
       void loadSchools();
       if (res.email_sent) {
@@ -619,6 +678,181 @@ export default function KidsAdminPanelPage() {
     return opts;
   }
 
+  const selectedClass = useMemo(
+    () => classes.find((c) => String(c.id) === selectedClassId) ?? null,
+    [classes, selectedClassId],
+  );
+
+  const classOptions = useMemo<KidsSelectOption[]>(
+    () => [
+      { value: '', label: classes.length ? 'Sınıf seçin' : 'Henüz sınıf yok' },
+      ...classes.map((c) => ({
+        value: String(c.id),
+        label: `${c.name}${c.school?.name ? ` · ${c.school.name}` : ''}`,
+      })),
+    ],
+    [classes],
+  );
+
+  const classTeacherOptions = useMemo<KidsSelectOption[]>(() => {
+    if (!selectedClass) return [{ value: '', label: 'Önce sınıf seçin' }];
+    const school = schools.find((s) => s.id === selectedClass.school.id);
+    const allowed = new Set((school?.teachers || []).map((t) => t.id));
+    const already = new Set(classTeachers.map((t) => t.teacher_user_id));
+    const rows = teachers.filter((t) => t.is_active && allowed.has(t.id) && !already.has(t.id));
+    return [
+      { value: '', label: 'Öğretmen seçin' },
+      ...rows.map((t) => ({
+        value: String(t.id),
+        label: `${(`${t.first_name || ''} ${t.last_name || ''}`.trim() || t.email)} · ${t.subject || 'Branşsız'}`,
+      })),
+    ];
+  }, [selectedClass, schools, teachers, classTeachers]);
+
+  const teacherSubjectOptions = useMemo<KidsSelectOption[]>(() => {
+    const activeRows = subjects.filter((s) => s.is_active);
+    if (activeRows.length === 0) {
+      return [{ value: '', label: 'Önce branş ekleyin' }];
+    }
+    return [
+      { value: '', label: 'Branş seçin' },
+      ...activeRows.map((s) => ({ value: s.name, label: s.name })),
+    ];
+  }, [subjects]);
+
+  const activeTeacherSubjectOptions = useMemo<KidsSelectOption[]>(
+    () => subjects.filter((s) => s.is_active).map((s) => ({ value: s.name, label: s.name })),
+    [subjects],
+  );
+
+  const teacherRowSubjectOptions = useCallback(
+    (teacher: KidsAdminTeacher): KidsSelectOption[] => {
+      const draft = (teacherSubjectDrafts[teacher.id] ?? teacher.subject ?? '').trim();
+      const hasCurrent = draft && activeTeacherSubjectOptions.some((o) => o.value === draft);
+      if (hasCurrent) return activeTeacherSubjectOptions;
+      if (!draft) return activeTeacherSubjectOptions;
+      return [{ value: draft, label: `${draft} (pasif)` }, ...activeTeacherSubjectOptions];
+    },
+    [activeTeacherSubjectOptions, teacherSubjectDrafts],
+  );
+
+  const subjectRows = useMemo(() => {
+    const sorted = [...subjects].sort(
+      (a, b) => Number(b.is_active) - Number(a.is_active) || a.name.localeCompare(b.name, 'tr'),
+    );
+    if (showPassiveSubjects) return sorted;
+    return sorted.filter((s) => s.is_active);
+  }, [subjects, showPassiveSubjects]);
+
+  useEffect(() => {
+    if (!selectedClassId) {
+      setClassTeachers([]);
+      return;
+    }
+    let cancelled = false;
+    setClassTeacherLoading(true);
+    (async () => {
+      try {
+        const list = await kidsListClassTeachers(Number(selectedClassId));
+        if (!cancelled) setClassTeachers(list);
+      } catch (e) {
+        if (!cancelled) toast.error(e instanceof Error ? e.message : 'Sınıf öğretmenleri alınamadı');
+      } finally {
+        if (!cancelled) setClassTeacherLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedClassId]);
+
+  async function onAssignClassTeacher() {
+    const cid = Number(selectedClassId || 0);
+    const tid = Number(classTeacherId || 0);
+    const teacherRow = teachers.find((t) => t.id === tid) ?? null;
+    const subject = (teacherRow?.subject || '').trim();
+    if (!cid) {
+      toast.error('Önce sınıf seçin.');
+      return;
+    }
+    if (!tid) {
+      toast.error('Öğretmen seçin.');
+      return;
+    }
+    if (!subject) {
+      toast.error('Öğretmenin branşı tanımlı değil. Önce öğretmen kartından branş seçin.');
+      return;
+    }
+    setClassTeacherSaving(true);
+    try {
+      const row = await kidsAddClassTeacher(cid, {
+        teacher_user_id: tid,
+        subject,
+        is_active: true,
+      });
+      setClassTeachers((prev) => [...prev, row]);
+      setClassTeacherId('');
+      toast.success('Öğretmen sınıfa branşıyla atandı.');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Atama yapılamadı');
+    } finally {
+      setClassTeacherSaving(false);
+    }
+  }
+
+  async function onRemoveClassTeacher(teacherUserId: number) {
+    const cid = Number(selectedClassId || 0);
+    if (!cid) return;
+    try {
+      await kidsRemoveClassTeacher(cid, teacherUserId);
+      setClassTeachers((prev) => prev.filter((t) => t.teacher_user_id !== teacherUserId));
+      toast.success('Sınıf öğretmeni kaldırıldı.');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Kaldırılamadı');
+    }
+  }
+
+  async function onCreateSubject(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const name = newSubjectName.trim();
+    if (!name) {
+      toast.error('Branş adı girin.');
+      return;
+    }
+    setSubjectSaving(true);
+    try {
+      const row = await kidsAdminCreateSubject({ name, is_active: true });
+      setSubjects((prev) => {
+        const has = prev.some((s) => s.id === row.id);
+        if (has) return prev.map((s) => (s.id === row.id ? row : s));
+        return [...prev, row];
+      });
+      setTeacherSubject((curr) => curr || row.name);
+      setNewSubjectName('');
+      toast.success('Branş eklendi.');
+    } catch (e2) {
+      toast.error(e2 instanceof Error ? e2.message : 'Branş eklenemedi');
+    } finally {
+      setSubjectSaving(false);
+    }
+  }
+
+  async function onToggleSubject(subject: KidsAdminSubject) {
+    setSubjectSaving(true);
+    try {
+      const updated = await kidsAdminPatchSubject(subject.id, { is_active: !subject.is_active });
+      setSubjects((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+      if (!updated.is_active && teacherSubject === updated.name) {
+        setTeacherSubject('');
+      }
+      toast.success(updated.is_active ? 'Branş aktif edildi.' : 'Branş pasif edildi.');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Branş güncellenemedi');
+    } finally {
+      setSubjectSaving(false);
+    }
+  }
+
   async function onToggleActive(t: KidsAdminTeacher) {
     const next = !t.is_active;
     setToggleId(t.id);
@@ -630,6 +864,49 @@ export default function KidsAdminPanelPage() {
       toast.error(e instanceof Error ? e.message : 'Durum güncellenemedi');
     } finally {
       setToggleId(null);
+    }
+  }
+
+  async function onResendWelcomeEmail(t: KidsAdminTeacher) {
+    setResendMailId(t.id);
+    try {
+      const res = await kidsAdminResendTeacherWelcome(t.id);
+      if (res.email_sent) {
+        toast.success('Davet maili tekrar gönderildi.');
+      } else {
+        const fallback = res.temporary_password
+          ? `Mail gönderilemedi. Geçici şifre: ${res.temporary_password}`
+          : res.email_error || 'Mail gönderilemedi.';
+        toast.error(fallback, { duration: 9000 });
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Mail tekrar gönderilemedi');
+    } finally {
+      setResendMailId(null);
+    }
+  }
+
+  async function onSaveTeacherSubject(t: KidsAdminTeacher) {
+    const subject = (teacherSubjectDrafts[t.id] ?? t.subject ?? '').trim();
+    if (!subject) {
+      toast.error('Branş seçin.');
+      return;
+    }
+    if (subject === (t.subject || '').trim()) return;
+    setSubjectUpdateId(t.id);
+    try {
+      const updated = await kidsAdminPatchTeacher(t.id, { subject });
+      setTeachers((prev) => prev.map((row) => (row.id === updated.id ? updated : row)));
+      setTeacherSubjectDrafts((prev) => {
+        const next = { ...prev };
+        delete next[t.id];
+        return next;
+      });
+      toast.success('Öğretmen branşı güncellendi.');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Branş güncellenemedi');
+    } finally {
+      setSubjectUpdateId(null);
     }
   }
 
@@ -682,6 +959,15 @@ export default function KidsAdminPanelPage() {
                 />
               </KidsFormField>
             </div>
+            <KidsFormField id="t-subject" label="Branş" required>
+              <KidsSelect
+                id="t-subject"
+                value={teacherSubject}
+                onChange={setTeacherSubject}
+                options={teacherSubjectOptions}
+                disabled={teacherSubjectOptions.length <= 1}
+              />
+            </KidsFormField>
             {schools.length > 0 ? (
               <SchoolAssignPicker
                 schools={schools}
@@ -710,6 +996,8 @@ export default function KidsAdminPanelPage() {
               onClick={() => {
                 void load();
                 void loadSchools();
+                void loadClasses();
+                void loadSubjects();
               }}
               disabled={listLoading}
             >
@@ -723,39 +1011,220 @@ export default function KidsAdminPanelPage() {
               {teachers.map((t) => (
                 <li
                   key={t.id}
-                  className="flex flex-col gap-2 rounded-xl border border-sky-200/80 bg-white/90 px-3 py-3 text-sm dark:border-sky-800 dark:bg-sky-950/25 sm:flex-row sm:items-center sm:justify-between"
+                  className="rounded-xl border border-sky-200/80 bg-white/95 p-3 text-sm shadow-xs dark:border-sky-800 dark:bg-sky-950/25"
                 >
-                  <div className="min-w-0">
-                    <span className="font-semibold text-slate-900 dark:text-white">
-                      {t.first_name || '-'} {t.last_name || ''}
-                    </span>
-                    <span className="mt-0.5 block truncate text-slate-600 dark:text-gray-300">{t.email}</span>
-                    <span
-                      className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${
-                        t.is_active
-                          ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100'
-                          : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200'
-                      }`}
-                    >
-                      {t.is_active ? 'Etkin' : 'Pasif'}
-                    </span>
+                  <div className="flex flex-col gap-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <span className="font-semibold text-slate-900 dark:text-white">
+                          {t.first_name || '-'} {t.last_name || ''}
+                        </span>
+                        <span className="mt-0.5 block truncate text-slate-600 dark:text-gray-300">{t.email}</span>
+                      </div>
+                      <span
+                        className={`inline-flex shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${
+                          t.is_active
+                            ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100'
+                            : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200'
+                        }`}
+                      >
+                        {t.is_active ? 'Etkin' : 'Pasif'}
+                      </span>
+                    </div>
+
+                    <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                      <KidsSelect
+                        id={`teacher-subject-${t.id}`}
+                        value={teacherSubjectDrafts[t.id] ?? t.subject ?? ''}
+                        onChange={(v) =>
+                          setTeacherSubjectDrafts((prev) => ({
+                            ...prev,
+                            [t.id]: v,
+                          }))
+                        }
+                        options={teacherRowSubjectOptions(t)}
+                        disabled={subjectUpdateId === t.id || activeTeacherSubjectOptions.length === 0}
+                      />
+                      <KidsSecondaryButton
+                        type="button"
+                        disabled={
+                          subjectUpdateId === t.id ||
+                          !((teacherSubjectDrafts[t.id] ?? t.subject ?? '').trim()) ||
+                          ((teacherSubjectDrafts[t.id] ?? t.subject ?? '').trim() === (t.subject || '').trim())
+                        }
+                        onClick={() => void onSaveTeacherSubject(t)}
+                        className="border-sky-200 text-sky-900 hover:bg-sky-50 dark:border-sky-700 dark:text-sky-100 dark:hover:bg-sky-900/30"
+                      >
+                        {subjectUpdateId === t.id ? 'Kaydediliyor…' : 'Branşı kaydet'}
+                      </KidsSecondaryButton>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <KidsSecondaryButton
+                        type="button"
+                        disabled={resendMailId === t.id}
+                        onClick={() => void onResendWelcomeEmail(t)}
+                        className="border-sky-200 text-sky-900 hover:bg-sky-50 dark:border-sky-700 dark:text-sky-100 dark:hover:bg-sky-900/30"
+                      >
+                        {resendMailId === t.id ? 'Gönderiliyor…' : 'Mail tekrar gönder'}
+                      </KidsSecondaryButton>
+                      <KidsSecondaryButton
+                        type="button"
+                        disabled={toggleId === t.id}
+                        onClick={() => void onToggleActive(t)}
+                        className="border-amber-200 text-amber-900 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-100 dark:hover:bg-amber-950/50"
+                      >
+                        {toggleId === t.id ? '…' : t.is_active ? 'Pasifleştir' : 'Etkinleştir'}
+                      </KidsSecondaryButton>
+                    </div>
                   </div>
-                  <KidsSecondaryButton
-                    type="button"
-                    disabled={toggleId === t.id}
-                    onClick={() => void onToggleActive(t)}
-                    className="shrink-0 border-amber-200 text-amber-900 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-100 dark:hover:bg-amber-950/50"
-                  >
-                    {toggleId === t.id
-                      ? '…'
-                      : t.is_active
-                        ? 'Pasifleştir'
-                        : 'Etkinleştir'}
-                  </KidsSecondaryButton>
                 </li>
               ))}
             </ul>
           )}
+        </KidsCard>
+      </div>
+
+      <div className="mt-10">
+        <KidsCard tone="sky">
+          <h2 className="font-logo text-xl font-bold text-sky-950 dark:text-sky-50">Sınıfa öğretmen ata</h2>
+          <p className="mt-2 text-sm text-sky-900/80 dark:text-sky-100/80">
+            Öğretmen hesabını oluşturup branşını seçtikten sonra burada sınıfa bağlayın.
+          </p>
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <KidsFormField id="class-assign-class" label="Sınıf" required>
+              <KidsSelect
+                id="class-assign-class"
+                value={selectedClassId}
+                onChange={setSelectedClassId}
+                options={classOptions}
+                disabled={classOptions.length === 0}
+              />
+            </KidsFormField>
+            <KidsFormField id="class-assign-teacher" label="Öğretmen" required>
+              <KidsSelect
+                id="class-assign-teacher"
+                value={classTeacherId}
+                onChange={setClassTeacherId}
+                options={classTeacherOptions}
+                disabled={!selectedClassId}
+              />
+            </KidsFormField>
+          </div>
+          <div className="mt-3 flex items-center gap-2">
+            <KidsPrimaryButton type="button" disabled={classTeacherSaving} onClick={() => void onAssignClassTeacher()}>
+              {classTeacherSaving ? 'Atanıyor…' : 'Sınıfa ata'}
+            </KidsPrimaryButton>
+            <KidsSecondaryButton
+              type="button"
+              onClick={() => {
+                void loadClasses();
+                void loadSubjects();
+              }}
+            >
+              Sınıfları yenile
+            </KidsSecondaryButton>
+          </div>
+
+          <div className="mt-5 rounded-2xl border border-sky-200/80 bg-white/70 p-4 dark:border-sky-800/50 dark:bg-sky-950/20">
+            <p className="text-sm font-semibold text-sky-900 dark:text-sky-100">
+              {selectedClass ? `${selectedClass.name} — atanmış öğretmenler` : 'Atanmış öğretmenler'}
+            </p>
+            {classTeacherLoading ? (
+              <p className="mt-2 text-sm text-slate-600 dark:text-gray-300">Yükleniyor…</p>
+            ) : classTeachers.length === 0 ? (
+              <p className="mt-2 text-sm text-slate-600 dark:text-gray-300">Henüz branş ataması yok.</p>
+            ) : (
+              <ul className="mt-3 space-y-2">
+                {classTeachers.map((t) => (
+                  <li
+                    key={t.teacher_user_id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-sky-200/70 bg-white/90 px-3 py-2 text-sm dark:border-sky-700/70 dark:bg-slate-900/50"
+                  >
+                    <span>
+                      <strong>{t.teacher_display}</strong> · {t.subject}
+                    </span>
+                    <KidsSecondaryButton
+                      type="button"
+                      className="border-rose-200 text-rose-700 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950/50"
+                      onClick={() => void onRemoveClassTeacher(t.teacher_user_id)}
+                    >
+                      Kaldır
+                    </KidsSecondaryButton>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </KidsCard>
+      </div>
+
+      <div className="mt-6">
+        <KidsCard tone="amber">
+          <h3 className="font-logo text-lg font-bold text-amber-950 dark:text-amber-50">Branş yönetimi</h3>
+          <p className="mt-1 text-sm text-amber-900/80 dark:text-amber-100/80">
+            Sınıf atamalarında görünecek branş listesini buradan yönetebilirsiniz.
+          </p>
+          <div className="mt-3 flex items-center justify-between gap-2">
+            <p className="text-xs text-amber-900/70 dark:text-amber-100/70">
+              Toplam {subjects.length} branş, listede {subjectRows.length} satır gösteriliyor.
+            </p>
+            <div className="flex items-center gap-2">
+              <KidsSecondaryButton
+                type="button"
+                onClick={() => setShowPassiveSubjects((v) => !v)}
+                disabled={subjectSaving}
+              >
+                {showPassiveSubjects ? 'Pasifleri gizle' : 'Pasifleri göster'}
+              </KidsSecondaryButton>
+              <KidsSecondaryButton type="button" onClick={() => void loadSubjects()} disabled={subjectSaving}>
+                Listeyi yenile
+              </KidsSecondaryButton>
+            </div>
+          </div>
+          <form className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={onCreateSubject}>
+            <div className="flex-1">
+              <KidsFormField id="new-subject-name" label="Yeni branş adı" required>
+                <input
+                  id="new-subject-name"
+                  type="text"
+                  value={newSubjectName}
+                  onChange={(e) => setNewSubjectName(e.target.value)}
+                  className={kidsInputClass}
+                  placeholder="Örn: Drama"
+                  maxLength={80}
+                  required
+                />
+              </KidsFormField>
+            </div>
+            <KidsPrimaryButton type="submit" disabled={subjectSaving}>
+              {subjectSaving ? 'Ekleniyor…' : 'Branş ekle'}
+            </KidsPrimaryButton>
+          </form>
+          <div className="mt-4 max-h-80 overflow-y-auto pr-1">
+            <ul className="space-y-2">
+            {subjectRows.length === 0 ? (
+              <li className="text-sm text-slate-600 dark:text-gray-300">Henüz branş tanımı yok.</li>
+            ) : (
+              subjectRows.map((s) => (
+                <li
+                  key={s.id}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-amber-200/70 bg-white/90 px-3 py-2 text-sm dark:border-amber-800/60 dark:bg-slate-900/50"
+                >
+                  <span className="text-slate-900 dark:text-white">
+                    {s.name}{' '}
+                    <span className="text-xs text-slate-500 dark:text-slate-400">
+                      ({s.is_active ? 'Aktif' : 'Pasif'} · {s.usage_count} atama)
+                    </span>
+                  </span>
+                  <KidsSecondaryButton type="button" disabled={subjectSaving} onClick={() => void onToggleSubject(s)}>
+                    {s.is_active ? 'Pasif yap' : 'Aktif yap'}
+                  </KidsSecondaryButton>
+                </li>
+              ))
+            )}
+            </ul>
+          </div>
         </KidsCard>
       </div>
 

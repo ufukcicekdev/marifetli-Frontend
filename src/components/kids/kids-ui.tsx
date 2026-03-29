@@ -61,25 +61,37 @@ export function KidsPageHeader({
   emoji,
   title,
   subtitle,
+  compactOnMobile = false,
 }: {
   emoji: string;
   title: string;
   subtitle: string;
+  compactOnMobile?: boolean;
 }) {
   return (
     <header className="mb-8 sm:mb-10">
       <div className="flex flex-wrap items-start gap-4 sm:gap-5">
         <span
-          className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-400 via-fuchsia-400 to-amber-400 text-3xl shadow-lg shadow-fuchsia-500/30 ring-4 ring-white/50 dark:ring-violet-950/50"
+          className={`flex shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-400 via-fuchsia-400 to-amber-400 shadow-lg shadow-fuchsia-500/30 ring-4 ring-white/50 dark:ring-violet-950/50 ${
+            compactOnMobile ? 'h-14 w-14 text-2xl sm:h-16 sm:w-16 sm:text-3xl' : 'h-16 w-16 text-3xl'
+          }`}
           aria-hidden
         >
           {emoji}
         </span>
         <div className="min-w-0 flex-1">
-          <h1 className="font-logo text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
+          <h1
+            className={`font-logo font-bold tracking-tight text-slate-900 dark:text-white ${
+              compactOnMobile ? 'text-[2rem] sm:text-4xl' : 'text-3xl sm:text-4xl'
+            }`}
+          >
             {title}
           </h1>
-          <p className="mt-2 max-w-2xl text-base leading-relaxed text-slate-600 dark:text-gray-300">
+          <p
+            className={`mt-2 max-w-2xl leading-relaxed text-slate-600 dark:text-gray-300 ${
+              compactOnMobile ? 'text-sm sm:text-base' : 'text-base'
+            }`}
+          >
             {subtitle}
           </p>
         </div>

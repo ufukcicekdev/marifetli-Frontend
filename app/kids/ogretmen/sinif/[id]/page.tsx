@@ -878,29 +878,6 @@ function KidsTeacherClassPageContent() {
                 </p>
               </>
             )}
-            <div className="flex flex-wrap gap-2">
-              <KidsSecondaryButton
-                type="button"
-                onClick={() => {
-                  if (editClassNonStandard) {
-                    const p = kidsParseStandardClassName(editName);
-                    if (p) {
-                      setEditClassGrade(p.grade);
-                      setEditClassSection(p.section);
-                      setEditClassNameSuffix(p.suffix || '');
-                      setEditClassNonStandard(false);
-                    } else {
-                      toast.error('Önce 4-B veya 4-B Sınıfı biçiminde bir ad yazın ya da standart seçime geçin.');
-                    }
-                  } else {
-                    setEditName(kidsBuildStandardClassName(editClassGrade, editClassSection, editClassNameSuffix));
-                    setEditClassNonStandard(true);
-                  }
-                }}
-              >
-                {editClassNonStandard ? 'Standart seçim (düzey + şube)' : 'Özel ad yaz'}
-              </KidsSecondaryButton>
-            </div>
             <KidsFormField
               id={editAcademicYearId}
               label="Eğitim-öğretim yılı"

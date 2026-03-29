@@ -50,6 +50,7 @@ export function KidsAuthProvider({
     const unified = localStorage.getItem(KIDS_UNIFIED_MAIN_AUTH_FLAG) === '1';
     const kidsTok = localStorage.getItem(KIDS_TOKEN_STORAGE_KEY);
     const mainTok = localStorage.getItem('access_token');
+    // Kids token yoksa ana site access_token ile (öğretmen/admin) Kids SSO devam edebilir.
     if (unified ? !mainTok : !kidsTok && !mainTok) {
       setUser(null);
       return;

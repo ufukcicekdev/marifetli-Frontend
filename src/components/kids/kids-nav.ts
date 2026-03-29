@@ -35,15 +35,18 @@ export function kidsNavLinks(
 
   if (role === 'teacher') {
     items.push({ href: `${p}/ogretmen/panel`, label: 'Öğretmen paneli', icon: 'teacher' });
+    items.push({ href: `${p}/ogretmen/odevler`, label: 'Ödevler', icon: 'challenge' });
   }
   if (role === 'student') {
     items.push({ href: `${p}/ogrenci/panel`, label: 'Öğrenci paneli', icon: 'student' });
+    items.push({ href: `${p}/ogrenci/odevler`, label: 'Ödevler', icon: 'challenge' });
     items.push({ href: `${p}/ogrenci/projeler`, label: 'Challenges', icon: 'challenge' });
     items.push({ href: `${p}/ogrenci/yarismalar`, label: 'Yarışmalar', icon: 'trophy' });
     items.push({ href: `${p}/ogrenci/oyun-merkezi`, label: 'Oyun merkezi', icon: 'gamepad' });
   }
   if (role === 'parent') {
     items.push({ href: `${p}/veli/panel`, label: 'Veli paneli', icon: 'parent' });
+    items.push({ href: `${p}/veli/cocuklarin-durumu`, label: 'Çocukların durumu', icon: 'student' });
     items.push({ href: `${p}/veli/ebeveyn-kontrolleri`, label: 'Ebeveyn kontrolleri', icon: 'timer' });
   }
   if (role && role !== 'student') {

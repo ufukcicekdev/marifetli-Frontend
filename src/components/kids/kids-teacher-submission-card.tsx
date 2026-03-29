@@ -440,8 +440,7 @@ export function KidsTeacherSubmissionCard({
       >
         {!canReview ? (
           <p className="mb-4 rounded-2xl border-2 border-amber-200 bg-amber-50 p-3 text-sm font-medium text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
-            Teslim süresi bitince kurallar ve emek düzeyi seçilir. Şimdilik yıldızı işaretleyip Kaydet ile
-            gönderebilirsin.
+            Değerlendirme son teslim tarihinden sonra açılır. Şimdilik yıldızı işaretleyip Kaydet ile gönderebilirsin.
           </p>
         ) : (
           <p className="mb-4 rounded-2xl border-2 border-violet-200 bg-violet-50/80 p-3 text-sm text-violet-950 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-100">
@@ -753,7 +752,7 @@ export function KidsTeacherSubmissionCard({
             <p
               className={`font-medium text-violet-600 dark:text-violet-400 ${isRow ? 'text-[10px] leading-snug' : 'text-xs'}`}
             >
-              Süre bitince tam değerlendirme açılır; şimdilik yıldız modal içinde.
+              Son teslimden sonra tam değerlendirme açılır; şimdilik yıldız modal içinde.
             </p>
           )}
         </div>

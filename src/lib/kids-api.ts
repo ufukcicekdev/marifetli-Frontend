@@ -49,12 +49,45 @@ export type KidsParentAssignmentRow = {
 };
 
 export type KidsParentChallengeRow = {
+  id?: number;
   title: string;
   status: string;
   class_name: string;
   /** Sunucu yanıtında olabilir: serbest yarışmada `free_parent`. */
   peer_scope?: string;
   is_initiator: boolean;
+  joined_at?: string | null;
+};
+
+export type KidsParentHomeworkHistoryRow = {
+  submission_id: number;
+  homework_id: number;
+  title: string;
+  description: string;
+  class_name: string;
+  teacher_display: string;
+  teacher_subject: string;
+  status:
+    | 'published'
+    | 'student_done'
+    | 'parent_approved'
+    | 'parent_rejected'
+    | 'teacher_approved'
+    | 'teacher_revision';
+  due_at: string | null;
+  student_done_at: string | null;
+  student_note: string;
+  parent_reviewed_at: string | null;
+  parent_note: string;
+  teacher_reviewed_at: string | null;
+  teacher_note: string;
+  attachments: {
+    id: number;
+    url: string;
+    original_name: string;
+    content_type: string;
+    size_bytes: number;
+  }[];
 };
 
 export type KidsParentChildOverview = {
@@ -70,12 +103,26 @@ export type KidsParentChildOverview = {
     school_name: string;
     teacher_user_id: number;
     teacher_display: string;
+    teachers?: {
+      teacher_user_id: number;
+      teacher_display: string;
+      subject: string;
+      is_primary: boolean;
+    }[];
   }[];
   badges: KidsParentBadge[];
   assignments_recent: KidsParentAssignmentRow[];
   challenges: KidsParentChallengeRow[];
-  /** İleride medya onayı vb.; şimdilik boş dizi. */
-  pending_parent_actions: unknown[];
+  homework_history: KidsParentHomeworkHistoryRow[];
+  pending_parent_actions: {
+    type: 'homework_parent_review';
+    submission_id: number;
+    assignment_id: number;
+    assignment_title: string;
+    class_name: string;
+    round_number: number;
+    student_marked_done_at: string | null;
+  }[];
 };
 
 export type KidsAdminTeacher = {
@@ -84,6 +131,7 @@ export type KidsAdminTeacher = {
   first_name: string;
   last_name: string;
   is_active: boolean;
+  subject: string;
   created_at: string;
 };
 
@@ -114,6 +162,7 @@ export type KidsSchool = {
   demo_start_at?: string | null;
   demo_end_at?: string | null;
   student_user_cap: number;
+  default_academic_year_label?: string;
   created_at: string;
   updated_at: string;
 };
@@ -128,6 +177,12 @@ export type KidsClass = {
   school: KidsSchool;
   teacher: number;
   teacher_email: string;
+  teachers?: {
+    teacher_user_id: number;
+    teacher_display: string;
+    subject: string;
+    is_primary: boolean;
+  }[];
   created_at: string;
   updated_at: string;
 };
@@ -226,6 +281,9 @@ export function kidsStudentAssignmentAllRoundsSubmitted(a: KidsAssignment): bool
 export type KidsAssignment = {
   id: number;
   kids_class: number;
+  class_name?: string;
+  teacher_display?: string;
+  teacher_subject?: string;
   title: string;
   purpose: string;
   materials: string;
@@ -269,6 +327,58 @@ export type KidsStudentAssignmentSubmission = {
   is_teacher_pick: boolean;
   review_hint_title: string;
   review_hint_code: string;
+};
+
+export type KidsHomework = {
+  id: number;
+  kids_class: number;
+  class_name?: string;
+  teacher_display?: string;
+  teacher_subject?: string;
+  title: string;
+  description: string;
+  page_start: number | null;
+  page_end: number | null;
+  due_at: string | null;
+  is_published: boolean;
+  attachments?: {
+    id: number;
+    url: string;
+    original_name: string;
+    content_type: string;
+    size_bytes: number;
+    created_at: string | null;
+  }[];
+  created_at: string;
+  updated_at: string;
+};
+
+export type KidsHomeworkSubmission = {
+  id: number;
+  homework: KidsHomework;
+  student: {
+    id: number;
+    email: string;
+    first_name: string;
+    last_name: string;
+    created_at: string;
+    profile_picture: string | null;
+  };
+  status:
+    | 'published'
+    | 'student_done'
+    | 'parent_approved'
+    | 'parent_rejected'
+    | 'teacher_approved'
+    | 'teacher_revision';
+  student_done_at: string | null;
+  student_note: string;
+  parent_reviewed_at: string | null;
+  parent_note: string;
+  teacher_reviewed_at: string | null;
+  teacher_note: string;
+  created_at: string;
+  updated_at: string;
 };
 
 export type KidsEnrollment = {
@@ -549,11 +659,14 @@ async function kidsFetchKidsOrMainAccess(
 }
 
 export function kidsClearSession() {
-  const wasUnified = localStorage.getItem(KIDS_UNIFIED_MAIN_AUTH_FLAG) === '1';
+  const hadMainToken = Boolean((localStorage.getItem(MAIN_SITE_ACCESS_STORAGE_KEY) || '').trim());
   localStorage.removeItem(KIDS_TOKEN_STORAGE_KEY);
   localStorage.removeItem(KIDS_REFRESH_STORAGE_KEY);
   localStorage.removeItem(KIDS_UNIFIED_MAIN_AUTH_FLAG);
-  if (wasUnified) {
+  // Kids çıkışında ana site JWT de temizlenir; refresh ile otomatik geri giriş engellenir.
+  localStorage.removeItem(MAIN_SITE_ACCESS_STORAGE_KEY);
+  localStorage.removeItem('refresh_token');
+  if (hadMainToken) {
     useAuthStore.getState().logout();
   }
 }
@@ -920,7 +1033,7 @@ export async function kidsAdminTeachersList(): Promise<KidsAdminTeacher[]> {
 
 export async function kidsAdminPatchTeacher(
   id: number,
-  payload: { is_active: boolean },
+  payload: { is_active?: boolean; subject?: string },
 ): Promise<KidsAdminTeacher> {
   const res = await kidsFetchKidsOrMainAccess(`/admin/teachers/${id}/`, {
     method: 'PATCH',
@@ -931,6 +1044,66 @@ export async function kidsAdminPatchTeacher(
   if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Öğretmen güncellenemedi'));
   if (!data?.teacher) throw new Error('Yanıt eksik');
   return data.teacher;
+}
+
+export async function kidsAdminResendTeacherWelcome(
+  id: number,
+): Promise<{ email_sent: boolean; email_error: string | null; temporary_password: string | null }> {
+  const res = await kidsFetchKidsOrMainAccess(`/admin/teachers/${id}/resend-welcome/`, {
+    method: 'POST',
+  });
+  const text = await res.text();
+  const data = readJson<
+    { email_sent?: boolean; email_error?: string | null; temporary_password?: string | null } & ApiErrorBody
+  >(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Mail tekrar gönderilemedi'));
+  return {
+    email_sent: Boolean(data?.email_sent),
+    email_error: data?.email_error ?? null,
+    temporary_password: data?.temporary_password ?? null,
+  };
+}
+
+export type KidsAdminSubject = {
+  id: number;
+  name: string;
+  is_active: boolean;
+  usage_count: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export async function kidsAdminSubjectsList(): Promise<KidsAdminSubject[]> {
+  const res = await kidsFetchKidsOrMainAccess('/admin/subjects/', { method: 'GET' });
+  const text = await res.text();
+  const data = readJson<{ subjects?: KidsAdminSubject[] } & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Branş listesi alınamadı'));
+  return data?.subjects ?? [];
+}
+
+export async function kidsAdminCreateSubject(body: { name: string; is_active?: boolean }): Promise<KidsAdminSubject> {
+  const res = await kidsFetchKidsOrMainAccess('/admin/subjects/', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  const data = readJson<KidsAdminSubject & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Branş eklenemedi'));
+  return data as KidsAdminSubject;
+}
+
+export async function kidsAdminPatchSubject(
+  id: number,
+  body: { name?: string; is_active?: boolean },
+): Promise<KidsAdminSubject> {
+  const res = await kidsFetchKidsOrMainAccess(`/admin/subjects/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  const data = readJson<KidsAdminSubject & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Branş güncellenemedi'));
+  return data as KidsAdminSubject;
 }
 
 export type KidsAdminSchoolYearProfile = {
@@ -1091,6 +1264,7 @@ export async function kidsAdminCreateTeacher(payload: {
   email: string;
   first_name?: string;
   last_name?: string;
+  subject: string;
   /** Bu okul kimliklerine üyelik eklenir (öğretmen oluşturulurken). */
   school_ids?: number[];
 }): Promise<{ teacher: KidsAdminTeacher; email_sent: boolean; email_error?: string | null; temporary_password?: string | null }> {
@@ -1387,6 +1561,69 @@ export async function kidsDeleteClass(id: number): Promise<void> {
   throw new Error(data?.detail || 'Sınıf silinemedi');
 }
 
+export type KidsClassTeacherAssignment = {
+  teacher_user_id: number;
+  teacher_display: string;
+  subject: string;
+  is_active: boolean;
+  assigned_at: string;
+};
+
+export type KidsSchoolDirectoryClassRow = {
+  id: number;
+  name: string;
+  description: string;
+  academic_year_label: string;
+  teacher_display: string;
+  is_assigned: boolean;
+};
+
+export async function kidsListClassTeachers(classId: number): Promise<KidsClassTeacherAssignment[]> {
+  const res = await kidsAuthorizedFetch(`/classes/${classId}/teachers/`, { method: 'GET' });
+  if (!res.ok) throw new Error('Sınıf öğretmenleri alınamadı');
+  return res.json() as Promise<KidsClassTeacherAssignment[]>;
+}
+
+export async function kidsAddClassTeacher(
+  classId: number,
+  body: { teacher_user_id: number; subject: string; is_active?: boolean },
+): Promise<KidsClassTeacherAssignment> {
+  const res = await kidsAuthorizedFetch(`/classes/${classId}/teachers/`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  const data = readJson<KidsClassTeacherAssignment & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Öğretmen atanamadı'));
+  return data as KidsClassTeacherAssignment;
+}
+
+export async function kidsRemoveClassTeacher(classId: number, teacherUserId: number): Promise<void> {
+  const res = await kidsAuthorizedFetch(`/classes/${classId}/teachers/${teacherUserId}/`, {
+    method: 'DELETE',
+  });
+  if (res.status === 204) return;
+  const text = await res.text();
+  const data = readJson<ApiErrorBody>(text);
+  throw new Error(data?.detail || 'Sınıf öğretmeni kaldırılamadı');
+}
+
+export async function kidsListSchoolClassDirectory(schoolId: number): Promise<KidsSchoolDirectoryClassRow[]> {
+  const res = await kidsAuthorizedFetch(`/schools/${schoolId}/classes-directory/`, { method: 'GET' });
+  const text = await res.text();
+  const data = readJson<{ classes?: KidsSchoolDirectoryClassRow[] } & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Sınıf listesi alınamadı'));
+  return Array.isArray(data?.classes) ? data.classes : [];
+}
+
+export async function kidsSelfJoinClass(classId: number): Promise<KidsClassTeacherAssignment> {
+  const res = await kidsAuthorizedFetch(`/classes/${classId}/self-join/`, { method: 'POST' });
+  const text = await res.text();
+  const data = readJson<KidsClassTeacherAssignment & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Sınıfa katılım başarısız'));
+  return data as KidsClassTeacherAssignment;
+}
+
 export async function kidsListStudents(classId: number): Promise<KidsEnrollment[]> {
   const res = await kidsAuthorizedFetch(`/classes/${classId}/students/`, { method: 'GET' });
   if (!res.ok) throw new Error('Öğrenci listesi alınamadı');
@@ -1428,6 +1665,10 @@ export type KidsSubmissionRecord = {
   } | null;
   video_url: string;
   caption: string;
+  student_marked_done_at: string | null;
+  parent_review_status: 'pending' | 'approved' | 'rejected';
+  parent_reviewed_at: string | null;
+  parent_note_to_teacher: string;
   is_late_submission?: boolean;
   rubric_scores?: { criterion_id: string; points: number; note?: string }[];
   rubric_total_score?: number | null;
@@ -1463,6 +1704,10 @@ export type KidsTeacherSubmission = {
   } | null;
   video_url: string;
   caption: string;
+  student_marked_done_at: string | null;
+  parent_review_status: 'pending' | 'approved' | 'rejected';
+  parent_reviewed_at: string | null;
+  parent_note_to_teacher: string;
   is_late_submission?: boolean;
   rubric_scores?: { criterion_id: string; points: number; note?: string }[];
   rubric_total_score?: number | null;
@@ -1473,7 +1718,7 @@ export type KidsTeacherSubmission = {
   teacher_reviewed_at: string | null;
   is_teacher_pick?: boolean;
   teacher_picked_at?: string | null;
-  /** Son teslim zamanı geçtiyse değerlendirme formu açılır. */
+  /** Veli onayı geldiyse öğretmen değerlendirme formu açılır. */
   can_review: boolean;
   created_at: string;
 };
@@ -2069,6 +2314,162 @@ export async function kidsPatchTeacherSubmissionReview(
   return data as KidsTeacherSubmission;
 }
 
+export async function kidsListClassHomeworks(classId: number): Promise<KidsHomework[]> {
+  const res = await kidsAuthorizedFetch(`/classes/${classId}/homeworks/`, { method: 'GET' });
+  if (!res.ok) throw new Error('Ödevler yüklenemedi');
+  return res.json() as Promise<KidsHomework[]>;
+}
+
+export async function kidsCreateClassHomework(
+  classId: number,
+  body: {
+    title: string;
+    description?: string;
+    page_start?: number | null;
+    page_end?: number | null;
+    due_at?: string | null;
+    is_published?: boolean;
+  },
+): Promise<KidsHomework> {
+  const res = await kidsAuthorizedFetch(`/classes/${classId}/homeworks/`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  const data = readJson<KidsHomework & ApiErrorBody>(text);
+  if (!res.ok) {
+    throw new Error(kidsFirstApiErrorMessage(data, 'Ödev oluşturulamadı'));
+  }
+  return data as KidsHomework;
+}
+
+export async function kidsUploadHomeworkAttachment(
+  classId: number,
+  homeworkId: number,
+  file: File,
+): Promise<KidsHomework> {
+  const fd = new FormData();
+  fd.append('file', file);
+  const res = await kidsAuthorizedFetch(`/classes/${classId}/homeworks/${homeworkId}/attachments/`, {
+    method: 'POST',
+    body: fd,
+  });
+  const text = await res.text();
+  const data = readJson<{ homework?: KidsHomework } & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Ödev dosyası yüklenemedi'));
+  if (!data?.homework) throw new Error('Yanıt eksik');
+  return data.homework;
+}
+
+export async function kidsPatchClassHomework(
+  classId: number,
+  homeworkId: number,
+  body: Partial<{
+    title: string;
+    description: string;
+    page_start: number | null;
+    page_end: number | null;
+    due_at: string | null;
+    is_published: boolean;
+  }>,
+): Promise<KidsHomework> {
+  const res = await kidsAuthorizedFetch(`/classes/${classId}/homeworks/${homeworkId}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  const data = readJson<KidsHomework & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Ödev güncellenemedi'));
+  return data as KidsHomework;
+}
+
+export async function kidsDeleteHomeworkAttachment(
+  classId: number,
+  homeworkId: number,
+  attachmentId: number,
+): Promise<KidsHomework> {
+  const res = await kidsAuthorizedFetch(
+    `/classes/${classId}/homeworks/${homeworkId}/attachments/${attachmentId}/`,
+    { method: 'DELETE' },
+  );
+  const text = await res.text();
+  const data = readJson<{ homework?: KidsHomework } & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Ödev eki silinemedi'));
+  if (!data?.homework) throw new Error('Yanıt eksik');
+  return data.homework;
+}
+
+export async function kidsListStudentHomeworks(): Promise<KidsHomeworkSubmission[]> {
+  const res = await kidsAuthorizedFetch('/student/homeworks/', { method: 'GET' });
+  if (!res.ok) throw new Error('Ödevler yüklenemedi');
+  return res.json() as Promise<KidsHomeworkSubmission[]>;
+}
+
+export async function kidsMarkHomeworkDone(
+  submissionId: number,
+  body?: { note?: string },
+): Promise<KidsHomeworkSubmission> {
+  const res = await kidsAuthorizedFetch(
+    `/student/homework-submissions/${submissionId}/mark-done/`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(body ?? {}),
+    },
+  );
+  const text = await res.text();
+  const data = readJson<KidsHomeworkSubmission & ApiErrorBody>(text);
+  if (!res.ok) {
+    throw new Error(kidsFirstApiErrorMessage(data, 'Ödev tamamlandı olarak işaretlenemedi'));
+  }
+  return data as KidsHomeworkSubmission;
+}
+
+export async function kidsListParentHomeworkPending(): Promise<KidsHomeworkSubmission[]> {
+  const res = await kidsAuthorizedFetch('/parent/homeworks/pending/', { method: 'GET' });
+  if (!res.ok) throw new Error('Veli ödev listesi yüklenemedi');
+  return res.json() as Promise<KidsHomeworkSubmission[]>;
+}
+
+export async function kidsParentReviewHomeworkSubmission(
+  submissionId: number,
+  body: { approved: boolean; note?: string },
+): Promise<KidsHomeworkSubmission> {
+  const res = await kidsAuthorizedFetch(`/parent/homework-submissions/${submissionId}/review/`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  const data = readJson<KidsHomeworkSubmission & ApiErrorBody>(text);
+  if (!res.ok) {
+    throw new Error(kidsFirstApiErrorMessage(data, 'Veli onayı kaydedilemedi'));
+  }
+  return data as KidsHomeworkSubmission;
+}
+
+export async function kidsTeacherHomeworkInbox(): Promise<KidsHomeworkSubmission[]> {
+  const res = await kidsAuthorizedFetch('/teacher/homeworks/submissions/inbox/', {
+    method: 'GET',
+  });
+  if (!res.ok) throw new Error('Öğretmen ödev kutusu yüklenemedi');
+  return res.json() as Promise<KidsHomeworkSubmission[]>;
+}
+
+export async function kidsTeacherReviewHomeworkSubmission(
+  submissionId: number,
+  body: { approved: boolean; note?: string },
+): Promise<KidsHomeworkSubmission> {
+  const res = await kidsAuthorizedFetch(`/teacher/homeworks/submissions/${submissionId}/review/`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  const data = readJson<KidsHomeworkSubmission & ApiErrorBody>(text);
+  if (!res.ok) {
+    throw new Error(kidsFirstApiErrorMessage(data, 'Ödev değerlendirmesi kaydedilemedi'));
+  }
+  return data as KidsHomeworkSubmission;
+}
+
 export type FreestyleItem = {
   id: number;
   title: string;
@@ -2166,6 +2567,14 @@ export type KidsAnnouncement = {
   created_by: number;
   created_at: string;
   updated_at: string;
+  attachments?: {
+    id: number;
+    url: string;
+    original_name: string;
+    content_type: string;
+    size_bytes: number;
+    created_at: string | null;
+  }[];
 };
 
 export async function kidsListConversations(): Promise<KidsConversation[]> {
@@ -2237,6 +2646,37 @@ export async function kidsCreateAnnouncement(body: {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Duyuru oluşturulamadı');
   return data as KidsAnnouncement;
+}
+
+export async function kidsUploadAnnouncementAttachment(
+  announcementId: number,
+  file: File,
+): Promise<KidsAnnouncement> {
+  const fd = new FormData();
+  fd.append('file', file);
+  const res = await kidsAuthorizedFetch(`/announcements/${announcementId}/attachments/`, {
+    method: 'POST',
+    body: fd,
+  });
+  const text = await res.text();
+  const data = readJson<{ announcement?: KidsAnnouncement } & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Dosya yüklenemedi'));
+  if (!data?.announcement) throw new Error('Yanıt eksik');
+  return data.announcement;
+}
+
+export async function kidsDeleteAnnouncementAttachment(
+  announcementId: number,
+  attachmentId: number,
+): Promise<KidsAnnouncement> {
+  const res = await kidsAuthorizedFetch(`/announcements/${announcementId}/attachments/${attachmentId}/`, {
+    method: 'DELETE',
+  });
+  const text = await res.text();
+  const data = readJson<{ announcement?: KidsAnnouncement } & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Dosya silinemedi'));
+  if (!data?.announcement) throw new Error('Yanıt eksik');
+  return data.announcement;
 }
 
 export async function kidsPatchAnnouncement(

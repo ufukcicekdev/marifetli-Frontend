@@ -2,17 +2,18 @@ import type { Metadata } from 'next';
 import { kidsPathPrefixFromHost } from '@/src/lib/kids-config';
 import { KidsShell } from '@/src/components/kids/kids-shell';
 
-const kidsUrl =
-  process.env.NEXT_PUBLIC_KIDS_SITE_URL || 'https://marifetli.com.tr/kids';
+const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.marifetli.com.tr').replace(/\/$/, '');
+const kidsUrl = `${siteUrl}/kids`;
 
 export const metadata: Metadata = {
-  metadataBase: new URL(kidsUrl),
+  metadataBase: new URL(siteUrl),
   title: {
     default: 'Marifetli Kids',
     template: '%s | Marifetli Kids',
   },
   description: 'Öğretmen ve öğrenciler için güvenli challenge alanı.',
-  robots: { index: false, follow: false },
+  alternates: { canonical: kidsUrl },
+  robots: { index: true, follow: true },
 };
 
 export default function KidsLayout({ children }: { children: React.ReactNode }) {

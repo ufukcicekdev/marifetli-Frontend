@@ -8,15 +8,16 @@ import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import {
   KIDS_CLASS_GRADE_OPTIONS,
   KIDS_CLASS_SECTION_OPTIONS,
-  kidsAcademicYearSelectOptions,
   kidsBuildStandardClassName,
   kidsClassLocationLine,
   kidsCreateClass,
   kidsListClasses,
+  kidsListSchoolClassDirectory,
   kidsListSchools,
   kidsSchoolLocationLine,
-  kidsSuggestedAcademicYearLabel,
+  kidsSelfJoinClass,
   type KidsClass,
+  type KidsSchoolDirectoryClassRow,
   type KidsSchool,
 } from '@/src/lib/kids-api';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
@@ -27,6 +28,7 @@ import {
   KidsPageHeader,
   KidsPanelMax,
   KidsPrimaryButton,
+  KidsSecondaryButton,
   KidsSelect,
   kidsInputClass,
   kidsTextareaClass,
@@ -41,16 +43,16 @@ export default function KidsTeacherPanelPage() {
   const [classGrade, setClassGrade] = useState('4');
   const [classSection, setClassSection] = useState('A');
   const [description, setDescription] = useState('');
-  const [academicYearLabel, setAcademicYearLabel] = useState(() => kidsSuggestedAcademicYearLabel());
   const [schoolId, setSchoolId] = useState<string>('');
   const [creating, setCreating] = useState(false);
+  const [schoolClasses, setSchoolClasses] = useState<KidsSchoolDirectoryClassRow[]>([]);
+  const [schoolClassesLoading, setSchoolClassesLoading] = useState(false);
+  const [joiningClassId, setJoiningClassId] = useState<number | null>(null);
   const classGradeId = useId();
   const classSectionId = useId();
   const descId = useId();
   const academicYearId = useId();
   const schoolSelectId = useId();
-
-  const academicYearOptions = useMemo(() => kidsAcademicYearSelectOptions(), []);
 
   const load = useCallback(async () => {
     try {
@@ -78,6 +80,29 @@ export default function KidsTeacherPanelPage() {
     setSchoolId(String(schools[0].id));
   }, [schools, schoolId]);
 
+  useEffect(() => {
+    const sid = Number(schoolId || 0);
+    if (!sid) {
+      setSchoolClasses([]);
+      return;
+    }
+    let cancelled = false;
+    setSchoolClassesLoading(true);
+    (async () => {
+      try {
+        const rows = await kidsListSchoolClassDirectory(sid);
+        if (!cancelled) setSchoolClasses(rows);
+      } catch (e) {
+        if (!cancelled) toast.error(e instanceof Error ? e.message : 'Okul sınıfları alınamadı');
+      } finally {
+        if (!cancelled) setSchoolClassesLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [schoolId]);
+
   async function onCreate(e: React.FormEvent) {
     e.preventDefault();
     const sid = Number(schoolId);
@@ -89,6 +114,12 @@ export default function KidsTeacherPanelPage() {
       toast.error('Sınıf düzeyi ve şube harfini seçmelisin.');
       return;
     }
+    const selectedSchool = schools.find((s) => String(s.id) === schoolId) ?? null;
+    const academicYearLabel = (selectedSchool?.default_academic_year_label || '').trim();
+    if (!academicYearLabel) {
+      toast.error('Bu okul için eğitim-öğretim yılı yönetimden tanımlanmalı.');
+      return;
+    }
     const composedName = kidsBuildStandardClassName(classGrade, classSection);
     setCreating(true);
     try {
@@ -96,18 +127,42 @@ export default function KidsTeacherPanelPage() {
         name: composedName,
         description: description.trim(),
         school_id: sid,
-        academic_year_label: academicYearLabel.trim(),
+        academic_year_label: academicYearLabel,
       });
       setClasses((prev) => [c, ...prev]);
       setClassGrade('4');
       setClassSection('A');
       setDescription('');
-      setAcademicYearLabel(kidsSuggestedAcademicYearLabel());
       toast.success('Yeni sınıf hazır — öğrenci davetine geçebilirsin.');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Oluşturulamadı');
+      const rawMessage = err instanceof Error ? err.message : 'Oluşturulamadı';
+      const duplicateClassMessage =
+        'Bu okulda aynı sınıf adı bu eğitim-öğretim yılı için zaten var. Yeni sınıf açmak yerine mevcut sınıfa öğretmen ataması yapın.';
+      if (rawMessage.includes(duplicateClassMessage)) {
+        toast.error('Bu okulda benzer bir sınıf var. "Bu sınıfa katıl" diyerek devam edebilirsiniz.');
+      } else {
+        toast.error(rawMessage);
+      }
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function onJoinExistingClass(row: KidsSchoolDirectoryClassRow) {
+    setJoiningClassId(row.id);
+    try {
+      await kidsSelfJoinClass(row.id);
+      toast.success(`${row.name} sınıfına atandın.`);
+      await load();
+      const sid = Number(schoolId || 0);
+      if (sid) {
+        const rows = await kidsListSchoolClassDirectory(sid);
+        setSchoolClasses(rows);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Sınıfa katılım başarısız');
+    } finally {
+      setJoiningClassId(null);
     }
   }
 
@@ -134,12 +189,15 @@ export default function KidsTeacherPanelPage() {
   }
 
   const firstName = user.first_name?.trim() || 'Öğretmen';
+  const selectedSchool = schools.find((s) => String(s.id) === schoolId) ?? null;
+  const lockedAcademicYearLabel = (selectedSchool?.default_academic_year_label || '').trim();
   return (
     <KidsPanelMax>
       <KidsPageHeader
         emoji="👩‍🏫"
         title={`Merhaba, ${firstName}!`}
         subtitle="Önce okulunu tanımla, sonra sınıf açarken o okulu seç. Davet ve challenge’lar sınıf sayfasından yönetilir."
+        compactOnMobile
       />
 
       <div className="grid gap-8 lg:grid-cols-12 lg:gap-10">
@@ -208,10 +266,55 @@ export default function KidsTeacherPanelPage() {
                       Yeni sınıf oluştur
                     </h2>
                     <p className="mt-1 text-sm leading-relaxed text-emerald-900/80 dark:text-emerald-100/80">
-                      Okulunu seç, sınıf adını yaz ve kaydet. Her eğitim-öğretim yılı için ayrı sınıf kaydı
-                      açıp isteğe bağlı yıl etiketi kullanabilirsin.
+                      Okulunu seç, sınıf düzeyi ve şubeyi belirleyip kaydet. Her eğitim-öğretim yılı için
+                      ayrı sınıf kaydı açılır.
                     </p>
                   </div>
+                </div>
+
+                <div className="mb-6 border-t border-emerald-200/70 pt-5 dark:border-emerald-800/40">
+                  <p className="text-xs font-bold uppercase tracking-wide text-emerald-800/90 dark:text-emerald-200/90">
+                    Bu okuldaki mevcut sınıflar
+                  </p>
+                  {schoolClassesLoading ? (
+                    <p className="mt-2 text-sm text-emerald-900/80 dark:text-emerald-100/80">Yükleniyor…</p>
+                  ) : schoolClasses.length === 0 ? (
+                    <p className="mt-2 text-sm text-emerald-900/80 dark:text-emerald-100/80">
+                      Seçilen okulda henüz sınıf yok.
+                    </p>
+                  ) : (
+                    <ul className="mt-3 space-y-2">
+                      {schoolClasses.map((row) => (
+                        <li
+                          key={row.id}
+                          className="rounded-xl border border-emerald-200/80 bg-white/80 px-3 py-2 dark:border-emerald-800/50 dark:bg-emerald-950/25"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="font-semibold text-emerald-950 dark:text-emerald-50">{row.name}</p>
+                              <p className="text-xs text-emerald-800/80 dark:text-emerald-200/80">
+                                Sınıf öğretmeni: {row.teacher_display}
+                              </p>
+                            </div>
+                            {row.is_assigned ? (
+                              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100">
+                                Zaten atandın
+                              </span>
+                            ) : (
+                              <KidsSecondaryButton
+                                type="button"
+                                disabled={joiningClassId === row.id}
+                                onClick={() => void onJoinExistingClass(row)}
+                                className="border-emerald-300 text-emerald-900 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-100 dark:hover:bg-emerald-900/30"
+                              >
+                                {joiningClassId === row.id ? 'Katılıyor…' : 'Bu sınıfa katıl'}
+                              </KidsSecondaryButton>
+                            )}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
 
                 <form className="space-y-8" onSubmit={onCreate} id="yeni-sinif-form">
@@ -282,14 +385,14 @@ export default function KidsTeacherPanelPage() {
                     <KidsFormField
                       id={academicYearId}
                       label="Eğitim-öğretim yılı"
-                      hint={`Öğrenciler sınıf atlayınca yeni sınıf açıp yıl seç; listelerde ayırt etmek için. «Seçilmedi» bırakılabilir.`}
+                      hint="Bu alan yönetim panelindeki okul yılı ayarından otomatik gelir."
                     >
-                      <KidsSelect
+                      <input
                         id={academicYearId}
-                        value={academicYearLabel}
-                        onChange={setAcademicYearLabel}
-                        options={academicYearOptions}
-                        searchable={false}
+                        value={lockedAcademicYearLabel || 'Yönetim tarafından henüz tanımlanmadı'}
+                        readOnly
+                        disabled
+                        className={kidsInputClass}
                       />
                     </KidsFormField>
 
@@ -346,7 +449,7 @@ export default function KidsTeacherPanelPage() {
               description={
                 schools.length === 0
                   ? 'Soldaki adımlarla önce okulunu ekle; ardından aynı karttan okul seçerek ilk sınıfını oluştur.'
-                  : 'Soldaki kartta okulunu seçip sınıf adını yazarak ilk sınıfını oluştur; sonra veli daveti için sınıf sayfasına geç.'
+                  : 'Soldaki kartta okulunu seçip sınıf düzeyi ve şube belirleyerek ilk sınıfını oluştur; sonra veli daveti için sınıf sayfasına geç.'
               }
             />
           ) : (

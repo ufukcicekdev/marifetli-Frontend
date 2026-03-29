@@ -8,6 +8,7 @@ import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import {
   kidsCreateConversation,
   kidsParentChildrenOverview,
+  kidsParentReviewHomeworkSubmission,
   kidsParentSwitchToStudent,
   kidsParentVerifyPassword,
   type KidsParentChildOverview,
@@ -39,6 +40,7 @@ export default function KidsParentPanelPage() {
   const [chatPassword, setChatPassword] = useState('');
   const [chatStarting, setChatStarting] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
+  const [reviewingSubmissionId, setReviewingSubmissionId] = useState<number | null>(null);
 
   const loadOverview = useCallback(async () => {
     setOverviewLoading(true);
@@ -119,6 +121,19 @@ export default function KidsParentPanelPage() {
     }
   }
 
+  async function markSubmittedReviewed(submissionId: number) {
+    setReviewingSubmissionId(submissionId);
+    try {
+      await kidsParentReviewHomeworkSubmission(submissionId, { approved: true });
+      toast.success('Teslim öğretmene gönderildi.');
+      await loadOverview();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Onay kaydedilemedi');
+    } finally {
+      setReviewingSubmissionId(null);
+    }
+  }
+
   if (loading || !user || user.role !== 'parent') {
     return (
       <KidsPanelMax>
@@ -163,6 +178,22 @@ export default function KidsParentPanelPage() {
             className="inline-flex min-h-12 w-full shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 px-8 text-sm font-bold text-white shadow-lg transition hover:from-emerald-500 hover:to-teal-500 sm:w-auto"
           >
             Ebeveyn kontrolleri
+          </Link>
+        </div>
+      </KidsCard>
+      <KidsCard tone="sky" className="mt-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="font-logo text-base font-bold text-sky-950 dark:text-sky-50">Çocukların durumu</h2>
+            <p className="mt-2 text-sm text-sky-900/85 dark:text-sky-100/85">
+              Challenge geçmişi, ödev geçmişi ve bekleyen veli onaylarını tek ekranda gör.
+            </p>
+          </div>
+          <Link
+            href={`${pathPrefix}/veli/cocuklarin-durumu`}
+            className="inline-flex min-h-12 w-full shrink-0 items-center justify-center rounded-full bg-linear-to-r from-sky-600 to-indigo-600 px-8 text-sm font-bold text-white shadow-lg transition hover:from-sky-500 hover:to-indigo-500 sm:w-auto"
+          >
+            Çocukların durumu
           </Link>
         </div>
       </KidsCard>
@@ -251,10 +282,30 @@ export default function KidsParentPanelPage() {
 
               {pendingActions.length > 0 ? (
                 <div className="mt-4 rounded-xl border border-violet-200 bg-violet-50/80 px-3 py-2 dark:border-violet-800 dark:bg-violet-950/40">
-                  <p className="text-xs font-bold text-violet-900 dark:text-violet-100">Onay bekleyenler</p>
-                  <p className="mt-2 text-sm text-violet-900 dark:text-violet-100">
-                    {pendingActions.length} kayıt — detay ekranı bir sonraki sürümde açılacak.
-                  </p>
+                  <p className="text-xs font-bold text-violet-900 dark:text-violet-100">Veli kontrolü bekleyen ödevler</p>
+                  <ul className="mt-2 space-y-2">
+                    {pendingActions.map((it, idx) => (
+                      <li
+                        key={`${it.submission_id}-${idx}`}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-violet-200/80 bg-white/80 px-2.5 py-2 text-sm dark:border-violet-700 dark:bg-violet-950/40"
+                      >
+                        <div className="min-w-0">
+                          <p className="font-semibold text-violet-950 dark:text-violet-100">{it.assignment_title}</p>
+                          <p className="text-xs text-violet-800/90 dark:text-violet-200/80">
+                            {it.class_name} · Tur {it.round_number}
+                          </p>
+                        </div>
+                        <KidsPrimaryButton
+                          type="button"
+                          className="!min-h-9 !px-3 !text-xs"
+                          disabled={reviewingSubmissionId === it.submission_id}
+                          onClick={() => void markSubmittedReviewed(it.submission_id)}
+                        >
+                          {reviewingSubmissionId === it.submission_id ? 'Kaydediliyor…' : 'Teslim edildi'}
+                        </KidsPrimaryButton>
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               ) : null}
 
@@ -265,39 +316,49 @@ export default function KidsParentPanelPage() {
                     {c.classes.map((cl) => (
                       <li
                         key={cl.id}
-                        className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-200/90 bg-white/90 px-3 py-2 text-xs font-medium text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-50"
+                        className="rounded-xl border border-amber-200/90 bg-white/90 px-3 py-2 text-xs font-medium text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-50"
                       >
-                        <span>
+                        <span className="block">
                           {cl.name}
                           {cl.school_name ? (
                             <span className="text-amber-800/80 dark:text-amber-200/70"> · {cl.school_name}</span>
                           ) : null}
-                          {cl.teacher_display ? (
-                            <span className="text-amber-800/80 dark:text-amber-200/70">
-                              {' '}
-                              · Öğretmen: {cl.teacher_display}
-                            </span>
-                          ) : null}
                         </span>
-                        <KidsSecondaryButton
-                          type="button"
-                          className="!min-h-9 !px-4 !text-xs"
-                          disabled={chatStarting}
-                          onClick={() => {
-                            setChatTarget({
-                              studentId: c.id,
-                              studentName: `${c.first_name} ${c.last_name}`.trim(),
-                              classId: cl.id,
-                              className: cl.name,
-                              teacherUserId: cl.teacher_user_id,
-                              teacherDisplay: cl.teacher_display,
-                            });
-                            setChatPassword('');
-                            setChatError(null);
-                          }}
-                        >
-                          Öğretmene mesaj başlat
-                        </KidsSecondaryButton>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {(cl.teachers && cl.teachers.length > 0
+                            ? cl.teachers
+                            : [
+                                {
+                                  teacher_user_id: cl.teacher_user_id,
+                                  teacher_display: cl.teacher_display,
+                                  subject: 'Sınıf Öğretmeni',
+                                  is_primary: true,
+                                },
+                              ]
+                          ).map((t) => (
+                            <KidsSecondaryButton
+                              key={`${cl.id}-${t.teacher_user_id}`}
+                              type="button"
+                              className="min-h-9 px-4 text-xs"
+                              disabled={chatStarting}
+                              onClick={() => {
+                                setChatTarget({
+                                  studentId: c.id,
+                                  studentName: `${c.first_name} ${c.last_name}`.trim(),
+                                  classId: cl.id,
+                                  className: cl.name,
+                                  teacherUserId: t.teacher_user_id,
+                                  teacherDisplay: `${t.teacher_display}${t.subject ? ` (${t.subject})` : ''}`,
+                                });
+                                setChatPassword('');
+                                setChatError(null);
+                              }}
+                            >
+                              Mesaj: {t.teacher_display}
+                              {t.subject ? ` · ${t.subject}` : ''}
+                            </KidsSecondaryButton>
+                          ))}
+                        </div>
                       </li>
                     ))}
                   </ul>
@@ -372,6 +433,7 @@ export default function KidsParentPanelPage() {
                   </ul>
                 )}
               </div>
+
             </KidsCard>
           );
         })}
