@@ -2589,6 +2589,8 @@ export type KidsTestQuestion = {
   id: number;
   order: number;
   stem: string;
+  topic?: string;
+  subtopic?: string;
   choices: { key: string; text: string }[];
   correct_choice_key: string;
   points: number;
@@ -2703,6 +2705,8 @@ export async function kidsExtractTestQuestions(images: File[]): Promise<{
   questions: {
     order: number;
     stem: string;
+    topic?: string;
+    subtopic?: string;
     choices: { key: string; text: string }[];
     correct_choice_key: string;
     points: number;
@@ -2722,6 +2726,8 @@ export async function kidsExtractTestQuestions(images: File[]): Promise<{
     questions: {
       order: number;
       stem: string;
+      topic?: string;
+      subtopic?: string;
       choices: { key: string; text: string }[];
       correct_choice_key: string;
       points: number;
@@ -2739,6 +2745,8 @@ export async function kidsCreateClassTest(
     questions: {
       order: number;
       stem: string;
+      topic?: string;
+      subtopic?: string;
       choices: { key: string; text: string }[];
       correct_choice_key: string;
       points?: number;
@@ -2806,6 +2814,8 @@ export async function kidsPatchTest(
     questions: {
       order: number;
       stem: string;
+      topic?: string;
+      subtopic?: string;
       choices: { key: string; text: string }[];
       correct_choice_key: string;
       points?: number;
@@ -2834,7 +2844,15 @@ export async function kidsStudentGetTest(testId: number): Promise<{
   instructions: string;
   duration_minutes: number | null;
   published_at: string | null;
-  questions: { id: number; order: number; stem: string; choices: { key: string; text: string }[]; points: number }[];
+  questions: {
+    id: number;
+    order: number;
+    stem: string;
+    topic?: string;
+    subtopic?: string;
+    choices: { key: string; text: string }[];
+    points: number;
+  }[];
   attempt: KidsTestAttempt | null;
 }> {
   const res = await kidsAuthorizedFetch(`/tests/${testId}/`, { method: 'GET' });
@@ -2846,7 +2864,15 @@ export async function kidsStudentGetTest(testId: number): Promise<{
     instructions: string;
     duration_minutes: number | null;
     published_at: string | null;
-    questions: { id: number; order: number; stem: string; choices: { key: string; text: string }[]; points: number }[];
+    questions: {
+      id: number;
+      order: number;
+      stem: string;
+      topic?: string;
+      subtopic?: string;
+      choices: { key: string; text: string }[];
+      points: number;
+    }[];
     attempt: KidsTestAttempt | null;
   };
 }
@@ -2945,6 +2971,8 @@ export async function kidsClassTestStudentReport(classId: number, testId: number
     question_id: number;
     order: number;
     stem: string;
+    topic?: string;
+    subtopic?: string;
     choices: { key: string; text: string }[];
     correct_choice_key: string;
     selected_choice_key: string;
@@ -2972,6 +3000,8 @@ export async function kidsClassTestStudentReport(classId: number, testId: number
       question_id: number;
       order: number;
       stem: string;
+      topic?: string;
+      subtopic?: string;
       choices: { key: string; text: string }[];
       correct_choice_key: string;
       selected_choice_key: string;

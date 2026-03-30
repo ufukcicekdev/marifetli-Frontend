@@ -21,6 +21,8 @@ import { KidsSelect } from '@/src/components/kids/kids-ui';
 type DraftQuestion = {
   order: number;
   stem: string;
+  topic: string;
+  subtopic: string;
   choices: { key: string; text: string }[];
   correct_choice_key: string;
   points: number;
@@ -132,6 +134,8 @@ export default function KidsTeacherTestsPage() {
       (row.questions || []).map((q, idx) => ({
         order: q.order || idx + 1,
         stem: q.stem || '',
+        topic: q.topic || '',
+        subtopic: q.subtopic || '',
         choices: (q.choices || []).map((c, cIdx) => ({
           key: c.key || String.fromCharCode(65 + cIdx),
           text: c.text || '',
@@ -200,7 +204,17 @@ export default function KidsTeacherTestsPage() {
       const out = await kidsExtractTestQuestions(images);
       setTitle((out.title || 'Yeni Test').trim());
       setInstructions((out.instructions || '').trim());
-      setQuestions(out.questions.map((q) => ({ ...q })));
+      setQuestions(
+        out.questions.map((q, idx) => ({
+          order: q.order || idx + 1,
+          stem: q.stem || '',
+          topic: q.topic || '',
+          subtopic: q.subtopic || '',
+          choices: (q.choices || []).map((c, cIdx) => ({ key: c.key || String.fromCharCode(65 + cIdx), text: c.text || '' })),
+          correct_choice_key: q.correct_choice_key || '',
+          points: q.points || 1,
+        })),
+      );
       toast.success(`AI ${out.questions.length} soru çıkardı`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'AI çıkarım başarısız');
@@ -241,6 +255,8 @@ export default function KidsTeacherTestsPage() {
         questions: questions.map((q, idx) => ({
           order: idx + 1,
           stem: q.stem.trim(),
+          topic: q.topic.trim(),
+          subtopic: q.subtopic.trim(),
           choices: q.choices.map((c, cIdx) => ({ key: c.key || String.fromCharCode(65 + cIdx), text: c.text.trim() })),
           correct_choice_key: q.correct_choice_key,
           points: q.points || 1,
