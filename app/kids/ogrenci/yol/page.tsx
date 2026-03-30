@@ -92,7 +92,7 @@ export default function KidsStudentRoadmapPage() {
         </Link>
         <h1 className="mt-4 text-2xl font-bold text-slate-900 dark:text-white">Rozet yolu</h1>
         <p className="mt-2 text-sm text-slate-600 dark:text-gray-400">
-          Duolingo tarzı bir yol: her düğüm bir rozet. Puanların düşmez; challenge yıldızları ayrıca birikir.
+          Her düğüm bir rozet. Puanların düşmez; challenge yıldızları ayrıca birikir.
         </p>
         {data ? (
           <p className="mt-2 text-sm font-semibold text-emerald-800 dark:text-emerald-200">
