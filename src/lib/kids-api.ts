@@ -2501,6 +2501,7 @@ export async function kidsFreestyleCreate(body: {
 
 export type KidsNotificationType =
   | 'kids_new_assignment'
+  | 'kids_new_test'
   | 'kids_submission_received'
   | 'kids_challenge_pending_teacher'
   | 'kids_challenge_pending_parent'

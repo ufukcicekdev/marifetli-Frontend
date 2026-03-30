@@ -18,6 +18,7 @@ import { canRequestPush, getFCMTokenAndRegister } from '@/src/lib/firebase-messa
 
 const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
   kids_new_assignment: 'Yeni challenge',
+  kids_new_test: 'Yeni test',
   kids_submission_received: 'Teslim alındı',
   kids_challenge_pending_teacher: 'Yarışma onayda',
   kids_challenge_pending_parent: 'Serbest yarışma (veli onayı)',
