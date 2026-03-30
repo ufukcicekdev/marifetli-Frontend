@@ -11,6 +11,7 @@ import {
   kidsExtractTestQuestions,
   kidsListClasses,
   kidsListMyCreatedTests,
+  kidsPatchTest,
   type KidsClass,
   type KidsTest,
 } from '@/src/lib/kids-api';
@@ -232,7 +233,7 @@ export default function KidsTeacherTestsPage() {
         durationMinutes.trim() === ''
           ? null
           : Math.min(300, Math.max(1, Number(durationMinutes.replace(/\D+/g, '') || '0')));
-      const created = await kidsCreateClassTest(classId, {
+      const payload = {
         title: title.trim(),
         instructions: instructions.trim(),
         duration_minutes: duration,
@@ -244,15 +245,27 @@ export default function KidsTeacherTestsPage() {
           correct_choice_key: q.correct_choice_key,
           points: q.points || 1,
         })),
-        source_images: images,
-      });
-      toast.success('Test kaydedildi. Yukarıdan seçip sınıflara gönderebilirsin.');
-      setMyTests((prev) => [created, ...prev.filter((x) => x.id !== created.id)]);
+      } as const;
+      const editingTestId = Number(workFromTestId);
+      const isEditing = Number.isFinite(editingTestId) && editingTestId > 0;
+      if (isEditing) {
+        const updated = await kidsPatchTest(editingTestId, payload);
+        toast.success('Test güncellendi.');
+        setMyTests((prev) => [updated, ...prev.filter((x) => x.id !== updated.id)]);
+        setWorkFromTestId(String(updated.id));
+      } else {
+        const created = await kidsCreateClassTest(classId, {
+          ...payload,
+          source_images: images,
+        });
+        toast.success('Test kaydedildi. Yukarıdan seçip sınıflara gönderebilirsin.');
+        setMyTests((prev) => [created, ...prev.filter((x) => x.id !== created.id)]);
+        setWorkFromTestId(String(created.id));
+      }
       setQuestions([]);
       setImages([]);
       setInstructions('');
       setTitle('Yeni Test');
-      setWorkFromTestId(String(created.id));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Test kaydedilemedi');
     } finally {
@@ -262,6 +275,7 @@ export default function KidsTeacherTestsPage() {
 
   if (authLoading || loading) return <p className="text-center text-sm">Yükleniyor…</p>;
   if (!user || (user.role !== 'teacher' && user.role !== 'admin')) return <p className="text-center text-sm">Yönlendiriliyorsun…</p>;
+  const isEditingDraft = Boolean(workFromTestId && Number(workFromTestId) > 0);
   const canDistribute =
     Boolean(distributeTestId) &&
     (distributeScope === 'all' ? classes.length > 0 : distributeClassIds.length > 0);
@@ -288,21 +302,18 @@ export default function KidsTeacherTestsPage() {
               />
             </div>
           </label>
-          <div className="text-xs text-slate-500 dark:text-slate-400">
-            Süre dolunca test otomatik gönderilir ve kilitlenir.
-          </div>
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <Link
             href={`${pathPrefix}/ogretmen/testler/raporlar`}
-            className="rounded-full border border-violet-300 px-3 py-1 text-xs font-bold text-violet-700 dark:border-violet-700 dark:text-violet-200"
+            className="inline-flex min-h-10 items-center rounded-xl bg-fuchsia-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-fuchsia-500 focus:outline-none focus:ring-2 focus:ring-fuchsia-400/60"
           >
             Rapor ekranına git
           </Link>
           <button
             type="button"
             onClick={resetDraftForm}
-            className="rounded-full border border-slate-300 px-3 py-1 text-xs font-bold text-slate-700 dark:border-slate-700 dark:text-slate-200"
+            className="inline-flex min-h-10 items-center rounded-xl border border-violet-300 bg-white px-4 py-2 text-sm font-semibold text-violet-700 shadow-sm transition hover:bg-violet-50 focus:outline-none focus:ring-2 focus:ring-violet-300/60 dark:border-violet-700 dark:bg-gray-900 dark:text-violet-200 dark:hover:bg-violet-950/40"
           >
             Formu temizle
           </button>
@@ -435,20 +446,13 @@ export default function KidsTeacherTestsPage() {
         ) : (
           <ul className="space-y-2">
             {myTests.map((t) => (
-              <li key={`mine-${t.id}`} className="flex items-center justify-between rounded-xl border border-violet-200 px-3 py-2 dark:border-violet-700">
+              <li key={`mine-${t.id}`} className="rounded-xl border border-violet-200 px-3 py-2 dark:border-violet-700">
                 <div>
                   <p className="text-sm font-semibold">{t.title}</p>
                   <p className="text-xs text-slate-500">
                     {t.kids_class ? classNameById.get(t.kids_class) || `Sınıf #${t.kids_class}` : 'Sınıf yok'} · {t.questions?.length || 0} soru
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => applyTestToForm(String(t.id))}
-                  className="rounded-full bg-violet-100 px-3 py-1 text-xs font-bold text-violet-800 dark:bg-violet-900/40 dark:text-violet-200"
-                >
-                  Düzenle
-                </button>
               </li>
             ))}
           </ul>
@@ -597,7 +601,7 @@ export default function KidsTeacherTestsPage() {
           onClick={() => void onPublish()}
           className="mt-4 rounded-lg bg-fuchsia-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60"
         >
-          {saving ? 'Kaydediliyor…' : '4) Kaydet'}
+          {saving ? (isEditingDraft ? 'Güncelleniyor…' : 'Kaydediliyor…') : isEditingDraft ? '4) Güncelle' : '4) Kaydet'}
         </button>
       </section>
 

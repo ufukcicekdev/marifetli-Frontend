@@ -2874,6 +2874,7 @@ export async function kidsStudentSubmitTest(
 
 export async function kidsClassTestReport(classId: number, testId: number): Promise<{
   test_id: number;
+  class_name: string;
   title: string;
   students_total: number;
   students_submitted: number;
@@ -2901,6 +2902,7 @@ export async function kidsClassTestReport(classId: number, testId: number): Prom
   if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Test raporu yüklenemedi');
   return data as {
     test_id: number;
+    class_name: string;
     title: string;
     students_total: number;
     students_submitted: number;
@@ -2921,6 +2923,59 @@ export async function kidsClassTestReport(classId: number, testId: number): Prom
       correct_count: number;
       attempt_count: number;
       success_rate: number;
+    }[];
+  };
+}
+
+export async function kidsClassTestStudentReport(classId: number, testId: number, studentId: number): Promise<{
+  test_id: number;
+  class_name: string;
+  test_title: string;
+  student: { id: number; name: string };
+  attempt: {
+    started_at: string;
+    submitted_at: string | null;
+    duration_seconds: number | null;
+    auto_submitted: boolean;
+    total_questions: number;
+    total_correct: number;
+    score: number;
+  } | null;
+  questions: {
+    question_id: number;
+    order: number;
+    stem: string;
+    choices: { key: string; text: string }[];
+    correct_choice_key: string;
+    selected_choice_key: string;
+    is_correct: boolean;
+  }[];
+}> {
+  const res = await kidsAuthorizedFetch(`/classes/${classId}/tests/${testId}/students/${studentId}/report/`, { method: 'GET' });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Öğrenci raporu yüklenemedi');
+  return data as {
+    test_id: number;
+    class_name: string;
+    test_title: string;
+    student: { id: number; name: string };
+    attempt: {
+      started_at: string;
+      submitted_at: string | null;
+      duration_seconds: number | null;
+      auto_submitted: boolean;
+      total_questions: number;
+      total_correct: number;
+      score: number;
+    } | null;
+    questions: {
+      question_id: number;
+      order: number;
+      stem: string;
+      choices: { key: string; text: string }[];
+      correct_choice_key: string;
+      selected_choice_key: string;
+      is_correct: boolean;
     }[];
   };
 }

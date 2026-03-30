@@ -112,7 +112,7 @@ export default function KidsStudentTestSolvePage() {
         )}
         {submitted ? (
           <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300">
-            Sonuç: {attempt?.total_correct}/{attempt?.total_questions} doğru · {attempt?.score.toFixed(2)} puan
+            Sonuç: {attempt?.total_correct}/{attempt?.total_questions} doğru · {attempt?.score.toFixed(2)}/100 puan
           </p>
         ) : null}
       </div>
