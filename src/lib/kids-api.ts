@@ -2548,6 +2548,14 @@ export type KidsMessage = {
   sender_student: number | null;
   sender_user: number | null;
   body: string;
+  attachment?: {
+    id: number;
+    url: string;
+    original_name: string;
+    content_type: string;
+    size_bytes: number;
+    created_at: string | null;
+  } | null;
   edited_at: string | null;
   created_at: string;
 };
@@ -2575,6 +2583,53 @@ export type KidsAnnouncement = {
     size_bytes: number;
     created_at: string | null;
   }[];
+};
+
+export type KidsTestQuestion = {
+  id: number;
+  order: number;
+  stem: string;
+  choices: { key: string; text: string }[];
+  correct_choice_key: string;
+  points: number;
+};
+
+export type KidsTest = {
+  id: number;
+  kids_class: number;
+  created_by: number;
+  source_test?: number | null;
+  title: string;
+  instructions: string;
+  duration_minutes: number | null;
+  status: 'draft' | 'published' | 'archived';
+  published_at: string | null;
+  questions: KidsTestQuestion[];
+  source_images: { id: number; page_order: number; url: string }[];
+  created_at: string;
+  updated_at: string;
+};
+
+export type KidsStudentTestListItem = {
+  id: number;
+  kids_class: number;
+  title: string;
+  instructions: string;
+  duration_minutes: number | null;
+  published_at: string | null;
+  question_count: number;
+};
+
+export type KidsTestAttempt = {
+  id: number;
+  test: number;
+  student: number;
+  started_at: string;
+  submitted_at: string | null;
+  auto_submitted: boolean;
+  score: number;
+  total_questions: number;
+  total_correct: number;
 };
 
 export async function kidsListConversations(): Promise<KidsConversation[]> {
@@ -2614,10 +2669,21 @@ export async function kidsListConversationMessages(conversationId: number): Prom
 export async function kidsSendConversationMessage(
   conversationId: number,
   body: string,
+  file?: File | null,
 ): Promise<KidsMessage> {
+  const hasFile = Boolean(file);
+  const payload =
+    hasFile && file
+      ? (() => {
+          const fd = new FormData();
+          fd.append('body', body);
+          fd.append('file', file);
+          return fd;
+        })()
+      : JSON.stringify({ body });
   const res = await kidsAuthorizedFetch(`/messages/${conversationId}/items/`, {
     method: 'POST',
-    body: JSON.stringify({ body }),
+    body: payload,
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Mesaj gönderilemedi');
@@ -2629,6 +2695,234 @@ export async function kidsListAnnouncements(): Promise<KidsAnnouncement[]> {
   const data = await res.json().catch(() => []);
   if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Duyurular yüklenemedi');
   return Array.isArray(data) ? (data as KidsAnnouncement[]) : [];
+}
+
+export async function kidsExtractTestQuestions(images: File[]): Promise<{
+  title: string;
+  instructions: string;
+  questions: {
+    order: number;
+    stem: string;
+    choices: { key: string; text: string }[];
+    correct_choice_key: string;
+    points: number;
+  }[];
+}> {
+  const fd = new FormData();
+  for (const image of images) fd.append('images', image);
+  const res = await kidsAuthorizedFetch('/tests/extract/', {
+    method: 'POST',
+    body: fd,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Test soruları çıkarılamadı');
+  return data as {
+    title: string;
+    instructions: string;
+    questions: {
+      order: number;
+      stem: string;
+      choices: { key: string; text: string }[];
+      correct_choice_key: string;
+      points: number;
+    }[];
+  };
+}
+
+export async function kidsCreateClassTest(
+  classId: number,
+  body: {
+    title: string;
+    instructions?: string;
+    duration_minutes?: number | null;
+    status?: 'draft' | 'published' | 'archived';
+    questions: {
+      order: number;
+      stem: string;
+      choices: { key: string; text: string }[];
+      correct_choice_key: string;
+      points?: number;
+    }[];
+    source_images?: File[];
+  },
+): Promise<KidsTest> {
+  const fd = new FormData();
+  fd.append('title', body.title);
+  fd.append('instructions', body.instructions ?? '');
+  if (body.duration_minutes != null) fd.append('duration_minutes', String(body.duration_minutes));
+  if (body.status) fd.append('status', body.status);
+  fd.append('questions', JSON.stringify(body.questions));
+  for (const image of body.source_images ?? []) fd.append('source_images', image);
+  const res = await kidsAuthorizedFetch(`/classes/${classId}/tests/`, {
+    method: 'POST',
+    body: fd,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Test oluşturulamadı');
+  return data as KidsTest;
+}
+
+export async function kidsListClassTests(classId: number): Promise<KidsTest[]> {
+  const res = await kidsAuthorizedFetch(`/classes/${classId}/tests/`, { method: 'GET' });
+  const data = await res.json().catch(() => []);
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Testler yüklenemedi');
+  return Array.isArray(data) ? (data as KidsTest[]) : [];
+}
+
+export async function kidsListMyCreatedTests(): Promise<KidsTest[]> {
+  const res = await kidsAuthorizedFetch('/tests/mine/', { method: 'GET' });
+  const data = await res.json().catch(() => []);
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Yüklediğim testler alınamadı');
+  return Array.isArray(data) ? (data as KidsTest[]) : [];
+}
+
+export async function kidsDistributeTestToClasses(
+  testId: number,
+  classIds: number[],
+): Promise<{ created: KidsTest[]; created_count: number; skipped_class_ids: number[] }> {
+  const res = await kidsAuthorizedFetch(`/tests/${testId}/distribute/`, {
+    method: 'POST',
+    body: JSON.stringify({ class_ids: classIds }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Test sınıflara gönderilemedi');
+  return data as { created: KidsTest[]; created_count: number; skipped_class_ids: number[] };
+}
+
+export async function kidsGetTest(testId: number): Promise<KidsTest> {
+  const res = await kidsAuthorizedFetch(`/tests/${testId}/`, { method: 'GET' });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Test yüklenemedi');
+  return data as KidsTest;
+}
+
+export async function kidsPatchTest(
+  testId: number,
+  body: Partial<{
+    title: string;
+    instructions: string;
+    duration_minutes: number | null;
+    status: 'draft' | 'published' | 'archived';
+    questions: {
+      order: number;
+      stem: string;
+      choices: { key: string; text: string }[];
+      correct_choice_key: string;
+      points?: number;
+    }[];
+  }>,
+): Promise<KidsTest> {
+  const res = await kidsAuthorizedFetch(`/tests/${testId}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Test güncellenemedi');
+  return data as KidsTest;
+}
+
+export async function kidsStudentListTests(): Promise<KidsStudentTestListItem[]> {
+  const res = await kidsAuthorizedFetch('/student/tests/', { method: 'GET' });
+  const data = await res.json().catch(() => []);
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Test listesi yüklenemedi');
+  return Array.isArray(data) ? (data as KidsStudentTestListItem[]) : [];
+}
+
+export async function kidsStudentGetTest(testId: number): Promise<{
+  id: number;
+  title: string;
+  instructions: string;
+  duration_minutes: number | null;
+  published_at: string | null;
+  questions: { id: number; order: number; stem: string; choices: { key: string; text: string }[]; points: number }[];
+  attempt: KidsTestAttempt | null;
+}> {
+  const res = await kidsAuthorizedFetch(`/tests/${testId}/`, { method: 'GET' });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Test yüklenemedi');
+  return data as {
+    id: number;
+    title: string;
+    instructions: string;
+    duration_minutes: number | null;
+    published_at: string | null;
+    questions: { id: number; order: number; stem: string; choices: { key: string; text: string }[]; points: number }[];
+    attempt: KidsTestAttempt | null;
+  };
+}
+
+export async function kidsStudentStartTest(testId: number): Promise<KidsTestAttempt> {
+  const res = await kidsAuthorizedFetch(`/student/tests/${testId}/start/`, { method: 'POST', body: JSON.stringify({}) });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Test başlatılamadı');
+  return data as KidsTestAttempt;
+}
+
+export async function kidsStudentSubmitTest(
+  testId: number,
+  answers: Record<string, string>,
+  auto_submitted = false,
+): Promise<KidsTestAttempt> {
+  const res = await kidsAuthorizedFetch(`/student/tests/${testId}/submit/`, {
+    method: 'POST',
+    body: JSON.stringify({ answers, auto_submitted }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Test gönderilemedi');
+  return data as KidsTestAttempt;
+}
+
+export async function kidsClassTestReport(classId: number, testId: number): Promise<{
+  test_id: number;
+  title: string;
+  students_total: number;
+  students_submitted: number;
+  average_score: number;
+  students: {
+    student_id: number;
+    student_name: string;
+    started_at: string;
+    submitted_at: string | null;
+    duration_seconds: number | null;
+    score: number;
+    total_correct: number;
+    total_questions: number;
+  }[];
+  question_stats: {
+    question_id: number;
+    order: number;
+    correct_count: number;
+    attempt_count: number;
+    success_rate: number;
+  }[];
+}> {
+  const res = await kidsAuthorizedFetch(`/classes/${classId}/tests/${testId}/report/`, { method: 'GET' });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Test raporu yüklenemedi');
+  return data as {
+    test_id: number;
+    title: string;
+    students_total: number;
+    students_submitted: number;
+    average_score: number;
+    students: {
+      student_id: number;
+      student_name: string;
+      started_at: string;
+      submitted_at: string | null;
+      duration_seconds: number | null;
+      score: number;
+      total_correct: number;
+      total_questions: number;
+    }[];
+    question_stats: {
+      question_id: number;
+      order: number;
+      correct_count: number;
+      attempt_count: number;
+      success_rate: number;
+    }[];
+  };
 }
 
 export async function kidsCreateAnnouncement(body: {

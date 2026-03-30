@@ -28,9 +28,11 @@ import {
   KidsSecondaryButton,
   kidsTextareaClass,
 } from '@/src/components/kids/kids-ui';
-import { MessageCircle, Send, Smile, Sparkles, UserCircle2, Users, Wifi, WifiOff } from 'lucide-react';
+import { Download, Image as ImageIcon, MessageCircle, Paperclip, Send, Smile, Sparkles, UserCircle2, Users, Wifi, WifiOff, X } from 'lucide-react';
 
 const QUICK_EMOJIS = ['😀', '😂', '😍', '👏', '👍', '🙏', '🎉', '🔥', '❤️', '🌟'] as const;
+const MAX_IMAGE_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+const MAX_FILE_ATTACHMENT_BYTES = 20 * 1024 * 1024;
 
 export default function KidsConversationDetailPage() {
   const params = useParams();
@@ -49,9 +51,11 @@ export default function KidsConversationDetailPage() {
   const [password, setPassword] = useState('');
   const [passwordBusy, setPasswordBusy] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const reconnectTimerRef = useRef<number | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const loadConversationList = async () => {
     setListLoading(true);
@@ -220,17 +224,18 @@ export default function KidsConversationDetailPage() {
 
   async function onSend() {
     const body = text.trim();
-    if (!body) return;
+    if (!body && !selectedFile) return;
     setSending(true);
     try {
       const ws = wsRef.current;
-      if (ws && ws.readyState === WebSocket.OPEN) {
+      if (!selectedFile && ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ action: 'send_message', body }));
       } else {
-        const row = await kidsSendConversationMessage(conversationId, body);
+        const row = await kidsSendConversationMessage(conversationId, body, selectedFile);
         setMessages((prev) => [...prev, row]);
       }
       setText('');
+      setSelectedFile(null);
       touchConversationListNow();
       void loadConversationList();
     } catch (e) {
@@ -242,6 +247,40 @@ export default function KidsConversationDetailPage() {
 
   function appendEmoji(emoji: string) {
     setText((prev) => `${prev}${emoji}`);
+  }
+
+  function formatBytesTr(size: number): string {
+    if (!Number.isFinite(size) || size <= 0) return '0 B';
+    if (size < 1024) return `${size} B`;
+    const kb = size / 1024;
+    if (kb < 1024) return `${kb.toFixed(1)} KB`;
+    const mb = kb / 1024;
+    return `${mb.toFixed(1)} MB`;
+  }
+
+  function isImageAttachment(contentType?: string | null, name?: string | null): boolean {
+    const ct = (contentType || '').toLowerCase();
+    if (ct.startsWith('image/')) return true;
+    const lowerName = (name || '').toLowerCase();
+    return ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'].some((ext) => lowerName.endsWith(ext));
+  }
+
+  function onPickFile(file: File | null) {
+    if (!file) {
+      setSelectedFile(null);
+      return;
+    }
+    const image = file.type.startsWith('image/');
+    const max = image ? MAX_IMAGE_ATTACHMENT_BYTES : MAX_FILE_ATTACHMENT_BYTES;
+    if (file.size <= 0) {
+      toast.error('Dosya boş olamaz');
+      return;
+    }
+    if (file.size > max) {
+      toast.error(image ? 'Görsel en fazla 10 MB olabilir' : 'Dosya en fazla 20 MB olabilir');
+      return;
+    }
+    setSelectedFile(file);
   }
 
   function isOutgoingMessage(m: KidsMessage): boolean {
@@ -394,7 +433,42 @@ export default function KidsConversationDetailPage() {
                           : 'rounded-bl-md border border-violet-100 bg-white text-slate-900 dark:border-violet-900 dark:bg-violet-950/60 dark:text-slate-100'
                       }`}
                     >
-                      <p className="whitespace-pre-wrap text-sm leading-relaxed">{m.body}</p>
+                      {m.body ? <p className="whitespace-pre-wrap text-sm leading-relaxed">{m.body}</p> : null}
+                      {m.attachment ? (
+                        <div className={`mt-2 rounded-xl border p-2 ${mine ? 'border-violet-300/50 bg-violet-500/20' : 'border-violet-200 bg-violet-50/60 dark:border-violet-800 dark:bg-violet-950/40'}`}>
+                          {isImageAttachment(m.attachment.content_type, m.attachment.original_name) ? (
+                            <a href={m.attachment.url} target="_blank" rel="noreferrer" className="block">
+                              <img
+                                src={m.attachment.url}
+                                alt={m.attachment.original_name || 'Görsel eki'}
+                                className="max-h-56 w-full rounded-lg object-cover"
+                              />
+                            </a>
+                          ) : (
+                            <div className="flex items-center gap-2 text-xs">
+                              <Paperclip className="h-3.5 w-3.5 shrink-0" />
+                              <span className="truncate">{m.attachment.original_name || 'Dosya'}</span>
+                            </div>
+                          )}
+                          <div className="mt-2 flex items-center justify-between gap-2">
+                            <span className={`text-[11px] ${mine ? 'text-violet-100' : 'text-slate-500 dark:text-slate-400'}`}>
+                              {formatBytesTr(m.attachment.size_bytes)}
+                            </span>
+                            <a
+                              href={m.attachment.url}
+                              download={m.attachment.original_name || undefined}
+                              className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-semibold ${
+                                mine
+                                  ? 'bg-white/20 text-white hover:bg-white/30'
+                                  : 'bg-violet-100 text-violet-700 hover:bg-violet-200 dark:bg-violet-900/60 dark:text-violet-200'
+                              }`}
+                            >
+                              <Download className="h-3.5 w-3.5" />
+                              İndir
+                            </a>
+                          </div>
+                        </div>
+                      ) : null}
                       <p className={`mt-1 text-right text-[11px] ${mine ? 'text-violet-100' : 'text-slate-500 dark:text-slate-400'}`}>
                         {new Date(m.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
                       </p>
@@ -444,13 +518,47 @@ export default function KidsConversationDetailPage() {
                 placeholder="Mesaj yazın... (Enter: gönder, Shift+Enter: yeni satır)"
                 className={kidsTextareaClass}
               />
+              {selectedFile ? (
+                <div className="flex items-center justify-between rounded-xl border border-violet-200 bg-white px-3 py-2 text-xs dark:border-violet-800 dark:bg-gray-950/60">
+                  <div className="flex min-w-0 items-center gap-2">
+                    {selectedFile.type.startsWith('image/') ? <ImageIcon className="h-4 w-4 shrink-0 text-violet-700 dark:text-violet-300" /> : <Paperclip className="h-4 w-4 shrink-0 text-violet-700 dark:text-violet-300" />}
+                    <span className="truncate font-semibold text-violet-900 dark:text-violet-100">{selectedFile.name}</span>
+                    <span className="text-slate-500 dark:text-slate-400">{formatBytesTr(selectedFile.size)}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedFile(null)}
+                    className="inline-flex items-center gap-1 rounded-full border border-violet-200 px-2 py-1 font-semibold text-violet-700 hover:bg-violet-50 dark:border-violet-700 dark:text-violet-200 dark:hover:bg-violet-900/40"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    Kaldır
+                  </button>
+                </div>
+              ) : null}
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                onChange={(e) => {
+                  onPickFile(e.target.files?.[0] ?? null);
+                  e.currentTarget.value = '';
+                }}
+              />
               <div className="flex justify-end">
-                <KidsPrimaryButton type="button" disabled={sending || !text.trim()} onClick={() => void onSend()}>
+                <div className="flex items-center gap-2">
+                  <KidsSecondaryButton type="button" disabled={sending} onClick={() => fileInputRef.current?.click()}>
+                    <span className="inline-flex items-center gap-1.5">
+                      <Paperclip className="h-4 w-4" />
+                      Dosya
+                    </span>
+                  </KidsSecondaryButton>
+                  <KidsPrimaryButton type="button" disabled={sending || (!text.trim() && !selectedFile)} onClick={() => void onSend()}>
                   <span className="inline-flex items-center gap-1.5">
                     <Send className="h-4 w-4" />
                     {sending ? 'Gönderiliyor…' : 'Gönder'}
                   </span>
                 </KidsPrimaryButton>
+                </div>
               </div>
             </div>
           </div>
