@@ -11,6 +11,7 @@ import {
 import { KidsStudentStarOverlay } from '@/src/components/kids/kids-student-star-overlay';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import {
+  type KidsAchievementCertificate,
   kidsGetBadgeRoadmap,
   kidsStudentDashboard,
   type KidsAssignment,
@@ -24,6 +25,7 @@ export default function KidsStudentPanelPage() {
   const { user, loading: authLoading, pathPrefix } = useKidsAuth();
   const [classes, setClasses] = useState<KidsClass[]>([]);
   const [assignments, setAssignments] = useState<KidsAssignment[]>([]);
+  const [certificates, setCertificates] = useState<KidsAchievementCertificate[]>([]);
   const [roadmap, setRoadmap] = useState<KidsBadgeRoadmap | null>(null);
   const [loading, setLoading] = useState(true);
   const [pickLabels, setPickLabels] = useState<string[] | null>(null);
@@ -36,6 +38,7 @@ export default function KidsStudentPanelPage() {
       ]);
       setClasses(data.classes);
       setAssignments(data.assignments);
+      setCertificates(Array.isArray(data.achievement_certificates) ? data.achievement_certificates : []);
       setRoadmap(road);
     } catch {
       toast.error('Panel yüklenemedi');
@@ -107,6 +110,7 @@ export default function KidsStudentPanelPage() {
         pathPrefix={pathPrefix}
         user={user}
         classes={classes}
+        certificates={certificates}
         roadmap={roadmap}
         loading={loading}
       />

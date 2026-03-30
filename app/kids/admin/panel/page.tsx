@@ -6,6 +6,8 @@ import toast from 'react-hot-toast';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import {
   kidsAddClassTeacher,
+  kidsAdminGetAchievementSettings,
+  kidsAdminPatchAchievementSettings,
   kidsAdminCreateSubject,
   kidsAdminAddSchoolYearProfile,
   kidsAdminAssignSchoolTeacher,
@@ -30,6 +32,7 @@ import {
   kidsRemoveClassTeacher,
   kidsSuggestedAcademicYearLabel,
   type KidsClass,
+  type KidsAdminAchievementSettings,
   type KidsAdminSubject,
   type KidsAdminSchoolDetail,
   type KidsClassTeacherAssignment,
@@ -220,6 +223,10 @@ export default function KidsAdminPanelPage() {
   const [newSubjectName, setNewSubjectName] = useState('');
   const [subjectSaving, setSubjectSaving] = useState(false);
   const [showPassiveSubjects, setShowPassiveSubjects] = useState(false);
+  const [achievementSettings, setAchievementSettings] = useState<KidsAdminAchievementSettings | null>(null);
+  const [weeklyTarget, setWeeklyTarget] = useState(2);
+  const [monthlyTarget, setMonthlyTarget] = useState(6);
+  const [achievementSaving, setAchievementSaving] = useState(false);
 
   const load = useCallback(async () => {
     setListLoading(true);
@@ -268,6 +275,17 @@ export default function KidsAdminPanelPage() {
     }
   }, [teacherSubject]);
 
+  const loadAchievementSettings = useCallback(async () => {
+    try {
+      const row = await kidsAdminGetAchievementSettings();
+      setAchievementSettings(row);
+      setWeeklyTarget(Math.max(1, Number(row.weekly_certificate_target || 2)));
+      setMonthlyTarget(Math.max(1, Number(row.monthly_certificate_target || 6)));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Sertifika ayarları alınamadı');
+    }
+  }, []);
+
   useEffect(() => {
     if (loading) return;
     if (!user) {
@@ -282,7 +300,8 @@ export default function KidsAdminPanelPage() {
     void loadSchools();
     void loadClasses();
     void loadSubjects();
-  }, [user, loading, pathPrefix, router, load, loadSchools, loadClasses, loadSubjects]);
+    void loadAchievementSettings();
+  }, [user, loading, pathPrefix, router, load, loadSchools, loadClasses, loadSubjects, loadAchievementSettings]);
 
   // Load MEB provinces on mount
   useEffect(() => {
@@ -910,6 +929,26 @@ export default function KidsAdminPanelPage() {
     }
   }
 
+  async function onSaveAchievementSettings() {
+    const w = Math.max(1, Math.floor(Number(weeklyTarget) || 1));
+    const m = Math.max(1, Math.floor(Number(monthlyTarget) || 1));
+    setAchievementSaving(true);
+    try {
+      const row = await kidsAdminPatchAchievementSettings({
+        weekly_certificate_target: w,
+        monthly_certificate_target: m,
+      });
+      setAchievementSettings(row);
+      setWeeklyTarget(Math.max(1, Number(row.weekly_certificate_target || 2)));
+      setMonthlyTarget(Math.max(1, Number(row.monthly_certificate_target || 6)));
+      toast.success('Sertifika hedefleri güncellendi.');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Sertifika hedefleri güncellenemedi');
+    } finally {
+      setAchievementSaving(false);
+    }
+  }
+
   if (loading || !user || user.role !== 'admin') {
     return (
       <KidsPanelMax>
@@ -998,6 +1037,7 @@ export default function KidsAdminPanelPage() {
                 void loadSchools();
                 void loadClasses();
                 void loadSubjects();
+                void loadAchievementSettings();
               }}
               disabled={listLoading}
             >
@@ -1229,6 +1269,52 @@ export default function KidsAdminPanelPage() {
       </div>
 
       <div className="mt-10 space-y-6">
+        <KidsCard>
+          <h3 className="font-logo text-lg font-bold text-violet-950 dark:text-violet-50">Sertifika hedef ayarları</h3>
+          <p className="mt-1 text-sm text-violet-900/80 dark:text-violet-100/80">
+            Öğrenci panelindeki haftalık/aylık başarı sertifikası hedef adımlarını buradan yönetebilirsiniz.
+          </p>
+          <div className="mt-4 grid gap-4 md:grid-cols-2">
+            <KidsFormField id="cert-weekly-target" label="Haftalık hedef adım" required>
+              <input
+                id="cert-weekly-target"
+                type="number"
+                min={1}
+                max={50}
+                required
+                value={weeklyTarget}
+                onChange={(e) => setWeeklyTarget(parseInt(e.target.value, 10) || 1)}
+                className={kidsInputClass}
+              />
+            </KidsFormField>
+            <KidsFormField id="cert-monthly-target" label="Aylık hedef adım" required>
+              <input
+                id="cert-monthly-target"
+                type="number"
+                min={1}
+                max={200}
+                required
+                value={monthlyTarget}
+                onChange={(e) => setMonthlyTarget(parseInt(e.target.value, 10) || 1)}
+                className={kidsInputClass}
+              />
+            </KidsFormField>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <KidsPrimaryButton type="button" disabled={achievementSaving} onClick={() => void onSaveAchievementSettings()}>
+              {achievementSaving ? 'Kaydediliyor…' : 'Sertifika hedeflerini kaydet'}
+            </KidsPrimaryButton>
+            <KidsSecondaryButton type="button" disabled={achievementSaving} onClick={() => void loadAchievementSettings()}>
+              Yenile
+            </KidsSecondaryButton>
+            {achievementSettings?.updated_at ? (
+              <span className="text-xs text-violet-800/80 dark:text-violet-200/80">
+                Son güncelleme: {new Date(achievementSettings.updated_at).toLocaleString('tr-TR')}
+              </span>
+            ) : null}
+          </div>
+        </KidsCard>
+
         <h2 className="font-logo text-xl font-bold text-slate-900 dark:text-white">Okullar ve öğrenci limiti</h2>
         <p className="text-sm text-slate-600 dark:text-gray-400">
           Demo ve satış okullarında tek kontrol kalemi öğrenci limitidir. Limit dolduğunda yeni öğrenci kaydı açılmaz.

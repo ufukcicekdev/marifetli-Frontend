@@ -329,6 +329,22 @@ export type KidsStudentAssignmentSubmission = {
   review_hint_code: string;
 };
 
+export type KidsAchievementCertificate = {
+  period_key: 'weekly' | 'monthly';
+  period_label: string;
+  title: string;
+  start_date: string;
+  target_count: number;
+  challenge_count: number;
+  homework_count: number;
+  total_count: number;
+  progress_percent: number;
+  earned: boolean;
+  level: 'starter' | 'bronze' | 'silver' | 'gold';
+  message: string;
+  last_earned_at: string | null;
+};
+
 export type KidsHomework = {
   id: number;
   kids_class: number;
@@ -1073,6 +1089,13 @@ export type KidsAdminSubject = {
   updated_at: string;
 };
 
+export type KidsAdminAchievementSettings = {
+  code: string;
+  weekly_certificate_target: number;
+  monthly_certificate_target: number;
+  updated_at: string;
+};
+
 export async function kidsAdminSubjectsList(): Promise<KidsAdminSubject[]> {
   const res = await kidsFetchKidsOrMainAccess('/admin/subjects/', { method: 'GET' });
   const text = await res.text();
@@ -1104,6 +1127,27 @@ export async function kidsAdminPatchSubject(
   const data = readJson<KidsAdminSubject & ApiErrorBody>(text);
   if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Branş güncellenemedi'));
   return data as KidsAdminSubject;
+}
+
+export async function kidsAdminGetAchievementSettings(): Promise<KidsAdminAchievementSettings> {
+  const res = await kidsFetchKidsOrMainAccess('/admin/achievement-settings/', { method: 'GET' });
+  const text = await res.text();
+  const data = readJson<KidsAdminAchievementSettings & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Sertifika ayarları alınamadı'));
+  return data as KidsAdminAchievementSettings;
+}
+
+export async function kidsAdminPatchAchievementSettings(
+  body: Partial<Pick<KidsAdminAchievementSettings, 'weekly_certificate_target' | 'monthly_certificate_target'>>,
+): Promise<KidsAdminAchievementSettings> {
+  const res = await kidsFetchKidsOrMainAccess('/admin/achievement-settings/', {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  const data = readJson<KidsAdminAchievementSettings & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Sertifika ayarları güncellenemedi'));
+  return data as KidsAdminAchievementSettings;
 }
 
 export type KidsAdminSchoolYearProfile = {
@@ -1956,7 +2000,11 @@ export async function kidsWeeklyChampion(classId: number) {
 export async function kidsStudentDashboard() {
   const res = await kidsAuthorizedFetch('/student/dashboard/', { method: 'GET' });
   if (!res.ok) throw new Error('Panel yüklenemedi');
-  return res.json() as Promise<{ classes: KidsClass[]; assignments: KidsAssignment[] }>;
+  return res.json() as Promise<{
+    classes: KidsClass[];
+    assignments: KidsAssignment[];
+    achievement_certificates?: KidsAchievementCertificate[];
+  }>;
 }
 
 /** Sınıf içi arkadaş yarışması (KidsChallenge; öğretmen onayı + davet). Öğretmenin verdiği ödevlerden ayrı. */
