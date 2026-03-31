@@ -11,7 +11,7 @@ export const metadata: Metadata = {
     default: 'Marifetli Kids',
     template: '%s | Marifetli Kids',
   },
-  description: 'Öğretmen ve öğrenciler için güvenli challenge alanı.',
+  description: 'Safe challenge area for teachers and students.',
   alternates: { canonical: kidsUrl },
   robots: { index: true, follow: true },
 };

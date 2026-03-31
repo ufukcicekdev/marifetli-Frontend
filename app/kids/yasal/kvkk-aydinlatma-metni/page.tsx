@@ -3,9 +3,9 @@ import { MarifetliKidsKvkkContent } from '@/src/components/legal/marifetli-kids-
 
 export default function KidsYasalKvkkPage() {
   return (
-    <MarifetliKidsLegalPageShell title="Kişisel Verilerin Korunması Aydınlatma Metni (Kids)" variant="kids">
+    <MarifetliKidsLegalPageShell title="Kisisel Verilerin Korunmasi Aydinlatma Metni (Kids)" variant="kids">
       <p className="mb-4 text-sm font-semibold text-violet-900 dark:text-violet-100">
-        KİŞİSEL VERİLERİN KORUNMASI AYDINLATMA METNİ (KIDS)
+        KISISEL VERILERIN KORUNMASI AYDINLATMA METNI (KIDS)
       </p>
       <MarifetliKidsKvkkContent variant="kids" />
     </MarifetliKidsLegalPageShell>

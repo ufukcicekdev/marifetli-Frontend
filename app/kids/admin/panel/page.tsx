@@ -50,15 +50,18 @@ import {
   type KidsSelectOption,
 } from '@/src/components/kids/kids-ui';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
+import { useKidsI18n } from '@/src/providers/kids-language-provider';
 
 function SchoolAssignPicker({
   schools,
   selectedIds,
   onToggle,
+  t,
 }: {
   schools: KidsAdminSchoolDetail[];
   selectedIds: number[];
   onToggle: (id: number) => void;
+  t: (key: string) => string;
 }) {
   const [query, setQuery] = useState('');
   const searchId = useId();
@@ -77,7 +80,7 @@ function SchoolAssignPicker({
   const selectedSchools = schools.filter((s) => selectedIds.includes(s.id));
 
   return (
-    <KidsFormField id={searchId} label="Okul ataması (isteğe bağlı)">
+    <KidsFormField id={searchId} label={t('admin.schoolAssign.label')}>
       <div className="rounded-xl border border-slate-200/80 bg-white/80 dark:border-slate-700 dark:bg-slate-900/40">
         <div className="border-b border-slate-200/60 p-2 dark:border-slate-700/60">
           <input
@@ -85,14 +88,14 @@ function SchoolAssignPicker({
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Okul adı, il veya ilçe ile ara…"
+            placeholder={t('admin.schoolAssign.searchPlaceholder')}
             className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-violet-400 focus:ring-1 focus:ring-violet-400 dark:border-slate-600 dark:bg-slate-800 dark:text-white dark:placeholder:text-slate-500 dark:focus:border-violet-500"
           />
         </div>
         <ul className="max-h-48 overflow-y-auto p-2">
           {filtered.length === 0 ? (
             <li className="px-2 py-3 text-center text-sm text-slate-500 dark:text-slate-400">
-              {query ? 'Eşleşen okul yok' : 'Henüz okul yok'}
+              {query ? t('admin.schoolAssign.noMatch') : t('admin.schoolAssign.noneYet')}
             </li>
           ) : (
             filtered.map((s) => (
@@ -118,7 +121,7 @@ function SchoolAssignPicker({
         {selectedSchools.length > 0 ? (
           <div className="border-t border-slate-200/60 px-3 py-2 dark:border-slate-700/60">
             <p className="text-xs font-semibold text-violet-700 dark:text-violet-300">
-              {selectedSchools.length} okul seçili
+              {t('admin.schoolAssign.selectedCount').replace('{n}', String(selectedSchools.length))}
             </p>
             <div className="mt-1 flex flex-wrap gap-1.5">
               {selectedSchools.map((s) => (
@@ -131,7 +134,7 @@ function SchoolAssignPicker({
                     type="button"
                     onClick={() => onToggle(s.id)}
                     className="ml-0.5 text-violet-500 hover:text-violet-800 dark:text-violet-400 dark:hover:text-violet-100"
-                    aria-label={`${s.name} atamasını kaldır`}
+                    aria-label={t('admin.schoolAssign.removeAria').replace('{name}', s.name)}
                   >
                     ×
                   </button>
@@ -148,6 +151,7 @@ function SchoolAssignPicker({
 export default function KidsAdminPanelPage() {
   const router = useRouter();
   const { user, loading, pathPrefix } = useKidsAuth();
+  const { t, language } = useKidsI18n();
   const [teachers, setTeachers] = useState<KidsAdminTeacher[]>([]);
   const [schools, setSchools] = useState<KidsAdminSchoolDetail[]>([]);
   const [listLoading, setListLoading] = useState(false);
@@ -233,22 +237,22 @@ export default function KidsAdminPanelPage() {
     try {
       setTeachers(await kidsAdminTeachersList());
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Liste alınamadı');
+      toast.error(e instanceof Error ? e.message : t('admin.errors.listFetch'));
     } finally {
       setListLoading(false);
     }
-  }, []);
+  }, [t]);
 
   const loadSchools = useCallback(async () => {
     setSchoolsLoading(true);
     try {
       setSchools(await kidsAdminSchoolsList());
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Okul listesi alınamadı');
+      toast.error(e instanceof Error ? e.message : t('admin.errors.schoolListFetch'));
     } finally {
       setSchoolsLoading(false);
     }
-  }, []);
+  }, [t]);
 
   const loadClasses = useCallback(async () => {
     try {
@@ -258,9 +262,9 @@ export default function KidsAdminPanelPage() {
         setSelectedClassId(String(list[0].id));
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Sınıflar alınamadı');
+      toast.error(e instanceof Error ? e.message : t('admin.errors.classListFetch'));
     }
-  }, [selectedClassId]);
+  }, [selectedClassId, t]);
 
   const loadSubjects = useCallback(async () => {
     try {
@@ -271,9 +275,9 @@ export default function KidsAdminPanelPage() {
         if (firstActive) setTeacherSubject(firstActive.name);
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Branşlar alınamadı');
+      toast.error(e instanceof Error ? e.message : t('admin.errors.subjectListFetch'));
     }
-  }, [teacherSubject]);
+  }, [teacherSubject, t]);
 
   const loadAchievementSettings = useCallback(async () => {
     try {
@@ -282,9 +286,9 @@ export default function KidsAdminPanelPage() {
       setWeeklyTarget(Math.max(1, Number(row.weekly_certificate_target || 2)));
       setMonthlyTarget(Math.max(1, Number(row.monthly_certificate_target || 6)));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Sertifika ayarları alınamadı');
+      toast.error(e instanceof Error ? e.message : t('admin.errors.certificateSettingsFetch'));
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (loading) return;
@@ -390,31 +394,31 @@ export default function KidsAdminPanelPage() {
 
   // Dropdown option memos
   const provinceOptions = useMemo<KidsSelectOption[]>(
-    () => [{ value: '', label: 'İl seçin' }, ...mebProvinces.map((p) => ({ value: p, label: p }))],
-    [mebProvinces],
+    () => [{ value: '', label: t('admin.select.province') }, ...mebProvinces.map((p) => ({ value: p, label: p }))],
+    [mebProvinces, t],
   );
   const districtOptions = useMemo<KidsSelectOption[]>(() => {
-    if (!mebIl) return [{ value: '', label: 'Önce il seçin' }];
-    return [{ value: '', label: 'İlçe seçin' }, ...mebDistricts.map((d) => ({ value: d, label: d }))];
-  }, [mebIl, mebDistricts]);
+    if (!mebIl) return [{ value: '', label: t('admin.select.provinceFirst') }];
+    return [{ value: '', label: t('admin.select.district') }, ...mebDistricts.map((d) => ({ value: d, label: d }))];
+  }, [mebIl, mebDistricts, t]);
   const schoolPickOptions = useMemo<KidsSelectOption[]>(() => {
-    if (!mebIl || !mebIlce) return [{ value: '', label: 'Önce il ve ilçe seçin' }];
-    if (mebSchoolsLoading) return [{ value: '', label: 'Okullar yükleniyor…' }];
-    if (mebSchools.length === 0) return [{ value: '', label: 'Bu ilçede kayıt yok' }];
-    return [{ value: '', label: 'Okul seçin' }, ...mebSchools.map((s) => ({ value: s.yol, label: s.name }))];
-  }, [mebIl, mebIlce, mebSchools, mebSchoolsLoading]);
+    if (!mebIl || !mebIlce) return [{ value: '', label: t('admin.select.provinceDistrictFirst') }];
+    if (mebSchoolsLoading) return [{ value: '', label: t('admin.select.schoolsLoading') }];
+    if (mebSchools.length === 0) return [{ value: '', label: t('admin.select.noRecordsInDistrict') }];
+    return [{ value: '', label: t('admin.select.pickSchool') }, ...mebSchools.map((s) => ({ value: s.yol, label: s.name }))];
+  }, [mebIl, mebIlce, mebSchools, mebSchoolsLoading, t]);
   const academicYearOptions = useMemo<KidsSelectOption[]>(
     () => kidsAcademicYearSelectOptions(),
     [],
   );
   const modalProvinceOptions = useMemo<KidsSelectOption[]>(
-    () => [{ value: '', label: 'İl seçin' }, ...mebProvinces.map((p) => ({ value: p, label: p }))],
-    [mebProvinces],
+    () => [{ value: '', label: t('admin.select.province') }, ...mebProvinces.map((p) => ({ value: p, label: p }))],
+    [mebProvinces, t],
   );
   const modalDistrictOptions = useMemo<KidsSelectOption[]>(() => {
-    if (!modalMebIl) return [{ value: '', label: 'Önce il seçin' }];
-    return [{ value: '', label: 'İlçe seçin' }, ...modalDistricts.map((d) => ({ value: d, label: d }))];
-  }, [modalMebIl, modalDistricts]);
+    if (!modalMebIl) return [{ value: '', label: t('admin.select.provinceFirst') }];
+    return [{ value: '', label: t('admin.select.district') }, ...modalDistricts.map((d) => ({ value: d, label: d }))];
+  }, [modalMebIl, modalDistricts, t]);
 
   function onMebSchoolPick(yol: string) {
     setMebSchoolYol(yol);
@@ -457,7 +461,7 @@ export default function KidsAdminPanelPage() {
     e.preventDefault();
     const subject = teacherSubject.trim();
     if (!subject) {
-      toast.error('Öğretmen branşı seçin.');
+      toast.error(t('admin.errors.selectTeacherSubject'));
       return;
     }
     setSaving(true);
@@ -477,17 +481,19 @@ export default function KidsAdminPanelPage() {
       setTeacherSchoolIds([]);
       void loadSchools();
       if (res.email_sent) {
-        toast.success('Öğretmen eklendi ve giriş bilgileri e-posta ile gönderildi.');
+        toast.success(t('admin.teacher.createdAndMailed'));
       } else {
-        toast.success('Öğretmen hesabı oluşturuldu.');
+        toast.success(t('admin.teacher.created'));
         const why = res.email_error ? ` ${res.email_error}` : '';
         toast(
-          `E-posta gönderilemedi.${why} Geçici şifreyi öğretmenle güvenli kanaldan paylaşın: ${res.temporary_password ?? '-'}`,
+          t('admin.teacher.emailFailedToast')
+            .replace('{detail}', why)
+            .replace('{password}', res.temporary_password ?? '-'),
           { duration: 14000, icon: '✉️' },
         );
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Öğretmen oluşturulamadı');
+      toast.error(err instanceof Error ? err.message : t('admin.errors.teacherCreateFailed'));
     } finally {
       setSaving(false);
     }
@@ -496,15 +502,15 @@ export default function KidsAdminPanelPage() {
   async function onSavePickedSchool() {
     if (!pickName.trim() || !pickProvince.trim() || !pickDistrict.trim()) return;
     if (nsStudentCap <= 0) {
-      toast.error('Öğrenci limiti en az 1 olmalı.');
+      toast.error(t('admin.errors.studentCapMinOne'));
       return;
     }
     if (nsStage === 'demo' && (!!nsDemoStartAt !== !!nsDemoEndAt)) {
-      toast.error('Demo için başlangıç ve bitiş tarihi birlikte girilmeli.');
+      toast.error(t('admin.errors.demoDatesRequired'));
       return;
     }
     if (nsDemoStartAt && nsDemoEndAt && nsDemoEndAt < nsDemoStartAt) {
-      toast.error('Demo bitiş tarihi başlangıçtan önce olamaz.');
+      toast.error(t('admin.errors.demoDateOrder'));
       return;
     }
     setSchoolSaving(true);
@@ -524,16 +530,16 @@ export default function KidsAdminPanelPage() {
                 {
                   academic_year: nsYear.trim(),
                   contracted_student_count: Math.max(1, Math.floor(Number(nsStudentCap) || 1)),
-                  notes: 'Satış limitiyle otomatik oluşturuldu.',
+                  notes: t('admin.school.notesSalesCapAuto'),
                 },
               ]
             : [],
       });
       setSchools((prev) => [row, ...prev.filter((s) => s.id !== row.id)]);
       resetMebPickForm();
-      toast.success('Okul kaydı oluşturuldu.');
+      toast.success(t('admin.school.created'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Okul oluşturulamadı');
+      toast.error(err instanceof Error ? err.message : t('admin.errors.schoolCreateFailed'));
     } finally {
       setSchoolSaving(false);
     }
@@ -563,27 +569,23 @@ export default function KidsAdminPanelPage() {
           : [...prev, school.district].sort((a, b) => a.localeCompare(b, 'tr')),
       );
       closeAddSchoolModal();
-      toast.success(
-        created
-          ? 'Okul MEB listesine eklendi. Şimdi üstten okul seçili; öğrenci limitiyle kaydedebilirsiniz.'
-          : 'Bu okul MEB listesinde zaten vardı. Üstte seçili hale getirildi; öğrenci limitiyle kaydedebilirsiniz.',
-      );
+      toast.success(created ? t('admin.toast.mebSchoolCreated') : t('admin.toast.mebSchoolExisted'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'MEB listesine okul eklenemedi');
+      toast.error(err instanceof Error ? err.message : t('admin.errors.mebSchoolAddFailed'));
     } finally {
       setModalCreating(false);
     }
   }
 
   async function onDeleteSchool(id: number) {
-    if (!confirm('Bu okulu silmek istediğinize emin misiniz? Bağlı sınıf varsa silinemez.')) return;
+    if (!confirm(t('schools.deleteConfirm'))) return;
     try {
       await kidsAdminDeleteSchool(id);
       setSchools((prev) => prev.filter((s) => s.id !== id));
       setTeacherSchoolIds((prev) => prev.filter((x) => x !== id));
-      toast.success('Okul silindi.');
+      toast.success(t('admin.school.deleted'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Silinemedi');
+      toast.error(err instanceof Error ? err.message : t('common.deleteFailed'));
     }
   }
 
@@ -591,16 +593,16 @@ export default function KidsAdminPanelPage() {
     const raw = assignTeacherId[schoolId] || '';
     const tid = parseInt(raw, 10);
     if (!tid) {
-      toast.error('Öğretmen seçin.');
+      toast.error(t('admin.errors.selectTeacher'));
       return;
     }
     try {
       const updated = await kidsAdminAssignSchoolTeacher(schoolId, tid);
       setSchools((prev) => prev.map((s) => (s.id === schoolId ? updated : s)));
       setAssignTeacherId((prev) => ({ ...prev, [schoolId]: '' }));
-      toast.success('Öğretmen okula atandı.');
+      toast.success(t('admin.school.teacherAssigned'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Atanamadı');
+      toast.error(err instanceof Error ? err.message : t('admin.errors.assignFailed'));
     }
   }
 
@@ -608,9 +610,9 @@ export default function KidsAdminPanelPage() {
     try {
       const updated = await kidsAdminRemoveSchoolTeacher(schoolId, teacherUserId);
       setSchools((prev) => prev.map((s) => (s.id === schoolId ? updated : s)));
-      toast.success('Öğretmen okuldan çıkarıldı.');
+      toast.success(t('admin.school.teacherRemoved'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Çıkarılamadı');
+      toast.error(err instanceof Error ? err.message : t('admin.errors.removeFailed'));
     }
   }
 
@@ -634,19 +636,19 @@ export default function KidsAdminPanelPage() {
 
   async function saveSchoolSettings(s: KidsAdminSchoolDetail) {
     if (editStudentCap <= 0) {
-      toast.error('Öğrenci limiti en az 1 olmalı.');
+      toast.error(t('admin.errors.studentCapMinOne'));
       return;
     }
     if (editStage === 'demo' && (!!editDemoStartAt !== !!editDemoEndAt)) {
-      toast.error('Demo için başlangıç ve bitiş tarihi birlikte girilmeli.');
+      toast.error(t('admin.errors.demoDatesRequired'));
       return;
     }
     if (editDemoStartAt && editDemoEndAt && editDemoEndAt < editDemoStartAt) {
-      toast.error('Demo bitiş tarihi başlangıçtan önce olamaz.');
+      toast.error(t('admin.errors.demoDateOrder'));
       return;
     }
     if (editStage === 'sales' && !editSalesYear.trim()) {
-      toast.error('Satış için eğitim-öğretim yılı seçin.');
+      toast.error(t('admin.errors.selectSalesYear'));
       return;
     }
     setSchoolEditSavingId(s.id);
@@ -665,7 +667,7 @@ export default function KidsAdminPanelPage() {
         const row = await kidsAdminAddSchoolYearProfile(s.id, {
           academic_year: editSalesYear.trim(),
           contracted_student_count: Math.max(1, Math.floor(Number(editStudentCap) || 1)),
-          notes: 'Satış ayarlarından otomatik oluşturuldu.',
+          notes: t('admin.school.notesSalesSettingsAuto'),
         });
         updated = {
           ...updated,
@@ -676,22 +678,22 @@ export default function KidsAdminPanelPage() {
       }
       setSchools((prev) => prev.map((x) => (x.id === s.id ? updated : x)));
       setEditSchoolId(null);
-      toast.success('Okul ayarları güncellendi.');
+      toast.success(t('admin.school.settingsUpdated'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Okul güncellenemedi');
+      toast.error(err instanceof Error ? err.message : t('admin.errors.schoolUpdateFailed'));
     } finally {
       setSchoolEditSavingId(null);
     }
   }
 
   function teacherAssignOptions(s: KidsAdminSchoolDetail): KidsSelectOption[] {
-    const taken = new Set(s.teachers.map((t) => t.id));
-    const opts: KidsSelectOption[] = [{ value: '', label: 'Öğretmen seç…' }];
-    for (const t of teachers) {
-      if (!t.is_active || taken.has(t.id)) continue;
+    const taken = new Set(s.teachers.map((x) => x.id));
+    const opts: KidsSelectOption[] = [{ value: '', label: t('admin.select.pickTeacherEllipsis') }];
+    for (const tm of teachers) {
+      if (!tm.is_active || taken.has(tm.id)) continue;
       opts.push({
-        value: String(t.id),
-        label: `${t.email} (${[t.first_name, t.last_name].filter(Boolean).join(' ') || '—'})`,
+        value: String(tm.id),
+        label: `${tm.email} (${[tm.first_name, tm.last_name].filter(Boolean).join(' ') || '—'})`,
       });
     }
     return opts;
@@ -704,40 +706,40 @@ export default function KidsAdminPanelPage() {
 
   const classOptions = useMemo<KidsSelectOption[]>(
     () => [
-      { value: '', label: classes.length ? 'Sınıf seçin' : 'Henüz sınıf yok' },
+      { value: '', label: classes.length ? t('admin.select.pickClass') : t('admin.select.noClassYet') },
       ...classes.map((c) => ({
         value: String(c.id),
         label: `${c.name}${c.school?.name ? ` · ${c.school.name}` : ''}`,
       })),
     ],
-    [classes],
+    [classes, t],
   );
 
   const classTeacherOptions = useMemo<KidsSelectOption[]>(() => {
-    if (!selectedClass) return [{ value: '', label: 'Önce sınıf seçin' }];
+    if (!selectedClass) return [{ value: '', label: t('admin.select.selectClassFirst') }];
     const school = schools.find((s) => s.id === selectedClass.school.id);
-    const allowed = new Set((school?.teachers || []).map((t) => t.id));
-    const already = new Set(classTeachers.map((t) => t.teacher_user_id));
-    const rows = teachers.filter((t) => t.is_active && allowed.has(t.id) && !already.has(t.id));
+    const allowed = new Set((school?.teachers || []).map((x) => x.id));
+    const already = new Set(classTeachers.map((x) => x.teacher_user_id));
+    const rows = teachers.filter((tm) => tm.is_active && allowed.has(tm.id) && !already.has(tm.id));
     return [
-      { value: '', label: 'Öğretmen seçin' },
-      ...rows.map((t) => ({
-        value: String(t.id),
-        label: `${(`${t.first_name || ''} ${t.last_name || ''}`.trim() || t.email)} · ${t.subject || 'Branşsız'}`,
+      { value: '', label: t('admin.select.pickTeacher') },
+      ...rows.map((tm) => ({
+        value: String(tm.id),
+        label: `${(`${tm.first_name || ''} ${tm.last_name || ''}`.trim() || tm.email)} · ${tm.subject || t('admin.noSubjectShort')}`,
       })),
     ];
-  }, [selectedClass, schools, teachers, classTeachers]);
+  }, [selectedClass, schools, teachers, classTeachers, t]);
 
   const teacherSubjectOptions = useMemo<KidsSelectOption[]>(() => {
     const activeRows = subjects.filter((s) => s.is_active);
     if (activeRows.length === 0) {
-      return [{ value: '', label: 'Önce branş ekleyin' }];
+      return [{ value: '', label: t('admin.select.addSubjectFirst') }];
     }
     return [
-      { value: '', label: 'Branş seçin' },
+      { value: '', label: t('admin.select.pickSubject') },
       ...activeRows.map((s) => ({ value: s.name, label: s.name })),
     ];
-  }, [subjects]);
+  }, [subjects, t]);
 
   const activeTeacherSubjectOptions = useMemo<KidsSelectOption[]>(
     () => subjects.filter((s) => s.is_active).map((s) => ({ value: s.name, label: s.name })),
@@ -750,9 +752,9 @@ export default function KidsAdminPanelPage() {
       const hasCurrent = draft && activeTeacherSubjectOptions.some((o) => o.value === draft);
       if (hasCurrent) return activeTeacherSubjectOptions;
       if (!draft) return activeTeacherSubjectOptions;
-      return [{ value: draft, label: `${draft} (pasif)` }, ...activeTeacherSubjectOptions];
+      return [{ value: draft, label: `${draft} ${t('admin.subject.inactiveSuffix')}` }, ...activeTeacherSubjectOptions];
     },
-    [activeTeacherSubjectOptions, teacherSubjectDrafts],
+    [activeTeacherSubjectOptions, teacherSubjectDrafts, t],
   );
 
   const subjectRows = useMemo(() => {
@@ -775,7 +777,7 @@ export default function KidsAdminPanelPage() {
         const list = await kidsListClassTeachers(Number(selectedClassId));
         if (!cancelled) setClassTeachers(list);
       } catch (e) {
-        if (!cancelled) toast.error(e instanceof Error ? e.message : 'Sınıf öğretmenleri alınamadı');
+        if (!cancelled) toast.error(e instanceof Error ? e.message : t('admin.errors.classTeachersFetchFailed'));
       } finally {
         if (!cancelled) setClassTeacherLoading(false);
       }
@@ -791,15 +793,15 @@ export default function KidsAdminPanelPage() {
     const teacherRow = teachers.find((t) => t.id === tid) ?? null;
     const subject = (teacherRow?.subject || '').trim();
     if (!cid) {
-      toast.error('Önce sınıf seçin.');
+      toast.error(t('admin.errors.selectClassFirst'));
       return;
     }
     if (!tid) {
-      toast.error('Öğretmen seçin.');
+      toast.error(t('admin.errors.selectTeacher'));
       return;
     }
     if (!subject) {
-      toast.error('Öğretmenin branşı tanımlı değil. Önce öğretmen kartından branş seçin.');
+      toast.error(t('admin.errors.teacherSubjectMissing'));
       return;
     }
     setClassTeacherSaving(true);
@@ -811,9 +813,9 @@ export default function KidsAdminPanelPage() {
       });
       setClassTeachers((prev) => [...prev, row]);
       setClassTeacherId('');
-      toast.success('Öğretmen sınıfa branşıyla atandı.');
+      toast.success(t('admin.class.teacherAssignedBySubject'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Atama yapılamadı');
+      toast.error(e instanceof Error ? e.message : t('admin.errors.classAssignFailed'));
     } finally {
       setClassTeacherSaving(false);
     }
@@ -825,9 +827,9 @@ export default function KidsAdminPanelPage() {
     try {
       await kidsRemoveClassTeacher(cid, teacherUserId);
       setClassTeachers((prev) => prev.filter((t) => t.teacher_user_id !== teacherUserId));
-      toast.success('Sınıf öğretmeni kaldırıldı.');
+      toast.success(t('admin.class.teacherRemoved'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Kaldırılamadı');
+      toast.error(e instanceof Error ? e.message : t('admin.errors.classRemoveFailed'));
     }
   }
 
@@ -835,7 +837,7 @@ export default function KidsAdminPanelPage() {
     e.preventDefault();
     const name = newSubjectName.trim();
     if (!name) {
-      toast.error('Branş adı girin.');
+      toast.error(t('admin.errors.subjectNameRequired'));
       return;
     }
     setSubjectSaving(true);
@@ -848,9 +850,9 @@ export default function KidsAdminPanelPage() {
       });
       setTeacherSubject((curr) => curr || row.name);
       setNewSubjectName('');
-      toast.success('Branş eklendi.');
+      toast.success(t('admin.subject.created'));
     } catch (e2) {
-      toast.error(e2 instanceof Error ? e2.message : 'Branş eklenemedi');
+      toast.error(e2 instanceof Error ? e2.message : t('admin.errors.subjectCreateFailed'));
     } finally {
       setSubjectSaving(false);
     }
@@ -864,66 +866,66 @@ export default function KidsAdminPanelPage() {
       if (!updated.is_active && teacherSubject === updated.name) {
         setTeacherSubject('');
       }
-      toast.success(updated.is_active ? 'Branş aktif edildi.' : 'Branş pasif edildi.');
+      toast.success(updated.is_active ? t('admin.subject.activated') : t('admin.subject.deactivated'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Branş güncellenemedi');
+      toast.error(e instanceof Error ? e.message : t('admin.errors.subjectUpdateFailed'));
     } finally {
       setSubjectSaving(false);
     }
   }
 
-  async function onToggleActive(t: KidsAdminTeacher) {
-    const next = !t.is_active;
-    setToggleId(t.id);
+  async function onToggleActive(teacher: KidsAdminTeacher) {
+    const next = !teacher.is_active;
+    setToggleId(teacher.id);
     try {
-      const updated = await kidsAdminPatchTeacher(t.id, { is_active: next });
+      const updated = await kidsAdminPatchTeacher(teacher.id, { is_active: next });
       setTeachers((prev) => prev.map((row) => (row.id === updated.id ? updated : row)));
-      toast.success(next ? 'Öğretmen hesabı etkinleştirildi.' : 'Öğretmen pasif: giriş yapamaz.');
+      toast.success(next ? t('admin.teacher.activated') : t('admin.teacher.deactivated'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Durum güncellenemedi');
+      toast.error(e instanceof Error ? e.message : t('admin.errors.statusUpdateFailed'));
     } finally {
       setToggleId(null);
     }
   }
 
-  async function onResendWelcomeEmail(t: KidsAdminTeacher) {
-    setResendMailId(t.id);
+  async function onResendWelcomeEmail(teacher: KidsAdminTeacher) {
+    setResendMailId(teacher.id);
     try {
-      const res = await kidsAdminResendTeacherWelcome(t.id);
+      const res = await kidsAdminResendTeacherWelcome(teacher.id);
       if (res.email_sent) {
-        toast.success('Davet maili tekrar gönderildi.');
+        toast.success(t('admin.teacher.inviteResent'));
       } else {
         const fallback = res.temporary_password
-          ? `Mail gönderilemedi. Geçici şifre: ${res.temporary_password}`
-          : res.email_error || 'Mail gönderilemedi.';
+          ? `Mail gonderilemedi. Gecici sifre: ${res.temporary_password}`
+          : res.email_error || 'Mail gonderilemedi.';
         toast.error(fallback, { duration: 9000 });
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Mail tekrar gönderilemedi');
+      toast.error(e instanceof Error ? e.message : t('admin.errors.inviteResendFailed'));
     } finally {
       setResendMailId(null);
     }
   }
 
-  async function onSaveTeacherSubject(t: KidsAdminTeacher) {
-    const subject = (teacherSubjectDrafts[t.id] ?? t.subject ?? '').trim();
+  async function onSaveTeacherSubject(teacher: KidsAdminTeacher) {
+    const subject = (teacherSubjectDrafts[teacher.id] ?? teacher.subject ?? '').trim();
     if (!subject) {
-      toast.error('Branş seçin.');
+      toast.error(t('admin.errors.selectSubject'));
       return;
     }
-    if (subject === (t.subject || '').trim()) return;
-    setSubjectUpdateId(t.id);
+    if (subject === (teacher.subject || '').trim()) return;
+    setSubjectUpdateId(teacher.id);
     try {
-      const updated = await kidsAdminPatchTeacher(t.id, { subject });
+      const updated = await kidsAdminPatchTeacher(teacher.id, { subject });
       setTeachers((prev) => prev.map((row) => (row.id === updated.id ? updated : row)));
       setTeacherSubjectDrafts((prev) => {
         const next = { ...prev };
-        delete next[t.id];
+        delete next[teacher.id];
         return next;
       });
-      toast.success('Öğretmen branşı güncellendi.');
+      toast.success(t('admin.teacher.subjectUpdated'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Branş güncellenemedi');
+      toast.error(e instanceof Error ? e.message : t('admin.errors.subjectUpdateFailed'));
     } finally {
       setSubjectUpdateId(null);
     }
@@ -941,9 +943,9 @@ export default function KidsAdminPanelPage() {
       setAchievementSettings(row);
       setWeeklyTarget(Math.max(1, Number(row.weekly_certificate_target || 2)));
       setMonthlyTarget(Math.max(1, Number(row.monthly_certificate_target || 6)));
-      toast.success('Sertifika hedefleri güncellendi.');
+      toast.success(t('admin.certificate.updated'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Sertifika hedefleri güncellenemedi');
+      toast.error(e instanceof Error ? e.message : t('admin.errors.certificateUpdateFailed'));
     } finally {
       setAchievementSaving(false);
     }
@@ -952,24 +954,23 @@ export default function KidsAdminPanelPage() {
   if (loading || !user || user.role !== 'admin') {
     return (
       <KidsPanelMax>
-        <p className="text-center text-violet-800 dark:text-violet-200">Yükleniyor…</p>
+        <p className="text-center text-violet-800 dark:text-violet-200">{t('common.loading')}</p>
       </KidsPanelMax>
     );
   }
 
   return (
     <KidsPanelMax>
-      <h1 className="font-logo text-2xl font-bold text-slate-900 dark:text-white">Yönetim — öğretmenler ve okullar</h1>
+      <h1 className="font-logo text-2xl font-bold text-slate-900 dark:text-white">{t('admin.title')}</h1>
       <p className="mt-2 text-sm text-slate-600 dark:text-gray-400">
-        Öğretmen hesaplarını buradan açın; okulları ve öğrenci limitlerini yönetin. Öğretmenler
-        yeni okul oluşturamaz — atama yönetimden yapılır.
+        {t('admin.subtitle')}
       </p>
 
       <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-start">
         <KidsCard className="lg:sticky lg:top-28">
-          <h2 className="font-logo text-lg font-bold text-slate-900 dark:text-white">Yeni öğretmen ekle</h2>
+          <h2 className="font-logo text-lg font-bold text-slate-900 dark:text-white">{t('admin.teacher.newTitle')}</h2>
           <form className="mt-4 space-y-4" onSubmit={onCreate}>
-            <KidsFormField id="t-email" label="E-posta" required>
+            <KidsFormField id="t-email" label={t('admin.form.email')} required>
               <input
                 id="t-email"
                 type="email"
@@ -977,11 +978,11 @@ export default function KidsAdminPanelPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className={kidsInputClass}
-                placeholder="ogretmen@okul.k12.tr"
+                placeholder={t('admin.form.teacherEmailPlaceholder')}
               />
             </KidsFormField>
             <div className="grid gap-4 sm:grid-cols-2">
-              <KidsFormField id="t-fn" label="Ad">
+              <KidsFormField id="t-fn" label={t('profile.firstName')}>
                 <input
                   id="t-fn"
                   value={firstName}
@@ -989,7 +990,7 @@ export default function KidsAdminPanelPage() {
                   className={kidsInputClass}
                 />
               </KidsFormField>
-              <KidsFormField id="t-ln" label="Soyad">
+              <KidsFormField id="t-ln" label={t('profile.lastName')}>
                 <input
                   id="t-ln"
                   value={lastName}
@@ -998,7 +999,7 @@ export default function KidsAdminPanelPage() {
                 />
               </KidsFormField>
             </div>
-            <KidsFormField id="t-subject" label="Branş" required>
+            <KidsFormField id="t-subject" label={t('admin.form.subject')} required>
               <KidsSelect
                 id="t-subject"
                 value={teacherSubject}
@@ -1012,14 +1013,13 @@ export default function KidsAdminPanelPage() {
                 schools={schools}
                 selectedIds={teacherSchoolIds}
                 onToggle={toggleTeacherSchool}
+                t={t}
               />
             ) : (
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Önce aşağıdan okul ekleyin; ardından öğretmeni oluştururken okula bağlayabilirsiniz.
-              </p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{t('admin.hint.addSchoolBeforeTeacher')}</p>
             )}
             <KidsPrimaryButton type="submit" disabled={saving}>
-              {saving ? 'Oluşturuluyor…' : 'Öğretmeni oluştur ve e-posta gönder'}
+              {saving ? t('admin.teacher.creating') : t('admin.teacher.createAndMail')}
             </KidsPrimaryButton>
           </form>
         </KidsCard>
@@ -1029,7 +1029,7 @@ export default function KidsAdminPanelPage() {
           className="flex min-h-0 min-w-0 flex-col lg:max-h-[calc(100vh-8.5rem)]"
         >
           <div className="flex shrink-0 items-center justify-between gap-2">
-            <h2 className="font-logo text-lg font-bold text-sky-950 dark:text-sky-50">Öğretmenler</h2>
+            <h2 className="font-logo text-lg font-bold text-sky-950 dark:text-sky-50">{t('admin.teacher.listTitle')}</h2>
             <KidsSecondaryButton
               type="button"
               onClick={() => {
@@ -1041,80 +1041,80 @@ export default function KidsAdminPanelPage() {
               }}
               disabled={listLoading}
             >
-              {listLoading ? 'Yenileniyor…' : 'Yenile'}
+              {listLoading ? t('common.refreshing') : t('common.refresh')}
             </KidsSecondaryButton>
           </div>
           {teachers.length === 0 ? (
-            <p className="mt-3 text-sm text-slate-600 dark:text-gray-300">Henüz öğretmen hesabı yok.</p>
+            <p className="mt-3 text-sm text-slate-600 dark:text-gray-300">{t('admin.teacher.none')}</p>
           ) : (
             <ul className="mt-4 min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain pr-1">
-              {teachers.map((t) => (
+              {teachers.map((teacher) => (
                 <li
-                  key={t.id}
+                  key={teacher.id}
                   className="rounded-xl border border-sky-200/80 bg-white/95 p-3 text-sm shadow-xs dark:border-sky-800 dark:bg-sky-950/25"
                 >
                   <div className="flex flex-col gap-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <span className="font-semibold text-slate-900 dark:text-white">
-                          {t.first_name || '-'} {t.last_name || ''}
+                          {teacher.first_name || '-'} {teacher.last_name || ''}
                         </span>
-                        <span className="mt-0.5 block truncate text-slate-600 dark:text-gray-300">{t.email}</span>
+                        <span className="mt-0.5 block truncate text-slate-600 dark:text-gray-300">{teacher.email}</span>
                       </div>
                       <span
                         className={`inline-flex shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${
-                          t.is_active
+                          teacher.is_active
                             ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100'
                             : 'bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-200'
                         }`}
                       >
-                        {t.is_active ? 'Etkin' : 'Pasif'}
+                        {teacher.is_active ? t('common.statusActive') : t('common.statusInactive')}
                       </span>
                     </div>
 
                     <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                       <KidsSelect
-                        id={`teacher-subject-${t.id}`}
-                        value={teacherSubjectDrafts[t.id] ?? t.subject ?? ''}
+                        id={`teacher-subject-${teacher.id}`}
+                        value={teacherSubjectDrafts[teacher.id] ?? teacher.subject ?? ''}
                         onChange={(v) =>
                           setTeacherSubjectDrafts((prev) => ({
                             ...prev,
-                            [t.id]: v,
+                            [teacher.id]: v,
                           }))
                         }
-                        options={teacherRowSubjectOptions(t)}
-                        disabled={subjectUpdateId === t.id || activeTeacherSubjectOptions.length === 0}
+                        options={teacherRowSubjectOptions(teacher)}
+                        disabled={subjectUpdateId === teacher.id || activeTeacherSubjectOptions.length === 0}
                       />
                       <KidsSecondaryButton
                         type="button"
                         disabled={
-                          subjectUpdateId === t.id ||
-                          !((teacherSubjectDrafts[t.id] ?? t.subject ?? '').trim()) ||
-                          ((teacherSubjectDrafts[t.id] ?? t.subject ?? '').trim() === (t.subject || '').trim())
+                          subjectUpdateId === teacher.id ||
+                          !((teacherSubjectDrafts[teacher.id] ?? teacher.subject ?? '').trim()) ||
+                          ((teacherSubjectDrafts[teacher.id] ?? teacher.subject ?? '').trim() === (teacher.subject || '').trim())
                         }
-                        onClick={() => void onSaveTeacherSubject(t)}
+                        onClick={() => void onSaveTeacherSubject(teacher)}
                         className="border-sky-200 text-sky-900 hover:bg-sky-50 dark:border-sky-700 dark:text-sky-100 dark:hover:bg-sky-900/30"
                       >
-                        {subjectUpdateId === t.id ? 'Kaydediliyor…' : 'Branşı kaydet'}
+                        {subjectUpdateId === teacher.id ? t('profile.saving') : t('admin.teacher.saveSubject')}
                       </KidsSecondaryButton>
                     </div>
 
                     <div className="flex flex-wrap gap-2">
                       <KidsSecondaryButton
                         type="button"
-                        disabled={resendMailId === t.id}
-                        onClick={() => void onResendWelcomeEmail(t)}
+                        disabled={resendMailId === teacher.id}
+                        onClick={() => void onResendWelcomeEmail(teacher)}
                         className="border-sky-200 text-sky-900 hover:bg-sky-50 dark:border-sky-700 dark:text-sky-100 dark:hover:bg-sky-900/30"
                       >
-                        {resendMailId === t.id ? 'Gönderiliyor…' : 'Mail tekrar gönder'}
+                        {resendMailId === teacher.id ? t('admin.teacher.sendingMail') : t('admin.teacher.resendMail')}
                       </KidsSecondaryButton>
                       <KidsSecondaryButton
                         type="button"
-                        disabled={toggleId === t.id}
-                        onClick={() => void onToggleActive(t)}
+                        disabled={toggleId === teacher.id}
+                        onClick={() => void onToggleActive(teacher)}
                         className="border-amber-200 text-amber-900 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-100 dark:hover:bg-amber-950/50"
                       >
-                        {toggleId === t.id ? '…' : t.is_active ? 'Pasifleştir' : 'Etkinleştir'}
+                        {toggleId === teacher.id ? '…' : teacher.is_active ? t('admin.teacher.deactivate') : t('admin.teacher.activate')}
                       </KidsSecondaryButton>
                     </div>
                   </div>
@@ -1127,12 +1127,10 @@ export default function KidsAdminPanelPage() {
 
       <div className="mt-10">
         <KidsCard tone="sky">
-          <h2 className="font-logo text-xl font-bold text-sky-950 dark:text-sky-50">Sınıfa öğretmen ata</h2>
-          <p className="mt-2 text-sm text-sky-900/80 dark:text-sky-100/80">
-            Öğretmen hesabını oluşturup branşını seçtikten sonra burada sınıfa bağlayın.
-          </p>
+          <h2 className="font-logo text-xl font-bold text-sky-950 dark:text-sky-50">{t('admin.classAssign.title')}</h2>
+          <p className="mt-2 text-sm text-sky-900/80 dark:text-sky-100/80">{t('admin.classAssign.subtitle')}</p>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <KidsFormField id="class-assign-class" label="Sınıf" required>
+            <KidsFormField id="class-assign-class" label={t('admin.form.class')} required>
               <KidsSelect
                 id="class-assign-class"
                 value={selectedClassId}
@@ -1141,7 +1139,7 @@ export default function KidsAdminPanelPage() {
                 disabled={classOptions.length === 0}
               />
             </KidsFormField>
-            <KidsFormField id="class-assign-teacher" label="Öğretmen" required>
+            <KidsFormField id="class-assign-teacher" label={t('admin.form.teacher')} required>
               <KidsSelect
                 id="class-assign-teacher"
                 value={classTeacherId}
@@ -1153,7 +1151,7 @@ export default function KidsAdminPanelPage() {
           </div>
           <div className="mt-3 flex items-center gap-2">
             <KidsPrimaryButton type="button" disabled={classTeacherSaving} onClick={() => void onAssignClassTeacher()}>
-              {classTeacherSaving ? 'Atanıyor…' : 'Sınıfa ata'}
+              {classTeacherSaving ? t('admin.classAssign.assigning') : t('admin.classAssign.assign')}
             </KidsPrimaryButton>
             <KidsSecondaryButton
               type="button"
@@ -1162,34 +1160,36 @@ export default function KidsAdminPanelPage() {
                 void loadSubjects();
               }}
             >
-              Sınıfları yenile
+              {t('admin.classAssign.refreshClasses')}
             </KidsSecondaryButton>
           </div>
 
           <div className="mt-5 rounded-2xl border border-sky-200/80 bg-white/70 p-4 dark:border-sky-800/50 dark:bg-sky-950/20">
             <p className="text-sm font-semibold text-sky-900 dark:text-sky-100">
-              {selectedClass ? `${selectedClass.name} — atanmış öğretmenler` : 'Atanmış öğretmenler'}
+              {selectedClass
+                ? t('admin.classAssign.assignedHeadingWithClass').replace('{name}', selectedClass.name)
+                : t('admin.classAssign.assignedHeading')}
             </p>
             {classTeacherLoading ? (
-              <p className="mt-2 text-sm text-slate-600 dark:text-gray-300">Yükleniyor…</p>
+              <p className="mt-2 text-sm text-slate-600 dark:text-gray-300">{t('common.loading')}</p>
             ) : classTeachers.length === 0 ? (
-              <p className="mt-2 text-sm text-slate-600 dark:text-gray-300">Henüz branş ataması yok.</p>
+              <p className="mt-2 text-sm text-slate-600 dark:text-gray-300">{t('admin.classAssign.noAssignments')}</p>
             ) : (
               <ul className="mt-3 space-y-2">
-                {classTeachers.map((t) => (
+                {classTeachers.map((ct) => (
                   <li
-                    key={t.teacher_user_id}
+                    key={ct.teacher_user_id}
                     className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-sky-200/70 bg-white/90 px-3 py-2 text-sm dark:border-sky-700/70 dark:bg-slate-900/50"
                   >
                     <span>
-                      <strong>{t.teacher_display}</strong> · {t.subject}
+                      <strong>{ct.teacher_display}</strong> · {ct.subject}
                     </span>
                     <KidsSecondaryButton
                       type="button"
                       className="border-rose-200 text-rose-700 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950/50"
-                      onClick={() => void onRemoveClassTeacher(t.teacher_user_id)}
+                      onClick={() => void onRemoveClassTeacher(ct.teacher_user_id)}
                     >
-                      Kaldır
+                      {t('common.remove')}
                     </KidsSecondaryButton>
                   </li>
                 ))}
@@ -1201,13 +1201,13 @@ export default function KidsAdminPanelPage() {
 
       <div className="mt-6">
         <KidsCard tone="amber">
-          <h3 className="font-logo text-lg font-bold text-amber-950 dark:text-amber-50">Branş yönetimi</h3>
-          <p className="mt-1 text-sm text-amber-900/80 dark:text-amber-100/80">
-            Sınıf atamalarında görünecek branş listesini buradan yönetebilirsiniz.
-          </p>
+          <h3 className="font-logo text-lg font-bold text-amber-950 dark:text-amber-50">{t('admin.subjects.title')}</h3>
+          <p className="mt-1 text-sm text-amber-900/80 dark:text-amber-100/80">{t('admin.subjects.subtitle')}</p>
           <div className="mt-3 flex items-center justify-between gap-2">
             <p className="text-xs text-amber-900/70 dark:text-amber-100/70">
-              Toplam {subjects.length} branş, listede {subjectRows.length} satır gösteriliyor.
+              {t('admin.subjects.summary')
+                .replace('{total}', String(subjects.length))
+                .replace('{shown}', String(subjectRows.length))}
             </p>
             <div className="flex items-center gap-2">
               <KidsSecondaryButton
@@ -1215,36 +1215,36 @@ export default function KidsAdminPanelPage() {
                 onClick={() => setShowPassiveSubjects((v) => !v)}
                 disabled={subjectSaving}
               >
-                {showPassiveSubjects ? 'Pasifleri gizle' : 'Pasifleri göster'}
+                {showPassiveSubjects ? t('admin.subjects.hidePassive') : t('admin.subjects.showPassive')}
               </KidsSecondaryButton>
               <KidsSecondaryButton type="button" onClick={() => void loadSubjects()} disabled={subjectSaving}>
-                Listeyi yenile
+                {t('admin.subjects.refreshList')}
               </KidsSecondaryButton>
             </div>
           </div>
           <form className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end" onSubmit={onCreateSubject}>
             <div className="flex-1">
-              <KidsFormField id="new-subject-name" label="Yeni branş adı" required>
+              <KidsFormField id="new-subject-name" label={t('admin.subjects.newName')} required>
                 <input
                   id="new-subject-name"
                   type="text"
                   value={newSubjectName}
                   onChange={(e) => setNewSubjectName(e.target.value)}
                   className={kidsInputClass}
-                  placeholder="Örn: Drama"
+                  placeholder={t('admin.subjects.newNamePlaceholder')}
                   maxLength={80}
                   required
                 />
               </KidsFormField>
             </div>
             <KidsPrimaryButton type="submit" disabled={subjectSaving}>
-              {subjectSaving ? 'Ekleniyor…' : 'Branş ekle'}
+              {subjectSaving ? t('admin.subjects.adding') : t('admin.subjects.add')}
             </KidsPrimaryButton>
           </form>
           <div className="mt-4 max-h-80 overflow-y-auto pr-1">
             <ul className="space-y-2">
             {subjectRows.length === 0 ? (
-              <li className="text-sm text-slate-600 dark:text-gray-300">Henüz branş tanımı yok.</li>
+              <li className="text-sm text-slate-600 dark:text-gray-300">{t('admin.subjects.noneYet')}</li>
             ) : (
               subjectRows.map((s) => (
                 <li
@@ -1254,11 +1254,12 @@ export default function KidsAdminPanelPage() {
                   <span className="text-slate-900 dark:text-white">
                     {s.name}{' '}
                     <span className="text-xs text-slate-500 dark:text-slate-400">
-                      ({s.is_active ? 'Aktif' : 'Pasif'} · {s.usage_count} atama)
+                      ({s.is_active ? t('common.statusActive') : t('common.statusInactive')} ·{' '}
+                      {t('admin.subjects.usageCount').replace('{n}', String(s.usage_count))})
                     </span>
                   </span>
                   <KidsSecondaryButton type="button" disabled={subjectSaving} onClick={() => void onToggleSubject(s)}>
-                    {s.is_active ? 'Pasif yap' : 'Aktif yap'}
+                    {s.is_active ? t('admin.subjects.makeInactive') : t('admin.subjects.makeActive')}
                   </KidsSecondaryButton>
                 </li>
               ))
@@ -1270,12 +1271,10 @@ export default function KidsAdminPanelPage() {
 
       <div className="mt-10 space-y-6">
         <KidsCard>
-          <h3 className="font-logo text-lg font-bold text-violet-950 dark:text-violet-50">Sertifika hedef ayarları</h3>
-          <p className="mt-1 text-sm text-violet-900/80 dark:text-violet-100/80">
-            Öğrenci panelindeki haftalık/aylık başarı sertifikası hedef adımlarını buradan yönetebilirsiniz.
-          </p>
+          <h3 className="font-logo text-lg font-bold text-violet-950 dark:text-violet-50">{t('admin.certificate.title')}</h3>
+          <p className="mt-1 text-sm text-violet-900/80 dark:text-violet-100/80">{t('admin.certificate.subtitle')}</p>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
-            <KidsFormField id="cert-weekly-target" label="Haftalık hedef adım" required>
+            <KidsFormField id="cert-weekly-target" label={t('admin.certificate.weeklyLabel')} required>
               <input
                 id="cert-weekly-target"
                 type="number"
@@ -1287,7 +1286,7 @@ export default function KidsAdminPanelPage() {
                 className={kidsInputClass}
               />
             </KidsFormField>
-            <KidsFormField id="cert-monthly-target" label="Aylık hedef adım" required>
+            <KidsFormField id="cert-monthly-target" label={t('admin.certificate.monthlyLabel')} required>
               <input
                 id="cert-monthly-target"
                 type="number"
@@ -1302,43 +1301,40 @@ export default function KidsAdminPanelPage() {
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <KidsPrimaryButton type="button" disabled={achievementSaving} onClick={() => void onSaveAchievementSettings()}>
-              {achievementSaving ? 'Kaydediliyor…' : 'Sertifika hedeflerini kaydet'}
+              {achievementSaving ? t('profile.saving') : t('admin.certificate.save')}
             </KidsPrimaryButton>
             <KidsSecondaryButton type="button" disabled={achievementSaving} onClick={() => void loadAchievementSettings()}>
-              Yenile
+              {t('common.refresh')}
             </KidsSecondaryButton>
             {achievementSettings?.updated_at ? (
               <span className="text-xs text-violet-800/80 dark:text-violet-200/80">
-                Son güncelleme: {new Date(achievementSettings.updated_at).toLocaleString('tr-TR')}
+                {t('admin.certificate.lastUpdated')}{' '}
+                {new Date(achievementSettings.updated_at).toLocaleString(language === 'en' ? 'en-GB' : language === 'ge' ? 'de-DE' : 'tr-TR')}
               </span>
             ) : null}
           </div>
         </KidsCard>
 
-        <h2 className="font-logo text-xl font-bold text-slate-900 dark:text-white">Okullar ve öğrenci limiti</h2>
-        <p className="text-sm text-slate-600 dark:text-gray-400">
-          Demo ve satış okullarında tek kontrol kalemi öğrenci limitidir. Limit dolduğunda yeni öğrenci kaydı açılmaz.
-        </p>
+        <h2 className="font-logo text-xl font-bold text-slate-900 dark:text-white">{t('admin.schools.sectionTitle')}</h2>
+        <p className="text-sm text-slate-600 dark:text-gray-400">{t('admin.schools.sectionSubtitle')}</p>
 
         <KidsCard tone="emerald">
-          <h3 className="font-logo text-lg font-bold text-emerald-950 dark:text-emerald-50">Yeni okul</h3>
-          <p className="mt-1 text-sm text-emerald-900/80 dark:text-emerald-100/80">
-            İl ve ilçe seçip MEB listesinden okulu bul. Listede yoksa &quot;Okul ekle&quot; ile manuel kayıt oluştur.
-          </p>
+          <h3 className="font-logo text-lg font-bold text-emerald-950 dark:text-emerald-50">{t('admin.schools.newSchoolTitle')}</h3>
+          <p className="mt-1 text-sm text-emerald-900/80 dark:text-emerald-100/80">{t('admin.schools.newSchoolSubtitle')}</p>
 
           {mebProvincesReady && mebProvinces.length === 0 ? (
             <p className="mt-3 rounded-2xl border border-amber-200/80 bg-amber-50/80 px-4 py-3 text-sm text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100">
-              Veritabanında MEB okul listesi yok. Sunucuda{' '}
+              {t('admin.schools.mebListMissingBefore')}{' '}
               <code className="rounded bg-amber-100/80 px-1 font-mono text-xs dark:bg-amber-900/40">
                 python manage.py sync_meb_schools
               </code>{' '}
-              çalıştırılmalı.
+              {t('admin.schools.mebListMissingAfter')}
             </p>
           ) : null}
 
           <div className="mt-4 space-y-4">
             <div className="grid gap-4 md:grid-cols-3">
-              <KidsFormField id={mebIlId} label="İl">
+              <KidsFormField id={mebIlId} label={t('schools.province')}>
                 <KidsSelect
                   id={mebIlId}
                   value={mebIl}
@@ -1352,7 +1348,7 @@ export default function KidsAdminPanelPage() {
                   options={provinceOptions}
                 />
               </KidsFormField>
-              <KidsFormField id={mebIlceId} label="İlçe">
+              <KidsFormField id={mebIlceId} label={t('schools.district')}>
                 <KidsSelect
                   id={mebIlceId}
                   value={mebIlce}
@@ -1366,7 +1362,7 @@ export default function KidsAdminPanelPage() {
                   disabled={!mebIl}
                 />
               </KidsFormField>
-              <KidsFormField id={mebSchoolPickId} label="Okul (MEB listesi)">
+              <KidsFormField id={mebSchoolPickId} label={t('schools.mebSchool')}>
                 <KidsSelect
                   id={mebSchoolPickId}
                   value={mebSchoolYol}
@@ -1380,7 +1376,7 @@ export default function KidsAdminPanelPage() {
             {mebSchoolYol ? (
               <div className="rounded-2xl border border-emerald-200/80 bg-white/60 p-4 dark:border-emerald-800/50 dark:bg-emerald-950/20">
                 <p className="text-xs font-bold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
-                  Seçilen okul
+                  {t('admin.schools.selectedSchool')}
                 </p>
                 <p className="mt-1 text-sm text-emerald-950 dark:text-emerald-50">
                   {[pickDistrict, pickProvince].filter(Boolean).join(' · ') || '—'}
@@ -1388,9 +1384,9 @@ export default function KidsAdminPanelPage() {
                 <div className="mt-3">
                   <KidsFormField
                     id={pickNameId}
-                    label="Okul adı"
+                    label={t('schools.schoolName')}
                     required
-                    hint="Gerekirse kısalt veya düzelt; kayıtta bu metin kullanılır."
+                    hint={t('schools.schoolNameHint')}
                   >
                     <input
                       id={pickNameId}
@@ -1403,19 +1399,19 @@ export default function KidsAdminPanelPage() {
                   </KidsFormField>
                 </div>
                 <div className="mt-3 grid gap-4 md:grid-cols-2">
-                  <KidsFormField id="ns-stage" label="Okul tipi" required>
+                  <KidsFormField id="ns-stage" label={t('admin.schools.schoolType')} required>
                     <KidsSelect
                       id="ns-stage"
                       value={nsStage}
                       onChange={(v) => setNsStage((v === 'sales' ? 'sales' : 'demo'))}
                       options={[
-                        { value: 'demo', label: 'Demo' },
-                        { value: 'sales', label: 'Satış' },
+                        { value: 'demo', label: t('admin.stage.demo') },
+                        { value: 'sales', label: t('admin.stage.sales') },
                       ]}
                       searchable={false}
                     />
                   </KidsFormField>
-                  <KidsFormField id="ns-cap" label="Öğrenci limiti" required>
+                  <KidsFormField id="ns-cap" label={t('admin.schools.studentCap')} required>
                     <input
                       id="ns-cap"
                       type="number"
@@ -1429,7 +1425,7 @@ export default function KidsAdminPanelPage() {
                 </div>
                 {nsStage === 'demo' ? (
                   <div className="mt-3 grid gap-4 md:grid-cols-2">
-                    <KidsFormField id="ns-demo-start" label="Demo başlangıç tarihi">
+                    <KidsFormField id="ns-demo-start" label={t('admin.schools.demoStart')}>
                       <input
                         id="ns-demo-start"
                         type="date"
@@ -1438,7 +1434,7 @@ export default function KidsAdminPanelPage() {
                         className={kidsInputClass}
                       />
                     </KidsFormField>
-                    <KidsFormField id="ns-demo-end" label="Demo bitiş tarihi">
+                    <KidsFormField id="ns-demo-end" label={t('admin.schools.demoEnd')}>
                       <input
                         id="ns-demo-end"
                         type="date"
@@ -1451,7 +1447,7 @@ export default function KidsAdminPanelPage() {
                 ) : null}
                 {nsStage === 'sales' ? (
                   <div className="mt-3 grid gap-4 md:grid-cols-2">
-                    <KidsFormField id="ns-year" label="Eğitim-öğretim yılı (örn. 2025-2026)" required>
+                    <KidsFormField id="ns-year" label={t('admin.schools.academicYearExample')} required>
                       <KidsSelect
                         id="ns-year"
                         value={nsYear}
@@ -1475,42 +1471,40 @@ export default function KidsAdminPanelPage() {
                   }
                   onClick={() => void onSavePickedSchool()}
                 >
-                  {schoolSaving ? 'Kaydediliyor…' : 'Okulu oluştur'}
+                  {schoolSaving ? t('profile.saving') : t('admin.schools.createSchool')}
                 </KidsPrimaryButton>
               </div>
             ) : null}
 
             {mebIl && mebIlce && !mebSchoolsLoading && mebSchools.length === 0 ? (
               <p className="rounded-2xl border border-violet-200/60 bg-violet-50/50 px-4 py-3 text-sm text-violet-900 dark:border-violet-900/40 dark:bg-violet-950/25 dark:text-violet-100">
-                Bu ilçe için MEB listesinde kayıt yok. Aşağıdaki düğmeyle elle okul ekleyebilirsiniz.
+                {t('schools.noMebSchoolInDistrict')}
               </p>
             ) : null}
 
             <div className="border-t border-emerald-200/60 pt-4 dark:border-emerald-800/40">
               <KidsSecondaryButton type="button" className="w-full sm:w-auto" onClick={openAddSchoolModal}>
-                Okul ekle (listede yok)
+                {t('schools.addIfNotListed')}
               </KidsSecondaryButton>
-              <p className="mt-2 text-xs text-emerald-800/70 dark:text-emerald-200/70">
-                İl ve ilçe yine MEB listesinden seçilir; sadece okul adını siz yazarsınız.
-              </p>
+              <p className="mt-2 text-xs text-emerald-800/70 dark:text-emerald-200/70">{t('schools.manualAddHint')}</p>
             </div>
           </div>
         </KidsCard>
 
         <div className="flex items-center justify-between gap-2">
-          <h3 className="font-logo text-lg font-bold text-slate-900 dark:text-white">Kayıtlı okullar</h3>
+          <h3 className="font-logo text-lg font-bold text-slate-900 dark:text-white">{t('schools.registered')}</h3>
           <KidsSecondaryButton type="button" onClick={() => void loadSchools()} disabled={schoolsLoading}>
-            {schoolsLoading ? 'Yenileniyor…' : 'Okul listesini yenile'}
+            {schoolsLoading ? t('common.refreshing') : t('admin.schools.refreshList')}
           </KidsSecondaryButton>
         </div>
 
         {schools.length === 0 ? (
-          <p className="text-sm text-slate-600 dark:text-gray-400">Henüz okul yok.</p>
+          <p className="text-sm text-slate-600 dark:text-gray-400">{t('admin.schools.noneYetShort')}</p>
         ) : (
           <ul className="space-y-2">
             {schools.map((s) => {
               const isOpen = expandedSchoolId === s.id;
-              const stageLabel = s.lifecycle_stage === 'sales' ? 'SATIŞ' : 'DEMO';
+              const stageLabel = s.lifecycle_stage === 'sales' ? t('admin.stage.salesBadge') : t('admin.stage.demoBadge');
               const stageClass =
                 s.lifecycle_stage === 'sales'
                   ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200'
@@ -1547,10 +1541,16 @@ export default function KidsAdminPanelPage() {
                       </span>
                       <span className="flex shrink-0 items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
                         {academicYearLine ? (
-                          <span className="hidden sm:inline" title="Eğitim-öğretim yılı">{academicYearLine}</span>
+                          <span className="hidden sm:inline" title={t('teacher.panel.academicYear')}>
+                            {academicYearLine}
+                          </span>
                         ) : null}
-                        <span title="Öğretmen">{s.teachers.length} öğrt</span>
-                        <span className="hidden sm:inline" title="Kullanılan / Limit">{capUsed} / {capTotal} limit</span>
+                        <span title={t('admin.form.teacher')}>
+                          {s.teachers.length} {t('admin.schools.teacherAbbr')}
+                        </span>
+                        <span className="hidden sm:inline" title={t('admin.schools.capTitle')}>
+                          {capUsed} / {capTotal} {t('admin.schools.capSuffix')}
+                        </span>
                       </span>
                     </button>
 
@@ -1558,20 +1558,25 @@ export default function KidsAdminPanelPage() {
                       <div className="border-t border-slate-200/60 px-5 pb-5 pt-4 dark:border-slate-700/60">
                         <div className="mb-4 flex items-center justify-between">
                           <p className="text-xs text-slate-500 dark:text-slate-400">
-                            Okul #{s.id} · Limit: {capUsed}/{capTotal}
-                            {academicYearLine ? ` · Eğitim yılı: ${academicYearLine}` : ""}
+                            {t('admin.schools.idAndLimit')
+                              .replace('{id}', String(s.id))
+                              .replace('{used}', String(capUsed))
+                              .replace('{total}', String(capTotal))}
+                            {academicYearLine ? ` · ${t('admin.schools.yearShort')}: ${academicYearLine}` : ''}
                             {s.lifecycle_stage === 'demo' && s.demo_start_at && s.demo_end_at
-                              ? ` · Demo: ${s.demo_start_at} → ${s.demo_end_at}${s.demo_is_active ? '' : ' (pasif)'}`
+                              ? ` · ${t('admin.schools.demoColon')} ${s.demo_start_at} → ${s.demo_end_at}${
+                                  s.demo_is_active ? '' : ` (${t('common.statusInactive')})`
+                                }`
                               : ''}
                           </p>
                           <div className="flex items-center gap-2">
                             {editSchoolId !== s.id ? (
                               <KidsSecondaryButton type="button" onClick={() => startEditSchool(s)}>
-                                Düzenle
+                                {t('parentControls.edit')}
                               </KidsSecondaryButton>
                             ) : (
                               <KidsSecondaryButton type="button" onClick={cancelEditSchool}>
-                                Düzenlemeyi kapat
+                                {t('admin.schools.closeEdit')}
                               </KidsSecondaryButton>
                             )}
                             <button
@@ -1579,28 +1584,30 @@ export default function KidsAdminPanelPage() {
                               onClick={() => void onDeleteSchool(s.id)}
                               className="rounded-full border-2 border-red-200 px-3 py-1.5 text-xs font-bold text-red-700 hover:bg-red-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40"
                             >
-                              Okulu sil
+                              {t('admin.schools.deleteSchool')}
                             </button>
                           </div>
                         </div>
 
                         {editSchoolId === s.id ? (
                           <div className="mb-4 rounded-xl border border-violet-200/80 bg-violet-50/40 p-3 dark:border-violet-900/50 dark:bg-violet-950/20">
-                            <p className="mb-3 text-sm font-semibold text-violet-900 dark:text-violet-100">Okul ayarları</p>
+                            <p className="mb-3 text-sm font-semibold text-violet-900 dark:text-violet-100">
+                              {t('admin.schools.settingsTitle')}
+                            </p>
                             <div className="grid gap-3 md:grid-cols-2">
-                              <KidsFormField id={`edit-stage-${s.id}`} label="Okul tipi" required>
+                              <KidsFormField id={`edit-stage-${s.id}`} label={t('admin.schools.schoolType')} required>
                                 <KidsSelect
                                   id={`edit-stage-${s.id}`}
                                   value={editStage}
                                   onChange={(v) => setEditStage(v === 'sales' ? 'sales' : 'demo')}
                                   options={[
-                                    { value: 'demo', label: 'Demo' },
-                                    { value: 'sales', label: 'Satış' },
+                                    { value: 'demo', label: t('admin.stage.demo') },
+                                    { value: 'sales', label: t('admin.stage.sales') },
                                   ]}
                                   searchable={false}
                                 />
                               </KidsFormField>
-                              <KidsFormField id={`edit-cap-${s.id}`} label="Öğrenci limiti" required>
+                              <KidsFormField id={`edit-cap-${s.id}`} label={t('admin.schools.studentCap')} required>
                                 <input
                                   id={`edit-cap-${s.id}`}
                                   type="number"
@@ -1614,7 +1621,7 @@ export default function KidsAdminPanelPage() {
                             </div>
                             {editStage === 'demo' ? (
                               <div className="mt-3 grid gap-3 md:grid-cols-2">
-                                <KidsFormField id={`edit-demo-start-${s.id}`} label="Demo başlangıç">
+                                <KidsFormField id={`edit-demo-start-${s.id}`} label={t('admin.schools.demoStartShort')}>
                                   <input
                                     id={`edit-demo-start-${s.id}`}
                                     type="date"
@@ -1623,7 +1630,7 @@ export default function KidsAdminPanelPage() {
                                     className={kidsInputClass}
                                   />
                                 </KidsFormField>
-                                <KidsFormField id={`edit-demo-end-${s.id}`} label="Demo bitiş">
+                                <KidsFormField id={`edit-demo-end-${s.id}`} label={t('admin.schools.demoEndShort')}>
                                   <input
                                     id={`edit-demo-end-${s.id}`}
                                     type="date"
@@ -1635,7 +1642,7 @@ export default function KidsAdminPanelPage() {
                               </div>
                             ) : (
                               <div className="mt-3 grid gap-3 md:grid-cols-2">
-                                <KidsFormField id={`edit-sales-year-${s.id}`} label="Eğitim-öğretim yılı" required>
+                                <KidsFormField id={`edit-sales-year-${s.id}`} label={t('teacher.panel.academicYear')} required>
                                   <KidsSelect
                                     id={`edit-sales-year-${s.id}`}
                                     value={editSalesYear}
@@ -1652,39 +1659,35 @@ export default function KidsAdminPanelPage() {
                                 disabled={schoolEditSavingId === s.id}
                                 onClick={() => void saveSchoolSettings(s)}
                               >
-                                {schoolEditSavingId === s.id ? 'Kaydediliyor…' : 'Ayarları kaydet'}
+                                {schoolEditSavingId === s.id ? t('profile.saving') : t('admin.schools.saveSettings')}
                               </KidsPrimaryButton>
-                              <p className="text-xs text-violet-700/80 dark:text-violet-200/80">
-                                Demo → Satış dönüşümü buradan yapılabilir.
-                              </p>
+                              <p className="text-xs text-violet-700/80 dark:text-violet-200/80">{t('admin.schools.demoToSalesHint')}</p>
                             </div>
                           </div>
                         ) : (
-                          <p className="mb-4 text-sm text-slate-600 dark:text-slate-400">
-                            Bu okulda kayıtlar tek kalem olan öğrenci limitine göre yönetilir.
-                          </p>
+                          <p className="mb-4 text-sm text-slate-600 dark:text-slate-400">{t('admin.schools.managedByCap')}</p>
                         )}
 
                         <div className="mt-6 border-t border-slate-200 pt-4 dark:border-slate-700">
-                          <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Bu okuldaki öğretmenler</p>
+                          <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">{t('admin.schools.teachersAtSchool')}</p>
                           <ul className="mt-2 space-y-2">
                             {s.teachers.length === 0 ? (
-                              <li className="text-sm text-slate-500">Henüz atanmış öğretmen yok.</li>
+                              <li className="text-sm text-slate-500">{t('admin.schools.noTeachersYet')}</li>
                             ) : (
-                              s.teachers.map((t) => (
+                              s.teachers.map((tm) => (
                                 <li
-                                  key={t.id}
+                                  key={tm.id}
                                   className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-50 px-3 py-2 text-sm dark:bg-slate-900/50"
                                 >
                                   <span>
-                                    {t.first_name} {t.last_name} · {t.email}
+                                    {tm.first_name} {tm.last_name} · {tm.email}
                                   </span>
                                   <button
                                     type="button"
                                     className="text-xs font-bold text-amber-700 hover:underline dark:text-amber-300"
-                                    onClick={() => void onRemoveTeacher(s.id, t.id)}
+                                    onClick={() => void onRemoveTeacher(s.id, tm.id)}
                                   >
-                                    Çıkar
+                                    {t('admin.schools.removeTeacher')}
                                   </button>
                                 </li>
                               ))
@@ -1692,7 +1695,7 @@ export default function KidsAdminPanelPage() {
                           </ul>
                           <div className="mt-3 flex flex-wrap items-end gap-2">
                             <div className="min-w-[220px] flex-1">
-                              <KidsFormField id={`assign-${s.id}`} label="Öğretmen ata">
+                              <KidsFormField id={`assign-${s.id}`} label={t('admin.schools.assignTeacher')}>
                                 <KidsSelect
                                   id={`assign-${s.id}`}
                                   value={assignTeacherId[s.id] ?? ''}
@@ -1702,7 +1705,7 @@ export default function KidsAdminPanelPage() {
                               </KidsFormField>
                             </div>
                             <KidsPrimaryButton type="button" onClick={() => void onAssignTeacher(s.id)}>
-                              Ata
+                              {t('admin.schools.assign')}
                             </KidsPrimaryButton>
                           </div>
                         </div>
@@ -1729,14 +1732,11 @@ export default function KidsAdminPanelPage() {
             onClick={(e) => e.stopPropagation()}
           >
             <h2 id={modalTitleId} className="font-logo text-xl font-bold text-slate-900 dark:text-white">
-              Okul ekle
+              {t('schools.addTitle')}
             </h2>
-            <p className="mt-2 text-sm text-slate-600 dark:text-gray-400">
-              Okul MEB listesinde yoksa buradan yalnızca il, ilçe ve okul adını ekleyin. Ardından üstteki MEB listesinden
-              seçip öğrenci limiti ile okul kaydını oluşturun.
-            </p>
+            <p className="mt-2 text-sm text-slate-600 dark:text-gray-400">{t('admin.schools.addModalBody')}</p>
             <form className="mt-6 space-y-4" onSubmit={onModalCreate}>
-              <KidsFormField id={modalIlId} label="İl">
+              <KidsFormField id={modalIlId} label={t('schools.province')}>
                 <KidsSelect
                   id={modalIlId}
                   value={modalMebIl}
@@ -1744,7 +1744,7 @@ export default function KidsAdminPanelPage() {
                   options={modalProvinceOptions}
                 />
               </KidsFormField>
-              <KidsFormField id={modalIlceId} label="İlçe">
+              <KidsFormField id={modalIlceId} label={t('schools.district')}>
                 <KidsSelect
                   id={modalIlceId}
                   value={modalMebIlce}
@@ -1753,7 +1753,7 @@ export default function KidsAdminPanelPage() {
                   disabled={!modalMebIl}
                 />
               </KidsFormField>
-              <KidsFormField id={modalNameId} label="Okul adı" required>
+              <KidsFormField id={modalNameId} label={t('schools.schoolName')} required>
                 <input
                   id={modalNameId}
                   required
@@ -1761,19 +1761,19 @@ export default function KidsAdminPanelPage() {
                   value={modalName}
                   onChange={(e) => setModalName(e.target.value)}
                   className={kidsInputClass}
-                  placeholder="Resmî veya kullandığınız kısa ad"
+                  placeholder={t('admin.schools.modalNamePlaceholder')}
                   autoComplete="organization"
                 />
               </KidsFormField>
               <div className="flex flex-wrap justify-end gap-2 pt-2">
                 <KidsSecondaryButton type="button" onClick={closeAddSchoolModal} disabled={modalCreating}>
-                  İptal
+                  {t('common.cancel')}
                 </KidsSecondaryButton>
                 <KidsPrimaryButton
                   type="submit"
                   disabled={modalCreating || !modalName.trim() || !modalMebIl.trim() || !modalMebIlce.trim()}
                 >
-                  {modalCreating ? 'Ekleniyor…' : 'MEB listesine ekle'}
+                  {modalCreating ? t('admin.schools.addingToMeb') : t('admin.schools.addToMebList')}
                 </KidsPrimaryButton>
               </div>
             </form>

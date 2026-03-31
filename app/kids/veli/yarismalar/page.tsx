@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 import { KidsPanelMax } from '@/src/components/kids/kids-ui';
+import { useKidsI18n } from '@/src/providers/kids-language-provider';
 
 export default function KidsParentFreeChallengesPage() {
   const router = useRouter();
   const { user, loading: authLoading, pathPrefix } = useKidsAuth();
+  const { t } = useKidsI18n();
 
   useEffect(() => {
     if (authLoading) return;
@@ -25,7 +27,7 @@ export default function KidsParentFreeChallengesPage() {
 
   return (
     <KidsPanelMax>
-      <p className="text-center text-violet-800 dark:text-violet-200">Yönlendiriliyor…</p>
+      <p className="text-center text-violet-800 dark:text-violet-200">{t('common.redirecting')}</p>
     </KidsPanelMax>
   );
 }

@@ -28,6 +28,7 @@ import {
   KidsSecondaryButton,
   kidsTextareaClass,
 } from '@/src/components/kids/kids-ui';
+import { useKidsI18n } from '@/src/providers/kids-language-provider';
 import { Download, Image as ImageIcon, MessageCircle, Paperclip, Send, Smile, Sparkles, UserCircle2, Users, Wifi, WifiOff, X } from 'lucide-react';
 
 const QUICK_EMOJIS = ['😀', '😂', '😍', '👏', '👍', '🙏', '🎉', '🔥', '❤️', '🌟'] as const;
@@ -39,6 +40,7 @@ export default function KidsConversationDetailPage() {
   const router = useRouter();
   const conversationId = Number(params.id);
   const { user, loading: authLoading, pathPrefix } = useKidsAuth();
+  const { t, language } = useKidsI18n();
   const [conversation, setConversation] = useState<KidsConversation | null>(null);
   const [rows, setRows] = useState<KidsConversation[]>([]);
   const [messages, setMessages] = useState<KidsMessage[]>([]);
@@ -81,7 +83,7 @@ export default function KidsConversationDetailPage() {
       setMessages(items);
       setRows(list);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Konuşma yüklenemedi');
+      toast.error(e instanceof Error ? e.message : t('messageDetail.loadError'));
       router.replace(`${pathPrefix}/mesajlar`);
     } finally {
       setLoading(false);
@@ -117,8 +119,10 @@ export default function KidsConversationDetailPage() {
   }, [accessReady, user, conversationId, pathPrefix, router]);
 
   const title = useMemo(
-    () => conversation?.topic?.trim() || `Konuşma #${conversation?.id ?? ''}`,
-    [conversation],
+    () =>
+      conversation?.topic?.trim() ||
+      t('messages.conversationFallback').replace('{id}', String(conversation?.id ?? '')),
+    [conversation, t],
   );
 
   function realtimeToken(): string {
@@ -239,7 +243,7 @@ export default function KidsConversationDetailPage() {
       touchConversationListNow();
       void loadConversationList();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Mesaj gönderilemedi');
+      toast.error(e instanceof Error ? e.message : t('messageDetail.sendError'));
     } finally {
       setSending(false);
     }
@@ -273,11 +277,11 @@ export default function KidsConversationDetailPage() {
     const image = file.type.startsWith('image/');
     const max = image ? MAX_IMAGE_ATTACHMENT_BYTES : MAX_FILE_ATTACHMENT_BYTES;
     if (file.size <= 0) {
-      toast.error('Dosya boş olamaz');
+      toast.error(t('messageDetail.emptyFile'));
       return;
     }
     if (file.size > max) {
-      toast.error(image ? 'Görsel en fazla 10 MB olabilir' : 'Dosya en fazla 20 MB olabilir');
+      toast.error(image ? t('messageDetail.imageTooLarge') : t('messageDetail.fileTooLarge'));
       return;
     }
     setSelectedFile(file);
@@ -297,14 +301,14 @@ export default function KidsConversationDetailPage() {
   }
 
   function conversationTitle(c: KidsConversation): string {
-    return c.topic?.trim() || `Konuşma #${c.id}`;
+    return c.topic?.trim() || t('messages.conversationFallback').replace('{id}', String(c.id));
   }
 
   async function verifyPasswordAndUnlock() {
     const pass = password.trim();
     setPasswordError(null);
     if (!pass) {
-      setPasswordError('Lütfen şifreni gir.');
+      setPasswordError(t('messages.enterPassword'));
       return;
     }
     setPasswordBusy(true);
@@ -314,14 +318,14 @@ export default function KidsConversationDetailPage() {
       setAccessReady(true);
       setPassword('');
     } catch (e) {
-      setPasswordError(e instanceof Error ? e.message : 'Şifre doğrulanamadı');
+      setPasswordError(e instanceof Error ? e.message : t('messages.passwordVerifyFailed'));
     } finally {
       setPasswordBusy(false);
     }
   }
 
   if (authLoading || !user || (accessReady && loading)) {
-    return <p className="text-center text-sm text-violet-800 dark:text-violet-200">Yükleniyor…</p>;
+    return <p className="text-center text-sm text-violet-800 dark:text-violet-200">{t('common.loading')}</p>;
   }
 
   return (
@@ -330,12 +334,12 @@ export default function KidsConversationDetailPage() {
         <aside className="hidden overflow-hidden rounded-3xl border-2 border-violet-200 bg-white/95 shadow-[0_20px_60px_-20px_rgba(124,58,237,0.25)] dark:border-violet-800 dark:bg-gray-900/80 md:block">
           <div className="flex items-center gap-2 border-b border-violet-100 px-4 py-3 dark:border-violet-800">
             <MessageCircle className="h-4 w-4 text-violet-700 dark:text-violet-300" />
-            <h2 className="font-logo text-lg font-bold text-violet-950 dark:text-violet-50">Mesajlar</h2>
+            <h2 className="font-logo text-lg font-bold text-violet-950 dark:text-violet-50">{t('messages.title')}</h2>
           </div>
           <div className="max-h-[72vh] overflow-y-auto p-2">
-            {listLoading ? <p className="px-2 py-2 text-xs text-slate-500">Liste güncelleniyor…</p> : null}
+            {listLoading ? <p className="px-2 py-2 text-xs text-slate-500">{t('messageDetail.listRefreshing')}</p> : null}
             {rows.length === 0 ? (
-              <p className="px-2 py-2 text-sm text-slate-500 dark:text-slate-400">Henüz konuşma yok.</p>
+              <p className="px-2 py-2 text-sm text-slate-500 dark:text-slate-400">{t('messages.empty')}</p>
             ) : (
               <ul className="space-y-1.5">
                 {rows.map((c) => {
@@ -355,8 +359,8 @@ export default function KidsConversationDetailPage() {
                         <div className="mt-1 flex items-center justify-between gap-2">
                           <span className="text-[11px] text-slate-500 dark:text-slate-400">
                             {c.last_message_at
-                              ? new Date(c.last_message_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
-                              : 'Mesaj yok'}
+                              ? new Date(c.last_message_at).toLocaleTimeString(language === 'tr' ? 'tr-TR' : language === 'ge' ? 'de-DE' : 'en-US', { hour: '2-digit', minute: '2-digit' })
+                              : t('messageDetail.noMessage')}
                           </span>
                           {c.unread_count > 0 ? (
                             <span className="rounded-full bg-violet-600 px-2 py-0.5 text-[11px] font-bold text-white">
@@ -382,7 +386,7 @@ export default function KidsConversationDetailPage() {
               <div>
                 <h1 className="font-logo text-xl font-bold text-violet-950 dark:text-violet-50">{title}</h1>
                 <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  {wsConnected ? 'Canlı mesajlaşma aktif' : 'Canlı bağlantı kuruluyor...'}
+                  {wsConnected ? t('messageDetail.liveActive') : t('messageDetail.liveConnecting')}
                 </p>
               </div>
             </div>
@@ -393,7 +397,7 @@ export default function KidsConversationDetailPage() {
                 className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-white px-3 py-1 text-xs font-bold text-violet-700 dark:border-violet-700 dark:bg-violet-950/40 dark:text-violet-200 md:hidden"
               >
                 <Users className="h-3.5 w-3.5" />
-                Kişiler
+                {t('messageDetail.contacts')}
               </button>
               <div
                 className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ${
@@ -403,7 +407,7 @@ export default function KidsConversationDetailPage() {
                 }`}
               >
                 {wsConnected ? <Wifi className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}
-                {wsConnected ? 'Canlı' : 'Bağlanıyor'}
+                {wsConnected ? t('messageDetail.live') : t('messageDetail.connecting')}
               </div>
             </div>
           </div>
@@ -411,9 +415,9 @@ export default function KidsConversationDetailPage() {
           <div className="max-h-[56vh] space-y-3 overflow-y-auto bg-[linear-gradient(180deg,#faf5ff_0%,#ffffff_20%,#ffffff_80%,#f5f3ff_100%)] p-4 dark:bg-[linear-gradient(180deg,rgba(46,16,101,0.2)_0%,rgba(2,6,23,0.88)_35%,rgba(2,6,23,0.88)_100%)]">
             {messages.length === 0 ? (
               <div className="rounded-2xl border border-violet-100 bg-white/80 p-4 text-center dark:border-violet-900 dark:bg-violet-950/30">
-                <p className="text-sm text-slate-500 dark:text-slate-400">Henüz mesaj yok.</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{t('messageDetail.noMessageYet')}</p>
                 <p className="mt-1 inline-flex items-center gap-1 text-xs font-semibold text-violet-600 dark:text-violet-300">
-                  <Sparkles className="h-3.5 w-3.5" /> İlk mesajı göndererek konuşmayı başlat.
+                  <Sparkles className="h-3.5 w-3.5" /> {t('messageDetail.startConversation')}
                 </p>
               </div>
             ) : (
@@ -440,14 +444,14 @@ export default function KidsConversationDetailPage() {
                             <a href={m.attachment.url} target="_blank" rel="noreferrer" className="block">
                               <img
                                 src={m.attachment.url}
-                                alt={m.attachment.original_name || 'Görsel eki'}
+                                alt={m.attachment.original_name || t('messageDetail.imageAttachment')}
                                 className="max-h-56 w-full rounded-lg object-cover"
                               />
                             </a>
                           ) : (
                             <div className="flex items-center gap-2 text-xs">
                               <Paperclip className="h-3.5 w-3.5 shrink-0" />
-                              <span className="truncate">{m.attachment.original_name || 'Dosya'}</span>
+                              <span className="truncate">{m.attachment.original_name || t('messageDetail.file')}</span>
                             </div>
                           )}
                           <div className="mt-2 flex items-center justify-between gap-2">
@@ -464,7 +468,7 @@ export default function KidsConversationDetailPage() {
                               }`}
                             >
                               <Download className="h-3.5 w-3.5" />
-                              İndir
+                              {t('messageDetail.download')}
                             </a>
                           </div>
                         </div>
@@ -490,7 +494,7 @@ export default function KidsConversationDetailPage() {
               <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-violet-200/70 bg-white/80 p-2 dark:border-violet-800 dark:bg-gray-950/60">
                 <span className="mr-1 inline-flex items-center gap-1 text-xs font-semibold text-violet-700 dark:text-violet-300">
                   <Smile className="h-3.5 w-3.5" />
-                  Hızlı ikonlar
+                  {t('messageDetail.quickIcons')}
                 </span>
                 {QUICK_EMOJIS.map((emoji) => (
                   <button
@@ -498,8 +502,8 @@ export default function KidsConversationDetailPage() {
                     type="button"
                     onClick={() => appendEmoji(emoji)}
                     className="grid h-8 w-8 place-items-center rounded-full border border-violet-200 bg-white text-base transition hover:scale-105 hover:bg-violet-50 dark:border-violet-700 dark:bg-violet-950/40"
-                    aria-label={`İkon ekle ${emoji}`}
-                    title={`İkon ekle ${emoji}`}
+                    aria-label={`${t('messageDetail.addIcon')} ${emoji}`}
+                    title={`${t('messageDetail.addIcon')} ${emoji}`}
                   >
                     {emoji}
                   </button>
@@ -515,7 +519,7 @@ export default function KidsConversationDetailPage() {
                     void onSend();
                   }
                 }}
-                placeholder="Mesaj yazın... (Enter: gönder, Shift+Enter: yeni satır)"
+                placeholder={t('messageDetail.messagePlaceholder')}
                 className={kidsTextareaClass}
               />
               {selectedFile ? (
@@ -531,7 +535,7 @@ export default function KidsConversationDetailPage() {
                     className="inline-flex items-center gap-1 rounded-full border border-violet-200 px-2 py-1 font-semibold text-violet-700 hover:bg-violet-50 dark:border-violet-700 dark:text-violet-200 dark:hover:bg-violet-900/40"
                   >
                     <X className="h-3.5 w-3.5" />
-                    Kaldır
+                    {t('messageDetail.remove')}
                   </button>
                 </div>
               ) : null}
@@ -549,13 +553,13 @@ export default function KidsConversationDetailPage() {
                   <KidsSecondaryButton type="button" disabled={sending} onClick={() => fileInputRef.current?.click()}>
                     <span className="inline-flex items-center gap-1.5">
                       <Paperclip className="h-4 w-4" />
-                      Dosya
+                      {t('messageDetail.file')}
                     </span>
                   </KidsSecondaryButton>
                   <KidsPrimaryButton type="button" disabled={sending || (!text.trim() && !selectedFile)} onClick={() => void onSend()}>
                   <span className="inline-flex items-center gap-1.5">
                     <Send className="h-4 w-4" />
-                    {sending ? 'Gönderiliyor…' : 'Gönder'}
+                    {sending ? t('messageDetail.sending') : t('messageDetail.send')}
                   </span>
                 </KidsPrimaryButton>
                 </div>
@@ -565,12 +569,12 @@ export default function KidsConversationDetailPage() {
         </section>
       </div>
       {user.role === 'parent' && !accessReady ? (
-        <KidsCenteredModal title="Mesajlar için şifre doğrulaması" onClose={() => router.replace(`${pathPrefix}/veli/panel`)}>
+        <KidsCenteredModal title={t('messages.passwordModalTitle')} onClose={() => router.replace(`${pathPrefix}/veli/panel`)}>
           <p className="text-sm text-slate-700 dark:text-slate-300">
-            Veli mesajlarını görüntülemek için hesabının şifresini gir. Bu doğrulama 15 dakika boyunca geçerli olur.
+            {t('messages.passwordModalBody')}
           </p>
           <label className="mt-4 block text-xs font-bold uppercase tracking-wide text-violet-800 dark:text-violet-200">
-            Hesap şifren
+            {t('messages.accountPassword')}
           </label>
           <input
             type="password"
@@ -597,10 +601,10 @@ export default function KidsConversationDetailPage() {
           ) : null}
           <div className="mt-4 flex justify-end gap-2">
             <KidsSecondaryButton type="button" disabled={passwordBusy} onClick={() => router.replace(`${pathPrefix}/veli/panel`)}>
-              Vazgeç
+              {t('common.cancel')}
             </KidsSecondaryButton>
             <KidsPrimaryButton type="button" disabled={passwordBusy} onClick={() => void verifyPasswordAndUnlock()}>
-              {passwordBusy ? 'Doğrulanıyor…' : 'Devam et'}
+              {passwordBusy ? t('messages.verifying') : t('messages.continue')}
             </KidsPrimaryButton>
           </div>
         </KidsCenteredModal>

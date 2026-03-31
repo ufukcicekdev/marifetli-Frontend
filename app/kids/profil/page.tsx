@@ -5,13 +5,15 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
-import { kidsPatchMe, kidsUploadProfilePhoto } from '@/src/lib/kids-api';
+import { kidsPatchMe, kidsUploadProfilePhoto, type KidsLanguageCode } from '@/src/lib/kids-api';
+import { useKidsI18n } from '@/src/providers/kids-language-provider';
 import {
   KidsCard,
   KidsFormField,
   KidsPageHeader,
   KidsPanelMax,
   KidsPrimaryButton,
+  KidsSelect,
   kidsInputClass,
 } from '@/src/components/kids/kids-ui';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
@@ -19,8 +21,10 @@ import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 export default function KidsProfilPage() {
   const router = useRouter();
   const { user, loading: authLoading, pathPrefix, refreshUser } = useKidsAuth();
+  const { t, canChangeLanguage, setLanguageLocal } = useKidsI18n();
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [preferredLanguage, setPreferredLanguage] = useState<KidsLanguageCode>('tr');
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
@@ -31,6 +35,7 @@ export default function KidsProfilPage() {
     if (!user) return;
     setFirstName(user.first_name || '');
     setLastName(user.last_name || '');
+    setPreferredLanguage((user.preferred_language || user.effective_language || 'tr') as KidsLanguageCode);
   }, [user]);
 
   useEffect(() => {
@@ -45,11 +50,11 @@ export default function KidsProfilPage() {
       e.target.value = '';
       if (!f) return;
       if (!f.type.match(/^image\/(jpeg|png|webp)$/i)) {
-        toast.error('JPEG, PNG veya WebP seçin.');
+        toast.error(t('profile.file.typeError'));
         return;
       }
       if (f.size > 2 * 1024 * 1024) {
-        toast.error('Dosya en fazla 2 MB olabilir.');
+        toast.error(t('profile.file.sizeError'));
         return;
       }
       if (preview?.startsWith('blob:')) URL.revokeObjectURL(preview);
@@ -60,16 +65,16 @@ export default function KidsProfilPage() {
           await kidsUploadProfilePhoto(f);
           await refreshUser();
           setPreview(null);
-          toast.success('Profil fotoğrafı güncellendi.');
+          toast.success(t('profile.photo.updated'));
         } catch (err) {
-          toast.error(err instanceof Error ? err.message : 'Yüklenemedi');
+          toast.error(err instanceof Error ? err.message : t('profile.photo.uploadFailed'));
           setPreview(null);
         } finally {
           setUploading(false);
         }
       })();
     },
-    [preview, refreshUser],
+    [preview, refreshUser, t],
   );
 
   async function onSaveNames(e: React.FormEvent) {
@@ -80,11 +85,15 @@ export default function KidsProfilPage() {
       await kidsPatchMe({
         first_name: firstName.trim(),
         last_name: lastName.trim(),
+        ...(canChangeLanguage ? { preferred_language: preferredLanguage } : {}),
       });
+      if (canChangeLanguage) {
+        setLanguageLocal(preferredLanguage);
+      }
       await refreshUser();
-      toast.success('Bilgilerin kaydedildi.');
+      toast.success(t('profile.saved'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Kaydedilemedi');
+      toast.error(err instanceof Error ? err.message : t('profile.saveError'));
     } finally {
       setSaving(false);
     }
@@ -100,7 +109,7 @@ export default function KidsProfilPage() {
   if (authLoading || !user) {
     return (
       <KidsPanelMax>
-        <p className="text-center text-violet-800 dark:text-violet-200">Yükleniyor…</p>
+        <p className="text-center text-violet-800 dark:text-violet-200">{t('common.loading')}</p>
       </KidsPanelMax>
     );
   }
@@ -112,8 +121,8 @@ export default function KidsProfilPage() {
     <KidsPanelMax>
       <KidsPageHeader
         emoji="👤"
-        title="Profilim"
-        subtitle="Adını ve soyadını güncelleyebilir; profil fotoğrafı ekleyebilirsin."
+        title={t('profile.title')}
+        subtitle={t('profile.subtitle')}
       />
 
       <div className="mx-auto max-w-lg space-y-8">
@@ -144,7 +153,7 @@ export default function KidsProfilPage() {
               <p className="text-sm text-violet-800/90 dark:text-violet-200/90">{user.email}</p>
               <label className="inline-flex cursor-pointer justify-center sm:justify-start">
                 <span className="rounded-xl border-2 border-violet-200 bg-white px-4 py-2 text-sm font-semibold text-violet-900 shadow-sm hover:bg-violet-50 dark:border-violet-700 dark:bg-gray-900 dark:text-violet-100 dark:hover:bg-violet-950/50">
-                  Fotoğraf seç
+                  {t('profile.photo.select')}
                 </span>
                 <input
                   type="file"
@@ -154,14 +163,14 @@ export default function KidsProfilPage() {
                   disabled={uploading}
                 />
               </label>
-              <p className="text-xs text-gray-500 dark:text-gray-400">JPEG, PNG veya WebP · en fazla 2 MB</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{t('profile.photo.hint')}</p>
             </div>
           </div>
         </KidsCard>
 
         <KidsCard>
           <form onSubmit={onSaveNames} className="space-y-5">
-            <KidsFormField id={fnId} label="Ad">
+            <KidsFormField id={fnId} label={t('profile.firstName')}>
               <input
                 id={fnId}
                 className={kidsInputClass}
@@ -170,7 +179,7 @@ export default function KidsProfilPage() {
                 autoComplete="given-name"
               />
             </KidsFormField>
-            <KidsFormField id={lnId} label="Soyad">
+            <KidsFormField id={lnId} label={t('profile.lastName')}>
               <input
                 id={lnId}
                 className={kidsInputClass}
@@ -179,8 +188,25 @@ export default function KidsProfilPage() {
                 autoComplete="family-name"
               />
             </KidsFormField>
+            <KidsFormField
+              id="preferred-language"
+              label={t('profile.language')}
+              hint={canChangeLanguage ? t('profile.language.hint.free') : t('profile.language.hint.locked')}
+            >
+              <KidsSelect
+                id="preferred-language"
+                value={preferredLanguage}
+                onChange={(v) => setPreferredLanguage(v as KidsLanguageCode)}
+                disabled={!canChangeLanguage}
+                options={[
+                  { value: 'tr', label: t('profile.language.tr') },
+                  { value: 'en', label: t('profile.language.en') },
+                  { value: 'ge', label: t('profile.language.ge') },
+                ]}
+              />
+            </KidsFormField>
             <KidsPrimaryButton type="submit" disabled={saving}>
-              {saving ? 'Kaydediliyor…' : 'Bilgileri kaydet'}
+              {saving ? t('profile.saving') : t('profile.save')}
             </KidsPrimaryButton>
           </form>
         </KidsCard>

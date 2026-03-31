@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
 import { useSidebarStore } from '@/src/stores/sidebar-store';
 import { ThemeToggle } from '@/src/components/theme-toggle';
 import { HEADER_HEIGHT_PX } from '@/src/components/header';
@@ -12,6 +13,8 @@ import { useAuthStore } from '@/src/stores/auth-store';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 import { marifetliKidsLegalPathOnKidsPortal } from '@/src/lib/marifetli-kids-legal-paths';
 import { NavIcon } from '@/src/components/nav-icon';
+import { useKidsI18n } from '@/src/providers/kids-language-provider';
+import { kidsPatchMe, type KidsLanguageCode } from '@/src/lib/kids-api';
 
 const SIDEBAR_PLACEHOLDER = (
   <aside
@@ -31,8 +34,10 @@ export function KidsSidebar({ pathPrefix }: KidsSidebarProps) {
   const pathname = usePathname();
   const isOpen = useSidebarStore((s) => s.isOpen);
   const toggle = useSidebarStore((s) => s.toggle);
-  const { user, loading } = useKidsAuth();
+  const { user, loading, refreshUser } = useKidsAuth();
   const siteAdmin = useAuthStore((s) => Boolean(s.user?.is_staff || s.user?.is_superuser));
+  const { t, language, canChangeLanguage, setLanguageLocal } = useKidsI18n();
+  const [savingLanguage, setSavingLanguage] = useState(false);
 
   const items = useMemo(
     () =>
@@ -53,6 +58,23 @@ export function KidsSidebar({ pathPrefix }: KidsSidebarProps) {
     closeOnMobile();
   }, [pathname]);
 
+  async function onLanguageChange(nextRaw: string) {
+    if (!canChangeLanguage) return;
+    const next = (nextRaw === 'en' || nextRaw === 'ge' ? nextRaw : 'tr') as KidsLanguageCode;
+    if (next === language) return;
+    setLanguageLocal(next);
+    setSavingLanguage(true);
+    try {
+      await kidsPatchMe({ preferred_language: next });
+      await refreshUser();
+      toast.success(t('profile.saved'));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('common.saveFailed'));
+    } finally {
+      setSavingLanguage(false);
+    }
+  }
+
   if (!mounted) return SIDEBAR_PLACEHOLDER;
 
   return (
@@ -71,7 +93,7 @@ export function KidsSidebar({ pathPrefix }: KidsSidebarProps) {
           ${isOpen ? 'w-64 translate-x-0' : 'w-16 -translate-x-full lg:translate-x-0'}
         `}
         style={{ top: HEADER_HEIGHT_PX }}
-        aria-label="Kids menü"
+        aria-label={t('sidebar.menu')}
       >
         <button
           type="button"
@@ -79,7 +101,7 @@ export function KidsSidebar({ pathPrefix }: KidsSidebarProps) {
           className={`hidden w-full border-b border-gray-200 transition-colors hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/50 lg:flex ${
             isOpen ? 'gap-3 p-4' : 'justify-center p-3'
           }`}
-          title={isOpen ? "Sidebar'ı kapat" : "Sidebar'ı aç"}
+          title={isOpen ? t('sidebar.close') : t('sidebar.open')}
         >
           <svg className="h-5 w-5 shrink-0 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -90,7 +112,7 @@ export function KidsSidebar({ pathPrefix }: KidsSidebarProps) {
           {isOpen && (
             <div className="mb-4 space-y-3 border-b border-gray-200 pb-4 dark:border-gray-800 lg:hidden">
               <div className="flex items-center justify-between px-1">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Tema</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">{t('sidebar.theme')}</span>
                 <ThemeToggle />
               </div>
               {!user && (
@@ -99,13 +121,34 @@ export function KidsSidebar({ pathPrefix }: KidsSidebarProps) {
                   onClick={() => toggle()}
                   className="flex min-h-[44px] items-center justify-center rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-3 text-sm font-bold text-white shadow-md hover:from-violet-500 hover:to-fuchsia-500"
                 >
-                  Giriş
+                  {t('header.login')}
                 </Link>
               )}
             </div>
           )}
 
           <div className="space-y-1">
+            {isOpen && canChangeLanguage ? (
+              <div className="mb-3 rounded-2xl border border-violet-200/80 bg-violet-50/70 p-3 dark:border-violet-800 dark:bg-violet-950/30">
+                <label htmlFor="kids-sidebar-language" className="mb-1 block text-xs font-semibold text-violet-900 dark:text-violet-100">
+                  {t('sidebar.language')}
+                </label>
+                <select
+                  id="kids-sidebar-language"
+                  className="h-10 w-full rounded-xl border border-violet-300 bg-white px-3 text-sm text-violet-900 dark:border-violet-700 dark:bg-gray-900 dark:text-violet-100"
+                  value={language}
+                  disabled={savingLanguage}
+                  onChange={(e) => void onLanguageChange(e.target.value)}
+                >
+                  <option value="tr">{t('profile.language.tr')}</option>
+                  <option value="en">{t('profile.language.en')}</option>
+                  <option value="ge">{t('profile.language.ge')}</option>
+                </select>
+                {savingLanguage ? (
+                  <p className="mt-1 text-[11px] text-violet-700 dark:text-violet-300">{t('sidebar.languageSaving')}</p>
+                ) : null}
+              </div>
+            ) : null}
             {items.map((item) => {
               const active = isKidsNavActive(pathname, item.href, pathPrefix);
               return (
@@ -124,12 +167,12 @@ export function KidsSidebar({ pathPrefix }: KidsSidebarProps) {
                       ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-md shadow-fuchsia-500/20'
                       : 'text-violet-900 hover:bg-white/80 dark:text-violet-100 dark:hover:bg-gray-800/80'
                   }`}
-                  title={!isOpen ? item.label : undefined}
+                  title={!isOpen ? t(item.labelKey) : undefined}
                 >
                   <span className="shrink-0 text-base">
                     <NavIcon name={item.icon} />
                   </span>
-                  {isOpen && <span>{item.label}</span>}
+                  {isOpen && <span>{t(item.labelKey)}</span>}
                 </Link>
               );
             })}
@@ -143,52 +186,52 @@ export function KidsSidebar({ pathPrefix }: KidsSidebarProps) {
               <span className="shrink-0 text-base">
                 <NavIcon name="site" />
               </span>
-              {isOpen && <span>Marifetli ana site</span>}
+              {isOpen && <span>{t('sidebar.mainSite')}</span>}
             </Link>
           </div>
 
           {isOpen && (
             <div className="mt-8 border-t border-gray-200 px-3 pt-3 text-center dark:border-gray-800">
               <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-violet-600/90 dark:text-violet-400/90">
-                Marifetli Kids yasal
+                {t('sidebar.legal.title')}
               </p>
               <div className="flex flex-col gap-1 text-xs text-gray-500 dark:text-gray-400">
                 <Link
                   href={marifetliKidsLegalPathOnKidsPortal(pathPrefix, 'terms')}
                   className="hover:text-brand hover:underline dark:hover:text-brand"
                 >
-                  Kullanım Şartları
+                  {t('sidebar.legal.terms')}
                 </Link>
                 <Link
                   href={marifetliKidsLegalPathOnKidsPortal(pathPrefix, 'privacy')}
                   className="hover:text-brand hover:underline dark:hover:text-brand"
                 >
-                  Gizlilik Politikası
+                  {t('sidebar.legal.privacy')}
                 </Link>
                 <Link
                   href={marifetliKidsLegalPathOnKidsPortal(pathPrefix, 'kvkk')}
                   className="hover:text-brand hover:underline dark:hover:text-brand"
                 >
-                  Aydınlatma Metni
+                  {t('sidebar.legal.kvkk')}
                 </Link>
                 <Link
                   href={marifetliKidsLegalPathOnKidsPortal(pathPrefix, 'cookies')}
                   className="hover:text-brand hover:underline dark:hover:text-brand"
                 >
-                  Çerez Politikası
+                  {t('sidebar.legal.cookies')}
                 </Link>
-                <span className="my-1 block text-[10px] text-gray-400 dark:text-gray-500">Marifetli ana site</span>
+                <span className="my-1 block text-[10px] text-gray-400 dark:text-gray-500">{t('sidebar.mainSite')}</span>
                 <Link
                   href="/gizlilik-politikasi"
                   className="hover:text-brand hover:underline dark:hover:text-brand"
                 >
-                  Gizlilik (genel)
+                  {t('sidebar.legal.privacyGeneral')}
                 </Link>
                 <Link
                   href="/kullanim-sartlari"
                   className="hover:text-brand hover:underline dark:hover:text-brand"
                 >
-                  Kullanım Şartları (genel)
+                  {t('sidebar.legal.termsGeneral')}
                 </Link>
               </div>
             </div>

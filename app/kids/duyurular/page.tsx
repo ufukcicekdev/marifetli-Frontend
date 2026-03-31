@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import {
   kidsCreateAnnouncement,
+  kidsDeleteAnnouncement,
   kidsDeleteAnnouncementAttachment,
   kidsListClasses,
   kidsListAnnouncements,
@@ -18,6 +19,7 @@ import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 import { KidsPrimaryButton, KidsSelect, kidsInputClass, kidsTextareaClass } from '@/src/components/kids/kids-ui';
 import { MediaSlider } from '@/src/components/media-slider';
 import type { MediaItem } from '@/src/lib/extract-media';
+import { useKidsI18n } from '@/src/providers/kids-language-provider';
 
 const ANNOUNCEMENT_IMAGE_MAX_BYTES = 10 * 1024 * 1024;
 const ANNOUNCEMENT_DOCUMENT_MAX_BYTES = 20 * 1024 * 1024;
@@ -49,6 +51,7 @@ function formatFileSize(sizeBytes: number): string {
 export default function KidsAnnouncementsPage() {
   const router = useRouter();
   const { user, loading: authLoading, pathPrefix } = useKidsAuth();
+  const { t, language } = useKidsI18n();
   const [rows, setRows] = useState<KidsAnnouncement[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -63,6 +66,8 @@ export default function KidsAnnouncementsPage() {
   const [editFiles, setEditFiles] = useState<File[]>([]);
   const [editSaving, setEditSaving] = useState(false);
   const [deletingAttachmentId, setDeletingAttachmentId] = useState<number | null>(null);
+  const [openAnnouncementId, setOpenAnnouncementId] = useState<number | null>(null);
+  const [deletingAnnouncementId, setDeletingAnnouncementId] = useState<number | null>(null);
 
   const canCreate = user?.role === 'teacher' || user?.role === 'admin';
   const selectedClassId = useMemo(() => Number(classId || 0), [classId]);
@@ -82,7 +87,7 @@ export default function KidsAnnouncementsPage() {
         setClasses([]);
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Duyurular yüklenemedi');
+      toast.error(e instanceof Error ? e.message : t('announcements.loadError'));
     } finally {
       setLoading(false);
     }
@@ -133,7 +138,7 @@ export default function KidsAnnouncementsPage() {
       const maxBytes = isImage ? ANNOUNCEMENT_IMAGE_MAX_BYTES : ANNOUNCEMENT_DOCUMENT_MAX_BYTES;
       if (f.size > maxBytes) {
         const limitText = isImage ? '10 MB' : '20 MB';
-        rejected.push(`${f.name} (en fazla ${limitText})`);
+        rejected.push(`${f.name} (${t('announcements.max')} ${limitText})`);
         continue;
       }
       accepted.push(f);
@@ -145,7 +150,7 @@ export default function KidsAnnouncementsPage() {
     if (next.length === 0) return;
     const { accepted, rejected } = filterFilesBySize(next);
     if (rejected.length > 0) {
-      toast.error(`Boyut limiti aşıldı: ${rejected.join(', ')}`);
+      toast.error(`${t('announcements.sizeLimitExceeded')}: ${rejected.join(', ')}`);
     }
     if (accepted.length > 0) {
       setFiles((prev) => [...prev, ...accepted]);
@@ -156,7 +161,7 @@ export default function KidsAnnouncementsPage() {
     if (next.length === 0) return;
     const { accepted, rejected } = filterFilesBySize(next);
     if (rejected.length > 0) {
-      toast.error(`Boyut limiti aşıldı: ${rejected.join(', ')}`);
+      toast.error(`${t('announcements.sizeLimitExceeded')}: ${rejected.join(', ')}`);
     }
     if (accepted.length > 0) {
       setEditFiles((prev) => [...prev, ...accepted]);
@@ -210,6 +215,7 @@ export default function KidsAnnouncementsPage() {
 
   function startEdit(a: KidsAnnouncement) {
     setEditingId(a.id);
+    setOpenAnnouncementId(a.id);
     setEditTitle(a.title || '');
     setEditBody(a.body || '');
     setEditFiles([]);
@@ -224,25 +230,25 @@ export default function KidsAnnouncementsPage() {
 
   async function onSaveEdit() {
     if (!editingId) return;
-    const t = editTitle.trim();
-    const b = editBody.trim();
-    if (!t || !b) {
-      toast.error('Başlık ve duyuru metni gerekli.');
+    const titleText = editTitle.trim();
+    const bodyText = editBody.trim();
+    if (!titleText || !bodyText) {
+      toast.error(t('announcements.titleBodyRequired'));
       return;
     }
     setEditSaving(true);
     try {
-      let latest = await kidsPatchAnnouncement(editingId, { title: t, body: b });
+      let latest = await kidsPatchAnnouncement(editingId, { title: titleText, body: bodyText });
       if (editFiles.length > 0) {
         for (const f of editFiles) {
           latest = await kidsUploadAnnouncementAttachment(editingId, f);
         }
       }
       setRows((prev) => prev.map((row) => (row.id === latest.id ? latest : row)));
-      toast.success('Duyuru güncellendi');
+      toast.success(t('announcements.updated'));
       cancelEdit();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Duyuru güncellenemedi');
+      toast.error(e instanceof Error ? e.message : t('announcements.updateFailed'));
     } finally {
       setEditSaving(false);
     }
@@ -253,20 +259,36 @@ export default function KidsAnnouncementsPage() {
     try {
       const latest = await kidsDeleteAnnouncementAttachment(announcementId, attachmentId);
       setRows((prev) => prev.map((row) => (row.id === latest.id ? latest : row)));
-      toast.success('Ek silindi');
+      toast.success(t('announcements.attachmentDeleted'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Ek silinemedi');
+      toast.error(e instanceof Error ? e.message : t('announcements.attachmentDeleteFailed'));
     } finally {
       setDeletingAttachmentId(null);
     }
   }
 
+  async function onDeleteAnnouncement(announcementId: number) {
+    if (!confirm(t('announcements.deleteConfirm'))) return;
+    setDeletingAnnouncementId(announcementId);
+    try {
+      await kidsDeleteAnnouncement(announcementId);
+      setRows((prev) => prev.filter((row) => row.id !== announcementId));
+      if (openAnnouncementId === announcementId) setOpenAnnouncementId(null);
+      if (editingId === announcementId) cancelEdit();
+      toast.success(t('announcements.deleted'));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('announcements.deleteFailed'));
+    } finally {
+      setDeletingAnnouncementId(null);
+    }
+  }
+
   async function onCreate() {
-    const t = title.trim();
-    const b = body.trim();
-    if (!t || !b) return;
+    const titleText = title.trim();
+    const bodyText = body.trim();
+    if (!titleText || !bodyText) return;
     if (!selectedClassId) {
-      toast.error('Duyuru için sınıf seçmelisin.');
+      toast.error(t('announcements.classRequired'));
       return;
     }
     setSaving(true);
@@ -274,8 +296,8 @@ export default function KidsAnnouncementsPage() {
       const created = await kidsCreateAnnouncement({
         scope: 'class',
         kids_class: selectedClassId,
-        title: t,
-        body: b,
+        title: titleText,
+        body: bodyText,
         is_published: true,
         target_role: 'all',
       });
@@ -289,51 +311,52 @@ export default function KidsAnnouncementsPage() {
       setTitle('');
       setBody('');
       setFiles([]);
-      toast.success('Duyuru yayınlandı');
+      toast.success(t('announcements.published'));
       await load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Duyuru oluşturulamadı');
+      toast.error(e instanceof Error ? e.message : t('announcements.createFailed'));
     } finally {
       setSaving(false);
     }
   }
 
   if (authLoading || !user) {
-    return <p className="text-center text-sm text-violet-800 dark:text-violet-200">Yükleniyor…</p>;
+    return <p className="text-center text-sm text-violet-800 dark:text-violet-200">{t('common.loading')}</p>;
   }
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
-      <h1 className="font-logo text-2xl font-bold text-violet-950 dark:text-violet-50">Duyurular</h1>
+    <div className="mx-auto max-w-6xl space-y-4">
+      <h1 className="font-logo text-2xl font-bold text-violet-950 dark:text-violet-50">{t('announcements.title')}</h1>
+      <div className={`grid gap-4 ${canCreate ? 'lg:grid-cols-2' : 'grid-cols-1'}`}>
       {canCreate ? (
-        <div className="space-y-2 rounded-2xl border-2 border-violet-200 bg-white/90 p-4 dark:border-violet-800 dark:bg-gray-900/70">
-          <p className="text-sm font-semibold text-violet-900 dark:text-violet-100">Yeni duyuru</p>
+        <div className="space-y-2 rounded-2xl border-2 border-violet-200 bg-white/90 p-4 lg:sticky lg:top-24 lg:h-fit dark:border-violet-800 dark:bg-gray-900/70">
+          <p className="text-sm font-semibold text-violet-900 dark:text-violet-100">{t('announcements.new')}</p>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Başlık"
+            placeholder={t('announcements.titleField')}
             className={kidsInputClass}
           />
           <textarea
             rows={3}
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            placeholder="Duyuru metni"
+            placeholder={t('announcements.bodyField')}
             className={kidsTextareaClass}
           />
           <div className="space-y-1">
-            <label className="text-sm font-semibold text-violet-900 dark:text-violet-100">Sınıf</label>
+            <label className="text-sm font-semibold text-violet-900 dark:text-violet-100">{t('announcements.class')}</label>
             <KidsSelect
               value={classId}
               onChange={setClassId}
               options={classes.map((c) => ({ value: String(c.id), label: c.name }))}
             />
             {classes.length === 0 ? (
-              <p className="text-xs text-amber-700 dark:text-amber-300">Önce bir sınıfa atanmalısın.</p>
+              <p className="text-xs text-amber-700 dark:text-amber-300">{t('announcements.assignClassFirst')}</p>
             ) : null}
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-violet-900 dark:text-violet-100">Dosya ekleri</label>
+            <label className="text-sm font-semibold text-violet-900 dark:text-violet-100">{t('announcements.attachments')}</label>
             {files.length === 0 ? (
               <div className="rounded-xl border-2 border-dashed border-violet-300/80 bg-violet-50/30 p-5 text-center dark:border-violet-700 dark:bg-violet-950/20">
                 <input
@@ -344,17 +367,17 @@ export default function KidsAnnouncementsPage() {
                   className="hidden"
                 />
                 <label htmlFor="announcement-files" className="cursor-pointer text-sm font-medium text-violet-800 dark:text-violet-100">
-                  Görsel / dosya eklemek için tıklayın
+                  {t('announcements.clickToAdd')}
                 </label>
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  Birden fazla görsel veya döküman ekleyebilirsiniz. Görsel: en fazla 10 MB, döküman: en fazla 20 MB.
+                  {t('announcements.attachmentHint')}
                 </p>
               </div>
             ) : (
               <div className="space-y-2 rounded-xl border border-violet-200/80 bg-violet-50/30 p-3 dark:border-violet-800/60 dark:bg-violet-950/20">
                 {uploadPreviewItems.length > 0 ? (
                   <div className="space-y-2">
-                    <MediaSlider items={uploadPreviewItems} className="h-52" alt="Duyuru dosya önizleme" fit="contain" />
+                    <MediaSlider items={uploadPreviewItems} className="h-52" alt="Announcement file preview" fit="contain" />
                     <div className="flex justify-end">
                       <input
                         id="announcement-files-more"
@@ -364,14 +387,14 @@ export default function KidsAnnouncementsPage() {
                         className="hidden"
                       />
                       <label htmlFor="announcement-files-more" className="cursor-pointer text-xs font-semibold text-violet-700 hover:text-violet-500 dark:text-violet-200">
-                        + Dosya ekle
+                        {t('announcements.addFile')}
                       </label>
                     </div>
                   </div>
                 ) : (
                   <div className="space-y-2">
                     <div className="rounded-lg border border-violet-200/80 bg-white p-3 text-xs text-slate-500 dark:border-violet-800/60 dark:bg-slate-900 dark:text-slate-300">
-                      Görsel yok, sadece doküman eklenmiş.
+                      {t('announcements.noImageOnlyDocs')}
                     </div>
                     <div className="flex justify-end">
                       <input
@@ -382,7 +405,7 @@ export default function KidsAnnouncementsPage() {
                         className="hidden"
                       />
                       <label htmlFor="announcement-files-more" className="cursor-pointer text-xs font-semibold text-violet-700 hover:text-violet-500 dark:text-violet-200">
-                        + Dosya ekle
+                        {t('announcements.addFile')}
                       </label>
                     </div>
                   </div>
@@ -398,7 +421,7 @@ export default function KidsAnnouncementsPage() {
                         onClick={() => removeFile(f)}
                         className="rounded-full border border-rose-300 px-2 py-0.5 text-rose-700 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950/40"
                       >
-                        Kaldır
+                        {t('messageDetail.remove')}
                       </button>
                     </li>
                   ))}
@@ -412,64 +435,80 @@ export default function KidsAnnouncementsPage() {
               onClick={() => void onCreate()}
               disabled={saving || !title.trim() || !body.trim() || !selectedClassId}
             >
-              {saving ? 'Yayınlanıyor…' : 'Yayınla'}
+              {saving ? t('announcements.publishing') : t('announcements.publish')}
             </KidsPrimaryButton>
           </div>
         </div>
       ) : null}
-      {loading ? <p className="text-sm text-slate-500">Yükleniyor…</p> : null}
-      {!loading && sorted.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-violet-300 bg-violet-50/50 p-6 text-sm text-violet-900 dark:border-violet-800 dark:bg-violet-950/20 dark:text-violet-100">
-          Henüz duyuru yok.
-        </div>
-      ) : null}
+      <section className="space-y-3">
+        <h2 className="font-logo text-lg font-bold text-violet-950 dark:text-violet-50">{t('announcements.previousTitle')}</h2>
+        {loading ? <p className="text-sm text-slate-500">{t('common.loading')}</p> : null}
+        {!loading && sorted.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-violet-300 bg-violet-50/50 p-6 text-sm text-violet-900 dark:border-violet-800 dark:bg-violet-950/20 dark:text-violet-100">
+            {t('announcements.empty')}
+          </div>
+        ) : null}
       <ul className="space-y-2">
         {sorted.map((a) => (
           <li key={a.id} className="rounded-2xl border-2 border-violet-200 bg-white/90 px-4 py-3 dark:border-violet-800 dark:bg-gray-900/70">
-            <div className="flex items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => setOpenAnnouncementId((prev) => (prev === a.id ? null : a.id))}
+              className="flex w-full items-center justify-between gap-3 text-left"
+            >
               <p className="font-semibold text-violet-950 dark:text-violet-100">
-                {editingId === a.id ? 'Duyuru düzenleniyor' : a.title}
+                {editingId === a.id ? t('announcements.editing') : a.title}
               </p>
               <span className="text-xs text-slate-500 dark:text-slate-400">
                 {a.published_at
-                  ? new Date(a.published_at).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })
-                  : 'Taslak'}
+                  ? new Date(a.published_at).toLocaleString(language === 'tr' ? 'tr-TR' : language === 'ge' ? 'de-DE' : 'en-US', { dateStyle: 'short', timeStyle: 'short' })
+                  : t('announcements.draft')}
               </span>
-            </div>
-            {canCreate && editingId !== a.id ? (
-              <div className="mt-2">
+            </button>
+            {openAnnouncementId === a.id && canCreate && editingId !== a.id ? (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={() => startEdit(a)}
                   className="rounded-full border border-violet-300 px-2.5 py-0.5 text-xs font-semibold text-violet-700 hover:bg-violet-100 dark:border-violet-700 dark:text-violet-200 dark:hover:bg-violet-900/40"
                 >
-                  Düzenle
+                  {t('announcements.edit')}
                 </button>
+                {(user?.role === 'admin' || a.created_by === user?.id) ? (
+                  <button
+                    type="button"
+                    onClick={() => void onDeleteAnnouncement(a.id)}
+                    disabled={deletingAnnouncementId === a.id}
+                    className="rounded-full border border-rose-300 px-2.5 py-0.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 disabled:opacity-60 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950/40"
+                  >
+                    {deletingAnnouncementId === a.id ? t('announcements.deleting') : t('announcements.delete')}
+                  </button>
+                ) : null}
               </div>
             ) : null}
-            {editingId === a.id ? (
+            {openAnnouncementId === a.id && editingId === a.id ? (
               <div className="mt-3 space-y-2 rounded-xl border border-violet-200/80 bg-violet-50/40 p-3 dark:border-violet-800/60 dark:bg-violet-950/25">
                 <input
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
-                  placeholder="Başlık"
+                  placeholder={t('announcements.titleField')}
                   className={kidsInputClass}
                 />
                 <textarea
                   rows={3}
                   value={editBody}
                   onChange={(e) => setEditBody(e.target.value)}
-                  placeholder="Duyuru metni"
+                  placeholder={t('announcements.bodyField')}
                   className={kidsTextareaClass}
                 />
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold text-violet-900/90 dark:text-violet-100/90">Yeni dosya ekleri</p>
+                  <p className="text-xs font-semibold text-violet-900/90 dark:text-violet-100/90">{t('announcements.newAttachments')}</p>
                   {Array.isArray(a.attachments) && a.attachments.length > 0 ? (
                     <ul className="space-y-2 rounded-lg border border-violet-200/70 bg-white/70 p-2 dark:border-violet-800/50 dark:bg-slate-900/60">
                       {a.attachments.map((att) => (
                         <li key={`edit-att-${att.id}`} className="flex items-center justify-between gap-2 text-xs">
                           <span className="truncate text-slate-700 dark:text-slate-200">
-                            {att.original_name || 'Dosya'}
+                            {att.original_name || t('messageDetail.file')}
                             {att.size_bytes ? ` (${formatFileSize(att.size_bytes)})` : ''}
                           </span>
                           <button
@@ -478,16 +517,16 @@ export default function KidsAnnouncementsPage() {
                             disabled={deletingAttachmentId === att.id || editSaving}
                             className="rounded-full border border-rose-300 px-2 py-0.5 text-rose-700 hover:bg-rose-50 disabled:opacity-60 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950/40"
                           >
-                            {deletingAttachmentId === att.id ? 'Siliniyor…' : 'Mevcut eki sil'}
+                            {deletingAttachmentId === att.id ? t('announcements.deleting') : t('announcements.deleteCurrentAttachment')}
                           </button>
                         </li>
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Bu duyuruda mevcut ek yok.</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{t('announcements.noExistingAttachment')}</p>
                   )}
                   {editPreviewItems.length > 0 ? (
-                    <MediaSlider items={editPreviewItems} className="h-48" alt="Duyuru düzenleme önizleme" fit="contain" />
+                    <MediaSlider items={editPreviewItems} className="h-48" alt="Announcement edit preview" fit="contain" />
                   ) : null}
                   <div className="flex items-center justify-between">
                     <input
@@ -498,9 +537,9 @@ export default function KidsAnnouncementsPage() {
                       className="hidden"
                     />
                     <label htmlFor={`announcement-edit-files-${a.id}`} className="cursor-pointer text-xs font-semibold text-violet-700 hover:text-violet-500 dark:text-violet-200">
-                      + Dosya ekle
+                      {t('announcements.addFile')}
                     </label>
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400">Görsel 10 MB, döküman 20 MB</span>
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400">{t('announcements.attachmentHintShort')}</span>
                   </div>
                   {editFiles.length > 0 ? (
                     <ul className="space-y-1 text-xs text-slate-600 dark:text-slate-300">
@@ -514,7 +553,7 @@ export default function KidsAnnouncementsPage() {
                             onClick={() => removeEditFile(f)}
                             className="rounded-full border border-rose-300 px-2 py-0.5 text-rose-700 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950/40"
                           >
-                            Kaldır
+                            {t('messageDetail.remove')}
                           </button>
                         </li>
                       ))}
@@ -528,23 +567,23 @@ export default function KidsAnnouncementsPage() {
                     disabled={editSaving}
                     className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                   >
-                    Vazgeç
+                    {t('common.cancel')}
                   </button>
                   <KidsPrimaryButton
                     type="button"
                     onClick={() => void onSaveEdit()}
                     disabled={editSaving || !editTitle.trim() || !editBody.trim()}
                   >
-                    {editSaving ? 'Kaydediliyor…' : 'Kaydet'}
+                    {editSaving ? t('profile.saving') : t('profile.save')}
                   </KidsPrimaryButton>
                 </div>
               </div>
-            ) : (
+            ) : openAnnouncementId === a.id ? (
               <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-200">{a.body}</p>
-            )}
-            {Array.isArray(a.attachments) && a.attachments.length > 0 ? (
+            ) : null}
+            {openAnnouncementId === a.id && Array.isArray(a.attachments) && a.attachments.length > 0 ? (
               <div className="mt-3 space-y-2">
-                <p className="text-xs font-semibold text-violet-900/90 dark:text-violet-100/90">Ekler</p>
+                <p className="text-xs font-semibold text-violet-900/90 dark:text-violet-100/90">{t('announcements.attachments')}</p>
                 {(() => {
                   const sliderItems: MediaItem[] = (a.attachments || []).map((att) => ({
                     url: isImageAttachment(att.content_type, att.original_name)
@@ -558,14 +597,14 @@ export default function KidsAnnouncementsPage() {
                   return (
                     <>
                       {sliderItems.length > 0 ? (
-                        <MediaSlider items={sliderItems} className="h-64" alt={a.title || 'Duyuru eki'} fit="contain" />
+                        <MediaSlider items={sliderItems} className="h-64" alt={a.title || t('announcements.attachmentAlt')} fit="contain" />
                       ) : null}
                       {docItems.length > 0 ? (
                         <ul className="space-y-2">
                           {docItems.map((att) => (
                             <li key={att.id} className="rounded-xl border border-violet-200/80 bg-violet-50/50 p-2 dark:border-violet-800/60 dark:bg-violet-950/30">
                               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
-                                <span className="font-medium text-slate-700 dark:text-slate-200">{att.original_name || 'Dosya'}</span>
+                                <span className="font-medium text-slate-700 dark:text-slate-200">{att.original_name || t('messageDetail.file')}</span>
                                 {att.size_bytes ? (
                                   <span className="text-slate-500 dark:text-slate-400">{formatFileSize(att.size_bytes)}</span>
                                 ) : null}
@@ -576,7 +615,7 @@ export default function KidsAnnouncementsPage() {
                                   download={att.original_name || true}
                                   className="rounded-full border border-violet-300 px-2 py-0.5 font-semibold text-violet-700 hover:bg-violet-100 dark:border-violet-700 dark:text-violet-200 dark:hover:bg-violet-900/40"
                                 >
-                                  Gör / İndir
+                                  {t('announcements.viewDownload')}
                                 </a>
                               </div>
                             </li>
@@ -591,6 +630,8 @@ export default function KidsAnnouncementsPage() {
           </li>
         ))}
       </ul>
+      </section>
+      </div>
     </div>
   );
 }

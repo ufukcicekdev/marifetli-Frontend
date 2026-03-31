@@ -13,6 +13,7 @@ import {
 } from '@/src/lib/kids-api';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
+import { useKidsI18n } from '@/src/providers/kids-language-provider';
 import { KidsCard, KidsPanelMax, KidsPrimaryButton, KidsSecondaryButton } from '@/src/components/kids/kids-ui';
 
 const MEMORY_ICONS = ['🍎', '🚗', '⭐', '🐶', '🎈', '⚽', '🌈', '🦋'];
@@ -195,6 +196,7 @@ function MathLevel({
   operation,
   onCorrect,
   onWrong,
+  t,
 }: {
   level: number;
   onLevelDone: (scoreDelta: number) => void;
@@ -202,6 +204,7 @@ function MathLevel({
   operation: MathOperation;
   onCorrect: () => void;
   onWrong: () => void;
+  t: (key: string) => string;
 }) {
   const total = 4 + level;
   const [idx, setIdx] = useState(0);
@@ -264,7 +267,7 @@ function MathLevel({
     if (n === correctResult) {
       playGameSound('success', soundOn);
       onCorrect();
-      setFeedback({ ok: true, text: 'Harika! Dogru cevap ✅' });
+      setFeedback({ ok: true, text: t('gameCenter.feedback.correct') });
       setScore((s) => s + 1);
       if (idx + 1 >= total) {
         onLevelDone(score * 10 + 10 + level * 6);
@@ -276,7 +279,7 @@ function MathLevel({
     } else {
       playGameSound('error', soundOn);
       onWrong();
-      setFeedback({ ok: false, text: 'Olmadi, tekrar dene ❌' });
+      setFeedback({ ok: false, text: t('gameCenter.feedback.retry') });
       return;
     }
   }
@@ -284,8 +287,8 @@ function MathLevel({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-base font-semibold text-slate-800">Soru {idx + 1} / {total}</p>
-        <p className="rounded-full bg-violet-100 px-3 py-1 text-xs font-black text-violet-800">Hizli cevapla!</p>
+        <p className="text-base font-semibold text-slate-800">{t('gameCenter.question')}: {idx + 1} / {total}</p>
+        <p className="rounded-full bg-violet-100 px-3 py-1 text-xs font-black text-violet-800">{t('gameCenter.answerQuick')}</p>
       </div>
       <div className="rounded-2xl border-2 border-violet-200 bg-violet-50 px-4 py-4 text-center">
         <p className="text-4xl font-black text-violet-800 md:text-5xl">{a} {opSymbol} {b} = ?</p>
@@ -331,12 +334,14 @@ function WordLevel({
   soundOn,
   onCorrect,
   onWrong,
+  t,
 }: {
   level: number;
   onLevelDone: (scoreDelta: number) => void;
   soundOn: boolean;
   onCorrect: () => void;
   onWrong: () => void;
+  t: (key: string) => string;
 }) {
   const word = WORD_LEVELS[Math.min(level, WORD_LEVELS.length - 1)];
   const [picked, setPicked] = useState('');
@@ -355,7 +360,7 @@ function WordLevel({
     if (picked.length === word.length) {
       playGameSound('error', soundOn);
       onWrong();
-      setFeedbackWord('Sira karisti, tekrar dene ❌');
+      setFeedbackWord(t('gameCenter.feedback.orderRetry'));
       window.setTimeout(() => {
         setPicked('');
         setFeedbackWord(null);
@@ -366,7 +371,7 @@ function WordLevel({
 
   return (
     <div className="space-y-3">
-      <p className="text-base font-semibold text-slate-700">Harfleri dogru sirayla sec</p>
+      <p className="text-base font-semibold text-slate-700">{t('gameCenter.word.selectInOrder')}</p>
       <div className="rounded-xl bg-amber-100 px-3 py-2 text-2xl font-black text-amber-900 md:text-3xl">{picked || '____'}</div>
       <div className="flex flex-wrap gap-2">
         {letters.map((ch, i) => (
@@ -381,7 +386,7 @@ function WordLevel({
         ))}
       </div>
       <div className="flex gap-2">
-        <KidsSecondaryButton type="button" onClick={() => setPicked('')}>Temizle</KidsSecondaryButton>
+        <KidsSecondaryButton type="button" onClick={() => setPicked('')}>{t('gameCenter.clear')}</KidsSecondaryButton>
       </div>
       {feedbackWord ? <p className="text-sm font-semibold text-rose-700">{feedbackWord}</p> : null}
     </div>
@@ -394,12 +399,14 @@ function ShapeLevel({
   soundOn,
   onCorrect,
   onWrong,
+  t,
 }: {
   level: number;
   onLevelDone: (scoreDelta: number) => void;
   soundOn: boolean;
   onCorrect: () => void;
   onWrong: () => void;
+  t: (key: string) => string;
 }) {
   const rounds = 3 + level;
   const [idx, setIdx] = useState(0);
@@ -426,7 +433,7 @@ function ShapeLevel({
 
   return (
     <div className="space-y-3">
-      <p className="text-base font-semibold text-slate-700">Ayni sekli sec ({idx + 1}/{rounds})</p>
+      <p className="text-base font-semibold text-slate-700">{t('gameCenter.shape.pickSame')} ({idx + 1}/{rounds})</p>
       <div className="text-6xl">{target}</div>
       <div className="flex flex-wrap gap-2">
         {options.map((s) => (
@@ -456,6 +463,7 @@ function GameStage({
   fx,
   onCorrect,
   onWrong,
+  t,
 }: {
   activeType: MiniGameType | null;
   level: number;
@@ -468,13 +476,14 @@ function GameStage({
   fx: { type: 'correct' | 'wrong' | null; text: string; id: number };
   onCorrect: () => void;
   onWrong: () => void;
+  t: (key: string) => string;
 }) {
   return (
     <div className="rounded-3xl border-4 border-violet-300/80 bg-gradient-to-br from-violet-50 via-white to-fuchsia-50 p-4 shadow-2xl dark:border-violet-700 dark:from-violet-950/40 dark:via-gray-900 dark:to-fuchsia-950/30 md:p-6">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-black text-violet-900 dark:text-violet-100">Seviye {level}/{maxLevel}</p>
-        <p className="text-sm font-black text-fuchsia-700 dark:text-fuchsia-200">Skor: {sessionScore}</p>
-        <p className="rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-800">🔥 Combo: {combo}</p>
+        <p className="text-sm font-black text-violet-900 dark:text-violet-100">{t('gameCenter.level')}: {level}/{maxLevel}</p>
+        <p className="text-sm font-black text-fuchsia-700 dark:text-fuchsia-200">{t('gameCenter.score')}: {sessionScore}</p>
+        <p className="rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-800">🔥 {t('gameCenter.combo')}: {combo}</p>
       </div>
       {fx.type ? (
         <div
@@ -500,13 +509,14 @@ function GameStage({
             operation={mathOperationForGame(activeGame)}
             onCorrect={onCorrect}
             onWrong={onWrong}
+            t={t}
           />
         ) : null}
         {activeType === 'word' ? (
-          <WordLevel key={`word-${level}`} level={level} onLevelDone={onLevelDone} soundOn={soundOn} onCorrect={onCorrect} onWrong={onWrong} />
+          <WordLevel key={`word-${level}`} level={level} onLevelDone={onLevelDone} soundOn={soundOn} onCorrect={onCorrect} onWrong={onWrong} t={t} />
         ) : null}
         {activeType === 'shape' ? (
-          <ShapeLevel key={`shape-${level}`} level={level} onLevelDone={onLevelDone} soundOn={soundOn} onCorrect={onCorrect} onWrong={onWrong} />
+          <ShapeLevel key={`shape-${level}`} level={level} onLevelDone={onLevelDone} soundOn={soundOn} onCorrect={onCorrect} onWrong={onWrong} t={t} />
         ) : null}
       </div>
     </div>
@@ -516,6 +526,7 @@ function GameStage({
 export default function KidsGameHubPage() {
   const router = useRouter();
   const { user, loading: authLoading, pathPrefix } = useKidsAuth();
+  const { t } = useKidsI18n();
   const [loading, setLoading] = useState(true);
   const [games, setGames] = useState<KidsGame[]>([]);
   const [sessions, setSessions] = useState<KidsGameSession[]>([]);
@@ -581,11 +592,11 @@ export default function KidsGameHubPage() {
         setSessionScore(0);
       }
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Oyunlar yuklenemedi');
+      toast.error(e instanceof Error ? e.message : t('gameCenter.loadError'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -620,9 +631,9 @@ export default function KidsGameHubPage() {
       }
       setSessions((prev) => [s, ...prev.filter((x) => x.id !== s.id)]);
       playGameSound('tap', soundOn);
-      toast.success(`${game.title} basladi`);
+      toast.success(t('gameCenter.started').replace('{title}', game.title));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Baslatilamadi');
+      toast.error(e instanceof Error ? e.message : t('gameCenter.startFailed'));
     } finally {
       setSaving(false);
     }
@@ -634,13 +645,13 @@ export default function KidsGameHubPage() {
       comboRef.current = n;
       return n;
     });
-    setFx((p) => ({ type: 'correct', text: 'Dogru cevap!', id: p.id + 1 }));
+    setFx((p) => ({ type: 'correct', text: t('gameCenter.fx.correct'), id: p.id + 1 }));
   }
 
   function onWrong() {
     setCombo(0);
     comboRef.current = 0;
-    setFx((p) => ({ type: 'wrong', text: 'Yanlis, tekrar dene!', id: p.id + 1 }));
+    setFx((p) => ({ type: 'wrong', text: t('gameCenter.fx.wrong'), id: p.id + 1 }));
   }
 
   useEffect(() => {
@@ -664,12 +675,12 @@ export default function KidsGameHubPage() {
       setActiveGame(null);
       setActiveType(null);
       setSessions((prev) => [ended, ...prev.filter((x) => x.id !== ended.id)]);
-      if (status === 'completed') toast.success('Oyun tamamlandi, puan/rozet kontrol edildi');
-      else toast('Oyun oturumu kapatildi');
+      if (status === 'completed') toast.success(t('gameCenter.completed'));
+      else toast(t('gameCenter.closed'));
       playGameSound(status === 'completed' ? 'finish' : 'tap', soundOn);
       await load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Oturum kapatilamadi');
+      toast.error(e instanceof Error ? e.message : t('gameCenter.closeFailed'));
     } finally {
       setSaving(false);
     }
@@ -684,16 +695,16 @@ export default function KidsGameHubPage() {
       return;
     }
     const nextLevel = level + 1;
-    toast(`🚀 Seviye ${nextLevel} basliyor...`, { duration: 1400 });
+    toast(`🚀 ${t('gameCenter.levelStarting').replace('{level}', String(nextLevel))}`, { duration: 1400 });
     setLevel(nextLevel);
     setCombo(0);
     comboRef.current = 0;
     playGameSound('levelup', soundOn);
-    toast.success(`Seviye ${level} tamamlandi!`);
+    toast.success(t('gameCenter.levelCompleted').replace('{level}', String(level)));
   }
 
   if (authLoading || !user || user.role !== 'student') {
-    return <p className="text-center text-slate-600 dark:text-slate-400">Yukleniyor...</p>;
+    return <p className="text-center text-slate-600 dark:text-slate-400">{t('common.loading')}</p>;
   }
 
   return (
@@ -708,30 +719,30 @@ export default function KidsGameHubPage() {
         <div>
           <h1 className="font-logo flex items-center gap-2 text-2xl font-bold text-slate-900 dark:text-white">
             <span className="inline-block animate-bounce" aria-hidden>🎮</span>
-            Oyun merkezi
+            {t('gameCenter.title')}
             <span className="inline-block animate-pulse" aria-hidden>🪄</span>
           </h1>
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-            Sinif seviyene uygun egitici oyunlarla ilerle, puan ve rozet kazan. Bugun hangi oyunda parlayacaksin?
+            {t('gameCenter.subtitle')}
           </p>
         </div>
         <KidsSecondaryButton type="button" disabled={loading || saving} onClick={() => void load()}>
-          🔄 Yenile
+          🔄 {t('homework.refresh')}
         </KidsSecondaryButton>
         <KidsSecondaryButton type="button" onClick={() => setSoundOn((v) => !v)}>
-          {soundOn ? '🔊 Ses acik' : '🔇 Ses kapali'}
+          {soundOn ? `🔊 ${t('gameCenter.soundOn')}` : `🔇 ${t('gameCenter.soundOff')}`}
         </KidsSecondaryButton>
       </div>
 
       <KidsCard tone="sky" className="relative overflow-hidden">
         <p className="text-sm font-semibold text-sky-900 dark:text-sky-100">
           <span className="mr-2 inline-flex items-center rounded-full bg-sky-200 px-2 py-0.5 text-[11px] font-black text-sky-900 dark:bg-sky-800 dark:text-sky-100">
-            SURE
+            {t('gameCenter.time')}
           </span>
-          Bugun oyun suresi: {todayMinutes} dk / {dailyLimit} dk
+          {t('gameCenter.todayTime')}: {todayMinutes} {t('gameCenter.minute')} / {dailyLimit} {t('gameCenter.minute')}
         </p>
         <p className="mt-1 text-xs text-sky-800 dark:text-sky-200">
-          Kalan sure: {remaining} dk · Seviye: {gradeLevel}. sinif · Hedef: eglenerek ogrenmek!
+          {t('gameCenter.remainingTime')}: {remaining} {t('gameCenter.minute')} · {t('gameCenter.level')}: {gradeLevel}. {t('gameCenter.class')} · {t('gameCenter.goal')}
         </p>
       </KidsCard>
 
@@ -739,14 +750,14 @@ export default function KidsGameHubPage() {
         <section className="mt-5">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <h2 className="font-logo text-xl font-black text-slate-900 dark:text-white">
-              {activeSession.game.title} oynaniyor
+              {activeSession.game.title} {t('gameCenter.playing')}
             </h2>
             <div className="flex gap-2">
               <KidsPrimaryButton type="button" disabled={saving} onClick={() => void onFinish('completed')}>
-                ✅ Bitir
+                ✅ {t('gameCenter.finish')}
               </KidsPrimaryButton>
               <KidsSecondaryButton type="button" disabled={saving} onClick={() => void onFinish('aborted')}>
-                ❌ Cik
+                ❌ {t('gameCenter.exit')}
               </KidsSecondaryButton>
             </div>
           </div>
@@ -762,6 +773,7 @@ export default function KidsGameHubPage() {
             fx={fx}
             onCorrect={onCorrect}
             onWrong={onWrong}
+            t={t}
           />
         </section>
       ) : (
@@ -773,15 +785,15 @@ export default function KidsGameHubPage() {
           const quest = dailyQuests[g.id];
           const vis = gameVisual(gType);
           const typeLabel: Record<MiniGameType, string> = {
-            memory: 'Hafiza',
-            math: 'Matematik',
-            word: 'Kelime',
-            shape: 'Sekil',
+            memory: t('gameCenter.type.memory'),
+            math: t('gameCenter.type.math'),
+            word: t('gameCenter.type.word'),
+            shape: t('gameCenter.type.shape'),
           };
           const difficultyLabel: Record<'easy' | 'medium' | 'hard', string> = {
-            easy: 'Kolay',
-            medium: 'Orta',
-            hard: 'Zor',
+            easy: t('gameCenter.difficulty.easy'),
+            medium: t('gameCenter.difficulty.medium'),
+            hard: t('gameCenter.difficulty.hard'),
           };
           return (
             <KidsCard
@@ -804,18 +816,18 @@ export default function KidsGameHubPage() {
               </div>
               <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{g.description}</p>
               <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                Seviye: {g.min_grade}-{g.max_grade}. sinif · Zorluk: {g.difficulty}
+                {t('gameCenter.level')}: {g.min_grade}-{g.max_grade}. {t('gameCenter.class')} · {t('gameCenter.difficulty.title')}: {g.difficulty}
               </p>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-semibold text-violet-800 dark:bg-violet-900/50 dark:text-violet-100">
-                  Oyun tipi: {typeLabel[gType]}
+                  {t('gameCenter.gameType')}: {typeLabel[gType]}
                 </span>
                 <span className="rounded-full bg-pink-100 px-2 py-0.5 text-[11px] font-semibold text-pink-800 dark:bg-pink-900/40 dark:text-pink-100">
-                  Rozet kazanimi aktif
+                  {t('gameCenter.badgeGainActive')}
                 </span>
               </div>
               <div className="mt-2">
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Zorluk modu</label>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('gameCenter.difficultyMode')}</label>
                 <select
                   value={selectedDifficulty}
                   disabled={saving || Boolean(activeSession)}
@@ -827,19 +839,19 @@ export default function KidsGameHubPage() {
                   }
                   className="mt-1 h-9 rounded-lg border border-violet-300 px-2 text-sm"
                 >
-                  <option value="easy">Kolay</option>
-                  <option value="medium">Orta</option>
-                  <option value="hard">Zor</option>
+                  <option value="easy">{t('gameCenter.difficulty.easy')}</option>
+                  <option value="medium">{t('gameCenter.difficulty.medium')}</option>
+                  <option value="hard">{t('gameCenter.difficulty.hard')}</option>
                 </select>
                 <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-                  Aktif mod: {difficultyLabel[selectedDifficulty]}
+                  {t('gameCenter.activeMode')}: {difficultyLabel[selectedDifficulty]}
                 </p>
               </div>
               <div className="mt-2 rounded-xl border border-emerald-200 bg-emerald-50 px-2 py-1.5 text-xs text-emerald-900">
                 <div>
-                  Gunluk gorev: {quest?.completed_today ? 'Tamamlandi ✅' : 'Bekliyor ⏳'} · Hedef skor: {quest?.score_target ?? 50}
+                  {t('gameCenter.dailyQuest')}: {quest?.completed_today ? t('gameCenter.done') : t('gameCenter.pending')} · {t('gameCenter.targetScore')}: {quest?.score_target ?? 50}
                 </div>
-                <div>Haftalik seri: {quest?.streak_count ?? 0} gun · En iyi skor: {bestScoreByGame[g.id] ?? 0}</div>
+                <div>{t('gameCenter.weeklyStreak')}: {quest?.streak_count ?? 0} {t('gameCenter.day')} · {t('gameCenter.bestScore')}: {bestScoreByGame[g.id] ?? 0}</div>
                 <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-emerald-200/70">
                   <div
                     className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500"
@@ -859,7 +871,7 @@ export default function KidsGameHubPage() {
                   disabled={saving || blocked || Boolean(activeSession)}
                   onClick={() => void onStart(g)}
                 >
-                  {blocked ? '🔒 Veli tarafindan kapali' : '🚀 Oyuna basla'}
+                  {blocked ? `🔒 ${t('gameCenter.blockedByParent')}` : `🚀 ${t('gameCenter.startGame')}`}
                 </KidsPrimaryButton>
               </div>
             </KidsCard>
@@ -870,9 +882,9 @@ export default function KidsGameHubPage() {
 
       {!activeSession ? (
       <KidsCard className="mt-6">
-        <h3 className="font-logo text-base font-bold text-slate-900 dark:text-white">📜 Son oyun gecmisi</h3>
+        <h3 className="font-logo text-base font-bold text-slate-900 dark:text-white">📜 {t('gameCenter.historyTitle')}</h3>
         {sessions.length === 0 ? (
-          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Henuz oyun oturumu yok.</p>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{t('gameCenter.noSessions')}</p>
         ) : (
           <ul className="mt-3 space-y-2 text-sm">
             {sessions.slice(0, 8).map((s) => (
@@ -880,7 +892,7 @@ export default function KidsGameHubPage() {
                 <span className="font-medium text-slate-900 dark:text-white">{s.game.title}</span>
                 <span className="text-slate-600 dark:text-slate-300">
                   {' '}
-                  · {s.status} · skor {s.score} · {Math.round((s.duration_seconds || 0) / 60)} dk
+                  · {s.status} · {t('gameCenter.score').toLowerCase()} {s.score} · {Math.round((s.duration_seconds || 0) / 60)} {t('gameCenter.minute')}
                 </span>
               </li>
             ))}

@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import { kidsClassTestStudentReport, kidsGetTest } from '@/src/lib/kids-api';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
+import { useKidsI18n } from '@/src/providers/kids-language-provider';
 
 type StudentReportData = Awaited<ReturnType<typeof kidsClassTestStudentReport>>;
 
@@ -16,6 +17,7 @@ export default function KidsTeacherTestStudentDetailPage() {
   const studentId = Number(params.studentId);
   const router = useRouter();
   const { user, loading: authLoading, pathPrefix } = useKidsAuth();
+  const { t, language } = useKidsI18n();
   const [loading, setLoading] = useState(true);
   const [report, setReport] = useState<StudentReportData | null>(null);
 
@@ -36,7 +38,7 @@ export default function KidsTeacherTestStudentDetailPage() {
         const detail = await kidsClassTestStudentReport(test.kids_class, test.id, studentId);
         setReport(detail);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : 'Öğrenci detayı yüklenemedi');
+        toast.error(e instanceof Error ? e.message : t('tests.studentReport.loadError'));
       } finally {
         setLoading(false);
       }
@@ -49,14 +51,14 @@ export default function KidsTeacherTestStudentDetailPage() {
   }, [report]);
 
   function formatDateTime(value: string | null): string {
-    if (!value) return '—';
+    if (!value) return '-';
     const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return '—';
-    return d.toLocaleString('tr-TR');
+    if (Number.isNaN(d.getTime())) return '-';
+    return d.toLocaleString(language === 'tr' ? 'tr-TR' : language === 'ge' ? 'de-DE' : 'en-US');
   }
 
   function formatSolveDuration(seconds: number | null): string {
-    if (seconds == null) return '—';
+    if (seconds == null) return '-';
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     if (mins <= 0) return `${secs} sn`;
@@ -87,7 +89,7 @@ export default function KidsTeacherTestStudentDetailPage() {
     const doc = iframe.contentDocument || iframe.contentWindow?.document;
     if (!doc) {
       iframe.remove();
-      toast.error('Yazdırma başlatılamadı.');
+      toast.error(t('tests.report.printStartFailed'));
       return;
     }
     doc.open();
@@ -115,9 +117,9 @@ export default function KidsTeacherTestStudentDetailPage() {
         (q) =>
           `<tr>
             <td>${q.order}</td>
-            <td>${escapeHtml(q.selected_choice_key || 'Boş')}</td>
+            <td>${escapeHtml(q.selected_choice_key || '-')}</td>
             <td>${escapeHtml(q.correct_choice_key || '—')}</td>
-            <td>${q.selected_choice_key ? (q.is_correct ? 'Doğru' : 'Yanlış') : 'Cevap yok'}</td>
+            <td>${q.selected_choice_key ? (q.is_correct ? 'Correct' : 'Wrong') : 'No answer'}</td>
           </tr>`,
       )
       .join('');
@@ -131,9 +133,9 @@ body{font-family:Arial,sans-serif;padding:24px;color:#111} h1,h2{margin:0 0 10px
 table{width:100%;border-collapse:collapse;margin-top:8px} th,td{border:1px solid #ddd;padding:8px;font-size:12px;text-align:left}
 </style></head><body>
 <div class="top"><img src="${logoUrl}" alt="Logo"><div><h1>${escapeHtml(reportTitle)}</h1><div>Marifetli Kids</div></div></div>
-<p><b>Skor:</b> ${r.attempt ? `${r.attempt.score.toFixed(2)}/100` : '—'}</p>
-<p><b>Sure:</b> ${r.attempt ? escapeHtml(formatSolveDuration(r.attempt.duration_seconds)) : '—'}</p>
-<h2>Soru Bazli Detay</h2>
+<p><b>${escapeHtml(t('tests.studentReport.score'))}:</b> ${r.attempt ? `${r.attempt.score.toFixed(2)}/100` : '—'}</p>
+<p><b>${escapeHtml(t('tests.studentReport.duration'))}:</b> ${r.attempt ? escapeHtml(formatSolveDuration(r.attempt.duration_seconds)) : '—'}</p>
+<h2>${escapeHtml(t('tests.studentReport.questionDetails'))}</h2>
 <table><thead><tr><th>Soru</th><th>Isaretlenen</th><th>Dogru</th><th>Durum</th></tr></thead><tbody>${questionRows}</tbody></table>
 </body></html>`;
     const fileName = `ogrenci-raporu-${fileSafe(r.class_name)}-${fileSafe(r.test_title)}-${r.student.id}.html`;
@@ -152,8 +154,8 @@ table{width:100%;border-collapse:collapse;margin-top:8px} th,td{border:1px solid
     URL.revokeObjectURL(url);
   }
 
-  if (authLoading || loading) return <p className="text-center text-sm">Yükleniyor…</p>;
-  if (!report) return <p className="text-center text-sm">Öğrenci detayı bulunamadı.</p>;
+  if (authLoading || loading) return <p className="text-center text-sm">{t('common.loading')}</p>;
+  if (!report) return <p className="text-center text-sm">{t('tests.studentReport.notFound')}</p>;
   const actionBtnClass =
     'inline-flex items-center rounded-lg border border-violet-300 bg-white px-3 py-1.5 text-xs font-semibold text-violet-700 shadow-sm transition hover:bg-violet-50 dark:border-violet-700 dark:bg-gray-900 dark:text-violet-200 dark:hover:bg-violet-950/40';
   const primaryBtnClass =
@@ -163,7 +165,7 @@ table{width:100%;border-collapse:collapse;margin-top:8px} th,td{border:1px solid
     <div className="mx-auto max-w-5xl space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="font-logo text-2xl font-bold text-violet-950 dark:text-violet-50">
-          {report.student.name} · Öğrenci Detayı
+          {report.student.name} · {t('tests.studentReport.titleSuffix')}
         </h1>
         <div className="flex flex-wrap items-center gap-2 print:hidden">
           <button
@@ -171,58 +173,58 @@ table{width:100%;border-collapse:collapse;margin-top:8px} th,td{border:1px solid
             onClick={onPrint}
             className={actionBtnClass}
           >
-            Yazdır
+            {t('tests.report.print')}
           </button>
           <button
             type="button"
             onClick={onDownloadHtml}
             className={primaryBtnClass}
           >
-            İndir (HTML)
+            {t('tests.report.downloadHtml')}
           </button>
           <Link
             href={`${pathPrefix}/ogretmen/testler/${testId}`}
             className={actionBtnClass}
           >
-            ← Rapor
+            {t('tests.studentReport.backReport')}
           </Link>
         </div>
       </div>
       <div className="hidden items-center gap-2 rounded-lg border border-violet-200 bg-white p-2 print:flex dark:border-violet-800 dark:bg-gray-900/70">
         <img src="/favicon.svg" alt="Marifetli logo" className="h-8 w-8" />
-        <p className="text-sm font-bold">Marifetli Kids - Ogrenci Raporu</p>
+        <p className="text-sm font-bold">{t('tests.studentReport.printHeader')}</p>
       </div>
       <p className="text-sm text-slate-600 dark:text-slate-300">{report.test_title}</p>
 
       {report.attempt ? (
         <div className="grid gap-3 sm:grid-cols-4">
           <div className="rounded-xl border border-violet-200 bg-white p-3 dark:border-violet-800 dark:bg-gray-900/70">
-            <p className="text-xs text-slate-500">Skor</p>
+            <p className="text-xs text-slate-500">{t('tests.studentReport.score')}</p>
             <p className="text-xl font-black">{report.attempt.score.toFixed(2)}/100</p>
           </div>
           <div className="rounded-xl border border-violet-200 bg-white p-3 dark:border-violet-800 dark:bg-gray-900/70">
-            <p className="text-xs text-slate-500">Doğru / Yanlış</p>
+            <p className="text-xs text-slate-500">{t('tests.studentReport.correctWrong')}</p>
             <p className="text-xl font-black">
               {report.attempt.total_correct} / {wrongCount}
             </p>
           </div>
           <div className="rounded-xl border border-violet-200 bg-white p-3 dark:border-violet-800 dark:bg-gray-900/70">
-            <p className="text-xs text-slate-500">Süre</p>
+            <p className="text-xs text-slate-500">{t('tests.studentReport.duration')}</p>
             <p className="text-xl font-black">{formatSolveDuration(report.attempt.duration_seconds)}</p>
           </div>
           <div className="rounded-xl border border-violet-200 bg-white p-3 dark:border-violet-800 dark:bg-gray-900/70">
-            <p className="text-xs text-slate-500">Teslim</p>
+            <p className="text-xs text-slate-500">{t('tests.studentReport.submittedAt')}</p>
             <p className="text-sm font-semibold">{formatDateTime(report.attempt.submitted_at)}</p>
           </div>
         </div>
       ) : (
         <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
-          Bu öğrenci testi henüz göndermemiş.
+          {t('tests.studentReport.notSubmittedYet')}
         </div>
       )}
 
       <section className="rounded-xl border border-violet-200 bg-white p-3 dark:border-violet-800 dark:bg-gray-900/70">
-        <h2 className="mb-2 text-sm font-bold">Soru Bazlı Detay</h2>
+        <h2 className="mb-2 text-sm font-bold">{t('tests.studentReport.questionDetails')}</h2>
         <ul className="space-y-2">
           {report.questions.map((q) => (
             <li key={q.question_id} className="rounded-lg border border-violet-100 p-3 dark:border-violet-800">
@@ -230,9 +232,9 @@ table{width:100%;border-collapse:collapse;margin-top:8px} th,td{border:1px solid
                 {q.order}. {q.stem}
               </p>
               <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-                İşaretlenen: {q.selected_choice_key || 'Boş'} · Doğru: {q.correct_choice_key || '—'} ·{' '}
+                {t('tests.studentReport.selected')}: {q.selected_choice_key || '-'} · {t('tests.studentReport.correct')}: {q.correct_choice_key || '-'} ·{' '}
                 <span className={q.selected_choice_key ? (q.is_correct ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300') : ''}>
-                  {q.selected_choice_key ? (q.is_correct ? 'Doğru' : 'Yanlış') : 'Cevap yok'}
+                  {q.selected_choice_key ? (q.is_correct ? t('tests.studentReport.correct') : t('tests.studentReport.wrong')) : t('tests.studentReport.noAnswer')}
                 </span>
               </p>
             </li>

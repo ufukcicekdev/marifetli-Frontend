@@ -4,7 +4,7 @@ import type { NavIconName } from '@/src/components/nav-icon';
 
 export { kidsHomeHref } from '@/src/lib/kids-config';
 
-export type KidsNavItem = { href: string; label: string; icon: NavIconName };
+export type KidsNavItem = { href: string; labelKey: string; icon: NavIconName };
 
 export const KIDS_SITE_MANAGEMENT_HREF = '/admin';
 
@@ -19,48 +19,48 @@ export function kidsNavLinks(
   /* Kids yöneticisi: çocuk dünyası menüsü + Yönetim (yalnızca Yönetim değil). */
   if (role === 'admin') {
     return [
-      { href: kidsHomeHref(p), label: 'Anasayfa', icon: 'home' },
-      { href: KIDS_SITE_MANAGEMENT_HREF, label: 'Yönetim', icon: 'admin' },
-      { href: `${p}/ogretmen/panel`, label: 'Öğretmen paneli', icon: 'teacher' },
-      { href: `${p}/bildirimler`, label: 'Bildirimler', icon: 'bell' },
-      { href: `${p}/profil`, label: 'Profilim', icon: 'profile' },
+      { href: kidsHomeHref(p), labelKey: 'nav.home', icon: 'home' },
+      { href: KIDS_SITE_MANAGEMENT_HREF, labelKey: 'nav.admin', icon: 'admin' },
+      { href: `${p}/ogretmen/panel`, labelKey: 'nav.teacherPanel', icon: 'teacher' },
+      { href: `${p}/bildirimler`, labelKey: 'nav.notifications', icon: 'bell' },
+      { href: `${p}/profil`, labelKey: 'nav.profile', icon: 'profile' },
     ];
   }
 
-  const items: KidsNavItem[] = [{ href: kidsHomeHref(p), label: 'Anasayfa', icon: 'home' }];
+  const items: KidsNavItem[] = [{ href: kidsHomeHref(p), labelKey: 'nav.home', icon: 'home' }];
 
   if (siteMainAdmin) {
-    items.splice(1, 0, { href: KIDS_SITE_MANAGEMENT_HREF, label: 'Yönetim', icon: 'admin' });
+    items.splice(1, 0, { href: KIDS_SITE_MANAGEMENT_HREF, labelKey: 'nav.admin', icon: 'admin' });
   }
 
   if (role === 'teacher') {
-    items.push({ href: `${p}/ogretmen/panel`, label: 'Öğretmen paneli', icon: 'teacher' });
-    items.push({ href: `${p}/ogretmen/odevler`, label: 'Ödevler', icon: 'challenge' });
-    items.push({ href: `${p}/ogretmen/testler`, label: 'Testler', icon: 'challenge' });
+    items.push({ href: `${p}/ogretmen/panel`, labelKey: 'nav.teacherPanel', icon: 'teacher' });
+    items.push({ href: `${p}/ogretmen/odevler`, labelKey: 'nav.homeworks', icon: 'challenge' });
+    items.push({ href: `${p}/ogretmen/testler`, labelKey: 'nav.tests', icon: 'challenge' });
   }
   if (role === 'student') {
-    items.push({ href: `${p}/ogrenci/panel`, label: 'Öğrenci paneli', icon: 'student' });
-    items.push({ href: `${p}/ogrenci/odevler`, label: 'Ödevler', icon: 'challenge' });
-    items.push({ href: `${p}/ogrenci/testler`, label: 'Testler', icon: 'challenge' });
-    items.push({ href: `${p}/ogrenci/projeler`, label: 'Challenges', icon: 'challenge' });
-    items.push({ href: `${p}/ogrenci/yarismalar`, label: 'Yarışmalar', icon: 'trophy' });
-    items.push({ href: `${p}/ogrenci/oyun-merkezi`, label: 'Oyun merkezi', icon: 'gamepad' });
+    items.push({ href: `${p}/ogrenci/panel`, labelKey: 'nav.studentPanel', icon: 'student' });
+    items.push({ href: `${p}/ogrenci/odevler`, labelKey: 'nav.homeworks', icon: 'challenge' });
+    items.push({ href: `${p}/ogrenci/testler`, labelKey: 'nav.tests', icon: 'challenge' });
+    items.push({ href: `${p}/ogrenci/projeler`, labelKey: 'nav.challenges', icon: 'challenge' });
+    items.push({ href: `${p}/ogrenci/yarismalar`, labelKey: 'nav.competitions', icon: 'trophy' });
+    items.push({ href: `${p}/ogrenci/oyun-merkezi`, labelKey: 'nav.gameCenter', icon: 'gamepad' });
   }
   if (role === 'parent') {
-    items.push({ href: `${p}/veli/panel`, label: 'Veli paneli', icon: 'parent' });
-    items.push({ href: `${p}/veli/cocuklarin-durumu`, label: 'Çocukların durumu', icon: 'student' });
-    items.push({ href: `${p}/veli/ebeveyn-kontrolleri`, label: 'Ebeveyn kontrolleri', icon: 'timer' });
+    items.push({ href: `${p}/veli/panel`, labelKey: 'nav.parentPanel', icon: 'parent' });
+    items.push({ href: `${p}/veli/cocuklarin-durumu`, labelKey: 'nav.childrenStatus', icon: 'student' });
+    items.push({ href: `${p}/veli/ebeveyn-kontrolleri`, labelKey: 'nav.parentControls', icon: 'timer' });
   }
   if (role && role !== 'student') {
-    items.push({ href: `${p}/mesajlar`, label: 'Mesajlar', icon: 'chat' });
+    items.push({ href: `${p}/mesajlar`, labelKey: 'nav.messages', icon: 'chat' });
   }
   if (role) {
-    items.push({ href: `${p}/duyurular`, label: 'Duyurular', icon: 'announce' });
-    items.push({ href: `${p}/bildirimler`, label: 'Bildirimler', icon: 'bell' });
-    items.push({ href: `${p}/profil`, label: 'Profilim', icon: 'profile' });
+    items.push({ href: `${p}/duyurular`, labelKey: 'nav.announcements', icon: 'announce' });
+    items.push({ href: `${p}/bildirimler`, labelKey: 'nav.notifications', icon: 'bell' });
+    items.push({ href: `${p}/profil`, labelKey: 'nav.profile', icon: 'profile' });
   }
   if (!role) {
-    items.push({ href: kidsLoginPortalHref(p), label: 'Giriş', icon: 'login' });
+    items.push({ href: kidsLoginPortalHref(p), labelKey: 'nav.login', icon: 'login' });
   }
   return items;
 }

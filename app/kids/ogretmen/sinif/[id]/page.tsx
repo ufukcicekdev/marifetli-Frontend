@@ -43,6 +43,7 @@ import {
   type KidsUser,
 } from '@/src/lib/kids-api';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
+import { useKidsI18n } from '@/src/providers/kids-language-provider';
 import {
   KidsCard,
   KidsCenteredModal,
@@ -60,26 +61,9 @@ import {
 } from '@/src/components/kids/kids-ui';
 import { KidsDateTimeField } from '@/src/components/kids/kids-datetime-field';
 
-const VIDEO_DURATION_OPTIONS: KidsSelectOption[] = [
-  { value: '60', label: '1 dakika' },
-  { value: '120', label: '2 dakika' },
-  { value: '180', label: '3 dakika' },
-];
-
-const SUBMISSION_ROUNDS_OPTIONS: KidsSelectOption[] = [
-  { value: '1', label: '1 challenge' },
-  { value: '2', label: '2 challenge' },
-  { value: '3', label: '3 challenge' },
-  { value: '4', label: '4 challenge' },
-  { value: '5', label: '5 challenge' },
-];
-
-const INVITE_DAYS_OPTIONS: KidsSelectOption[] = [
-  { value: '3', label: '3 gün' },
-  { value: '7', label: '7 gün' },
-  { value: '14', label: '14 gün' },
-  { value: '30', label: '30 gün' },
-];
+const VIDEO_DURATION_VALUES = [60, 120, 180] as const;
+const SUBMISSION_ROUNDS_VALUES = [1, 2, 3, 4, 5] as const;
+const INVITE_DAYS_VALUES = [3, 7, 14, 30] as const;
 
 type TabId = 'general' | 'invite' | 'students' | 'assignments' | 'peer' | 'stars';
 
@@ -90,25 +74,25 @@ function tabFromSearchParam(raw: string | null): TabId | null {
   return TAB_IDS.includes(raw as TabId) ? (raw as TabId) : null;
 }
 
-const TABS: { id: TabId; label: string; icon: string }[] = [
-  { id: 'general', label: 'Sınıf', icon: '⚙️' },
-  { id: 'invite', label: 'Davet', icon: '✉️' },
-  { id: 'students', label: 'Öğrenciler', icon: '🧒' },
-  { id: 'assignments', label: 'Challenges', icon: '📝' },
-  { id: 'peer', label: 'Yarışmalar', icon: '🏆' },
-  { id: 'stars', label: 'Haftanın yıldızı', icon: '⭐' },
+const TABS: { id: TabId; labelKey: string; icon: string }[] = [
+  { id: 'general', labelKey: 'teacherClass.tabs.class', icon: '⚙️' },
+  { id: 'invite', labelKey: 'teacherClass.tabs.invite', icon: '✉️' },
+  { id: 'students', labelKey: 'teacherClass.tabs.students', icon: '🧒' },
+  { id: 'assignments', labelKey: 'teacherClass.tabs.challenges', icon: '📝' },
+  { id: 'peer', labelKey: 'teacherClass.tabs.competitions', icon: '🏆' },
+  { id: 'stars', labelKey: 'teacherClass.tabs.star', icon: '⭐' },
 ];
 
-function peerRowStatusTr(s: KidsPeerChallengeStatus): string {
+function peerRowStatusTr(s: KidsPeerChallengeStatus, t: (key: string) => string): string {
   switch (s) {
     case 'pending_teacher':
-      return 'Onay bekliyor';
+      return t('teacherClass.peer.status.pending');
     case 'rejected':
-      return 'Reddedildi';
+      return t('teacherClass.peer.status.rejected');
     case 'active':
-      return 'Devam ediyor';
+      return t('teacherClass.peer.status.active');
     case 'ended':
-      return 'Sona erdi';
+      return t('teacherClass.peer.status.ended');
     default:
       return s;
   }
@@ -120,6 +104,7 @@ function KidsTeacherClassPageContent() {
   const searchParams = useSearchParams();
   const classId = Number(params.id);
   const { user, loading: authLoading, pathPrefix } = useKidsAuth();
+  const { t, language } = useKidsI18n();
   const [tab, setTab] = useState<TabId>(() => tabFromSearchParam(searchParams.get('tab')) ?? 'general');
 
   const [cls, setCls] = useState<KidsClass | null>(null);
@@ -139,6 +124,7 @@ function KidsTeacherClassPageContent() {
   const [editClassGrade, setEditClassGrade] = useState('4');
   const [editClassSection, setEditClassSection] = useState('A');
   const [editAcademicYear, setEditAcademicYear] = useState('');
+  const [editLanguage, setEditLanguage] = useState<'tr' | 'en' | 'ge'>('tr');
   const [editDesc, setEditDesc] = useState('');
   const [editSchoolId, setEditSchoolId] = useState<string>('');
   const [savingClass, setSavingClass] = useState(false);
@@ -148,20 +134,20 @@ function KidsTeacherClassPageContent() {
   const [inviting, setInviting] = useState(false);
   const [classInviteUrl, setClassInviteUrl] = useState('');
   const [creatingClassLink, setCreatingClassLink] = useState(false);
-  /** Sunucu `KIDS_INVITE_EMAIL_ENABLED` — kapalıyken e-posta davet formu gösterilmez. */
+  /** Sunucu `KIDS_INVITE_EMAIL_ENABLED` — kapaliyken e-posta davet formu gosterilmez. */
   const [inviteEmailEnabled, setInviteEmailEnabled] = useState(true);
-  /** Sunucu `KIDS_ASSIGNMENT_VIDEO_ENABLED` — kapalıyken challenge’da video teslim seçeneği yok. */
+  /** Sunucu `KIDS_ASSIGNMENT_VIDEO_ENABLED` — kapaliyken challenge’da video teslim secenegi yok. */
   const [assignmentVideoEnabled, setAssignmentVideoEnabled] = useState(true);
 
   const [asgTitle, setAsgTitle] = useState('');
   const [asgPurpose, setAsgPurpose] = useState('');
   const [asgMaterials, setAsgMaterials] = useState('');
   const [asgVideoSec, setAsgVideoSec] = useState<60 | 120 | 180>(120);
-  /** Aynı konu altında öğrencinin teslim edeceği ayrı challenge sayısı (1–5). */
+  /** Ayni konu altinda ogrencinin teslim edecegi ayri challenge sayisi (1–5). */
   const [asgSubmissionRounds, setAsgSubmissionRounds] = useState<1 | 2 | 3 | 4 | 5>(1);
-  /** Öğrenci teslim türü: görsel/adım adım veya video (ikisi birden değil). */
+  /** Ogrenci teslim turu: gorsel/adim adim veya video (ikisi birden degil). */
   const [asgMediaType, setAsgMediaType] = useState<'image' | 'video'>('image');
-  /** Teslime başlangıç (zorunlu), `YYYY-MM-DDTHH:mm` */
+  /** Teslime baslangic (zorunlu), `YYYY-MM-DDTHH:mm` */
   const [asgOpenAt, setAsgOpenAt] = useState('');
   /** Son teslim (zorunlu), `YYYY-MM-DDTHH:mm` */
   const [asgCloseAt, setAsgCloseAt] = useState('');
@@ -176,7 +162,7 @@ function KidsTeacherClassPageContent() {
   const [editOpenAt, setEditOpenAt] = useState('');
   const [editCloseAt, setEditCloseAt] = useState('');
   const [editSaving, setEditSaving] = useState(false);
-  /** Modal `<dialog>` üst katmanda olduğu için toast görünmez; hata bu metinle gösterilir. */
+  /** Modal `<dialog>` ust katmanda oldugu icin toast gorunmez; hata bu metinle gosterilir. */
   const [editAssignmentError, setEditAssignmentError] = useState<string | null>(null);
   const [deletingClass, setDeletingClass] = useState(false);
   const [removingEnrollmentId, setRemovingEnrollmentId] = useState<number | null>(null);
@@ -185,6 +171,7 @@ function KidsTeacherClassPageContent() {
   const editClassGradeId = useId();
   const editClassSectionId = useId();
   const editAcademicYearId = useId();
+  const editLanguageId = useId();
   const editDescId = useId();
   const editSchoolSelectId = useId();
   const inviteEmailsId = useId();
@@ -195,6 +182,38 @@ function KidsTeacherClassPageContent() {
   const editAsgTitleId = useId();
   const editAsgOpenAtId = useId();
   const editAsgCloseAtId = useId();
+  const videoDurationOptions = useMemo<KidsSelectOption[]>(
+    () =>
+      VIDEO_DURATION_VALUES.map((v) => ({
+        value: String(v),
+        label: `${Math.max(1, Math.floor(v / 60))} ${t('teacherClass.assignments.minuteUnit')}`,
+      })),
+    [t],
+  );
+  const submissionRoundsOptions = useMemo<KidsSelectOption[]>(
+    () =>
+      SUBMISSION_ROUNDS_VALUES.map((v) => ({
+        value: String(v),
+        label: `${v} ${t('teacherClass.assignments.challengeUnit')}`,
+      })),
+    [t],
+  );
+  const inviteDaysOptions = useMemo<KidsSelectOption[]>(
+    () =>
+      INVITE_DAYS_VALUES.map((v) => ({
+        value: String(v),
+        label: `${v} ${t('teacherClass.invite.dayUnit')}`,
+      })),
+    [t],
+  );
+  const classLanguageOptions = useMemo<KidsSelectOption[]>(
+    () => [
+      { value: 'tr', label: t('profile.language.tr') },
+      { value: 'en', label: t('profile.language.en') },
+      { value: 'ge', label: t('profile.language.ge') },
+    ],
+    [t],
+  );
 
   useEffect(() => {
     setAsgCloseAt((v) => v || kidsDatetimeLocalDefaultClose(7));
@@ -210,7 +229,7 @@ function KidsTeacherClassPageContent() {
     try {
       const res = await kidsAuthorizedFetch(`/classes/${classId}/`, { method: 'GET' });
       if (!res.ok) {
-        toast.error('Sınıf bulunamadı');
+        toast.error(t('teacherClass.classNotFound'));
         router.replace(`${pathPrefix}/ogretmen/panel`);
         return;
       }
@@ -235,14 +254,15 @@ function KidsTeacherClassPageContent() {
         setEditName(c.name);
       }
       setEditAcademicYear((c.academic_year_label || '').trim());
+      setEditLanguage(c.language === 'en' || c.language === 'ge' ? c.language : 'tr');
       setEditDesc(c.description || '');
       setEditSchoolId(String(c.school.id));
       setStudents(st);
       setAssignments(as);
     } catch {
-      toast.error('Veri yüklenemedi');
+      toast.error(t('teacherClass.dataLoadError'));
     }
-  }, [classId, pathPrefix, router]);
+  }, [classId, pathPrefix, router, t]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -294,18 +314,18 @@ function KidsTeacherClassPageContent() {
       const list = await kidsTeacherClassPeerChallenges(classId);
       setPeerChallenges(list);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Yarışmalar yüklenemedi');
+      toast.error(e instanceof Error ? e.message : t('teacherClass.competitionsLoadError'));
     } finally {
       setPeerLoading(false);
     }
-  }, [classId]);
+  }, [classId, t]);
 
   useEffect(() => {
     if (tab !== 'peer' || !cls) return;
     void loadPeerChallenges();
   }, [tab, cls, loadPeerChallenges]);
 
-  /** Planlanmış / yayından kalkmış: tüm alanlar. Yayındaki: başlangıç + challenge tur sayısı kilitli (backend ile aynı mantık). */
+  /** Planlanmis / yayindan kalkmis: tum alanlar. Yayindaki: baslangic + challenge tur sayisi kilitli (backend ile ayni mantik). */
   function isAssignmentEditFullyFree(a: KidsAssignment): boolean {
     if (!a.is_published) return true;
     const raw = a.submission_opens_at;
@@ -366,17 +386,17 @@ function KidsTeacherClassPageContent() {
           <p className="font-bold text-slate-900 dark:text-white">{a.title}</p>
           {opensSoon ? (
             <p className="mt-1 text-[11px] font-bold uppercase tracking-wide text-amber-800 dark:text-amber-200">
-              Planlanmış — öğrenciler henüz görmüyor
+              {t('teacherClass.assignments.card.plannedHidden')}
             </p>
           ) : null}
           <p className="mt-1 text-xs text-slate-500 dark:text-gray-400">
             {a.require_video && a.require_image
-              ? `Görsel veya video · video en fazla ${a.video_max_seconds} sn · ${a.submission_rounds ?? 1} ayrı challenge`
+              ? t('teacherClass.assignments.card.imageOrVideo').replace('{sec}', String(a.video_max_seconds)).replace('{rounds}', String(a.submission_rounds ?? 1))
               : a.require_video
-                ? `Video teslimi · en fazla ${a.video_max_seconds} sn · ${a.submission_rounds ?? 1} ayrı challenge`
+                ? t('teacherClass.assignments.card.videoOnly').replace('{sec}', String(a.video_max_seconds)).replace('{rounds}', String(a.submission_rounds ?? 1))
                 : a.require_image
-                  ? `Görsel teslim · ${a.submission_rounds ?? 1} ayrı challenge`
-                  : 'Teslim türü serbest'}
+                  ? t('teacherClass.assignments.card.imageOnly').replace('{rounds}', String(a.submission_rounds ?? 1))
+                  : t('teacherClass.assignments.card.flexible')}
           </p>
           {winLabel ? (
             <p className="mt-1 text-xs font-semibold text-violet-800 dark:text-violet-200">{winLabel}</p>
@@ -384,8 +404,8 @@ function KidsTeacherClassPageContent() {
           {opensSoon ? (
             <p className="mt-1 text-[11px] text-slate-600 dark:text-gray-400">
               {a.students_notified_at
-                ? 'Öğrenciler bilgilendirildi.'
-                : 'Başlangıç saatinde öğrencilere haber verilecek.'}
+                ? t('teacherClass.assignments.card.studentsNotified')
+                : t('teacherClass.assignments.card.studentsWillBeNotified')}
             </p>
           ) : null}
         </div>
@@ -394,20 +414,20 @@ function KidsTeacherClassPageContent() {
             {subN}/{enr}
           </span>
           <span className="max-w-[4.5rem] text-center text-[10px] font-medium leading-tight text-slate-400 dark:text-gray-500">
-            teslim / öğrenci
+            {t('teacherClass.assignments.card.submissionRatio')}
           </span>
           <KidsSecondaryButton
             type="button"
             className="min-h-9 w-full px-3 py-1.5 text-xs sm:w-auto"
             onClick={() => openAssignmentEdit(a)}
           >
-            Düzenle
+            {t('teacherClass.assignments.card.edit')}
           </KidsSecondaryButton>
           <Link
             href={`${pathPrefix}/ogretmen/sinif/${classId}/proje/${a.id}`}
             className="text-xs font-bold text-violet-700 underline underline-offset-2 hover:text-fuchsia-600 dark:text-violet-300 dark:hover:text-fuchsia-400"
           >
-            Teslimler →
+            {t('teacherClass.assignments.card.submissions')}
           </Link>
         </div>
       </div>
@@ -418,7 +438,7 @@ function KidsTeacherClassPageContent() {
     const base = kidsAcademicYearSelectOptions();
     const v = (editAcademicYear || '').trim();
     if (v && !base.some((o) => o.value === v)) {
-      return [{ value: v, label: `${v} (kayıtlı)` }, ...base.filter((o) => o.value !== '')];
+      return [{ value: v, label: `${v} (kayitli)` }, ...base.filter((o) => o.value !== '')];
     }
     return base;
   }, [editAcademicYear]);
@@ -429,7 +449,7 @@ function KidsTeacherClassPageContent() {
     const sidRaw = editSchoolId.trim();
     const sid = Number(sidRaw);
     if (!sidRaw || !Number.isFinite(sid) || sid <= 0) {
-      toast.error('Bu sınıfın bağlı olduğu okulu seçmelisin.');
+      toast.error(t('teacherClass.general.selectSchoolError'));
       return;
     }
     let nameToSave: string;
@@ -438,12 +458,12 @@ function KidsTeacherClassPageContent() {
     } else if (editClassNonStandard) {
       nameToSave = editName.trim();
       if (!nameToSave) {
-        toast.error('Sınıf adı zorunludur.');
+        toast.error(t('teacherClass.general.classNameRequired'));
         return;
       }
     } else {
       if (!editClassGrade || !editClassSection) {
-        toast.error('Sınıf düzeyi ve şube harfini seçmelisin.');
+        toast.error(t('teacherClass.general.gradeSectionRequired'));
         return;
       }
       nameToSave = kidsBuildStandardClassName(editClassGrade, editClassSection);
@@ -453,13 +473,14 @@ function KidsTeacherClassPageContent() {
       const updated = await kidsPatchClass(cls.id, {
         name: nameToSave,
         academic_year_label: canEditClassIdentity ? editAcademicYear.trim() : (cls.academic_year_label || '').trim(),
+        language: editLanguage,
         description: editDesc.trim(),
         school_id: sid,
       });
       setCls(updated);
-      toast.success('Sınıf bilgileri güncellendi');
+      toast.success(t('teacherClass.general.updated'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Kaydedilemedi');
+      toast.error(err instanceof Error ? err.message : t('common.saveFailed'));
     } finally {
       setSavingClass(false);
     }
@@ -469,7 +490,7 @@ function KidsTeacherClassPageContent() {
     e.preventDefault();
     const emails = parseKidsInviteEmails(inviteEmailsText);
     if (emails.length === 0) {
-      toast.error('E-posta ile göndermek için en az bir adres yazın veya üstteki davet linkini kullanın.');
+      toast.error(t('teacherClass.invite.enterEmailOrUseLink'));
       return;
     }
     setInviting(true);
@@ -483,29 +504,31 @@ function KidsTeacherClassPageContent() {
       if (summary.emails_failed === 0) {
         toast.success(
           summary.total === 1
-            ? 'Veliye davet e-postası gönderildi.'
-            : `${summary.total} veliye davet e-postası gönderildi.`,
+            ? t('teacherClass.invite.emailSentSingle')
+            : t('teacherClass.invite.emailSentMultiple').replace('{count}', String(summary.total)),
         );
       } else if (summary.emails_sent === 0) {
-        const err = invites[0]?.email_error || 'E-posta gönderilemedi; bir süre sonra tekrar deneyin.';
-        toast.error(`Davetler kaydedildi ancak e-posta gönderilemedi: ${err}`, { duration: 10_000 });
+        const err = invites[0]?.email_error || t('teacherClass.invite.emailFailed');
+        toast.error(`${t('teacherClass.invite.savedButEmailFailed')}: ${err}`, { duration: 10_000 });
         const first = invites[0]?.signup_url;
         if (first && typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
           try {
             await navigator.clipboard.writeText(first);
-            toast('İlk davet linki panoya kopyalandı; gerekirse manuel paylaş.', { duration: 6000 });
+            toast(t('teacherClass.invite.firstLinkCopied'), { duration: 6000 });
           } catch {
             /* ignore */
           }
         }
       } else {
         toast.success(
-          `${summary.emails_sent} e-posta gönderildi, ${summary.emails_failed} adres için gönderim başarısız.`,
+          t('teacherClass.invite.partialSendResult')
+            .replace('{sent}', String(summary.emails_sent))
+            .replace('{failed}', String(summary.emails_failed)),
           { duration: 8000 },
         );
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Davet oluşturulamadı');
+      toast.error(err instanceof Error ? err.message : t('teacherClass.invite.createFailed'));
     } finally {
       setInviting(false);
     }
@@ -519,12 +542,12 @@ function KidsTeacherClassPageContent() {
       setClassInviteUrl(r.signup_url);
       try {
         await navigator.clipboard?.writeText(r.signup_url);
-        toast.success('Davet linki oluşturuldu ve panoya kopyalandı.', { duration: 4000 });
+        toast.success(t('teacherClass.invite.linkCreatedAndCopied'), { duration: 4000 });
       } catch {
-        toast.success('Davet linki oluşturuldu. Aşağıdan kopyalayabilirsin.', { duration: 5000 });
+        toast.success(t('teacherClass.invite.linkCreatedCopyBelow'), { duration: 5000 });
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Link oluşturulamadı');
+      toast.error(err instanceof Error ? err.message : t('teacherClass.invite.linkCreateFailed'));
     } finally {
       setCreatingClassLink(false);
     }
@@ -533,17 +556,17 @@ function KidsTeacherClassPageContent() {
   async function createAssignment(e: React.FormEvent) {
     e.preventDefault();
     if (!asgTitle.trim()) {
-      toast.error('Challenge başlığı zorunludur.');
+      toast.error(t('teacherClass.assignments.titleRequired'));
       return;
     }
     const closeIso = kidsDatetimeLocalToIso(asgCloseAt);
     if (!closeIso) {
-      toast.error('Son teslim tarih ve saatini seçmelisin.');
+      toast.error(t('teacherClass.assignments.closeAtRequired'));
       return;
     }
     const openIso = kidsDatetimeLocalToIso(asgOpenAt);
     if (!openIso) {
-      toast.error('Teslime başlangıç tarih ve saatini seçmelisin.');
+      toast.error(t('teacherClass.assignments.openAtRequired'));
       return;
     }
     setAsgSaving(true);
@@ -572,11 +595,11 @@ function KidsTeacherClassPageContent() {
       const plannedLater = new Date(openIso).getTime() > Date.now();
       toast.success(
         plannedLater
-          ? 'Challenge planlandı. Öğrenciler başlangıç saatine kadar görmeyecek; saat gelince kısa süre içinde haberdar edilirler.'
-          : 'Challenge öğrencilere açıldı; panelde görebilirler.',
+          ? t('teacherClass.assignments.plannedSuccess')
+          : t('teacherClass.assignments.publishedSuccess'),
       );
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Challenge eklenemedi');
+      toast.error(err instanceof Error ? err.message : t('teacherClass.assignments.createFailed'));
     } finally {
       setAsgSaving(false);
     }
@@ -587,12 +610,12 @@ function KidsTeacherClassPageContent() {
     setEditAssignmentError(null);
     if (!editAssignment) return;
     if (!editTitle.trim()) {
-      setEditAssignmentError('Challenge başlığı zorunludur.');
+      setEditAssignmentError(t('teacherClass.assignments.titleRequired'));
       return;
     }
     const closeIso = kidsDatetimeLocalToIso(editCloseAt);
     if (!closeIso) {
-      setEditAssignmentError('Son teslim tarih ve saatini seçmelisin.');
+      setEditAssignmentError(t('teacherClass.assignments.closeAtRequired'));
       return;
     }
     const free = isAssignmentEditFullyFree(editAssignment);
@@ -600,7 +623,7 @@ function KidsTeacherClassPageContent() {
     if (free) {
       const parsed = kidsDatetimeLocalToIso(editOpenAt);
       if (!parsed) {
-        setEditAssignmentError('Teslime başlangıç tarih ve saatini seçmelisin.');
+        setEditAssignmentError(t('teacherClass.assignments.openAtRequired'));
         return;
       }
       openIso = parsed;
@@ -624,9 +647,9 @@ function KidsTeacherClassPageContent() {
       setAssignments((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
       setEditAssignment(null);
       setEditAssignmentError(null);
-      toast.success('Challenge güncellendi.');
+      toast.success(t('teacherClass.assignments.updated'));
     } catch (err) {
-      setEditAssignmentError(err instanceof Error ? err.message : 'Güncellenemedi');
+      setEditAssignmentError(err instanceof Error ? err.message : t('teacherClass.assignments.updateFailed'));
     } finally {
       setEditSaving(false);
     }
@@ -637,7 +660,7 @@ function KidsTeacherClassPageContent() {
       const data = await kidsWeeklyChampion(classId);
       setChampion(data);
     } catch {
-      toast.error('Liste yüklenemedi');
+      toast.error(t('teacherClass.stars.loadFailed'));
     }
   }
 
@@ -647,7 +670,7 @@ function KidsTeacherClassPageContent() {
         decision,
         rejection_note: rejectNoteById[chId] ?? '',
       });
-      toast.success(decision === 'approve' ? 'Yarışma onaylandı.' : 'Öneri reddedildi.');
+      toast.success(decision === 'approve' ? t('teacherClass.peer.approved') : t('teacherClass.peer.rejected'));
       setRejectNoteById((prev) => {
         const next = { ...prev };
         delete next[chId];
@@ -655,7 +678,7 @@ function KidsTeacherClassPageContent() {
       });
       await loadPeerChallenges();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'İşlem yapılamadı');
+      toast.error(e instanceof Error ? e.message : t('teacherClass.actionFailed'));
     }
   }
 
@@ -665,26 +688,26 @@ function KidsTeacherClassPageContent() {
       const conv = await kidsCreateConversation({
         student_id: en.student.id,
         kids_class_id: classId,
-        topic: `${display} · ${cls?.name || 'Sınıf'}`,
+        topic: `${display} · ${cls?.name || t('announcements.class')}`,
       });
-      toast.success('Konuşma açıldı');
+      toast.success(t('teacherClass.conversationOpened'));
       router.push(`${pathPrefix}/mesajlar/${conv.id}`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Konuşma açılamadı');
+      toast.error(err instanceof Error ? err.message : t('teacherClass.conversationOpenFailed'));
     }
   }
 
   function peerStarterLabel(ch: KidsPeerChallenge) {
     if (!ch.created_by_student) return '—';
     const en = students.find((e) => e.student.id === ch.created_by_student);
-    if (!en) return `Öğrenci #${ch.created_by_student}`;
+    if (!en) return `${t('teacherClass.students.fallbackStudent')} #${ch.created_by_student}`;
     return [en.student.first_name, en.student.last_name].filter(Boolean).join(' ') || en.student.email;
   }
 
   async function removeStudentFromClass(en: KidsEnrollment) {
     const label = [en.student.first_name, en.student.last_name].filter(Boolean).join(' ').trim() || en.student.email;
     const ok = window.confirm(
-      `${label} bu sınıftan çıkarılsın mı? Bu sınıfa ait challenge teslimleri de silinir; öğrenci hesabı silinmez.`,
+      t('teacherClass.students.removeConfirm').replace('{name}', label),
     );
     if (!ok) return;
     setRemovingEnrollmentId(en.id);
@@ -694,11 +717,11 @@ function KidsTeacherClassPageContent() {
       try {
         setAssignments(await kidsListAssignments(classId));
       } catch {
-        /* challenge özetleri güncellenemedi */
+        /* challenge ozetleri guncellenemedi */
       }
-      toast.success('Öğrenci sınıftan çıkarıldı');
+      toast.success(t('teacherClass.students.removed'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'İşlem başarısız');
+      toast.error(err instanceof Error ? err.message : t('teacherClass.actionFailed'));
     } finally {
       setRemovingEnrollmentId(null);
     }
@@ -707,16 +730,16 @@ function KidsTeacherClassPageContent() {
   async function deleteEntireClass() {
     if (!cls) return;
     const ok = window.confirm(
-      `“${cls.name}” sınıfı kalıcı olarak silinsin mi? Öğrenci kayıtları, challenge’lar ve teslimler silinir. Geri alınamaz.`,
+      t('teacherClass.general.deleteConfirm').replace('{name}', cls.name),
     );
     if (!ok) return;
     setDeletingClass(true);
     try {
       await kidsDeleteClass(cls.id);
-      toast.success('Sınıf silindi');
+      toast.success(t('teacherClass.classDeleted'));
       router.replace(`${pathPrefix}/ogretmen/panel`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Sınıf silinemedi');
+      toast.error(err instanceof Error ? err.message : t('teacherClass.classDeleteFailed'));
     } finally {
       setDeletingClass(false);
     }
@@ -725,7 +748,7 @@ function KidsTeacherClassPageContent() {
   if (authLoading || !user) {
     return (
       <KidsPanelMax>
-        <p className="text-center text-violet-800 dark:text-violet-200">Yükleniyor…</p>
+        <p className="text-center text-violet-800 dark:text-violet-200">{t('common.loading')}</p>
       </KidsPanelMax>
     );
   }
@@ -733,7 +756,7 @@ function KidsTeacherClassPageContent() {
   if (!cls) {
     return (
       <KidsPanelMax>
-        <p className="text-center text-violet-800 dark:text-violet-200">Yükleniyor…</p>
+        <p className="text-center text-violet-800 dark:text-violet-200">{t('common.loading')}</p>
       </KidsPanelMax>
     );
   }
@@ -748,14 +771,14 @@ function KidsTeacherClassPageContent() {
           href={`${pathPrefix}/ogretmen/panel`}
           className="inline-flex items-center gap-2 text-sm font-bold text-violet-700 hover:text-fuchsia-600 dark:text-violet-300 dark:hover:text-fuchsia-400"
         >
-          <span aria-hidden>←</span> Tüm sınıflarım
+          <span aria-hidden>←</span> {t('teacherClass.backAllClasses')}
         </Link>
       </div>
 
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-sm font-bold uppercase tracking-wide text-fuchsia-600 dark:text-fuchsia-400">
-            Sınıf paneli
+            {t('teacherClass.panel')}
           </p>
           <div className="mt-1 flex flex-wrap items-center gap-3">
             <h1 className="font-logo text-3xl font-bold text-slate-900 dark:text-white sm:text-4xl">
@@ -778,33 +801,33 @@ function KidsTeacherClassPageContent() {
         </div>
         <div className="flex gap-2 text-sm">
           <span className="rounded-2xl bg-sky-100 px-3 py-2 font-bold text-sky-900 dark:bg-sky-950/60 dark:text-sky-100">
-            🧒 {students.length} öğrenci
+            🧒 {students.length} {t('teacherClass.students')}
           </span>
           <span className="rounded-2xl bg-amber-100 px-3 py-2 font-bold text-amber-900 dark:bg-amber-950/60 dark:text-amber-100">
-            📝 {assignments.length} challenge
+            📝 {assignments.length} {t('teacherClass.challenges')}
           </span>
         </div>
       </div>
 
       <KidsTabs
-        tabs={TABS}
+        tabs={TABS.map((row) => ({ id: row.id, label: t(row.labelKey), icon: row.icon }))}
         active={tab}
         onChange={(id) => setTab(id as TabId)}
-        ariaLabel="Sınıf bölümleri"
+        ariaLabel={t('teacherClass.tabs.aria')}
       />
 
       {tab === 'general' && (
         <KidsCard>
-          <h2 className="font-logo text-lg font-bold text-slate-900 dark:text-white">Sınıf bilgileri</h2>
+          <h2 className="font-logo text-lg font-bold text-slate-900 dark:text-white">{t('teacherClass.general.title')}</h2>
           <p className="mt-1 text-sm text-slate-600 dark:text-gray-400">
-            Sınıf adı, açıklama ve bağlı okulu güncelle. Okul atamaları yönetim panelinden yapılır.
+            {t('teacherClass.general.subtitle')}
           </p>
           <form className="mt-6 space-y-5" onSubmit={saveClass}>
             <KidsFormField
               id={editSchoolSelectId}
-              label="Okul"
+              label={t('schools.title')}
               required
-              hint="İl / ilçe / mahalle yalnızca okul kartında; sınıfta tekrar girilmez."
+              hint={t('teacherClass.general.schoolHint')}
             >
               <KidsSelect
                 id={editSchoolSelectId}
@@ -820,9 +843,9 @@ function KidsTeacherClassPageContent() {
             {editClassNonStandard ? (
               <KidsFormField
                 id={editNameId}
-                label="Sınıf adı (özel)"
+                label={t('teacherClass.general.customClassName')}
                 required
-                hint="Kulüp veya özel grup adı gibi durumlarda serbest metin. Standart sınıf için aşağıdaki düğmeyi kullan."
+                hint={t('teacherClass.general.customClassNameHint')}
               >
                 <input
                   id={editNameId}
@@ -836,7 +859,7 @@ function KidsTeacherClassPageContent() {
             ) : (
               <>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <KidsFormField id={editClassGradeId} label="Sınıf düzeyi" required hint="1–12.">
+                  <KidsFormField id={editClassGradeId} label={t('teacher.panel.classLevel')} required hint={t('teacherClass.general.gradeHint')}>
                     <KidsSelect
                       id={editClassGradeId}
                       value={editClassGrade}
@@ -846,7 +869,7 @@ function KidsTeacherClassPageContent() {
                       disabled={!canEditClassIdentity}
                     />
                   </KidsFormField>
-                  <KidsFormField id={editClassSectionId} label="Şube (harf)" required hint="A–Z.">
+                  <KidsFormField id={editClassSectionId} label={t('teacher.panel.section')} required hint={t('teacherClass.general.sectionHint')}>
                     <KidsSelect
                       id={editClassSectionId}
                       value={editClassSection}
@@ -858,7 +881,7 @@ function KidsTeacherClassPageContent() {
                   </KidsFormField>
                 </div>
                 <p className="text-sm text-slate-600 dark:text-gray-400">
-                  Önizleme:{' '}
+                  {t('teacherClass.general.preview')}:{' '}
                   <strong className="font-logo text-slate-900 dark:text-white">
                     {kidsBuildStandardClassName(editClassGrade, editClassSection)}
                   </strong>
@@ -867,8 +890,8 @@ function KidsTeacherClassPageContent() {
             )}
             <KidsFormField
               id={editAcademicYearId}
-              label="Eğitim-öğretim yılı"
-              hint="Bu alan yönetim panelinden belirlenir; öğretmen panelinde sadece görüntülenir."
+              label={t('teacher.panel.academicYear')}
+              hint={t('teacherClass.general.academicYearHint')}
             >
               <KidsSelect
                 id={editAcademicYearId}
@@ -879,7 +902,16 @@ function KidsTeacherClassPageContent() {
                 disabled
               />
             </KidsFormField>
-            <KidsFormField id={editDescId} label="Açıklama" hint="Öğrenci ve velilere kısa bilgi.">
+            <KidsFormField id={editLanguageId} label={t('teacherClass.general.language')} hint={t('teacherClass.general.languageHint')}>
+              <KidsSelect
+                id={editLanguageId}
+                value={editLanguage}
+                onChange={(next) => setEditLanguage(next as 'tr' | 'en' | 'ge')}
+                options={classLanguageOptions}
+                searchable={false}
+              />
+            </KidsFormField>
+            <KidsFormField id={editDescId} label={t('teacherHomework.description')} hint={t('teacherClass.general.descriptionHint')}>
               <textarea
                 id={editDescId}
                 value={editDesc}
@@ -889,14 +921,14 @@ function KidsTeacherClassPageContent() {
               />
             </KidsFormField>
             <KidsPrimaryButton type="submit" disabled={savingClass}>
-              {savingClass ? 'Kaydediliyor…' : 'Değişiklikleri kaydet'}
+              {savingClass ? t('profile.saving') : t('profile.save')}
             </KidsPrimaryButton>
           </form>
 
           <div className="mt-10 border-t border-rose-200/80 pt-6 dark:border-rose-900/50">
-            <h3 className="font-logo text-base font-bold text-rose-900 dark:text-rose-100">Tehlikeli bölge</h3>
+            <h3 className="font-logo text-base font-bold text-rose-900 dark:text-rose-100">{t('teacherClass.general.dangerTitle')}</h3>
             <p className="mt-2 text-sm text-slate-600 dark:text-gray-400">
-              Sınıfı silersen bu sınıfa bağlı tüm öğrenci kayıtları, challenge’lar ve teslimler kalıcı olarak kaldırılır.
+              {t('teacherClass.general.dangerHint')}
             </p>
             <KidsSecondaryButton
               type="button"
@@ -904,7 +936,7 @@ function KidsTeacherClassPageContent() {
               disabled={deletingClass}
               onClick={() => void deleteEntireClass()}
             >
-              {deletingClass ? 'Siliniyor…' : 'Sınıfı kalıcı olarak sil'}
+              {deletingClass ? t('teacherClass.general.deleting') : t('teacherClass.general.deleteClass')}
             </KidsSecondaryButton>
           </div>
         </KidsCard>
@@ -912,32 +944,29 @@ function KidsTeacherClassPageContent() {
 
       {tab === 'invite' && (
         <KidsCard tone="sky">
-          <h2 className="font-logo text-lg font-bold text-sky-950 dark:text-sky-50">Veli daveti</h2>
+          <h2 className="font-logo text-lg font-bold text-sky-950 dark:text-sky-50">{t('teacherClass.invite.title')}</h2>
           <p className="mt-2 text-sm leading-relaxed text-sky-900/85 dark:text-sky-100/85">
-            Velilerden tek tek e-posta istemek yerine <strong>sınıfa özel bir kayıt linki</strong> oluşturup
-            WhatsApp, SMS veya sınıf grubunda paylaşabilirsin. Linke tıklayan veli kendi e-postası, adı-soyadı,
-            telefonu ve <strong>veli şifresini</strong> girer; ardından çocuğun adı-soyadı ve{' '}
-            <strong>çocuk şifresi</strong> tanımlanır. Çocuk paneline kullanıcı adı veya e-posta ile giriş yapılır.
+            {t('teacherClass.invite.subtitle')}
           </p>
 
           <div className="mt-6 space-y-4 rounded-2xl border-2 border-sky-200/80 bg-white/70 p-5 dark:border-sky-800/50 dark:bg-sky-950/20">
-            <KidsFormField id="invite-days" label="Link geçerliliği" hint="Süre dolunca yeni link üretmen gerekir.">
+            <KidsFormField id="invite-days" label={t('teacherClass.invite.linkValidity')} hint={t('teacherClass.invite.linkValidityHint')}>
               <KidsSelect
                 id="invite-days"
                 value={String(inviteDays)}
                 onChange={(v) => setInviteDays(Number(v))}
-                options={INVITE_DAYS_OPTIONS}
+                options={inviteDaysOptions}
               />
             </KidsFormField>
             <KidsPrimaryButton type="button" disabled={creatingClassLink} onClick={() => void createClassShareLink()}>
-              {creatingClassLink ? 'Oluşturuluyor…' : 'Davet linki oluştur'}
+              {creatingClassLink ? t('teacherClass.invite.creatingLink') : t('teacherClass.invite.createLink')}
             </KidsPrimaryButton>
             {classInviteUrl ? (
               <div className="space-y-2">
                 <KidsFormField
                   id={classLinkInputId}
-                  label="Paylaşılacak bağlantı"
-                  hint="Bu adresi velilerle paylaş. Aynı linki birden fazla aile kullanabilir (süre bitene kadar)."
+                  label={t('teacherClass.invite.shareableLink')}
+                  hint={t('teacherClass.invite.shareableLinkHint')}
                 >
                   <input
                     id={classLinkInputId}
@@ -951,12 +980,12 @@ function KidsTeacherClassPageContent() {
                   type="button"
                   onClick={() => {
                     void navigator.clipboard?.writeText(classInviteUrl).then(
-                      () => toast.success('Kopyalandı'),
-                      () => toast.error('Panoya kopyalanamadı'),
+                      () => toast.success(t('teacherClass.invite.copied')),
+                      () => toast.error(t('teacherClass.invite.copyFailed')),
                     );
                   }}
                 >
-                  Linki kopyala
+                  {t('teacherClass.invite.copyLink')}
                 </KidsSecondaryButton>
               </div>
             ) : null}
@@ -965,20 +994,19 @@ function KidsTeacherClassPageContent() {
           {inviteEmailEnabled ? (
             <div className="relative mt-10 border-t border-sky-200/70 pt-8 dark:border-sky-800/50">
               <p className="mb-1 text-xs font-bold uppercase tracking-wide text-sky-700 dark:text-sky-300">
-                İsteğe bağlı
+                {t('teacherClass.invite.optional')}
               </p>
               <h3 className="font-logo text-base font-bold text-sky-950 dark:text-sky-50">
-                E-posta ile davet gönder
+                {t('teacherClass.invite.emailTitle')}
               </h3>
               <p className="mt-2 text-sm leading-relaxed text-sky-900/85 dark:text-sky-100/85">
-                Belirli veli adreslerine sistem üzerinden e-posta göndermek istersen adresleri yaz; her adres
-                için ayrı tek kullanımlık bağlantı üretilir ve posta ile gider.
+                {t('teacherClass.invite.emailSubtitle')}
               </p>
               <form className="mt-5 space-y-5" onSubmit={sendInvite}>
                 <KidsFormField
                   id={inviteEmailsId}
-                  label="Veli e-postaları"
-                  hint="Virgül, noktalı virgül veya her satıra bir adres. En fazla 40 adres."
+                  label={t('teacherClass.invite.parentEmails')}
+                  hint={t('teacherClass.invite.parentEmailsHint')}
                 >
                   <textarea
                     id={inviteEmailsId}
@@ -991,14 +1019,13 @@ function KidsTeacherClassPageContent() {
                   />
                 </KidsFormField>
                 <KidsPrimaryButton type="submit" disabled={inviting}>
-                  {inviting ? 'Gönderiliyor…' : 'E-posta davetlerini oluştur ve gönder'}
+                  {inviting ? t('teacherClass.invite.sending') : t('teacherClass.invite.sendEmails')}
                 </KidsPrimaryButton>
               </form>
             </div>
           ) : (
             <p className="mt-8 text-xs text-sky-800/70 dark:text-sky-200/60">
-              Toplu e-posta daveti kurum ayarlarıyla kapalı; velilerle yalnızca yukarıdaki davet linkini
-              paylaş.
+              {t('teacherClass.invite.emailDisabled')}
             </p>
           )}
         </KidsCard>
@@ -1006,19 +1033,18 @@ function KidsTeacherClassPageContent() {
 
       {tab === 'students' && (
         <KidsCard tone="amber">
-          <h2 className="font-logo text-lg font-bold text-amber-950 dark:text-amber-50">Kayıtlı öğrenciler</h2>
+          <h2 className="font-logo text-lg font-bold text-amber-950 dark:text-amber-50">{t('teacherClass.students.title')}</h2>
           {students.length > 0 ? (
             <p className="mt-2 text-xs text-amber-900/85 dark:text-amber-100/85">
-              Her satırda, bu sınıfta yayında kaç challenge olduğu ve öğrencinin bunlardan kaçına en az bir teslim gönderdiği gösterilir
-              (aynı challenge’a birden fazla teslim yine tek sayılır).
+              {t('teacherClass.students.subtitle')}
             </p>
           ) : null}
           {students.length === 0 ? (
             <div className="mt-6">
               <KidsEmptyState
                 emoji="🎈"
-                title="Henüz kimse yok"
-                description="Öğretmenin paylaştığı davet linki veya e-posta davetiyle kayıt olan öğrenciler burada görünür."
+                title={t('teacherClass.students.emptyTitle')}
+                description={t('teacherClass.students.emptyDesc')}
               />
             </div>
           ) : (
@@ -1035,9 +1061,9 @@ function KidsTeacherClassPageContent() {
                     <p className="text-sm text-slate-600 dark:text-gray-400">{en.student.email}</p>
                     {typeof en.class_published_assignment_count === 'number' ? (
                       <p className="mt-2 text-xs font-semibold text-violet-800 dark:text-violet-200">
-                        Yayınlanan challenge: {en.class_published_assignment_count}
+                        {t('teacherClass.students.publishedChallenges')}: {en.class_published_assignment_count}
                         {' · '}
-                        Teslim edilen: {en.assignments_submitted_count ?? 0}
+                        {t('teacherClass.students.submitted')}: {en.assignments_submitted_count ?? 0}
                         <span className="font-black text-fuchsia-700 dark:text-fuchsia-300">
                           {' '}
                           ({en.assignments_submitted_count ?? 0}/{en.class_published_assignment_count})
@@ -1047,13 +1073,13 @@ function KidsTeacherClassPageContent() {
                   </div>
                   <div className="flex flex-wrap items-center gap-2 sm:flex-col sm:items-end">
                     <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">
-                      Kayıt: {new Date(en.created_at).toLocaleDateString('tr-TR')}
+                      {t('teacherClass.students.registered')}: {new Date(en.created_at).toLocaleDateString(language)}
                     </span>
                     <KidsSecondaryButton
                       type="button"
                       onClick={() => void startParentConversation(en)}
                     >
-                      Veliyle mesaj başlat
+                      {t('teacherClass.students.messageParent')}
                     </KidsSecondaryButton>
                     <KidsSecondaryButton
                       type="button"
@@ -1061,7 +1087,7 @@ function KidsTeacherClassPageContent() {
                       disabled={removingEnrollmentId === en.id}
                       onClick={() => void removeStudentFromClass(en)}
                     >
-                      {removingEnrollmentId === en.id ? 'Çıkarılıyor…' : 'Sınıftan çıkar'}
+                      {removingEnrollmentId === en.id ? t('teacherClass.students.removing') : t('teacherClass.students.removeFromClass')}
                     </KidsSecondaryButton>
                   </div>
                 </li>
@@ -1074,32 +1100,32 @@ function KidsTeacherClassPageContent() {
       {tab === 'assignments' && (
         <div className="flex min-h-0 flex-col gap-3 lg:max-h-[min(720px,calc(100dvh-13rem))] lg:min-h-[380px]">
           <p className="text-sm text-slate-600 dark:text-gray-400 lg:hidden">
-            Solda yeni challenge, sağda özet ve teslim oranı (ör. 3/20). Detay için challenge’a gir.
+            {t('teacherClass.assignments.mobileHint')}
           </p>
           <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-2 lg:gap-6 lg:overflow-hidden">
             <KidsCard className="flex min-h-[260px] flex-col overflow-hidden lg:min-h-0">
               <div className="shrink-0">
-                <h2 className="font-logo text-lg font-bold text-slate-900 dark:text-white">Yeni challenge</h2>
+              <h2 className="font-logo text-lg font-bold text-slate-900 dark:text-white">{t('teacherClass.assignments.newTitle')}</h2>
                 <p className="mt-1 text-sm text-slate-600 dark:text-gray-400">
-                  Görsel teslimde öğrenci her tur için 1 görsel yükler.
+                  {t('teacherClass.assignments.newSubtitle')}
                   {assignmentVideoEnabled
-                    ? ' İstersen video teslimi de seçebilirsin.'
-                    : ' Video teslimi bu kurulumda kapalı.'}
+                    ? ` ${t('teacherClass.assignments.videoEnabled')}`
+                    : ` ${t('teacherClass.assignments.videoDisabled')}`}
                 </p>
               </div>
               <div className="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 [-webkit-overflow-scrolling:touch]">
                 <form className="space-y-4" onSubmit={createAssignment}>
-              <KidsFormField id={asgTitleId} label="Başlık" required>
+              <KidsFormField id={asgTitleId} label={t('teacherClass.assignments.title')} required>
                 <input
                   id={asgTitleId}
                   required
                   value={asgTitle}
                   onChange={(e) => setAsgTitle(e.target.value)}
                   className={kidsInputClass}
-                  placeholder="Örn. Su döngüsü maketi"
+                  placeholder={t('teacherClass.assignments.titlePlaceholder')}
                 />
               </KidsFormField>
-              <KidsFormField id="asg-purpose" label="Amaç / ne öğrenecekler?">
+              <KidsFormField id="asg-purpose" label={t('teacherClass.assignments.purpose')}>
                 <textarea
                   id="asg-purpose"
                   value={asgPurpose}
@@ -1108,50 +1134,50 @@ function KidsTeacherClassPageContent() {
                   className={kidsTextareaClass}
                 />
               </KidsFormField>
-              <KidsFormField id="asg-mat" label="Malzemeler">
+              <KidsFormField id="asg-mat" label={t('teacherClass.assignments.materials')}>
                 <textarea
                   id="asg-mat"
                   value={asgMaterials}
                   onChange={(e) => setAsgMaterials(e.target.value)}
                   rows={2}
                   className={kidsTextareaClass}
-                  placeholder="Liste halinde yazabilirsin"
+                  placeholder={t('teacherClass.assignments.materialsPlaceholder')}
                 />
               </KidsFormField>
               <KidsFormField
                 id={asgOpenAtId}
-                label="Teslime başlangıç tarihi ve saati"
+                label={t('teacherClass.assignments.openAt')}
                 required
-                hint="Başlangıç zamanı şu andan sonraysa challenge planlanmış listede durur; öğrenciler o saate kadar görmez, saat gelince haberdar edilir. Şimdiki veya geçmiş bir saat seçersen challenge öğrencilere hemen açık sayılır."
+                hint={t('teacherClass.assignments.openAtHint')}
               >
                 <KidsDateTimeField
                   id={asgOpenAtId}
                   value={asgOpenAt}
                   onChange={setAsgOpenAt}
                   required
-                  placeholder="Başlangıç tarih ve saatini seç"
+                  placeholder={t('teacherClass.assignments.openAtPlaceholder')}
                 />
               </KidsFormField>
               <KidsFormField
                 id={asgCloseAtId}
-                label="Son teslim tarihi ve saati"
+                label={t('teacherClass.assignments.closeAt')}
                 required
-                hint="Öğrenci yalnızca bu zamana kadar (ve varsa başlangıçtan sonra) teslim edebilir."
+                hint={t('teacherClass.assignments.closeAtHint')}
               >
                 <KidsDateTimeField
                   id={asgCloseAtId}
                   value={asgCloseAt}
                   onChange={setAsgCloseAt}
                   required
-                  placeholder="Son teslimi seçmek için dokun"
+                  placeholder={t('teacherClass.assignments.closeAtPlaceholder')}
                 />
               </KidsFormField>
               <fieldset className="rounded-2xl border-2 border-violet-100 bg-violet-50/50 p-4 dark:border-violet-900/40 dark:bg-violet-950/30">
                 <legend className="px-2 text-sm font-bold text-violet-900 dark:text-violet-100">
-                  Kurallar
+                  {t('teacherClass.assignments.rules')}
                 </legend>
                 <p className="mt-2 text-sm text-slate-600 dark:text-gray-400">
-                  Öğrenci challenge’ını nasıl teslim etsin?
+                  {t('teacherClass.assignments.rulesHint')}
                 </p>
                 <div
                   className={`mt-3 grid gap-3 ${assignmentVideoEnabled ? 'sm:grid-cols-2' : 'sm:grid-cols-1'}`}
@@ -1169,10 +1195,10 @@ function KidsTeacherClassPageContent() {
                       🖼️
                     </span>
                     <span className="mt-2 block font-logo text-base font-bold text-slate-900 dark:text-white">
-                      Görsel / adım adım
+                      {t('teacherClass.assignments.imageMode')}
                     </span>
                     <span className="mt-1 block text-xs text-slate-600 dark:text-gray-400">
-                      Metin ve görselle teslim; her challenge turunda 1 görsel.
+                      {t('teacherClass.assignments.imageModeHint')}
                     </span>
                   </button>
                   {assignmentVideoEnabled ? (
@@ -1189,10 +1215,10 @@ function KidsTeacherClassPageContent() {
                         🎬
                       </span>
                       <span className="mt-2 block font-logo text-base font-bold text-slate-900 dark:text-white">
-                        Video
+                        {t('teacherClass.assignments.videoMode')}
                       </span>
                       <span className="mt-1 block text-xs text-slate-600 dark:text-gray-400">
-                        Öğrenci video bağlantısı ile teslim eder.
+                        {t('teacherClass.assignments.videoModeHint')}
                       </span>
                     </button>
                   ) : null}
@@ -1200,36 +1226,36 @@ function KidsTeacherClassPageContent() {
                 {asgMediaType === 'video' ? (
                   <div className="mt-4">
                     <label htmlFor="asg-video-duration" className={`${kidsLabelClass} block`}>
-                      Video süre limiti
+                      {t('teacherClass.assignments.videoLimit')}
                     </label>
                     <p className="mb-2 text-xs text-slate-500 dark:text-gray-400">
-                      Öğrenci yüklediği veya paylaştığı video bu süreyi aşmamalı.
+                      {t('teacherClass.assignments.videoLimitHint')}
                     </p>
                     <KidsSelect
                       id="asg-video-duration"
                       value={String(asgVideoSec)}
                       onChange={(v) => setAsgVideoSec(Number(v) as 60 | 120 | 180)}
-                      options={VIDEO_DURATION_OPTIONS}
+                      options={videoDurationOptions}
                     />
                   </div>
                 ) : null}
                 <div className="mt-4">
                   <label htmlFor="asg-submission-rounds" className={`${kidsLabelClass} block`}>
-                    Bu konu için kaç ayrı challenge teslim edilsin?
+                    {t('teacherClass.assignments.roundCount')}
                   </label>
                   <p className="mb-2 text-xs text-slate-500 dark:text-gray-400">
-                    Öğrenci panelinde &quot;Challenge 1&quot;, &quot;Challenge 2&quot; şeklinde görünür (1–5).
+                    {t('teacherClass.assignments.roundCountHint')}
                   </p>
                   <KidsSelect
                     id="asg-submission-rounds"
                     value={String(asgSubmissionRounds)}
                     onChange={(v) => setAsgSubmissionRounds(Number(v) as 1 | 2 | 3 | 4 | 5)}
-                    options={SUBMISSION_ROUNDS_OPTIONS}
+                    options={submissionRoundsOptions}
                   />
                 </div>
               </fieldset>
               <KidsPrimaryButton type="submit" disabled={asgSaving}>
-                {asgSaving ? 'Kaydediliyor…' : 'Challenge’ı yayınla'}
+                {asgSaving ? t('profile.saving') : t('teacherClass.assignments.publish')}
               </KidsPrimaryButton>
                 </form>
               </div>
@@ -1237,28 +1263,25 @@ function KidsTeacherClassPageContent() {
 
             <KidsCard className="flex min-h-[280px] flex-col overflow-hidden lg:min-h-0">
               <div className="shrink-0">
-                <h2 className="font-logo text-lg font-bold text-slate-900 dark:text-white">Challenges</h2>
+                <h2 className="font-logo text-lg font-bold text-slate-900 dark:text-white">{t('teacherClass.assignments.listTitle')}</h2>
                 <p className="mt-1 text-xs text-slate-500 dark:text-gray-400">
-                  <strong className="font-semibold text-slate-700 dark:text-gray-300">Planlanmış</strong> challenge’lar
-                  öğrencilere başlangıç saatinde görünür.{' '}
-                  <strong className="font-semibold text-slate-700 dark:text-gray-300">Öğrencilere açık</strong> olanlar
-                  şu an öğrenci panelinde. Her kartta soldaki sayı teslim eden, sağdaki sayı sınıftaki öğrenci adedi.
+                  {t('teacherClass.assignments.listHint')}
                 </p>
               </div>
               <div className="mt-3 min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain pr-1 [-webkit-overflow-scrolling:touch]">
                 {assignments.length === 0 ? (
-                  <p className="text-sm text-slate-500 dark:text-gray-400">Henüz challenge yok.</p>
+                  <p className="text-sm text-slate-500 dark:text-gray-400">{t('teacherClass.assignments.empty')}</p>
                 ) : (
                   <>
                     <div>
                       <h3 className="font-logo text-sm font-bold text-amber-900 dark:text-amber-100">
-                        Planlanmış <span className="font-sans text-xs font-semibold">({plannedAssignments.length})</span>
+                        {t('teacherClass.assignments.planned')} <span className="font-sans text-xs font-semibold">({plannedAssignments.length})</span>
                       </h3>
                       <p className="mt-1 text-[11px] text-amber-900/80 dark:text-amber-200/90">
-                        Başlangıç saati gelince öğrencilere haber gider; nadiren birkaç dakika gecikebilir.
+                        {t('teacherClass.assignments.plannedHint')}
                       </p>
                       {plannedAssignments.length === 0 ? (
-                        <p className="mt-2 text-sm text-slate-500 dark:text-gray-400">Şu an planlanmış challenge yok.</p>
+                        <p className="mt-2 text-sm text-slate-500 dark:text-gray-400">{t('teacherClass.assignments.noPlanned')}</p>
                       ) : (
                         <ul className="mt-2 space-y-3">
                           {plannedAssignments.map((a) => (
@@ -1274,10 +1297,10 @@ function KidsTeacherClassPageContent() {
                     </div>
                     <div>
                       <h3 className="font-logo text-sm font-bold text-violet-900 dark:text-violet-100">
-                        Öğrencilere açık <span className="font-sans text-xs font-semibold">({liveAssignments.length})</span>
+                        {t('teacherClass.assignments.live')} <span className="font-sans text-xs font-semibold">({liveAssignments.length})</span>
                       </h3>
                       {liveAssignments.length === 0 ? (
-                        <p className="mt-2 text-sm text-slate-500 dark:text-gray-400">Liste boş.</p>
+                        <p className="mt-2 text-sm text-slate-500 dark:text-gray-400">{t('teacherClass.assignments.listEmpty')}</p>
                       ) : (
                         <ul className="mt-2 space-y-3">
                           {liveAssignments.map((a) => (
@@ -1304,22 +1327,21 @@ function KidsTeacherClassPageContent() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2 className="font-logo text-lg font-bold text-emerald-950 dark:text-emerald-50">
-                Sınıf yarışmaları
+                {t('teacherClass.peer.title')}
               </h2>
               <p className="mt-1 text-sm text-emerald-900/85 dark:text-emerald-100/85">
-                Öğrencilerin arkadaş yarışması önerileri burada. Onaylayınca başlatan sınıf arkadaşlarına davet
-                gönderebilir. (Öğretmen ödevleri &quot;Challenges&quot; sekmesinde.)
+                {t('teacherClass.peer.subtitle')}
               </p>
             </div>
             <KidsSecondaryButton type="button" disabled={peerLoading} onClick={() => void loadPeerChallenges()}>
-              {peerLoading ? 'Yükleniyor…' : 'Yenile'}
+              {peerLoading ? t('common.loading') : t('teacherClass.peer.refresh')}
             </KidsSecondaryButton>
           </div>
           {peerLoading && peerChallenges.length === 0 ? (
-            <p className="mt-6 text-sm text-emerald-800 dark:text-emerald-200">Yükleniyor…</p>
+            <p className="mt-6 text-sm text-emerald-800 dark:text-emerald-200">{t('common.loading')}</p>
           ) : peerChallenges.length === 0 ? (
             <p className="mt-6 text-sm text-emerald-800/80 dark:text-emerald-200/90">
-              Bu sınıfta henüz yarışma kaydı yok.
+              {t('teacherClass.peer.empty')}
             </p>
           ) : (
             <div className="mt-6 space-y-8">
@@ -1334,7 +1356,7 @@ function KidsTeacherClassPageContent() {
                     {pending.length > 0 ? (
                       <div className="space-y-4">
                         <h3 className="text-xs font-black uppercase tracking-wide text-amber-800 dark:text-amber-200">
-                          Onay bekleyen öğrenci önerileri ({pending.length})
+                          {t('teacherClass.peer.pendingTitle').replace('{count}', String(pending.length))}
                         </h3>
                         <ul className="space-y-4">
                           {pending.map((ch) => (
@@ -1344,19 +1366,19 @@ function KidsTeacherClassPageContent() {
                             >
                               <p className="font-logo text-lg font-bold text-amber-950 dark:text-amber-50">{ch.title}</p>
                               <p className="mt-1 text-xs font-semibold text-amber-900 dark:text-amber-200">
-                                Başlatan: {peerStarterLabel(ch)}
+                                {t('teacherClass.peer.starter')}: {peerStarterLabel(ch)}
                               </p>
                               <p className="mt-1 text-xs text-amber-900/90 dark:text-amber-100/85">
-                                Challenge adımı sayısı: {Math.max(1, ch.submission_rounds ?? 1)}
+                                {t('teacherClass.peer.roundCount')}: {Math.max(1, ch.submission_rounds ?? 1)}
                               </p>
                               {ch.starts_at || ch.ends_at ? (
                                 <p className="mt-1 text-xs font-semibold text-amber-900 dark:text-amber-100">
                                   {ch.starts_at
-                                    ? `Başlangıç: ${new Date(ch.starts_at).toLocaleString('tr-TR')}`
+                                    ? `${t('competitions.start')}: ${new Date(ch.starts_at).toLocaleString(language)}`
                                     : null}
                                   {ch.starts_at && ch.ends_at ? ' · ' : null}
                                   {ch.ends_at
-                                    ? `Bitiş: ${new Date(ch.ends_at).toLocaleString('tr-TR')}`
+                                    ? `${t('competitions.end')}: ${new Date(ch.ends_at).toLocaleString(language)}`
                                     : null}
                                 </p>
                               ) : null}
@@ -1367,11 +1389,11 @@ function KidsTeacherClassPageContent() {
                               ) : null}
                               {ch.rules_or_goal ? (
                                 <p className="mt-2 whitespace-pre-wrap text-sm text-amber-900/85 dark:text-amber-100/85">
-                                  <span className="font-bold">Hedef / kurallar:</span> {ch.rules_or_goal}
+                                  <span className="font-bold">{t('competitions.rulesOptional')}:</span> {ch.rules_or_goal}
                                 </p>
                               ) : null}
                               <label className="mt-3 block text-xs font-bold text-amber-900 dark:text-amber-200">
-                                Red nedeni (isteğe bağlı)
+                                {t('teacherClass.peer.rejectNote')}
                                 <textarea
                                   value={rejectNoteById[ch.id] ?? ''}
                                   onChange={(e) =>
@@ -1379,15 +1401,15 @@ function KidsTeacherClassPageContent() {
                                   }
                                   className={`${kidsTextareaClass} mt-1 min-h-[72px]`}
                                   maxLength={600}
-                                  placeholder="Öğrenciye görünür kısa not"
+                                  placeholder={t('teacherClass.peer.rejectNotePlaceholder')}
                                 />
                               </label>
                               <div className="mt-3 flex flex-wrap gap-2">
                                 <KidsPrimaryButton type="button" onClick={() => void reviewPeerChallengeRow(ch.id, 'approve')}>
-                                  Onayla
+                                  {t('teacherClass.peer.approve')}
                                 </KidsPrimaryButton>
                                 <KidsSecondaryButton type="button" onClick={() => void reviewPeerChallengeRow(ch.id, 'reject')}>
-                                  Reddet
+                                  {t('teacherClass.peer.reject')}
                                 </KidsSecondaryButton>
                               </div>
                             </li>
@@ -1398,7 +1420,7 @@ function KidsTeacherClassPageContent() {
                     {other.length > 0 ? (
                       <div className="space-y-3">
                         <h3 className="text-xs font-black uppercase tracking-wide text-emerald-800 dark:text-emerald-200">
-                          Diğer kayıtlar
+                          {t('teacherClass.peer.other')}
                         </h3>
                         <ul className="space-y-2">
                           {other.map((ch) => (
@@ -1408,8 +1430,8 @@ function KidsTeacherClassPageContent() {
                             >
                               <span className="font-semibold text-emerald-950 dark:text-emerald-50">{ch.title}</span>
                               <span className="text-xs font-bold text-emerald-800 dark:text-emerald-200">
-                                {peerRowStatusTr(ch.status)}
-                                {ch.source === 'teacher' ? ' · Öğretmen' : ''}
+                                {peerRowStatusTr(ch.status, t)}
+                                {ch.source === 'teacher' ? ` · ${t('teacherClass.peer.byTeacher')}` : ''}
                               </span>
                             </li>
                           ))}
@@ -1429,20 +1451,20 @@ function KidsTeacherClassPageContent() {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h2 className="font-logo text-lg font-bold text-amber-950 dark:text-amber-50">
-                Haftanın yıldızı
+                {t('teacherClass.stars.title')}
               </h2>
               <p className="mt-1 text-sm text-amber-900/80 dark:text-amber-100/80">
-                Son 7 günde en çok teslim eden öğrenciler; her satırda gelişim puanı ve rozet seviyesi de görünür.
+                {t('teacherClass.stars.subtitle')}
               </p>
             </div>
             <KidsSecondaryButton type="button" onClick={() => loadChampion()}>
-              Listeyi yükle
+              {t('teacherClass.stars.load')}
             </KidsSecondaryButton>
           </div>
           {champion ? (
             <ul className="mt-6 space-y-2">
               {champion.top.length === 0 ? (
-                <li className="text-sm text-amber-800 dark:text-amber-200">Bu hafta henüz teslim yok.</li>
+                <li className="text-sm text-amber-800 dark:text-amber-200">{t('teacherClass.stars.emptyWeek')}</li>
               ) : (
                 champion.top.map((row, i) => (
                   <li
@@ -1454,9 +1476,9 @@ function KidsTeacherClassPageContent() {
                         {i + 1}. {row.student.first_name} {row.student.last_name || row.student.email}
                       </p>
                       <p className="mt-1 text-xs font-semibold text-amber-900/90 dark:text-amber-100/90">
-                        Gelişim puanı: {row.student.growth_points ?? 0}
+                        {t('roadmap.growthPoints')}: {row.student.growth_points ?? 0}
                         {row.student.growth_stage ? (
-                          <span> · Rozet: {row.student.growth_stage.title}</span>
+                          <span> · {t('roadmap.title')}: {row.student.growth_stage.title}</span>
                         ) : null}
                       </p>
                       {row.student.growth_stage?.subtitle ? (
@@ -1466,7 +1488,7 @@ function KidsTeacherClassPageContent() {
                       ) : null}
                     </div>
                     <span className="shrink-0 self-start rounded-full bg-white/80 px-3 py-1 text-sm font-bold text-amber-900 sm:self-center dark:bg-gray-900/80 dark:text-amber-100">
-                      {row.submission_count} teslim
+                      {row.submission_count} {t('teacherClass.stars.submissions')}
                     </span>
                   </li>
                 ))
@@ -1474,7 +1496,7 @@ function KidsTeacherClassPageContent() {
             </ul>
           ) : (
             <p className="mt-6 text-sm text-amber-800/80 dark:text-amber-200/80">
-              Yukarıdaki düğmeye basarak bu haftanın listesini getir.
+              {t('teacherClass.stars.loadHint')}
             </p>
           )}
         </KidsCard>
@@ -1482,7 +1504,7 @@ function KidsTeacherClassPageContent() {
 
       {editAssignment ? (
         <KidsCenteredModal
-          title="Challenge’ı düzenle"
+          title={t('teacherClass.assignments.editTitle')}
           onClose={() => {
             if (!editSaving) {
               setEditAssignment(null);
@@ -1498,8 +1520,8 @@ function KidsTeacherClassPageContent() {
               <>
                 <p className="mb-4 text-sm text-slate-600 dark:text-gray-400">
                   {editFullyFree
-                    ? 'Planlanmış veya taslak challenge’da tüm alanları değiştirebilirsin.'
-                    : 'Öğrencilere açık challenge’da teslim başlangıcı ve challenge (tur) sayısı sabittir; diğer alanları güncelleyebilirsin.'}
+                    ? t('teacherClass.assignments.editFreeHint')
+                    : t('teacherClass.assignments.editLockedHint')}
                 </p>
                 {editAssignmentError ? (
                   <div
@@ -1510,7 +1532,7 @@ function KidsTeacherClassPageContent() {
                   </div>
                 ) : null}
                 <form className="space-y-4" onSubmit={saveAssignmentEdit}>
-                  <KidsFormField id={editAsgTitleId} label="Başlık" required>
+                  <KidsFormField id={editAsgTitleId} label={t('teacherClass.assignments.title')} required>
                     <input
                       id={editAsgTitleId}
                       required
@@ -1519,7 +1541,7 @@ function KidsTeacherClassPageContent() {
                       className={kidsInputClass}
                     />
                   </KidsFormField>
-                  <KidsFormField id="edit-asg-purpose" label="Amaç / ne öğrenecekler?">
+                  <KidsFormField id="edit-asg-purpose" label={t('teacherClass.assignments.purpose')}>
                     <textarea
                       id="edit-asg-purpose"
                       value={editPurpose}
@@ -1528,7 +1550,7 @@ function KidsTeacherClassPageContent() {
                       className={kidsTextareaClass}
                     />
                   </KidsFormField>
-                  <KidsFormField id="edit-asg-mat" label="Malzemeler">
+                  <KidsFormField id="edit-asg-mat" label={t('teacherClass.assignments.materials')}>
                     <textarea
                       id="edit-asg-mat"
                       value={editMaterials}
@@ -1539,12 +1561,12 @@ function KidsTeacherClassPageContent() {
                   </KidsFormField>
                   <KidsFormField
                     id={editAsgOpenAtId}
-                    label="Teslime başlangıç tarihi ve saati"
+                    label={t('teacherClass.assignments.openAt')}
                     required={editFullyFree}
                     hint={
                       editFullyFree
-                        ? 'Planlanmış challenge’da başlangıç ve son teslim zorunludur; başlangıç, son teslimden önce olmalıdır.'
-                        : 'Bu challenge öğrencilere açık; başlangıç tarihini değiştirmek için challenge’ın planlanmış olması gerekir.'
+                        ? t('teacherClass.assignments.editOpenAtHintFree')
+                        : t('teacherClass.assignments.editOpenAtHintLocked')
                     }
                   >
                     <KidsDateTimeField
@@ -1554,30 +1576,30 @@ function KidsTeacherClassPageContent() {
                       disabled={!editFullyFree}
                       required={editFullyFree}
                       placeholder={
-                        editFullyFree ? 'Başlangıç tarih ve saatini seç' : 'Kilitli — planlanmış challenge’da düzenlenebilir'
+                        editFullyFree ? t('teacherClass.assignments.openAtPlaceholder') : t('teacherClass.assignments.editOpenAtLockedPlaceholder')
                       }
                     />
                   </KidsFormField>
                   <KidsFormField
                     id={editAsgCloseAtId}
-                    label="Son teslim tarihi ve saati"
+                    label={t('teacherClass.assignments.closeAt')}
                     required
-                    hint="Öğrenci yalnızca bu zamana kadar (ve varsa başlangıçtan sonra) teslim edebilir."
+                    hint={t('teacherClass.assignments.closeAtHint')}
                   >
                     <KidsDateTimeField
                       id={editAsgCloseAtId}
                       value={editCloseAt}
                       onChange={setEditCloseAt}
                       required
-                      placeholder="Son teslimi seçmek için dokun"
+                      placeholder={t('teacherClass.assignments.closeAtPlaceholder')}
                     />
                   </KidsFormField>
                   <fieldset className="rounded-2xl border-2 border-violet-100 bg-violet-50/50 p-4 dark:border-violet-900/40 dark:bg-violet-950/30">
                     <legend className="px-2 text-sm font-bold text-violet-900 dark:text-violet-100">
-                      Kurallar
+                      {t('teacherClass.assignments.rules')}
                     </legend>
                     <p className="mt-2 text-sm text-slate-600 dark:text-gray-400">
-                      Öğrenci challenge’ını nasıl teslim etsin?
+                      {t('teacherClass.assignments.rulesHint')}
                     </p>
                     <div
                       className={`mt-3 grid gap-3 ${assignmentVideoEnabled ? 'sm:grid-cols-2' : 'sm:grid-cols-1'}`}
@@ -1595,10 +1617,10 @@ function KidsTeacherClassPageContent() {
                           🖼️
                         </span>
                         <span className="mt-2 block font-logo text-base font-bold text-slate-900 dark:text-white">
-                          Görsel / adım adım
+                          {t('teacherClass.assignments.imageMode')}
                         </span>
                         <span className="mt-1 block text-xs text-slate-600 dark:text-gray-400">
-                          Metin ve görselle teslim; her turda 1 görsel.
+                          {t('teacherClass.assignments.imageModeHint')}
                         </span>
                       </button>
                       {assignmentVideoEnabled ? (
@@ -1615,10 +1637,10 @@ function KidsTeacherClassPageContent() {
                             🎬
                           </span>
                           <span className="mt-2 block font-logo text-base font-bold text-slate-900 dark:text-white">
-                            Video
+                            {t('teacherClass.assignments.videoMode')}
                           </span>
                           <span className="mt-1 block text-xs text-slate-600 dark:text-gray-400">
-                            Öğrenci video bağlantısı ile teslim eder.
+                            {t('teacherClass.assignments.videoModeHint')}
                           </span>
                         </button>
                       ) : null}
@@ -1626,40 +1648,40 @@ function KidsTeacherClassPageContent() {
                     {editMediaType === 'video' ? (
                       <div className="mt-4">
                         <label htmlFor="edit-asg-video-duration" className={`${kidsLabelClass} block`}>
-                          Video süre limiti
+                          {t('teacherClass.assignments.videoLimit')}
                         </label>
                         <p className="mb-2 text-xs text-slate-500 dark:text-gray-400">
-                          Öğrenci yüklediği veya paylaştığı video bu süreyi aşmamalı.
+                          {t('teacherClass.assignments.videoLimitHint')}
                         </p>
                         <KidsSelect
                           id="edit-asg-video-duration"
                           value={String(editVideoSec)}
                           onChange={(v) => setEditVideoSec(Number(v) as 60 | 120 | 180)}
-                          options={VIDEO_DURATION_OPTIONS}
+                          options={videoDurationOptions}
                         />
                       </div>
                     ) : null}
                     <div className="mt-4">
                       <label htmlFor="edit-asg-submission-rounds" className={`${kidsLabelClass} block`}>
-                        Bu konu için kaç ayrı challenge teslim edilsin?
+                        {t('teacherClass.assignments.roundCount')}
                       </label>
                       <p className="mb-2 text-xs text-slate-500 dark:text-gray-400">
                         {editFullyFree
-                          ? 'Öğrenci panelinde Challenge 1, Challenge 2 şeklinde görünür (1–5).'
-                          : 'Yayındaki challenge’da bu sayı değiştirilemez.'}
+                          ? t('teacherClass.assignments.roundCountHint')
+                          : t('teacherClass.assignments.editRoundLockedHint')}
                       </p>
                       <KidsSelect
                         id="edit-asg-submission-rounds"
                         value={String(editSubmissionRounds)}
                         onChange={(v) => setEditSubmissionRounds(Number(v) as 1 | 2 | 3 | 4 | 5)}
-                        options={SUBMISSION_ROUNDS_OPTIONS}
+                        options={submissionRoundsOptions}
                         disabled={!editFullyFree}
                       />
                     </div>
                   </fieldset>
                   <div className="flex flex-wrap gap-2 pt-1">
                     <KidsPrimaryButton type="submit" disabled={editSaving}>
-                      {editSaving ? 'Kaydediliyor…' : 'Kaydet'}
+                      {editSaving ? t('profile.saving') : t('profile.save')}
                     </KidsPrimaryButton>
                     <KidsSecondaryButton
                       type="button"
@@ -1669,7 +1691,7 @@ function KidsTeacherClassPageContent() {
                         setEditAssignmentError(null);
                       }}
                     >
-                      Vazgeç
+                      {t('common.cancel')}
                     </KidsSecondaryButton>
                   </div>
                 </form>
@@ -1684,7 +1706,7 @@ function KidsTeacherClassPageContent() {
 
 export default function KidsTeacherClassPage() {
   return (
-    <Suspense fallback={<p className="text-center text-sm text-violet-800 dark:text-violet-200">Yükleniyor…</p>}>
+    <Suspense fallback={<p className="text-center text-sm text-violet-800 dark:text-violet-200">{'Loading...'}</p>}>
       <KidsTeacherClassPageContent />
     </Suspense>
   );

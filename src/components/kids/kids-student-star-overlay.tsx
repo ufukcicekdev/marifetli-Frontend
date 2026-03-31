@@ -3,6 +3,7 @@
 import { useEffect } from 'react';
 import { PartyPopper, Sparkles, Star } from 'lucide-react';
 import { KidsPrimaryButton } from '@/src/components/kids/kids-ui';
+import { useKidsI18n } from '@/src/providers/kids-language-provider';
 
 type Props = {
   open: boolean;
@@ -12,6 +13,7 @@ type Props = {
 };
 
 export function KidsStudentStarOverlay({ open, labels, onClose }: Props) {
+  const { t } = useKidsI18n();
   useEffect(() => {
     if (!open) return;
     const prev = document.body.style.overflow;
@@ -52,10 +54,10 @@ export function KidsStudentStarOverlay({ open, labels, onClose }: Props) {
             id="kids-star-celebration-title"
             className="mt-4 font-logo text-2xl font-black text-violet-950 dark:text-amber-100"
           >
-            Öğretmen yıldızı!
+            {t('student.starOverlay.title')}
           </h2>
           <p className="mt-2 text-sm font-semibold text-violet-900/90 dark:text-violet-100/90">
-            Bu challenge’da öne çıkan teslimlerden birisin — aferin!
+            {t('student.starOverlay.body')}
           </p>
           {labels.length > 0 ? (
             <ul className="mt-4 space-y-1 text-left text-sm font-bold text-fuchsia-900 dark:text-fuchsia-200">
@@ -70,7 +72,7 @@ export function KidsStudentStarOverlay({ open, labels, onClose }: Props) {
             </ul>
           ) : null}
           <KidsPrimaryButton type="button" className="mt-8 w-full rounded-2xl py-4 text-base" onClick={onClose}>
-            Devam et
+            {t('student.starOverlay.continue')}
           </KidsPrimaryButton>
         </div>
       </div>

@@ -7,10 +7,12 @@ import { KidsStudentProjectsPanel } from '@/src/components/kids/kids-student-pro
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import { kidsStudentDashboard, type KidsAssignment } from '@/src/lib/kids-api';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
+import { useKidsI18n } from '@/src/providers/kids-language-provider';
 
 export default function KidsStudentProjectsPage() {
   const router = useRouter();
   const { user, loading: authLoading, pathPrefix } = useKidsAuth();
+  const { t } = useKidsI18n();
   const [assignments, setAssignments] = useState<KidsAssignment[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -19,11 +21,11 @@ export default function KidsStudentProjectsPage() {
       const data = await kidsStudentDashboard();
       setAssignments(data.assignments);
     } catch {
-      toast.error('Challenges yüklenemedi');
+      toast.error(t('projects.loadError'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -39,10 +41,10 @@ export default function KidsStudentProjectsPage() {
   }, [authLoading, user?.id, user?.role, router, pathPrefix, load]);
 
   if (authLoading || !user) {
-    return <p className="text-center text-gray-600 dark:text-gray-400">Yükleniyor…</p>;
+    return <p className="text-center text-gray-600 dark:text-gray-400">{t('common.loading')}</p>;
   }
   if (user.role !== 'student') {
-    return <p className="text-center text-gray-600">Yönlendiriliyorsun…</p>;
+    return <p className="text-center text-gray-600">{t('common.redirecting')}</p>;
   }
 
   return (

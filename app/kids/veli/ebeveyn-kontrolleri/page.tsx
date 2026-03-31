@@ -13,11 +13,13 @@ import {
 } from '@/src/lib/kids-api';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
+import { useKidsI18n } from '@/src/providers/kids-language-provider';
 import { KidsCard, KidsPanelMax, KidsPrimaryButton, KidsSelect, kidsInputClass } from '@/src/components/kids/kids-ui';
 
 export default function KidsParentControlsPage() {
   const router = useRouter();
   const { user, loading, pathPrefix } = useKidsAuth();
+  const { t } = useKidsI18n();
   const [children, setChildren] = useState<KidsParentChildOverview[]>([]);
   const [games, setGames] = useState<KidsGame[]>([]);
   const [studentId, setStudentId] = useState<number | null>(null);
@@ -70,9 +72,9 @@ export default function KidsParentControlsPage() {
       return;
     }
     void load().catch((e) => {
-      toast.error(e instanceof Error ? e.message : 'Kontroller yuklenemedi');
+      toast.error(e instanceof Error ? e.message : t('parentControls.loadError'));
     });
-  }, [loading, user?.id, user?.role, pathPrefix, router, load]);
+  }, [loading, user?.id, user?.role, pathPrefix, router, load, t]);
 
   const canSave = useMemo(() => {
     const n = Number(dailyMinutes);
@@ -93,7 +95,7 @@ export default function KidsParentControlsPage() {
       setGames(g.games || []);
       setGamesByChild((prev) => ({ ...prev, [nextId]: g.games || [] }));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Kural yuklenemedi');
+      toast.error(e instanceof Error ? e.message : t('parentControls.policyLoadError'));
     }
   }
 
@@ -110,27 +112,27 @@ export default function KidsParentControlsPage() {
       const refreshed = await kidsParentGamesList(studentId).catch(() => ({ games: [] as KidsGame[] }));
       setGames(refreshed.games || []);
       setGamesByChild((prev) => ({ ...prev, [studentId]: refreshed.games || [] }));
-      toast.success('Ebeveyn kontrolleri kaydedildi');
+      toast.success(t('parentControls.saved'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Kaydedilemedi');
+      toast.error(e instanceof Error ? e.message : t('common.saveFailed'));
     } finally {
       setSaving(false);
     }
   }
 
   if (loading || !user || user.role !== 'parent') {
-    return <p className="text-center text-slate-600 dark:text-slate-400">Yukleniyor...</p>;
+    return <p className="text-center text-slate-600 dark:text-slate-400">{t('common.loading')}</p>;
   }
 
   return (
     <KidsPanelMax>
-      <h1 className="font-logo text-2xl font-bold text-slate-900 dark:text-white">Ebeveyn kontrolleri</h1>
+      <h1 className="font-logo text-2xl font-bold text-slate-900 dark:text-white">{t('parentControls.title')}</h1>
       <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-        Cocuklarin oyun suresi, saat araligi ve oyun bazli izinlerini buradan yonet.
+        {t('parentControls.subtitle')}
       </p>
 
       <KidsCard className="mt-6">
-        <label className="text-sm font-semibold text-slate-800 dark:text-slate-100">Cocuk sec</label>
+        <label className="text-sm font-semibold text-slate-800 dark:text-slate-100">{t('childrenStatus.selectChild')}</label>
         <KidsSelect
           value={studentId ? String(studentId) : ''}
           onChange={(v) => {
@@ -148,7 +150,7 @@ export default function KidsParentControlsPage() {
 
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           <div>
-            <label className="text-xs font-semibold text-slate-700 dark:text-slate-200">Gunluk limit (dk)</label>
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-200">{t('parentControls.dailyLimit')}</label>
             <input
               type="number"
               min={5}
@@ -159,20 +161,20 @@ export default function KidsParentControlsPage() {
             />
           </div>
           <div>
-            <label className="text-xs font-semibold text-slate-700 dark:text-slate-200">Baslangic saati</label>
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-200">{t('parentControls.startTime')}</label>
             <input type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} className={`${kidsInputClass} mt-1`} />
           </div>
           <div>
-            <label className="text-xs font-semibold text-slate-700 dark:text-slate-200">Bitis saati</label>
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-200">{t('parentControls.endTime')}</label>
             <input type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className={`${kidsInputClass} mt-1`} />
           </div>
         </div>
       </KidsCard>
 
       <KidsCard className="mt-4" tone="sky">
-        <h2 className="font-logo text-base font-bold text-slate-900 dark:text-white">Oyun izinleri</h2>
+        <h2 className="font-logo text-base font-bold text-slate-900 dark:text-white">{t('parentControls.gamePermissions')}</h2>
         <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-          Cocuk bazli ozet: her cocuk icin oyun durumu ayri gorunur.
+          {t('parentControls.childSummaryHint')}
         </p>
         <div className="mt-3 grid gap-3 md:grid-cols-2">
           {children.map((c) => {
@@ -195,16 +197,16 @@ export default function KidsParentControlsPage() {
                     onClick={() => void onPickStudent(c.id)}
                     className="rounded-full bg-violet-600 px-2.5 py-1 text-[11px] font-bold text-white"
                   >
-                    {isActiveEditor ? 'Duzenleniyor' : 'Duzenle'}
+                    {isActiveEditor ? t('parentControls.editing') : t('parentControls.edit')}
                   </button>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  <div>Toplam oyun: <strong>{totalGames}</strong></div>
-                  <div>Acik oyun: <strong>{openCount ?? '-'}</strong></div>
-                  <div>Kapali oyun: <strong>{blockedCount ?? '-'}</strong></div>
-                  <div>Gunluk gorev: <strong>{completedQuestCount}</strong></div>
-                  <div>En iyi skor: <strong>{bestScoreOverall}</strong></div>
-                  <div className="col-span-2">En yuksek seri: <strong>{maxStreak} gun</strong></div>
+                  <div>{t('parentControls.totalGames')}: <strong>{totalGames}</strong></div>
+                  <div>{t('parentControls.openGames')}: <strong>{openCount ?? '-'}</strong></div>
+                  <div>{t('parentControls.closedGames')}: <strong>{blockedCount ?? '-'}</strong></div>
+                  <div>{t('parentControls.dailyQuest')}: <strong>{completedQuestCount}</strong></div>
+                  <div>{t('parentControls.bestScore')}: <strong>{bestScoreOverall}</strong></div>
+                  <div className="col-span-2">{t('parentControls.maxStreak')}: <strong>{maxStreak} {t('gameCenter.day')}</strong></div>
                 </div>
               </div>
             );
@@ -216,21 +218,21 @@ export default function KidsParentControlsPage() {
             onClick={() => setBlocked([])}
             className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-bold text-white"
           >
-            Secili cocuk icin tum oyunlari ac
+            {t('parentControls.openAllForSelected')}
           </button>
           <button
             type="button"
             onClick={() => setBlocked(games.map((g) => g.id))}
             className="rounded-full bg-rose-600 px-3 py-1 text-xs font-bold text-white"
           >
-            Secili cocuk icin tum oyunlari kapat
+            {t('parentControls.closeAllForSelected')}
           </button>
         </div>
       </KidsCard>
 
       <div className="mt-5">
         <KidsPrimaryButton type="button" disabled={!canSave || saving} onClick={() => void onSave()}>
-          {saving ? 'Kaydediliyor...' : 'Kurallari kaydet'}
+          {saving ? t('profile.saving') : t('parentControls.saveRules')}
         </KidsPrimaryButton>
       </div>
     </KidsPanelMax>

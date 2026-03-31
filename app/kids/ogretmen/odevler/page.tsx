@@ -23,6 +23,7 @@ import {
 import { KidsDateTimeField } from '@/src/components/kids/kids-datetime-field';
 import { MediaSlider } from '@/src/components/media-slider';
 import type { MediaItem } from '@/src/lib/extract-media';
+import { useKidsI18n } from '@/src/providers/kids-language-provider';
 import {
   KidsCard,
   KidsFormField,
@@ -47,9 +48,9 @@ function isImageFile(file: File): boolean {
   return isImageAttachment(file.type, file.name);
 }
 
-function filePlaceholderUrl(fileName: string): string {
+function filePlaceholderUrl(fileName: string, label: string): string {
   const ext = (fileName.split('.').pop() || 'DOSYA').toUpperCase().slice(0, 6);
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540"><rect width="960" height="540" fill="#ECFEFF"/><rect x="360" y="120" width="240" height="300" rx="24" fill="#BAE6FD"/><path d="M520 120v76c0 13 11 24 24 24h56" fill="#7DD3FC"/><path d="M520 120l80 100" stroke="#38BDF8" stroke-width="10"/><text x="480" y="300" text-anchor="middle" font-family="Arial, sans-serif" font-size="40" font-weight="700" fill="#0C4A6E">${ext}</text><text x="480" y="345" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#0369A1">Ödev eki</text></svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540"><rect width="960" height="540" fill="#ECFEFF"/><rect x="360" y="120" width="240" height="300" rx="24" fill="#BAE6FD"/><path d="M520 120v76c0 13 11 24 24 24h56" fill="#7DD3FC"/><path d="M520 120l80 100" stroke="#38BDF8" stroke-width="10"/><text x="480" y="300" text-anchor="middle" font-family="Arial, sans-serif" font-size="40" font-weight="700" fill="#0C4A6E">${ext}</text><text x="480" y="345" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#0369A1">${label}</text></svg>`;
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
@@ -64,6 +65,7 @@ function formatFileSize(sizeBytes: number): string {
 export default function KidsTeacherHomeworksPage() {
   const router = useRouter();
   const { user, loading: authLoading, pathPrefix } = useKidsAuth();
+  const { t, language } = useKidsI18n();
   const [classes, setClasses] = useState<KidsClass[]>([]);
   const [classId, setClassId] = useState<string>('');
   const [title, setTitle] = useState('');
@@ -90,7 +92,7 @@ export default function KidsTeacherHomeworksPage() {
   const uploadPreviewItems = useMemo<MediaItem[]>(
     () =>
       files.map((f) => ({
-        url: isImageFile(f) ? URL.createObjectURL(f) : filePlaceholderUrl(f.name),
+        url: isImageFile(f) ? URL.createObjectURL(f) : filePlaceholderUrl(f.name, t('homework.attachmentLabel')),
         type: 'image',
       })),
     [files],
@@ -107,7 +109,7 @@ export default function KidsTeacherHomeworksPage() {
   const editPreviewItems = useMemo<MediaItem[]>(
     () =>
       editFiles.map((f) => ({
-        url: isImageFile(f) ? URL.createObjectURL(f) : filePlaceholderUrl(f.name),
+        url: isImageFile(f) ? URL.createObjectURL(f) : filePlaceholderUrl(f.name, t('homework.attachmentLabel')),
         type: 'image',
       })),
     [editFiles],
@@ -133,11 +135,11 @@ export default function KidsTeacherHomeworksPage() {
         setClassId(String(classList[0].id));
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Ödev verileri yüklenemedi');
+      toast.error(err instanceof Error ? err.message : t('teacherHomework.dataLoadError'));
     } finally {
       setLoading(false);
     }
-  }, [classId]);
+  }, [classId, t]);
 
   const loadClassHomeworks = useCallback(async (cid: number) => {
     if (!cid) {
@@ -148,7 +150,7 @@ export default function KidsTeacherHomeworksPage() {
       const list = await kidsListClassHomeworks(cid);
       setHomeworks(list);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Sınıf ödevleri yüklenemedi');
+      toast.error(err instanceof Error ? err.message : t('teacherHomework.classHomeworksLoadError'));
     }
   }, []);
 
@@ -170,11 +172,11 @@ export default function KidsTeacherHomeworksPage() {
   async function createHomework(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedClassId) {
-      toast.error('Önce sınıf seç.');
+      toast.error(t('teacherHomework.selectClassFirst'));
       return;
     }
     if (!title.trim()) {
-      toast.error('Başlık gerekli.');
+      toast.error(t('teacherHomework.titleRequired'));
       return;
     }
     setCreating(true);
@@ -193,10 +195,10 @@ export default function KidsTeacherHomeworksPage() {
       setDescription('');
       setDueAtLocal('');
       setFiles([]);
-      toast.success('Ödev yayınlandı.');
+      toast.success(t('teacherHomework.published'));
       await Promise.all([loadClassHomeworks(selectedClassId), load()]);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Ödev oluşturulamadı');
+      toast.error(err instanceof Error ? err.message : t('teacherHomework.createFailed'));
     } finally {
       setCreating(false);
     }
@@ -206,10 +208,10 @@ export default function KidsTeacherHomeworksPage() {
     setReviewingId(submissionId);
     try {
       await kidsTeacherReviewHomeworkSubmission(submissionId, { approved });
-      toast.success(approved ? 'Ödev onaylandı.' : 'Düzeltme istendi.');
+      toast.success(approved ? t('teacherHomework.approved') : t('teacherHomework.revisionRequested'));
       await load();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Değerlendirme kaydedilemedi');
+      toast.error(err instanceof Error ? err.message : t('teacherHomework.reviewSaveFailed'));
     } finally {
       setReviewingId(null);
     }
@@ -227,7 +229,7 @@ export default function KidsTeacherHomeworksPage() {
         accepted.push(f);
       }
     }
-    if (rejected.length > 0) toast.error(`Boyut limiti aşıldı: ${rejected.join(', ')}`);
+    if (rejected.length > 0) toast.error(`${t('announcements.sizeLimitExceeded')}: ${rejected.join(', ')}`);
     if (accepted.length > 0) setFiles((prev) => [...prev, ...accepted]);
   }
 
@@ -257,7 +259,7 @@ export default function KidsTeacherHomeworksPage() {
         accepted.push(f);
       }
     }
-    if (rejected.length > 0) toast.error(`Boyut limiti aşıldı: ${rejected.join(', ')}`);
+    if (rejected.length > 0) toast.error(`${t('announcements.sizeLimitExceeded')}: ${rejected.join(', ')}`);
     if (accepted.length > 0) setEditFiles((prev) => [...prev, ...accepted]);
   }
 
@@ -294,7 +296,7 @@ export default function KidsTeacherHomeworksPage() {
   async function saveEditHomework() {
     if (!selectedClassId || !editingHomeworkId) return;
     if (!editTitle.trim()) {
-      toast.error('Başlık gerekli.');
+      toast.error(t('teacherHomework.titleRequired'));
       return;
     }
     setEditSaving(true);
@@ -310,10 +312,10 @@ export default function KidsTeacherHomeworksPage() {
         }
       }
       setHomeworks((prev) => prev.map((row) => (row.id === latest.id ? latest : row)));
-      toast.success('Ödev güncellendi.');
+      toast.success(t('teacherHomework.updated'));
       cancelEditHomework();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Ödev güncellenemedi');
+      toast.error(err instanceof Error ? err.message : t('teacherHomework.updateFailed'));
     } finally {
       setEditSaving(false);
     }
@@ -325,9 +327,9 @@ export default function KidsTeacherHomeworksPage() {
     try {
       const latest = await kidsDeleteHomeworkAttachment(selectedClassId, homeworkId, attachmentId);
       setHomeworks((prev) => prev.map((row) => (row.id === latest.id ? latest : row)));
-      toast.success('Ödev eki silindi.');
+      toast.success(t('teacherHomework.attachmentDeleted'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Ödev eki silinemedi');
+      toast.error(err instanceof Error ? err.message : t('teacherHomework.attachmentDeleteFailed'));
     } finally {
       setDeletingAttachmentId(null);
     }
@@ -336,17 +338,17 @@ export default function KidsTeacherHomeworksPage() {
   return (
     <KidsPanelMax>
       <div className="mb-6 flex items-center justify-between gap-3">
-        <h1 className="font-logo text-2xl font-bold text-slate-900 dark:text-white">Ödev Yönetimi</h1>
+        <h1 className="font-logo text-2xl font-bold text-slate-900 dark:text-white">{t('teacherHomework.title')}</h1>
         <KidsSecondaryButton type="button" onClick={() => void load()} disabled={loading}>
-          {loading ? 'Yükleniyor…' : 'Yenile'}
+          {loading ? t('common.loading') : t('teacherHomework.refresh')}
         </KidsSecondaryButton>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <KidsCard tone="emerald">
-          <h2 className="font-logo text-lg font-bold text-emerald-950 dark:text-emerald-50">Yeni ödev yayınla</h2>
+          <h2 className="font-logo text-lg font-bold text-emerald-950 dark:text-emerald-50">{t('teacherHomework.newHomework')}</h2>
           <form className="mt-4 space-y-3" onSubmit={createHomework}>
-            <KidsFormField id={classSelectId} label="Sınıf">
+            <KidsFormField id={classSelectId} label={t('announcements.class')}>
               <KidsSelect
                 id={classSelectId}
                 value={classId}
@@ -354,7 +356,7 @@ export default function KidsTeacherHomeworksPage() {
                 options={classes.map((c) => ({ value: String(c.id), label: c.name }))}
               />
             </KidsFormField>
-            <KidsFormField id={titleId} label="Başlık">
+            <KidsFormField id={titleId} label={t('announcements.titleField')}>
               <input
                 id={titleId}
                 className={kidsInputClass}
@@ -362,7 +364,7 @@ export default function KidsTeacherHomeworksPage() {
                 onChange={(e) => setTitle(e.target.value)}
               />
             </KidsFormField>
-            <KidsFormField id={descriptionId} label="Açıklama">
+            <KidsFormField id={descriptionId} label={t('teacherHomework.description')}>
               <textarea
                 id={descriptionId}
                 className={kidsTextareaClass}
@@ -370,15 +372,15 @@ export default function KidsTeacherHomeworksPage() {
                 onChange={(e) => setDescription(e.target.value)}
               />
             </KidsFormField>
-            <KidsFormField id={dueAtId} label="Son teslim tarihi (opsiyonel)">
+            <KidsFormField id={dueAtId} label={t('teacherHomework.dueOptional')}>
               <KidsDateTimeField id={dueAtId} value={dueAtLocal} onChange={setDueAtLocal} />
             </KidsFormField>
             <div className="space-y-2 rounded-xl border border-emerald-200/70 bg-emerald-50/40 p-3 dark:border-emerald-800/50 dark:bg-emerald-950/20">
-              <p className="text-xs font-semibold text-emerald-900 dark:text-emerald-100">Ödev dosya ekleri</p>
+              <p className="text-xs font-semibold text-emerald-900 dark:text-emerald-100">{t('teacherHomework.attachments')}</p>
               {uploadPreviewItems.length > 0 ? (
-                <MediaSlider items={uploadPreviewItems} className="h-44" alt="Ödev dosya önizleme" fit="contain" />
+                <MediaSlider items={uploadPreviewItems} className="h-44" alt="Homework file preview" fit="contain" />
               ) : (
-                <p className="text-xs text-slate-600 dark:text-slate-300">Henüz dosya eklenmedi.</p>
+                <p className="text-xs text-slate-600 dark:text-slate-300">{t('teacherHomework.noAttachmentYet')}</p>
               )}
               <div className="flex items-center justify-between">
                 <input
@@ -389,9 +391,9 @@ export default function KidsTeacherHomeworksPage() {
                   className="hidden"
                 />
                 <label htmlFor="homework-files" className="cursor-pointer text-xs font-semibold text-emerald-700 hover:text-emerald-500 dark:text-emerald-200">
-                  + Dosya ekle
+                  {t('announcements.addFile')}
                 </label>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400">Görsel 10 MB, döküman 20 MB</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">{t('announcements.attachmentHintShort')}</span>
               </div>
               {files.length > 0 ? (
                 <ul className="space-y-1 text-xs text-slate-600 dark:text-slate-300">
@@ -405,7 +407,7 @@ export default function KidsTeacherHomeworksPage() {
                         onClick={() => removeFile(f)}
                         className="rounded-full border border-rose-300 px-2 py-0.5 text-rose-700 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950/40"
                       >
-                        Kaldır
+                        {t('messageDetail.remove')}
                       </button>
                     </li>
                   ))}
@@ -413,16 +415,16 @@ export default function KidsTeacherHomeworksPage() {
               ) : null}
             </div>
             <KidsPrimaryButton type="submit" disabled={creating}>
-              {creating ? 'Yayınlanıyor…' : 'Yayınla'}
+              {creating ? t('announcements.publishing') : t('announcements.publish')}
             </KidsPrimaryButton>
           </form>
         </KidsCard>
 
         <KidsCard tone="sky">
-          <h2 className="font-logo text-lg font-bold text-indigo-950 dark:text-indigo-50">Seçili sınıfın ödevleri</h2>
+          <h2 className="font-logo text-lg font-bold text-indigo-950 dark:text-indigo-50">{t('teacherHomework.selectedClassHomeworks')}</h2>
           <div className="mt-3 space-y-2">
             {homeworks.length === 0 ? (
-              <p className="text-sm text-indigo-900/80 dark:text-indigo-100/80">Bu sınıf için ödev yok.</p>
+              <p className="text-sm text-indigo-900/80 dark:text-indigo-100/80">{t('teacherHomework.noHomeworkClass')}</p>
             ) : (
               homeworks.map((hw) => (
                 <div key={hw.id} className="rounded-xl border border-indigo-200/70 px-3 py-2 dark:border-indigo-700/60">
@@ -432,42 +434,42 @@ export default function KidsTeacherHomeworksPage() {
                         value={editTitle}
                         onChange={(e) => setEditTitle(e.target.value)}
                         className={kidsInputClass}
-                        placeholder="Başlık"
+                        placeholder={t('announcements.titleField')}
                       />
                       <textarea
                         value={editDescription}
                         onChange={(e) => setEditDescription(e.target.value)}
                         className={kidsTextareaClass}
                         rows={3}
-                        placeholder="Açıklama"
+                        placeholder={t('teacherHomework.description')}
                       />
                       <KidsDateTimeField id={`edit-due-${hw.id}`} value={editDueAtLocal} onChange={setEditDueAtLocal} />
                       <div className="rounded-lg border border-indigo-200/70 bg-white/70 p-2 dark:border-indigo-800/50 dark:bg-slate-900/60">
-                        <p className="text-xs font-semibold text-indigo-900 dark:text-indigo-100">Mevcut ekler</p>
+                          <p className="text-xs font-semibold text-indigo-900 dark:text-indigo-100">{t('teacherHomework.currentAttachments')}</p>
                         {Array.isArray(hw.attachments) && hw.attachments.length > 0 ? (
                           <ul className="mt-1 space-y-1 text-xs">
                             {hw.attachments.map((att) => (
                               <li key={att.id} className="flex items-center justify-between gap-2">
-                                <span className="truncate text-slate-700 dark:text-slate-200">{att.original_name || 'Dosya'}</span>
+                                <span className="truncate text-slate-700 dark:text-slate-200">{att.original_name || t('messageDetail.file')}</span>
                                 <button
                                   type="button"
                                   onClick={() => void deleteHomeworkAttachment(hw.id, att.id)}
                                   disabled={deletingAttachmentId === att.id || editSaving}
                                   className="rounded-full border border-rose-300 px-2 py-0.5 text-rose-700 hover:bg-rose-50 disabled:opacity-60 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950/40"
                                 >
-                                  {deletingAttachmentId === att.id ? 'Siliniyor…' : 'Sil'}
+                                  {deletingAttachmentId === att.id ? t('announcements.deleting') : t('announcements.deleteCurrentAttachment')}
                                 </button>
                               </li>
                             ))}
                           </ul>
                         ) : (
-                          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Ek yok.</p>
+                          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t('announcements.noExistingAttachment')}</p>
                         )}
                       </div>
                       <div className="rounded-lg border border-indigo-200/70 bg-indigo-50/40 p-2 dark:border-indigo-800/50 dark:bg-indigo-950/20">
-                        <p className="text-xs font-semibold text-indigo-900 dark:text-indigo-100">Yeni ekler</p>
+                        <p className="text-xs font-semibold text-indigo-900 dark:text-indigo-100">{t('announcements.newAttachments')}</p>
                         {editPreviewItems.length > 0 ? (
-                          <MediaSlider items={editPreviewItems} className="mt-1 h-36" alt="Ödev ek önizleme" fit="contain" />
+                          <MediaSlider items={editPreviewItems} className="mt-1 h-36" alt="Homework attachment preview" fit="contain" />
                         ) : null}
                         <div className="mt-1 flex items-center justify-between">
                           <input
@@ -478,9 +480,9 @@ export default function KidsTeacherHomeworksPage() {
                             className="hidden"
                           />
                           <label htmlFor={`edit-homework-files-${hw.id}`} className="cursor-pointer text-xs font-semibold text-indigo-700 hover:text-indigo-500 dark:text-indigo-200">
-                            + Dosya ekle
+                            {t('announcements.addFile')}
                           </label>
-                          <span className="text-[11px] text-slate-500 dark:text-slate-400">Görsel 10 MB, döküman 20 MB</span>
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400">{t('announcements.attachmentHintShort')}</span>
                         </div>
                         {editFiles.length > 0 ? (
                           <ul className="mt-1 space-y-1 text-xs text-slate-600 dark:text-slate-300">
@@ -494,7 +496,7 @@ export default function KidsTeacherHomeworksPage() {
                                   onClick={() => removeEditFile(f)}
                                   className="rounded-full border border-rose-300 px-2 py-0.5 text-rose-700 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950/40"
                                 >
-                                  Kaldır
+                                  {t('messageDetail.remove')}
                                 </button>
                               </li>
                             ))}
@@ -503,10 +505,10 @@ export default function KidsTeacherHomeworksPage() {
                       </div>
                       <div className="flex justify-end gap-2">
                         <KidsSecondaryButton type="button" onClick={cancelEditHomework} disabled={editSaving}>
-                          Vazgeç
+                          {t('common.cancel')}
                         </KidsSecondaryButton>
                         <KidsPrimaryButton type="button" onClick={() => void saveEditHomework()} disabled={editSaving || !editTitle.trim()}>
-                          {editSaving ? 'Kaydediliyor…' : 'Kaydet'}
+                          {editSaving ? t('profile.saving') : t('profile.save')}
                         </KidsPrimaryButton>
                       </div>
                     </div>
@@ -519,20 +521,22 @@ export default function KidsTeacherHomeworksPage() {
                           onClick={() => startEditHomework(hw)}
                           className="rounded-full border border-indigo-300 px-2.5 py-0.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 dark:border-indigo-700 dark:text-indigo-200 dark:hover:bg-indigo-900/40"
                         >
-                          Düzenle
+                          {t('announcements.edit')}
                         </button>
                       </div>
-                      <p className="text-xs text-slate-600 dark:text-slate-300">{hw.description || 'Açıklama yok'}</p>
+                      <p className="text-xs text-slate-600 dark:text-slate-300">{hw.description || t('teacherHomework.noDescription')}</p>
                       {hw.due_at ? (
                         <p className="mt-1 text-xs text-indigo-800/80 dark:text-indigo-200/80">
-                          Son teslim: {new Date(hw.due_at).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}
+                          {t('teacherHomework.dueAt')}: {new Date(hw.due_at).toLocaleString(language, { dateStyle: 'short', timeStyle: 'short' })}
                         </p>
                       ) : null}
                       {Array.isArray(hw.attachments) && hw.attachments.length > 0 ? (
                         <div className="mt-2">
                           <MediaSlider
                             items={hw.attachments.map((att) => ({
-                              url: isImageAttachment(att.content_type, att.original_name) ? att.url : filePlaceholderUrl(att.original_name || 'dosya'),
+                              url: isImageAttachment(att.content_type, att.original_name)
+                                ? att.url
+                                : filePlaceholderUrl(att.original_name || 'dosya', t('homework.attachmentLabel')),
                               type: 'image',
                             }))}
                             className="h-40"
@@ -551,10 +555,10 @@ export default function KidsTeacherHomeworksPage() {
       </div>
 
       <KidsCard tone="amber" className="mt-6">
-        <h2 className="font-logo text-lg font-bold text-amber-950 dark:text-amber-50">Veli onayı gelen ödevler</h2>
+        <h2 className="font-logo text-lg font-bold text-amber-950 dark:text-amber-50">{t('teacherHomework.parentApprovedInbox')}</h2>
         <div className="mt-3 space-y-2">
           {inbox.length === 0 ? (
-            <p className="text-sm text-amber-900/80 dark:text-amber-100/80">Bekleyen kayıt yok.</p>
+            <p className="text-sm text-amber-900/80 dark:text-amber-100/80">{t('teacherHomework.noPendingInbox')}</p>
           ) : (
             inbox.map((sub) => (
               <div key={sub.id} className="rounded-xl border border-amber-200/80 p-3 dark:border-amber-700/60">
@@ -568,14 +572,14 @@ export default function KidsTeacherHomeworksPage() {
                     disabled={reviewingId !== null}
                     onClick={() => void reviewSubmission(sub.id, true)}
                   >
-                    {reviewingId === sub.id ? '…' : 'Onayla'}
+                    {reviewingId === sub.id ? '...' : t('teacherHomework.approve')}
                   </KidsPrimaryButton>
                   <KidsSecondaryButton
                     type="button"
                     disabled={reviewingId !== null}
                     onClick={() => void reviewSubmission(sub.id, false)}
                   >
-                    Düzeltme iste
+                    {t('teacherHomework.askRevision')}
                   </KidsSecondaryButton>
                 </div>
               </div>

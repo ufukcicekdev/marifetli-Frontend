@@ -3,9 +3,9 @@ import { MarifetliKidsTermsContent } from '@/src/components/legal/marifetli-kids
 
 export default function KidsYasalKullanimSartlariPage() {
   return (
-    <MarifetliKidsLegalPageShell title="Kullanım Şartları — Marifetli Kids" variant="kids">
+    <MarifetliKidsLegalPageShell title="Kullanim Sartlari - Marifetli Kids" variant="kids">
       <p className="mb-4 text-sm font-semibold text-violet-900 dark:text-violet-100">
-        KULLANIM ŞARTLARI – MARİFETLİ KIDS
+        KULLANIM SARTLARI - MARIFETLI KIDS
       </p>
       <MarifetliKidsTermsContent variant="kids" />
     </MarifetliKidsLegalPageShell>

@@ -15,10 +15,12 @@ import {
   kidsParentMessagesMarkUnlockedNow,
 } from '@/src/lib/kids-parent-message-gate';
 import { KidsCenteredModal, KidsPrimaryButton, KidsSecondaryButton } from '@/src/components/kids/kids-ui';
+import { useKidsI18n } from '@/src/providers/kids-language-provider';
 
 export default function KidsMessagesPage() {
   const router = useRouter();
   const { user, loading: authLoading, pathPrefix } = useKidsAuth();
+  const { t, language } = useKidsI18n();
   const [loading, setLoading] = useState(true);
   const [rows, setRows] = useState<KidsConversation[]>([]);
   const [error, setError] = useState('');
@@ -54,18 +56,18 @@ export default function KidsMessagesPage() {
         const list = await kidsListConversations();
         setRows(list);
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Mesajlar yüklenemedi');
+        setError(e instanceof Error ? e.message : t('messages.loadError'));
       } finally {
         setLoading(false);
       }
     })();
-  }, [accessReady, user]);
+  }, [accessReady, user, t]);
 
   async function verifyPasswordAndUnlock() {
     const pass = password.trim();
     setPasswordError(null);
     if (!pass) {
-      setPasswordError('Lütfen şifreni gir.');
+      setPasswordError(t('messages.enterPassword'));
       return;
     }
     setPasswordBusy(true);
@@ -75,27 +77,27 @@ export default function KidsMessagesPage() {
       setAccessReady(true);
       setPassword('');
     } catch (e) {
-      setPasswordError(e instanceof Error ? e.message : 'Şifre doğrulanamadı');
+      setPasswordError(e instanceof Error ? e.message : t('messages.passwordVerifyFailed'));
     } finally {
       setPasswordBusy(false);
     }
   }
 
   if (authLoading || !user) {
-    return <p className="text-center text-sm text-violet-800 dark:text-violet-200">Yükleniyor…</p>;
+    return <p className="text-center text-sm text-violet-800 dark:text-violet-200">{t('common.loading')}</p>;
   }
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      <h1 className="font-logo text-2xl font-bold text-violet-950 dark:text-violet-50">Mesajlar</h1>
+      <h1 className="font-logo text-2xl font-bold text-violet-950 dark:text-violet-50">{t('messages.title')}</h1>
       <p className="text-sm text-slate-600 dark:text-slate-300">
-        Veli ve öğretmen bağlamlı konuşmalar burada listelenir.
+        {t('messages.subtitle')}
       </p>
-      {loading ? <p className="text-sm text-slate-500">Yükleniyor…</p> : null}
+      {loading ? <p className="text-sm text-slate-500">{t('common.loading')}</p> : null}
       {error ? <p className="text-sm text-red-600 dark:text-red-400">{error}</p> : null}
       {!loading && !error && rows.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-violet-300 bg-violet-50/50 p-6 text-sm text-violet-900 dark:border-violet-800 dark:bg-violet-950/20 dark:text-violet-100">
-          Henüz konuşma yok.
+          {t('messages.empty')}
         </div>
       ) : null}
       <ul className="space-y-2">
@@ -107,28 +109,28 @@ export default function KidsMessagesPage() {
             >
               <div className="flex items-center justify-between gap-3">
                 <p className="font-semibold text-violet-950 dark:text-violet-100">
-                  {c.topic?.trim() || `Konuşma #${c.id}`}
+                  {c.topic?.trim() || t('messages.conversationFallback').replace('{id}', String(c.id))}
                 </p>
                 <span className="text-xs text-slate-500 dark:text-slate-400">
                   {c.last_message_at
-                    ? new Date(c.last_message_at).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })
-                    : 'Henüz mesaj yok'}
+                    ? new Date(c.last_message_at).toLocaleString(language === 'tr' ? 'tr-TR' : language === 'ge' ? 'de-DE' : 'en-US', { dateStyle: 'short', timeStyle: 'short' })
+                    : t('messages.noMessageYet')}
                 </span>
               </div>
               <p className="mt-1 text-xs font-semibold text-fuchsia-700 dark:text-fuchsia-300">
-                Okunmamış: {c.unread_count}
+                {t('messages.unread')}: {c.unread_count}
               </p>
             </Link>
           </li>
         ))}
       </ul>
       {user.role === 'parent' && !accessReady ? (
-        <KidsCenteredModal title="Mesajlar için şifre doğrulaması" onClose={() => router.replace(`${pathPrefix}/veli/panel`)}>
+        <KidsCenteredModal title={t('messages.passwordModalTitle')} onClose={() => router.replace(`${pathPrefix}/veli/panel`)}>
           <p className="text-sm text-slate-700 dark:text-slate-300">
-            Veli mesajlarını görüntülemek için hesabının şifresini gir. Bu doğrulama 15 dakika boyunca geçerli olur.
+            {t('messages.passwordModalBody')}
           </p>
           <label className="mt-4 block text-xs font-bold uppercase tracking-wide text-violet-800 dark:text-violet-200">
-            Hesap şifren
+            {t('messages.accountPassword')}
           </label>
           <input
             type="password"
@@ -155,10 +157,10 @@ export default function KidsMessagesPage() {
           ) : null}
           <div className="mt-4 flex justify-end gap-2">
             <KidsSecondaryButton type="button" disabled={passwordBusy} onClick={() => router.replace(`${pathPrefix}/veli/panel`)}>
-              Vazgeç
+              {t('common.cancel')}
             </KidsSecondaryButton>
             <KidsPrimaryButton type="button" disabled={passwordBusy} onClick={() => void verifyPasswordAndUnlock()}>
-              {passwordBusy ? 'Doğrulanıyor…' : 'Devam et'}
+              {passwordBusy ? t('messages.verifying') : t('messages.continue')}
             </KidsPrimaryButton>
           </div>
         </KidsCenteredModal>

@@ -3,26 +3,31 @@
 import { useMemo } from 'react';
 import { Sparkles as SparklesIcon, Sprout } from 'lucide-react';
 import { KidsCenteredModal, KidsPrimaryButton } from '@/src/components/kids/kids-ui';
+import { useKidsI18n } from '@/src/providers/kids-language-provider';
 
-const MID_STEP_MESSAGES = [
-  'Çok iyi gidiyorsun! Bu adımı tamamladın — bir sonrakinde de parlayacaksın.',
-  'Vay be! Emek verdin, belli oluyor; macera devam ediyor, durma.',
-  'Süpersin! Her adım seni biraz daha güçlendiriyor; devam etmelisin.',
-  'Bravo! Öğretmenin çalışkanlığını görecek; bir sonraki adımda da şov yap.',
-  'Harika iş çıkardın! Küçük adımlar büyük başarıları getirir — devam.',
-  'Eline sağlık! Bu tur tamam; nefes al ve sonraki adıma geç.',
-];
+const MID_MOTIVATION_KEYS = [
+  'student.motivation.mid0',
+  'student.motivation.mid1',
+  'student.motivation.mid2',
+  'student.motivation.mid3',
+  'student.motivation.mid4',
+  'student.motivation.mid5',
+] as const;
 
-const FINAL_STEP_MESSAGES = [
-  'Tüm adımları bitirdin! Sen bir yıldızsın — gurur duyabilirsin.',
-  'Konuyu baştan sona tamamladın. Filiz bile alkışlıyor!',
-  'Son adım da sende! Bu challenge’ı taçlandırdın; süpersin.',
-];
+const FINAL_MOTIVATION_KEYS = [
+  'student.motivation.final0',
+  'student.motivation.final1',
+  'student.motivation.final2',
+] as const;
 
 /** Yeni bir adım teslimi sonrası rastgele mesaj (güncelleme / tekrar gönderimde kullanılmaz). */
-export function kidsPickStepMotivationMessage(isFinalStep: boolean): string {
-  const pool = isFinalStep ? FINAL_STEP_MESSAGES : MID_STEP_MESSAGES;
-  return pool[Math.floor(Math.random() * pool.length)] ?? pool[0];
+export function kidsPickStepMotivationMessage(
+  isFinalStep: boolean,
+  t: (key: string) => string,
+): string {
+  const pool = isFinalStep ? FINAL_MOTIVATION_KEYS : MID_MOTIVATION_KEYS;
+  const k = pool[Math.floor(Math.random() * pool.length)] ?? pool[0];
+  return t(k);
 }
 
 function Sparkles() {
@@ -67,6 +72,7 @@ type Props = {
  * Kapatınca üst bileşen navigasyonu (sonraki adım veya challenges listesi) yapar.
  */
 export function KidsStudentStepMotivationModal({ open, message, isFinalStep, onContinue }: Props) {
+  const { t } = useKidsI18n();
   if (!open) return null;
 
   return (
@@ -74,14 +80,14 @@ export function KidsStudentStepMotivationModal({ open, message, isFinalStep, onC
       title={
         <span className="flex items-center gap-2">
           <Sprout className="h-4 w-4 text-emerald-500" aria-hidden />
-          Filiz diyor ki…
+          {t('student.motivation.modalTitle')}
         </span>
       }
       onClose={onContinue}
       maxWidthClass="max-w-md"
       footer={
         <KidsPrimaryButton type="button" className="w-full" onClick={onContinue}>
-          {isFinalStep ? 'Challenges’a dön' : 'Devam ediyorum!'}
+          {isFinalStep ? t('student.motivation.btnBackToChallenges') : t('student.motivation.btnContinue')}
         </KidsPrimaryButton>
       }
     >
@@ -99,7 +105,7 @@ export function KidsStudentStepMotivationModal({ open, message, isFinalStep, onC
           </div>
         </div>
         <p className="font-logo mt-6 text-xl font-black text-violet-950 dark:text-violet-100">
-          {isFinalStep ? 'Konu tamam!' : 'Süper gidiyorsun!'}
+          {isFinalStep ? t('student.motivation.headlineFinal') : t('student.motivation.headlineMid')}
         </p>
         <p className="mt-3 text-sm font-semibold leading-relaxed text-slate-600 dark:text-gray-300">
           {message}

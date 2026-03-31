@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
@@ -18,6 +18,7 @@ import {
 } from '@/src/lib/kids-api';
 import { isPeerStudentChallengeWindowOpen } from '@/src/lib/kids-peer-challenge-time';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
+import { useKidsI18n } from '@/src/providers/kids-language-provider';
 import { KidsDateTimeField } from '@/src/components/kids/kids-datetime-field';
 import {
   KidsCard,
@@ -36,40 +37,33 @@ function toDatetimeLocalValue(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-const PEER_SUBMISSION_ROUNDS_OPTIONS: KidsSelectOption[] = [
-  { value: '1', label: '1 challenge adımı' },
-  { value: '2', label: '2 challenge adımı' },
-  { value: '3', label: '3 challenge adımı' },
-  { value: '4', label: '4 challenge adımı' },
-  { value: '5', label: '5 challenge adımı' },
-];
-
-function peerChallengeStatusTr(s: KidsPeerChallengeStatus): string {
+function peerChallengeStatusTr(s: KidsPeerChallengeStatus, t: (key: string) => string): string {
   switch (s) {
     case 'pending_teacher':
-      return 'Öğretmen onayı bekleniyor';
+      return t('competitions.status.pendingTeacher');
     case 'pending_parent':
-      return 'Veli onayı bekleniyor';
+      return t('competitions.status.pendingParent');
     case 'rejected':
-      return 'Reddedildi';
+      return t('competitions.status.rejected');
     case 'active':
-      return 'Devam ediyor';
+      return t('competitions.status.active');
     case 'ended':
-      return 'Sona erdi';
+      return t('competitions.status.ended');
     default:
       return s;
   }
 }
 
-function challengeScopeLabel(c: KidsPeerChallenge): string {
+function challengeScopeLabel(c: KidsPeerChallenge, t: (key: string) => string): string {
   return (c.peer_scope ?? 'class_peer') === 'free_parent'
-    ? 'Serbest yarışma'
-    : c.kids_class_name || 'Sınıf yarışması';
+    ? t('competitions.scope.free')
+    : c.kids_class_name || t('competitions.scope.class');
 }
 
 export default function KidsStudentPeerChallengesPage() {
   const router = useRouter();
   const { user, loading: authLoading, pathPrefix } = useKidsAuth();
+  const { t, language } = useKidsI18n();
   const [classes, setClasses] = useState<KidsClass[]>([]);
   const [challenges, setChallenges] = useState<KidsPeerChallenge[]>([]);
   const [invites, setInvites] = useState<KidsPeerChallengeInviteRow[]>([]);
@@ -92,6 +86,14 @@ export default function KidsStudentPeerChallengesPage() {
   const startsId = useId();
   const endsId = useId();
   const dateDefaultsSet = useRef(false);
+  const peerSubmissionRoundsOptions = useMemo<KidsSelectOption[]>(
+    () =>
+      [1, 2, 3, 4, 5].map((v) => ({
+        value: String(v),
+        label: `${v} ${t('competitions.challengeUnit')}`,
+      })),
+    [t],
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -105,11 +107,11 @@ export default function KidsStudentPeerChallengesPage() {
       setInvites(peer.pending_invites);
       setAllowFreeChallenge(peer.allow_free_parent_challenge !== false);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Liste yüklenemedi');
+      toast.error(e instanceof Error ? e.message : t('competitions.listLoadError'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (competitionMode === 'free' && !allowFreeChallenge) {
@@ -152,39 +154,39 @@ export default function KidsStudentPeerChallengesPage() {
     e.preventDefault();
     const cid = Number(classId);
     if (competitionMode === 'class' && (!Number.isFinite(cid) || cid <= 0)) {
-      toast.error('Sınıf seçmelisin.');
+      toast.error(t('competitions.mustSelectClass'));
       return;
     }
     if (!title.trim()) {
-      toast.error('Başlık yazmalısın.');
+      toast.error(t('competitions.mustEnterTitle'));
       return;
     }
     if (!startsAtLocal || !endsAtLocal) {
-      toast.error('Başlangıç ve bitiş tarihlerini seçmelisin.');
+      toast.error(t('competitions.mustSelectDates'));
       return;
     }
     const startsIso = kidsDatetimeLocalToIso(startsAtLocal);
     const endsIso = kidsDatetimeLocalToIso(endsAtLocal);
     if (!startsIso || !endsIso) {
-      toast.error('Geçerli tarih ve saat seçmelisin.');
+      toast.error(t('competitions.mustSelectValidDatetime'));
       return;
     }
     const startMs = new Date(startsIso).getTime();
     const endMs = new Date(endsIso).getTime();
     if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) {
-      toast.error('Geçerli tarih ve saat seçmelisin.');
+      toast.error(t('competitions.mustSelectValidDatetime'));
       return;
     }
     if (endMs <= startMs) {
-      toast.error('Bitiş, başlangıçtan sonra olmalıdır.');
+      toast.error(t('competitions.endAfterStart'));
       return;
     }
     if (endMs - startMs < 30 * 60 * 1000) {
-      toast.error('Yarışma süresi en az 30 dakika olmalıdır.');
+      toast.error(t('competitions.minDuration'));
       return;
     }
     if (endMs <= Date.now()) {
-      toast.error('Bitiş zamanı gelecekte olmalıdır.');
+      toast.error(t('competitions.endInFuture'));
       return;
     }
     setSaving(true);
@@ -201,8 +203,8 @@ export default function KidsStudentPeerChallengesPage() {
       });
       toast.success(
         competitionMode === 'free'
-          ? 'Önerin veli hesabına iletildi. Onaylanınca haber verilir.'
-          : 'Önerin öğretmene gönderildi. Onaylanınca haber verilir.',
+          ? t('competitions.sentToParent')
+          : t('competitions.sentToTeacher'),
       );
       setTitle('');
       setDescription('');
@@ -216,7 +218,7 @@ export default function KidsStudentPeerChallengesPage() {
       setEndsAtLocal(toDatetimeLocalValue(e));
       await load();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Gönderilemedi');
+      toast.error(err instanceof Error ? err.message : t('competitions.sendFailed'));
     } finally {
       setSaving(false);
     }
@@ -226,10 +228,10 @@ export default function KidsStudentPeerChallengesPage() {
     setRespondingId(id);
     try {
       await kidsRespondPeerChallengeInvite(id, action);
-      toast.success(action === 'accept' ? 'Katıldın!' : 'Daveti reddettin.');
+      toast.success(action === 'accept' ? t('competitions.joined') : t('competitions.declinedInvite'));
       await load();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Yanıt verilemedi');
+      toast.error(err instanceof Error ? err.message : t('competitions.respondFailed'));
     } finally {
       setRespondingId(null);
     }
@@ -238,7 +240,7 @@ export default function KidsStudentPeerChallengesPage() {
   if (authLoading || !user || user.role !== 'student') {
     return (
       <KidsPanelMax className="max-w-6xl">
-        <p className="text-center text-violet-800 dark:text-violet-200">Yükleniyor…</p>
+        <p className="text-center text-violet-800 dark:text-violet-200">{t('common.loading')}</p>
       </KidsPanelMax>
     );
   }
@@ -250,36 +252,36 @@ export default function KidsStudentPeerChallengesPage() {
           href={`${pathPrefix}/ogrenci/panel`}
           className="inline-flex items-center gap-2 text-sm font-bold text-violet-700 hover:text-fuchsia-600 dark:text-violet-300"
         >
-          <span aria-hidden>←</span> Panele dön
+          <span aria-hidden>←</span> {t('competitions.backPanel')}
         </Link>
       </div>
 
       <header className="mb-8">
         <h1 className="font-logo text-3xl font-bold text-slate-900 dark:text-white sm:text-4xl">
-          🏆 Yarışmalar
+          🏆 {t('competitions.title')}
         </h1>
         <p className="mt-2 max-w-2xl text-slate-600 dark:text-gray-300">
-          <strong className="font-semibold text-slate-800 dark:text-gray-200">Sınıf yarışması:</strong> öğretmen
-          onayından sonra sınıf arkadaşlarına davet.{' '}
+          <strong className="font-semibold text-slate-800 dark:text-gray-200">{t('competitions.classComp')}</strong>{' '}
+          {t('competitions.classCompBody')}{' '}
           {allowFreeChallenge ? (
             <>
-              <strong className="font-semibold text-slate-800 dark:text-gray-200">Serbest yarışma:</strong> sınıfa bağlı
-              değil; veli hesabının onayıyla yalnızca sen katılırsın.
+              <strong className="font-semibold text-slate-800 dark:text-gray-200">{t('competitions.freeComp')}</strong>{' '}
+              {t('competitions.freeCompBody')}
             </>
           ) : (
-            <span className="font-semibold text-amber-800 dark:text-amber-200">Serbest yarışma şu anda kapalı.</span>
+            <span className="font-semibold text-amber-800 dark:text-amber-200">{t('competitions.freeClosed')}</span>
           )}{' '}
-          (Öğretmen ödevleri menüdeki Challenges sayfasında.)
+          {t('competitions.teacherHomeworkNote')}
         </p>
       </header>
 
       {loading ? (
-        <p className="text-center text-violet-800 dark:text-violet-200">Yükleniyor…</p>
+        <p className="text-center text-violet-800 dark:text-violet-200">{t('common.loading')}</p>
       ) : (
         <div className="space-y-8">
           {invites.length > 0 ? (
             <KidsCard tone="sky">
-              <h2 className="font-logo text-lg font-bold text-sky-950 dark:text-sky-50">Sana gelen davetler</h2>
+              <h2 className="font-logo text-lg font-bold text-sky-950 dark:text-sky-50">{t('competitions.invitesTitle')}</h2>
               <ul className="mt-4 space-y-4">
                 {invites.map((inv) => {
                   const windowOpen = isPeerStudentChallengeWindowOpen(inv.challenge);
@@ -290,22 +292,22 @@ export default function KidsStudentPeerChallengesPage() {
                   >
                     <p className="font-bold text-slate-900 dark:text-white">{inv.challenge.title}</p>
                     <p className="text-xs text-slate-500 dark:text-gray-400">
-                      {challengeScopeLabel(inv.challenge)}
+                      {challengeScopeLabel(inv.challenge, t)}
                     </p>
                     {inv.challenge.starts_at || inv.challenge.ends_at ? (
                       <p className="mt-1 text-xs text-slate-600 dark:text-gray-400">
                         {inv.challenge.starts_at
-                          ? `Başlangıç: ${new Date(inv.challenge.starts_at).toLocaleString('tr-TR')}`
+                          ? `${t('competitions.start')}: ${new Date(inv.challenge.starts_at).toLocaleString(language)}`
                           : null}
                         {inv.challenge.starts_at && inv.challenge.ends_at ? ' · ' : null}
                         {inv.challenge.ends_at
-                          ? `Bitiş: ${new Date(inv.challenge.ends_at).toLocaleString('tr-TR')}`
+                          ? `${t('competitions.end')}: ${new Date(inv.challenge.ends_at).toLocaleString(language)}`
                           : null}
                       </p>
                     ) : null}
                     <p className="mt-2 text-sm text-slate-700 dark:text-gray-300">
                       <strong>{[inv.inviter.first_name, inv.inviter.last_name].filter(Boolean).join(' ') || inv.inviter.email}</strong>{' '}
-                      seni davet ediyor.
+                      {t('competitions.invitedYou')}
                     </p>
                     {inv.personal_message ? (
                       <p className="mt-2 rounded-xl bg-sky-50 px-3 py-2 text-sm dark:bg-sky-950/50">
@@ -314,7 +316,7 @@ export default function KidsStudentPeerChallengesPage() {
                     ) : null}
                     {!windowOpen ? (
                       <p className="mt-2 text-sm font-semibold text-amber-800 dark:text-amber-200">
-                        Yarışma süresi kapalı veya henüz başlamadı; kabul edemezsin.
+                        {t('competitions.windowClosed')}
                       </p>
                     ) : null}
                     <div className="mt-3 flex flex-wrap gap-2">
@@ -323,14 +325,14 @@ export default function KidsStudentPeerChallengesPage() {
                         disabled={respondingId === inv.id || !windowOpen}
                         onClick={() => void respondInvite(inv.id, 'accept')}
                       >
-                        {respondingId === inv.id ? '…' : 'Kabul et'}
+                        {respondingId === inv.id ? '...' : t('competitions.accept')}
                       </KidsPrimaryButton>
                       <KidsSecondaryButton
                         type="button"
                         disabled={respondingId === inv.id}
                         onClick={() => void respondInvite(inv.id, 'decline')}
                       >
-                        Reddet
+                        {t('competitions.decline')}
                       </KidsSecondaryButton>
                     </div>
                   </li>
@@ -343,11 +345,9 @@ export default function KidsStudentPeerChallengesPage() {
           {/* lg+: solda öneri formu, sağda yarışma listesi; mobilde önce form, sonra liste */}
           <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-2 lg:gap-10">
             <KidsCard tone="amber" className="min-w-0 lg:order-1">
-              <h2 className="font-logo text-lg font-bold text-amber-950 dark:text-amber-50">Yeni yarışma öner</h2>
+              <h2 className="font-logo text-lg font-bold text-amber-950 dark:text-amber-50">{t('competitions.newProposal')}</h2>
               <p className="mt-1 text-sm text-amber-900/85 dark:text-amber-100/85">
-                Öğretmeninin oluşturduğu ödevler gibi <strong className="font-semibold">tek konu</strong> yazarsın; aynı
-                konu altında kaç ayrı challenge adımı olacağını seçersin (Challenge 1, 2, …). Sınıf yarışmasında ayda bir
-                kez aynı sınıfta öneri; serbest yarışmada veli onayı ve ayrı bir kota geçerli olabilir.
+                {t('competitions.proposalHint')}
               </p>
               <div className="mt-4 flex flex-wrap gap-2">
                 <button
@@ -359,7 +359,7 @@ export default function KidsStudentPeerChallengesPage() {
                       : 'border-2 border-amber-300/80 bg-white/80 text-amber-950 hover:bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-50'
                   }`}
                 >
-                  Sınıf yarışması
+                  {t('competitions.classCompButton')}
                 </button>
                 {allowFreeChallenge ? (
                   <button
@@ -371,24 +371,23 @@ export default function KidsStudentPeerChallengesPage() {
                         : 'border-2 border-fuchsia-300/80 bg-white/80 text-fuchsia-950 hover:bg-fuchsia-50 dark:border-fuchsia-700 dark:bg-fuchsia-950/30 dark:text-fuchsia-50'
                     }`}
                   >
-                    Serbest yarışma
+                    {t('competitions.freeCompButton')}
                   </button>
                 ) : null}
               </div>
               {competitionMode === 'class' && classes.length === 0 ? (
                 <p className="mt-4 text-sm font-semibold text-amber-900 dark:text-amber-100">
-                  Sınıf yarışması için kayıtlı sınıfın olmalı; öğretmen davetiyle önce sınıfa katıl.
+                  {t('competitions.classModeRequiresClass')}
                 </p>
               ) : competitionMode === 'free' ? (
                 <p className="mt-4 rounded-xl border border-fuchsia-200/90 bg-fuchsia-50/80 px-3 py-2 text-sm text-fuchsia-950 dark:border-fuchsia-800 dark:bg-fuchsia-950/40 dark:text-fuchsia-100">
-                  Profilinde bağlı bir <strong className="font-semibold">veli hesabı</strong> olmalı (aile kaydı /
-                  davet akışı). Veli, Kids veli panelinden onaylar; sınıf arkadaşı daveti yoktur.
+                  {t('competitions.freeModeHint')}
                 </p>
               ) : null}
               {competitionMode === 'class' && classes.length === 0 ? null : (
                 <form className="mt-5 space-y-4" onSubmit={onPropose}>
                   {competitionMode === 'class' ? (
-                    <KidsFormField id={classSelectId} label="Sınıf" required>
+                    <KidsFormField id={classSelectId} label={t('announcements.class')} required>
                       <KidsSelect
                         id={classSelectId}
                         value={classId}
@@ -399,36 +398,36 @@ export default function KidsStudentPeerChallengesPage() {
                   ) : null}
                   <KidsFormField
                     id={titleId}
-                    label="Konu / yarışma başlığı"
+                    label={t('competitions.topicLabel')}
                     required
-                    hint="Tüm adımlar bu başlık altında toplanır (öğretmen ödevindeki gibi)."
+                    hint={t('competitions.topicHint')}
                   >
                     <input
                       id={titleId}
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       className={kidsInputClass}
-                      placeholder="Örn. Kim daha çok kitap okur?"
+                      placeholder={t('competitions.topicPlaceholder')}
                       maxLength={200}
                     />
                   </KidsFormField>
                   <KidsFormField
                     id={roundsId}
-                    label="Bu konu için kaç ayrı challenge adımı?"
-                    hint="Öğrenci panelinde Challenge 1, Challenge 2 şeklinde görünür (1–5)."
+                    label={t('competitions.roundCountLabel')}
+                    hint={t('competitions.roundCountHint')}
                   >
                     <KidsSelect
                       id={roundsId}
                       value={String(submissionRounds)}
                       onChange={(v) => setSubmissionRounds(Number(v) as 1 | 2 | 3 | 4 | 5)}
-                      options={PEER_SUBMISSION_ROUNDS_OPTIONS}
+                      options={peerSubmissionRoundsOptions}
                       searchable={false}
                     />
                   </KidsFormField>
                   <KidsFormField
                     id={startsId}
-                    label="Başlangıç tarihi ve saati"
-                    hint="Bu saate kadar davet ve katılım kapalı sayılır; sunucu saatinize göre kaydedilir."
+                    label={t('competitions.startDateTime')}
+                    hint={t('competitions.startDateTimeHint')}
                     required
                   >
                     <KidsDateTimeField
@@ -437,13 +436,13 @@ export default function KidsStudentPeerChallengesPage() {
                       onChange={setStartsAtLocal}
                       required
                       disabled={saving}
-                      placeholder="Başlangıç tarih ve saatini seç"
+                      placeholder={t('competitions.startDateTimePlaceholder')}
                     />
                   </KidsFormField>
                   <KidsFormField
                     id={endsId}
-                    label="Bitiş tarihi ve saati"
-                    hint="Bu saatten sonra davet kabulü ve yeni davet gönderimi yapılamaz (en az 30 dakika süre)."
+                    label={t('competitions.endDateTime')}
+                    hint={t('competitions.endDateTimeHint')}
                     required
                   >
                     <KidsDateTimeField
@@ -452,10 +451,10 @@ export default function KidsStudentPeerChallengesPage() {
                       onChange={setEndsAtLocal}
                       required
                       disabled={saving}
-                      placeholder="Bitiş tarih ve saatini seç"
+                      placeholder={t('competitions.endDateTimePlaceholder')}
                     />
                   </KidsFormField>
-                  <KidsFormField id="pc-desc" label="Açıklama (isteğe bağlı)">
+                  <KidsFormField id="pc-desc" label={t('competitions.descriptionOptional')}>
                     <textarea
                       id="pc-desc"
                       value={description}
@@ -464,7 +463,7 @@ export default function KidsStudentPeerChallengesPage() {
                       rows={3}
                     />
                   </KidsFormField>
-                  <KidsFormField id="pc-rules" label="Hedef / kurallar (isteğe bağlı)">
+                  <KidsFormField id="pc-rules" label={t('competitions.rulesOptional')}>
                     <textarea
                       id="pc-rules"
                       value={rules}
@@ -474,7 +473,7 @@ export default function KidsStudentPeerChallengesPage() {
                     />
                   </KidsFormField>
                   <KidsPrimaryButton type="submit" disabled={saving}>
-                    {saving ? 'Gönderiliyor…' : competitionMode === 'free' ? 'Veliye gönder' : 'Öğretmene gönder'}
+                    {saving ? t('competitions.sending') : competitionMode === 'free' ? t('competitions.sendToParent') : t('competitions.sendToTeacher')}
                   </KidsPrimaryButton>
                 </form>
               )}
@@ -482,13 +481,13 @@ export default function KidsStudentPeerChallengesPage() {
 
             <div className="min-w-0 lg:order-2 lg:sticky lg:top-28 lg:self-start">
               <KidsCard>
-                <h2 className="font-logo text-lg font-bold text-slate-900 dark:text-white">Yarışmaların</h2>
+                <h2 className="font-logo text-lg font-bold text-slate-900 dark:text-white">{t('competitions.yours')}</h2>
                 <p className="mt-1 text-sm text-slate-600 dark:text-gray-400 lg:hidden">
-                  Tüm yarışmaların burada; birine tıklayarak detay ve davetlere gidebilirsin.
+                  {t('competitions.yoursHint')}
                 </p>
                 {challenges.length === 0 ? (
                   <p className="mt-3 text-sm text-slate-600 dark:text-gray-400">
-                    Henüz bir yarışman yok. Soldaki formdan yeni öneri gönderebilirsin.
+                    {t('competitions.emptyYours')}
                   </p>
                 ) : (
                   <ul className="mt-4 max-h-[min(70vh,32rem)] space-y-3 overflow-y-auto pr-1 lg:max-h-[calc(100vh-12rem)]">
@@ -501,14 +500,14 @@ export default function KidsStudentPeerChallengesPage() {
                           <div className="flex flex-wrap items-center justify-between gap-2">
                             <span className="font-bold text-slate-900 dark:text-white">{c.title}</span>
                             <span className="rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-bold text-violet-900 dark:bg-violet-900/60 dark:text-violet-100">
-                              {peerChallengeStatusTr(c.status)}
+                              {peerChallengeStatusTr(c.status, t)}
                             </span>
                           </div>
                           <p className="mt-1 text-xs text-slate-500 dark:text-gray-400">
-                            {challengeScopeLabel(c)}
+                            {challengeScopeLabel(c, t)}
                             {(c.submission_rounds ?? 1) > 1 ? (
                               <span className="ml-2 font-semibold text-violet-700 dark:text-violet-300">
-                                · {c.submission_rounds} adım
+                                · {c.submission_rounds} {t('competitions.challengeUnit')}
                               </span>
                             ) : null}
                           </p>

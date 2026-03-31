@@ -25,16 +25,19 @@ import { useCallback, useEffect, useId, useState, type ReactNode } from 'react';
 import { KidsRoleLoginForm } from '@/src/components/kids/kids-role-login-form';
 import { KidsCenteredModal, KidsPrimaryButton, KidsSecondaryButton } from '@/src/components/kids/kids-ui';
 import { kidsHomeHref } from '@/src/lib/kids-config';
+import { useKidsI18n } from '@/src/providers/kids-language-provider';
 
 type LoginTab = 'student' | 'teacher' | 'parent';
 
 function KidsLandingRolePickCard({
   label,
+  ariaLabel,
   icon,
   circleClass,
   onPick,
 }: {
   label: string;
+  ariaLabel: string;
   icon: ReactNode;
   circleClass: string;
   onPick: () => void;
@@ -43,7 +46,7 @@ function KidsLandingRolePickCard({
     <button
       type="button"
       onClick={onPick}
-      aria-label={`${label} olarak giriş yap`}
+      aria-label={ariaLabel}
       className="group flex min-h-0 w-full min-w-0 flex-col items-center gap-2 rounded-3xl border border-slate-200/90 bg-white/95 px-2 py-4 shadow-sm transition hover:-translate-y-0.5 hover:border-sky-300/90 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 sm:gap-3 sm:px-4 sm:py-6 dark:border-slate-600/80 dark:bg-gray-900/90 dark:hover:border-sky-600/70"
     >
       <span
@@ -168,6 +171,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
   /** Modal içi: girişte üst bilgi kutusu; şifre sıfırlamada gizlenir */
   const [modalAuthPhase, setModalAuthPhase] = useState<'login' | 'forgot' | 'sent'>('login');
   const tabListId = useId();
+  const { t } = useKidsI18n();
 
   const closeLogin = useCallback(() => {
     setLoginOpen(false);
@@ -219,10 +223,10 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
         <div className="flex flex-wrap items-center justify-center gap-2 text-center">
           <span className="inline-flex items-center gap-1.5 rounded-full border-2 border-violet-200 bg-white/90 px-3 py-1 text-xs font-bold text-violet-800 shadow-sm dark:border-violet-800 dark:bg-violet-950/60 dark:text-violet-100">
             <Sparkles className="inline-block h-3.5 w-3.5 animate-pulse" aria-hidden />
-            Güvenli alan
+            {t('landing.safeArea')}
           </span>
           <span className="inline-flex items-center gap-1 rounded-full border-2 border-amber-200 bg-amber-50/90 px-3 py-1 text-xs font-bold text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-100">
-            <ShieldCheck className="h-3.5 w-3.5" aria-hidden /> Eğlenerek öğren
+            <ShieldCheck className="h-3.5 w-3.5" aria-hidden /> {t('landing.learnByFun')}
           </span>
         </div>
 
@@ -237,24 +241,24 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
                 Marifetli Kids
               </p>
               <h1 className="font-logo mt-3 text-center text-4xl font-black leading-tight text-violet-950 dark:text-white sm:text-6xl">
-                Renkli challenges,
+                {t('landing.heroTitleLine1')}
                 <br />
                 <span className="bg-gradient-to-r from-fuchsia-600 to-amber-500 bg-clip-text text-transparent dark:from-fuchsia-400 dark:to-amber-400">
-                  senin köşen!
+                  {t('landing.heroTitleLine2')}
                 </span>
               </h1>
               <p className="mx-auto mt-5 max-w-lg text-center text-base font-medium leading-relaxed text-slate-600 dark:text-gray-300 sm:text-lg">
-                Öğretmeninin verdiği challenge’ları tamamla, serbest kürsüde parla, rozet yolunda ilerle — hepsi tek yerde,
-                çocuk dostu ve güvenli.
+                {t('landing.heroSubtitle')}
               </p>
 
               <div className="mx-auto mt-10 w-full max-w-3xl px-0 sm:px-2">
                 <p className="text-center text-lg font-black text-slate-900 dark:text-white sm:text-xl">
-                  Şunlardan hangisisiniz?
+                  {t('landing.whichRole')}
                 </p>
                 <div className="mt-6 grid w-full grid-cols-3 gap-2 sm:gap-4 md:gap-5">
                   <KidsLandingRolePickCard
-                    label="Öğretmen"
+                    label={t('landing.role.teacher')}
+                    ariaLabel={t('landing.role.teacher')}
                     icon={<GraduationCap className="h-7 w-7 text-rose-600 sm:h-8 sm:w-8 dark:text-rose-200" />}
                     circleClass="bg-amber-300/90 text-rose-600 dark:bg-amber-400/40 dark:text-rose-200"
                     onPick={() => {
@@ -263,7 +267,8 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
                     }}
                   />
                   <KidsLandingRolePickCard
-                    label="Veli"
+                    label={t('landing.role.parent')}
+                    ariaLabel={t('landing.role.parent')}
                     icon={<Users className="h-7 w-7 text-sky-800 sm:h-8 sm:w-8 dark:text-sky-100" />}
                     circleClass="bg-sky-200/95 text-sky-800 dark:bg-sky-900/50 dark:text-sky-100"
                     onPick={() => {
@@ -272,7 +277,8 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
                     }}
                   />
                   <KidsLandingRolePickCard
-                    label="Öğrenci"
+                    label={t('landing.role.student')}
+                    ariaLabel={t('landing.role.student')}
                     icon={<Backpack className="h-7 w-7 text-emerald-800 sm:h-8 sm:w-8 dark:text-lime-100" />}
                     circleClass="bg-lime-300/90 text-emerald-800 dark:bg-lime-900/40 dark:text-lime-100"
                     onPick={() => {
@@ -283,7 +289,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
                 </div>
                 <div
                   className="mt-8 flex flex-col items-center justify-center gap-2 sm:flex-row sm:gap-4"
-                  aria-label="Güven ve topluluk"
+                  aria-label={t('landing.trustAria')}
                 >
                   <div className="flex items-center gap-0.5 text-amber-400" aria-hidden>
                     <span className="text-xl leading-none sm:text-2xl">★</span>
@@ -293,7 +299,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
                     <span className="text-xl leading-none text-amber-400/45 sm:text-2xl">★</span>
                   </div>
                   <p className="text-center text-sm font-medium text-slate-500 dark:text-slate-400">
-                    Veli onaylı kayıt · Güvenli sınıf ortamı
+                    {t('landing.trustLine')}
                   </p>
                 </div>
               </div>
@@ -304,14 +310,14 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
                   className="min-h-14 w-full max-w-xs rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 text-base font-black shadow-lg shadow-fuchsia-500/35 ring-4 ring-fuchsia-200/50 hover:from-violet-500 hover:to-fuchsia-500 dark:ring-fuchsia-900/40"
                   onClick={() => setLoginOpen(true)}
                 >
-                  <Rocket className="h-4 w-4" aria-hidden /> Giriş yap
+                  <Rocket className="h-4 w-4" aria-hidden /> {t('landing.login')}
                 </KidsPrimaryButton>
                 <KidsSecondaryButton
                   type="button"
                   className="min-h-12 w-full max-w-xs rounded-2xl border-2 border-violet-300 font-bold text-violet-900 dark:border-violet-700 dark:text-violet-100"
                   onClick={() => setLoginOpen(true)}
                 >
-                  Zaten hesabım var
+                  {t('landing.alreadyHaveAccount')}
                 </KidsSecondaryButton>
               </div>
               
@@ -327,25 +333,25 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
             </span>
             <h2 className="font-logo mt-2 text-lg font-bold text-sky-900 dark:text-sky-100">Challenges</h2>
             <p className="mt-1.5 text-sm leading-relaxed text-sky-900/80 dark:text-sky-100/80">
-              Metin, görsel veya video ile teslim; öğretmen geri bildirimi hemen panelinde.
+              {t('landing.card.challengesBody')}
             </p>
           </div>
           <div className="group rounded-3xl border-2 border-amber-200 bg-gradient-to-br from-amber-50 to-white p-5 shadow-md transition hover:-translate-y-0.5 hover:shadow-lg dark:border-amber-800/50 dark:from-amber-950/40 dark:to-gray-900/90">
             <span className="text-3xl transition group-hover:rotate-6" aria-hidden>
               <Mic2 className="h-7 w-7 text-amber-600" />
             </span>
-            <h2 className="font-logo mt-2 text-lg font-bold text-amber-900 dark:text-amber-100">Serbest kürsü</h2>
+            <h2 className="font-logo mt-2 text-lg font-bold text-amber-900 dark:text-amber-100">{t('landing.card.freestyleTitle')}</h2>
             <p className="mt-1.5 text-sm leading-relaxed text-amber-900/80 dark:text-amber-100/80">
-              Kendi fikirlerini paylaş; sınıfın ötesinde de parlayabilirsin.
+              {t('landing.card.freestyleBody')}
             </p>
           </div>
           <div className="group rounded-3xl border-2 border-violet-200 bg-gradient-to-br from-violet-50 to-white p-5 shadow-md transition hover:-translate-y-0.5 hover:shadow-lg dark:border-violet-800/50 dark:from-violet-950/40 dark:to-gray-900/90 sm:col-span-1">
             <span className="text-3xl transition group-hover:scale-110" aria-hidden>
               <Trophy className="h-7 w-7 text-violet-600" />
             </span>
-            <h2 className="font-logo mt-2 text-lg font-bold text-violet-900 dark:text-violet-100">Rozet yolu</h2>
+            <h2 className="font-logo mt-2 text-lg font-bold text-violet-900 dark:text-violet-100">{t('landing.card.badgeTitle')}</h2>
             <p className="mt-1.5 text-sm leading-relaxed text-violet-900/80 dark:text-violet-100/80">
-              İlerle, kutla, motive ol — oyunlaştırılmış küçük zaferler.
+              {t('landing.card.badgeBody')}
             </p>
           </div>
         </div>
@@ -363,47 +369,47 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
             <div className="relative flex flex-col gap-16 sm:gap-20 md:gap-28 lg:gap-32">
             <KidsLandingZigzagRow
               imageFirst
-              title="Hemen bağlantı kurun"
-              body="Öğretmen, veli ve öğrenci rolleriyle panelde bir aradasınız: challenge geri bildirimleri, onaylar ve bildirimler tek akışta — sınıfı kaçırmadan takip edin."
+              title={t('landing.feature.connect.title')}
+              body={t('landing.feature.connect.body')}
               imageSrc={KIDS_LANDING_IMAGE('kids-landing-messages.png')}
-              imageAlt="Sohbet balonları ve okul iletişimi illüstrasyonu"
+              imageAlt={t('landing.feature.connect.alt')}
               iconWrapClass="bg-sky-500 ring-4 ring-sky-100 dark:ring-sky-900/50"
               icon={<MessageCircle className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={2.25} aria-hidden />}
             />
             <KidsLandingZigzagRow
               imageFirst={false}
-              title="Onun dünyasına açılan bir pencere sunun"
-              body="Challenge teslimleri ve serbest kürsü paylaşımlarıyla sınıf enerjisini yakalayın; veliler çocuklarının üretimini güvenli, kontrollü bir ortamda görebilir."
+              title={t('landing.feature.window.title')}
+              body={t('landing.feature.window.body')}
               imageSrc={KIDS_LANDING_IMAGE('kids-landing-stories.png')}
-              imageAlt="Sınıf anlarını gösteren kartlar illüstrasyonu"
+              imageAlt={t('landing.feature.window.alt')}
               iconWrapClass="bg-amber-500 ring-4 ring-amber-100 dark:ring-amber-900/50"
               icon={<Images className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={2.25} aria-hidden />}
             />
             <KidsLandingZigzagRow
               imageFirst
-              title="Duyduk, duymadık demeyin!"
-              body="Yaklaşan teslim tarihleri, duyurular ve etkinlikleri takvim mantığıyla düşünün: herkes ne zaman ne yapacağını bilir; hatırlatıcılarla iş düşmez."
+              title={t('landing.feature.calendar.title')}
+              body={t('landing.feature.calendar.body')}
               imageSrc={KIDS_LANDING_IMAGE('kids-landing-events.png')}
-              imageAlt="Etkinlik kartları ve takvim illüstrasyonu"
+              imageAlt={t('landing.feature.calendar.alt')}
               iconWrapClass="bg-violet-600 ring-4 ring-violet-100 dark:ring-violet-900/50"
               icon={<CalendarDays className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={2.25} aria-hidden />}
             />
             <KidsLandingZigzagRow
               imageFirst={false}
-              title="Kendi yöntemleriyle büyümelerine yardımcı olun"
-              body="Rozet yolu, challenge ilerlemesi ve oyun merkezi skorlarıyla çocuklar kendi hızında ilerler; küçük kutlamalar motivasyonu tazeliyor — renkli, güvenli bir challenge dünyası."
+              title={t('landing.feature.grow.title')}
+              body={t('landing.feature.grow.body')}
               imageSrc={KIDS_LANDING_IMAGE('kids-landing-grow.png')}
-              imageAlt="Rozet ve gelişim illüstrasyonu: sevimli maskotlar ve rozetler"
+              imageAlt={t('landing.feature.grow.alt')}
               iconWrapClass="bg-lime-500 ring-4 ring-lime-100 dark:ring-lime-900/50"
               icon={<Rocket className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={2.25} aria-hidden />}
               imageBackdropClass="bg-lime-200/55 dark:bg-emerald-900/35"
             />
             <KidsLandingZigzagRow
               imageFirst
-              title="Şimdiye kadarki en iyi sınıfı oluşturun"
-              body="Davet linkleri, sınıf ve challenge yönetimi, teslimleri değerlendirme ve haftanın yıldızı gibi parçalar tek öğretmen panelinde — sınıfınızı toparlayın, zaman kazanın."
+              title={t('landing.feature.classroom.title')}
+              body={t('landing.feature.classroom.body')}
               imageSrc={KIDS_LANDING_IMAGE('kids-landing-toolkit.png')}
-              imageAlt="Öğretmen araçları illüstrasyonu: sınıf maskotu ve araç ikonları"
+              imageAlt={t('landing.feature.classroom.alt')}
               iconWrapClass="bg-rose-500 ring-4 ring-rose-100 dark:ring-rose-900/50"
               icon={<Wand2 className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={2.25} aria-hidden />}
               imageBackdropClass="bg-rose-200/50 dark:bg-rose-950/30"
@@ -416,14 +422,13 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="max-w-2xl">
               <p className="inline-flex items-center gap-1 rounded-full border border-fuchsia-300 bg-white/80 px-2.5 py-1 text-xs font-black text-fuchsia-700 dark:border-fuchsia-700 dark:bg-fuchsia-950/40 dark:text-fuchsia-200">
-                <Backpack className="h-3.5 w-3.5" aria-hidden /> Yeni: Oyun merkezi
+                <Backpack className="h-3.5 w-3.5" aria-hidden /> {t('landing.game.new')}
               </p>
               <h2 className="font-logo mt-3 text-2xl font-black text-violet-950 dark:text-violet-50 sm:text-3xl">
-                Oyunlarla daha kolay öğrenin
+                {t('landing.game.title')}
               </h2>
               <p className="mt-3 text-sm leading-relaxed text-slate-700 dark:text-slate-200 sm:text-base">
-                Hafıza, toplama, çıkarma, çarpma ve bölme oyunlarıyla eğlenerek öğren.
-                Seviye atla, combo yap, günlük görevleri tamamla ve rozet kazan.
+                {t('landing.game.body')}
               </p>
             </div>
             <div className="text-5xl sm:text-6xl" aria-hidden>
@@ -436,7 +441,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
               className="min-h-12 rounded-2xl"
               onClick={() => router.push(`${pathPrefix}/ogrenci/oyun-merkezi`)}
             >
-              Oyunu keşfet
+              {t('landing.discoverGame')}
             </KidsPrimaryButton>
             <KidsSecondaryButton
               type="button"
@@ -446,7 +451,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
                 setLoginOpen(true);
               }}
             >
-              Öğrenci olarak giriş yap
+              {t('landing.loginAsStudent')}
             </KidsSecondaryButton>
           </div>
           </div>
@@ -458,10 +463,10 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
                 <span className="text-3xl" aria-hidden>
                   <Backpack className="h-7 w-7 text-sky-600" />
                 </span>
-                <h2 className="font-logo text-xl font-bold text-sky-900 dark:text-sky-100">Öğrenci misin?</h2>
+                <h2 className="font-logo text-xl font-bold text-sky-900 dark:text-sky-100">{t('landing.studentQuestion')}</h2>
               </div>
               <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-gray-300">
-                Davet linkiyle kayıt ol, sınıfına katıl. Giriş için aşağıdaki düğmeyi veya modalı kullan.
+                {t('landing.studentCardBody')}
               </p>
               <button
                 type="button"
@@ -471,7 +476,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
                 }}
                 className="mt-4 text-sm font-bold text-sky-700 underline underline-offset-2 hover:text-fuchsia-600 dark:text-sky-300"
               >
-                Öğrenci girişi →
+                {t('landing.studentLoginCta')}
               </button>
             </div>
             <div className="rounded-3xl border-2 border-emerald-200/90 bg-white/80 p-6 dark:border-emerald-800/60 dark:bg-gray-900/70">
@@ -479,10 +484,10 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
                 <span className="text-3xl" aria-hidden>
                   <GraduationCap className="h-7 w-7 text-emerald-600" />
                 </span>
-                <h2 className="font-logo text-xl font-bold text-emerald-900 dark:text-emerald-100">Öğretmen misin?</h2>
+                <h2 className="font-logo text-xl font-bold text-emerald-900 dark:text-emerald-100">{t('landing.teacherQuestion')}</h2>
               </div>
               <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-gray-300">
-                Sınıf ve challenge yönetimi, davetler ve haftanın yıldızı — hesabın yönetici tarafından açılır.
+                {t('landing.teacherCardBody')}
               </p>
               <button
                 type="button"
@@ -492,7 +497,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
                 }}
                 className="mt-4 text-sm font-bold text-emerald-700 underline underline-offset-2 hover:text-fuchsia-600 dark:text-emerald-300"
               >
-                Öğretmen girişi →
+                {t('landing.teacherLoginCta')}
               </button>
             </div>
           </div>
@@ -512,7 +517,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
         </div>
 
         <p className="text-center text-sm font-semibold text-violet-800/90 dark:text-violet-200/90">
-          Veli onaylı kayıt · Kişisel verine saygı · İyi eğlenceler
+          {t('landing.footerTrust')}
         </p>
       </div>
 
@@ -521,7 +526,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
           title={
             <span className="flex items-center gap-2">
               <DoorOpen className="h-4 w-4" aria-hidden />
-              Giriş
+              {t('landing.login')}
             </span>
           }
           onClose={closeLogin}
@@ -529,14 +534,14 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
           panelClassName="max-h-[88dvh]"
         >
           <p className="text-sm text-slate-600 dark:text-gray-400">
-            Sekmeyi seç, giriş bilgilerini yaz — ayrı giriş sayfası yok.
+            {t('landing.modalHelp')}
           </p>
 
           <div
             id={tabListId}
             className="mt-4 rounded-2xl bg-gradient-to-r from-violet-200/80 via-fuchsia-200/70 to-amber-200/80 p-1.5 dark:from-violet-900/50 dark:via-fuchsia-900/50 dark:to-amber-900/40"
             role="tablist"
-            aria-label="Giriş türü"
+            aria-label={t('landing.loginType')}
           >
             <div className="grid grid-cols-3 gap-1">
               <button
@@ -555,7 +560,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
                 <span className="mr-1" aria-hidden>
                   <Backpack className="inline h-3.5 w-3.5" />
                 </span>
-                Öğrenci
+                {t('landing.role.student')}
               </button>
               <button
                 type="button"
@@ -573,7 +578,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
                 <span className="mr-1" aria-hidden>
                   <Users className="inline h-3.5 w-3.5" />
                 </span>
-                Veli
+                {t('landing.role.parent')}
               </button>
               <button
                 type="button"
@@ -591,7 +596,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
                 <span className="mr-1" aria-hidden>
                   <GraduationCap className="inline h-3.5 w-3.5" />
                 </span>
-                Öğretmen
+                {t('landing.role.teacher')}
               </button>
             </div>
           </div>
@@ -606,19 +611,17 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
               {modalAuthPhase === 'login' ? (
                 <div className="rounded-2xl border-2 border-sky-200 bg-sky-50/80 p-3 dark:border-sky-800/60 dark:bg-sky-950/35">
                   <p className="text-xs leading-relaxed text-sky-900/90 dark:text-sky-100/90">
-                    Hesabın yoksa öğretmeninden gelen <strong className="font-semibold">davet linkiyle</strong> kayıt olursun.
-                    Kendi e-postan olmasa bile: veli <strong>Veli</strong> sekmesinden giriş yapıp seni{' '}
-                    <strong>çocuk paneline</strong> yönlendirebilir. İstersen kullanıcı adı + çocuk şifresi de kullanılır.
+                    {t('landing.studentModalHint')}
                   </p>
                 </div>
               ) : null}
               <KidsRoleLoginForm
                 embedded
                 fieldIdSuffix="student"
-                title="Öğrenci girişi"
-                subtitle="Kayıt yalnızca öğretmen davetiyle yapılır."
-                identifierLabel="E-posta veya kullanıcı adı"
-                identifierPlaceholder="ornek@email.com veya ayse_yilmaz_ab12"
+                title={t('landing.studentLoginTitle')}
+                subtitle={t('landing.studentLoginSubtitle')}
+                identifierLabel={t('landing.studentIdentifierLabel')}
+                identifierPlaceholder={t('landing.studentIdentifierPlaceholder')}
                 identifierInputType="text"
                 allowedRoles={['student']}
                 redirectTo="/ogrenci/panel"
@@ -635,16 +638,15 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
               {modalAuthPhase === 'login' ? (
                 <div className="rounded-2xl border-2 border-amber-200 bg-amber-50/80 p-3 dark:border-amber-800/60 dark:bg-amber-950/35">
                   <p className="text-xs leading-relaxed text-amber-900/90 dark:text-amber-100/90">
-                    Veli hesabın, sınıf davetiyle kayıt sırasında oluşturduğun <strong>e-posta ve şifre</strong> ile açılır.
-                    Çocuk onayları ve bağlı hesaplar burada görünecek.
+                    {t('landing.parentModalHint')}
                   </p>
                 </div>
               ) : null}
               <KidsRoleLoginForm
                 embedded
                 fieldIdSuffix="parent"
-                title="Veli girişi"
-                subtitle="Davet formunda belirlediğin veli e-postası ve şifre."
+                title={t('landing.parentLoginTitle')}
+                subtitle={t('landing.parentLoginSubtitle')}
                 allowedRoles={['parent']}
                 redirectTo="/veli/panel"
                 onEmbeddedForgotPhaseChange={setModalAuthPhase}
@@ -660,15 +662,15 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
               {modalAuthPhase === 'login' ? (
                 <div className="rounded-2xl border-2 border-emerald-200 bg-emerald-50/80 p-3 dark:border-emerald-800/60 dark:bg-emerald-950/35">
                   <p className="text-xs leading-relaxed text-emerald-900/90 dark:text-emerald-100/90">
-                    Hesabın yönetici tarafından açılmış olmalıdır.
+                    {t('landing.teacherModalHint')}
                   </p>
                 </div>
               ) : null}
               <KidsRoleLoginForm
                 embedded
                 fieldIdSuffix="teacher"
-                title="Öğretmen girişi"
-                subtitle="E-posta ve şifrenle sınıf ve challenge yönetimine gir."
+                title={t('landing.teacherLoginTitle')}
+                subtitle={t('landing.teacherLoginSubtitle')}
                 allowedRoles={['teacher', 'admin']}
                 redirectTo="/ogretmen/panel"
                 onEmbeddedForgotPhaseChange={setModalAuthPhase}

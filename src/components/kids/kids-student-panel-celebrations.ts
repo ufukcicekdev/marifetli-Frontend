@@ -23,7 +23,11 @@ function writeStringArray(key: string, values: string[]) {
 export type NewPickCelebration = { kind: 'pick'; labels: string[] };
 
 /** İlk ziyarette mevcut yıldızları “görüldü” say; yalnızca sonradan eklenenler kutlanır. */
-export function detectNewTeacherPicks(roadmap: KidsBadgeRoadmap): NewPickCelebration | null {
+export function detectNewTeacherPicks(
+  roadmap: KidsBadgeRoadmap,
+  /** `label` yoksa çağrılır (ör. i18n “Challenge #{id}”). */
+  formatChallengeFallback?: (assignmentId: number) => string,
+): NewPickCelebration | null {
   if (typeof window === 'undefined') return null;
   const keys = roadmap.teacher_picks.map((p) => p.key);
   if (!localStorage.getItem(PICK_BASELINE)) {
@@ -35,7 +39,9 @@ export function detectNewTeacherPicks(roadmap: KidsBadgeRoadmap): NewPickCelebra
   const fresh = roadmap.teacher_picks.filter((p) => !seen.has(p.key));
   if (fresh.length === 0) return null;
   writeStringArray(PICK_SEEN_KEYS, [...new Set([...seen, ...keys])]);
-  const labels = fresh.map((p) => p.label || `Challenge #${p.assignment_id}`);
+  const labels = fresh.map((p) =>
+    p.label || (formatChallengeFallback?.(p.assignment_id) ?? `Challenge #${p.assignment_id}`),
+  );
   return { kind: 'pick', labels };
 }
 

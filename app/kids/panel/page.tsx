@@ -3,12 +3,14 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
+import { useKidsI18n } from '@/src/providers/kids-language-provider';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 
 /** Eski /panel bağlantıları rolüne göre yönlendirilir. */
 export default function KidsPanelRedirectPage() {
   const router = useRouter();
   const { user, loading, pathPrefix } = useKidsAuth();
+  const { t } = useKidsI18n();
 
   useEffect(() => {
     if (loading) return;
@@ -35,5 +37,5 @@ export default function KidsPanelRedirectPage() {
     router.replace(kidsLoginPortalHref(pathPrefix));
   }, [user, loading, pathPrefix, router]);
 
-  return <p className="text-center text-gray-600 dark:text-gray-400">Yönlendiriliyorsun…</p>;
+  return <p className="text-center text-gray-600 dark:text-gray-400">{t('common.redirecting')}</p>;
 }

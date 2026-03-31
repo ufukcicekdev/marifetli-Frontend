@@ -11,6 +11,7 @@ import {
 import { applyKidsSessionFromAuthResponse } from '@/src/lib/kids-session-storage';
 import { reconcileAuthStoreWithAccessToken } from '@/src/stores/auth-store';
 import { trPhoneDigitsFromInput, trPhoneInputChange } from '@/src/lib/tr-phone-input';
+import { useKidsI18n } from '@/src/providers/kids-language-provider';
 
 function needsParentEmailInForm(p: KidsInvitePreview): boolean {
   return Boolean(p.requires_parent_email ?? p.requires_student_email);
@@ -20,6 +21,7 @@ export default function KidsInviteAcceptPage() {
   const params = useParams();
   const pathname = usePathname();
   const token = typeof params.token === 'string' ? params.token : '';
+  const { t, language } = useKidsI18n();
 
   const [preview, setPreview] = useState<KidsInvitePreview | null>(null);
   const [previewError, setPreviewError] = useState<string | null>(null);
@@ -39,7 +41,7 @@ export default function KidsInviteAcceptPage() {
 
   useEffect(() => {
     if (!token) {
-      setPreviewError('Geçersiz bağlantı');
+      setPreviewError(t('invite.invalidLink'));
       return;
     }
     let cancelled = false;
@@ -52,7 +54,7 @@ export default function KidsInviteAcceptPage() {
         }
       } catch (e) {
         if (!cancelled) {
-          setPreviewError(e instanceof Error ? e.message : 'Davet bulunamadı');
+          setPreviewError(e instanceof Error ? e.message : t('invite.notFound'));
         }
       }
     })();
@@ -64,13 +66,13 @@ export default function KidsInviteAcceptPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!token) {
-      toast.error('Geçersiz davet');
+      toast.error(t('invite.invalid'));
       return;
     }
     if (!preview) return;
     const askEmail = needsParentEmailInForm(preview);
     if (askEmail && !parentEmail.trim()) {
-      toast.error('Veli e-posta adresini girin.');
+      toast.error(t('invite.enterParentEmail'));
       return;
     }
     setLoading(true);
@@ -83,7 +85,7 @@ export default function KidsInviteAcceptPage() {
         }))
         .filter((c) => c.first_name && c.last_name && c.password);
       if (normalizedChildren.length === 0) {
-        toast.error('En az bir çocuk bilgisi girin.');
+        toast.error(t('invite.enterAtLeastOneChild'));
         return;
       }
       const body: Record<string, unknown> = {
@@ -108,7 +110,7 @@ export default function KidsInviteAcceptPage() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        toast.error((data as { detail?: string }).detail || 'Kayıt tamamlanamadı');
+        toast.error((data as { detail?: string }).detail || t('invite.registerFailed'));
         return;
       }
       const createdChildren = (data as { created_children?: Array<{ student_login_name?: string }> })
@@ -128,15 +130,15 @@ export default function KidsInviteAcceptPage() {
       if (firstLogin) {
         const count = Array.isArray(createdChildren) ? createdChildren.length : 1;
         toast.success(
-          `Hoş geldin! ${count} çocuk eklendi. İlk giriş kullanıcı adı: ${firstLogin}`,
+          `${t('invite.welcome')} ${count} ${t('invite.childAdded')}. ${t('invite.firstLogin')}: ${firstLogin}`,
           { duration: 8000 },
         );
       } else {
-        toast.success('Hoş geldin!');
+        toast.success(t('invite.welcome'));
       }
       window.location.assign(panelHref);
     } catch {
-      toast.error('Bağlantı hatası');
+      toast.error(t('invite.connectionError'));
     } finally {
       setLoading(false);
     }
@@ -145,7 +147,7 @@ export default function KidsInviteAcceptPage() {
   if (previewError && !preview) {
     return (
       <div className="mx-auto max-w-md rounded-3xl border-2 border-rose-200 bg-white p-8 shadow-sm dark:border-rose-900 dark:bg-gray-900">
-        <h1 className="text-xl font-bold text-slate-900 dark:text-white">Davet kullanılamıyor</h1>
+        <h1 className="text-xl font-bold text-slate-900 dark:text-white">{t('invite.unavailable')}</h1>
         <p className="mt-2 text-sm text-slate-600 dark:text-gray-400">{previewError}</p>
       </div>
     );
@@ -154,7 +156,7 @@ export default function KidsInviteAcceptPage() {
   if (!preview) {
     return (
       <div className="mx-auto max-w-md rounded-3xl border-2 border-sky-200 bg-white p-8 text-center text-slate-600 dark:border-sky-900 dark:bg-gray-900 dark:text-gray-400">
-        Yükleniyor…
+        {t('common.loading')}
       </div>
     );
   }
@@ -165,9 +167,9 @@ export default function KidsInviteAcceptPage() {
 
   return (
     <div className="mx-auto max-w-lg rounded-3xl border-2 border-sky-200 bg-white p-8 shadow-sm dark:border-sky-800 dark:bg-gray-900">
-      <p className="text-sm font-semibold text-sky-700 dark:text-sky-300">Sınıf daveti</p>
+      <p className="text-sm font-semibold text-sky-700 dark:text-sky-300">{t('invite.classInvite')}</p>
       <h1 className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
-        <span className="text-sky-600 dark:text-sky-400">{preview.teacher_display}</span> sınıfına katılım
+        <span className="text-sky-600 dark:text-sky-400">{preview.teacher_display}</span> {t('invite.joinClass')}
       </h1>
       <p className="mt-2 text-lg font-bold text-violet-800 dark:text-violet-200">{preview.class_name}</p>
       {schoolLine ? (
@@ -179,19 +181,17 @@ export default function KidsInviteAcceptPage() {
         </p>
       ) : null}
       <p className="mt-3 text-xs text-slate-500 dark:text-gray-500">
-        Bu davet yaklaşık <strong>{exp.toLocaleDateString('tr-TR')}</strong> tarihine kadar geçerlidir.
+        {t('invite.validUntil')} <strong>{exp.toLocaleDateString(language)}</strong>.
       </p>
       <p className="mt-3 rounded-xl bg-violet-50 px-3 py-2 text-xs leading-relaxed text-violet-900 dark:bg-violet-950/40 dark:text-violet-100">
-        Önce <strong>veli hesabı</strong> (e-posta + şifre) oluşturulur; çocuğun kendi e-postası gerekmez. Çocuk paneline
-        en kolay yol: veli girişi → <strong>çocuk paneline geç</strong>. İstersen çocuk, kullanıcı adı + çocuk şifresiyle de
-        girebilir. İleride içerik onayları için veli oturumu kullanılacaktır.
+        {t('invite.parentFlow')}
       </p>
 
       <form className="mt-8 space-y-4" onSubmit={onSubmit}>
         {askEmail ? (
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-gray-300" htmlFor={parentEmailId}>
-              Veli e-postası <span className="text-rose-500">*</span>
+              {t('invite.parentEmail')} <span className="text-rose-500">*</span>
             </label>
             <input
               id={parentEmailId}
@@ -204,19 +204,19 @@ export default function KidsInviteAcceptPage() {
               placeholder="veli@email.com"
             />
             <p className="mt-1 text-xs text-slate-500 dark:text-gray-500">
-              Veli girişi ve bildirimler bu adrese gider. Çocuğun girişi için ayrı bir kullanıcı adı oluşturulur.
+              {t('invite.parentEmailHint')}
             </p>
           </div>
         ) : (
           <p className="rounded-xl bg-sky-50 px-3 py-2 text-sm text-sky-900 dark:bg-sky-950/50 dark:text-sky-100">
-            Kayıt, davet e-postasındaki veli adresine yapılacaktır; e-postayı burada değiştiremezsin.
+            {t('invite.emailLockedHint')}
           </p>
         )}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-gray-300" htmlFor="pfn">
-              Veli adı <span className="text-rose-500">*</span>
+              {t('invite.parentName')} <span className="text-rose-500">*</span>
             </label>
             <input
               id="pfn"
@@ -229,7 +229,7 @@ export default function KidsInviteAcceptPage() {
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 dark:text-gray-300" htmlFor="pln">
-              Veli soyadı <span className="text-rose-500">*</span>
+              {t('invite.parentLastName')} <span className="text-rose-500">*</span>
             </label>
             <input
               id="pln"
@@ -244,7 +244,7 @@ export default function KidsInviteAcceptPage() {
 
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-gray-300" htmlFor="pph">
-            Veli telefonu
+            {t('invite.parentPhone')}
           </label>
           <input
             id="pph"
@@ -257,14 +257,12 @@ export default function KidsInviteAcceptPage() {
             className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 font-mono tabular-nums outline-none ring-sky-400 focus:ring-2 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
             placeholder="0 5XX XXX XX XX"
           />
-          <p className="mt-1 text-xs text-slate-500 dark:text-gray-500">
-            Yalnızca rakam; +90 ile başlarsan otomatik düzenlenir. İsteğe bağlı.
-          </p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-gray-500">{t('invite.phoneHint')}</p>
         </div>
 
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-gray-300" htmlFor="ppw">
-            Veli şifresi <span className="text-rose-500">*</span> <span className="text-xs font-normal">(en az 8 karakter)</span>
+            {t('invite.parentPassword')} <span className="text-rose-500">*</span> <span className="text-xs font-normal">({t('invite.min8')})</span>
           </label>
           <input
             id="ppw"
@@ -282,7 +280,7 @@ export default function KidsInviteAcceptPage() {
 
         <div className="flex items-center justify-between gap-3">
           <p className="text-xs font-bold uppercase tracking-wide text-fuchsia-700 dark:text-fuchsia-300">
-            Çocuk hesapları
+            {t('invite.childAccounts')}
           </p>
           <button
             type="button"
@@ -293,28 +291,28 @@ export default function KidsInviteAcceptPage() {
             }
             className="rounded-full border border-fuchsia-300 px-3 py-1 text-xs font-bold text-fuchsia-700 hover:bg-fuchsia-50 dark:border-fuchsia-700 dark:text-fuchsia-300 dark:hover:bg-fuchsia-950/40"
           >
-            + Çocuk ekle
+            {t('invite.addChild')}
           </button>
         </div>
 
         {children.map((child, idx) => (
           <div key={idx} className="rounded-2xl border border-slate-200 p-3 dark:border-gray-700">
             <div className="mb-2 flex items-center justify-between">
-              <p className="text-sm font-bold text-slate-800 dark:text-gray-100">Çocuk {idx + 1}</p>
+              <p className="text-sm font-bold text-slate-800 dark:text-gray-100">{t('invite.child')} {idx + 1}</p>
               {children.length > 1 ? (
                 <button
                   type="button"
                   onClick={() => setChildren((prev) => prev.filter((_, i) => i !== idx))}
                   className="text-xs font-semibold text-rose-600 hover:underline dark:text-rose-300"
                 >
-                  Kaldır
+                  {t('messageDetail.remove')}
                 </button>
               ) : null}
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-gray-300">
-                  Çocuğun adı <span className="text-rose-500">*</span>
+                  {t('invite.childName')} <span className="text-rose-500">*</span>
                 </label>
                 <input
                   required
@@ -330,7 +328,7 @@ export default function KidsInviteAcceptPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 dark:text-gray-300">
-                  Çocuğun soyadı <span className="text-rose-500">*</span>
+                  {t('invite.childLastName')} <span className="text-rose-500">*</span>
                 </label>
                 <input
                   required
@@ -347,8 +345,8 @@ export default function KidsInviteAcceptPage() {
             </div>
             <div className="mt-3">
               <label className="block text-sm font-medium text-slate-700 dark:text-gray-300">
-                Çocuk şifresi <span className="text-rose-500">*</span>{' '}
-                <span className="text-xs font-normal">(en az 8 karakter)</span>
+                {t('invite.childPassword')} <span className="text-rose-500">*</span>{' '}
+                <span className="text-xs font-normal">({t('invite.min8')})</span>
               </label>
               <input
                 type="password"
@@ -367,7 +365,7 @@ export default function KidsInviteAcceptPage() {
           </div>
         ))}
         <p className="text-xs text-slate-500 dark:text-gray-500">
-          Aynı sınıf için birden fazla çocuk ekleyebilirsin (en fazla 10).
+          {t('invite.multipleChildrenHint')}
         </p>
 
         <button
@@ -375,7 +373,7 @@ export default function KidsInviteAcceptPage() {
           disabled={loading}
           className="w-full rounded-full bg-sky-500 py-2.5 text-sm font-semibold text-white hover:bg-sky-600 disabled:opacity-60"
         >
-          {loading ? 'Kaydediliyor…' : 'Veli ve çocuk hesaplarını oluştur / sınıfa katıl'}
+          {loading ? t('profile.saving') : t('invite.submit')}
         </button>
       </form>
     </div>

@@ -18,6 +18,7 @@ import {
   type MebSchoolPick,
 } from '@/src/lib/kids-api';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
+import { useKidsI18n } from '@/src/providers/kids-language-provider';
 import {
   KidsCard,
   KidsEmptyState,
@@ -34,6 +35,7 @@ import {
 export default function KidsTeacherSchoolsPage() {
   const router = useRouter();
   const { user, loading: authLoading, pathPrefix } = useKidsAuth();
+  const { t } = useKidsI18n();
   const [schools, setSchools] = useState<KidsSchool[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -81,11 +83,11 @@ export default function KidsTeacherSchoolsPage() {
       const list = await kidsListSchools();
       setSchools([...list].sort((a, b) => a.name.localeCompare(b.name, 'tr')));
     } catch {
-      toast.error('Okullar yüklenemedi');
+      toast.error(t('schools.loadError'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -105,7 +107,7 @@ export default function KidsTeacherSchoolsPage() {
         const p = await kidsMebProvinces();
         if (!cancelled) setMebProvinces(p);
       } catch {
-        if (!cancelled) toast.error('MEB il listesi yüklenemedi');
+        if (!cancelled) toast.error(t('schools.provincesLoadError'));
       } finally {
         if (!cancelled) setMebProvincesReady(true);
       }
@@ -134,7 +136,7 @@ export default function KidsTeacherSchoolsPage() {
       } catch {
         if (!cancelled) {
           setMebDistricts([]);
-          toast.error('İlçeler yüklenemedi');
+          toast.error(t('schools.districtsLoadError'));
         }
       }
     })();
@@ -158,7 +160,7 @@ export default function KidsTeacherSchoolsPage() {
       } catch {
         if (!cancelled) {
           setMebSchools([]);
-          toast.error('Okul listesi yüklenemedi');
+          toast.error(t('schools.listLoadError'));
         }
       } finally {
         if (!cancelled) setMebSchoolsLoading(false);
@@ -190,7 +192,7 @@ export default function KidsTeacherSchoolsPage() {
       } catch {
         if (!cancelled) {
           setModalDistricts([]);
-          toast.error('İlçeler yüklenemedi');
+          toast.error(t('schools.districtsLoadError'));
         }
       }
     })();
@@ -249,37 +251,37 @@ export default function KidsTeacherSchoolsPage() {
   }
 
   const provinceOptions = useMemo<KidsSelectOption[]>(
-    () => [{ value: '', label: 'İl seçin' }, ...mebProvinces.map((p) => ({ value: p, label: p }))],
-    [mebProvinces],
+    () => [{ value: '', label: t('admin.select.province') }, ...mebProvinces.map((p) => ({ value: p, label: p }))],
+    [mebProvinces, t],
   );
 
   const districtOptions = useMemo<KidsSelectOption[]>(() => {
-    if (!mebIl) return [{ value: '', label: 'Önce il seçin' }];
-    return [{ value: '', label: 'İlçe seçin' }, ...mebDistricts.map((d) => ({ value: d, label: d }))];
-  }, [mebIl, mebDistricts]);
+    if (!mebIl) return [{ value: '', label: t('admin.select.provinceFirst') }];
+    return [{ value: '', label: t('admin.select.district') }, ...mebDistricts.map((d) => ({ value: d, label: d }))];
+  }, [mebIl, mebDistricts, t]);
 
   const schoolOptions = useMemo<KidsSelectOption[]>(() => {
     if (!mebIl || !mebIlce) {
-      return [{ value: '', label: 'Önce il ve ilçe seç' }];
+      return [{ value: '', label: t('admin.select.provinceDistrictFirst') }];
     }
     if (mebSchoolsLoading) {
-      return [{ value: '', label: 'Okullar yükleniyor…' }];
+      return [{ value: '', label: t('admin.select.schoolsLoading') }];
     }
     if (mebSchools.length === 0) {
-      return [{ value: '', label: 'Bu ilçede kayıt yok' }];
+      return [{ value: '', label: t('admin.select.noRecordsInDistrict') }];
     }
-    return [{ value: '', label: 'Okul seçin' }, ...mebSchools.map((s) => ({ value: s.yol, label: s.name }))];
-  }, [mebIl, mebIlce, mebSchools, mebSchoolsLoading]);
+    return [{ value: '', label: t('admin.select.pickSchool') }, ...mebSchools.map((s) => ({ value: s.yol, label: s.name }))];
+  }, [mebIl, mebIlce, mebSchools, mebSchoolsLoading, t]);
 
   const modalProvinceOptions = useMemo<KidsSelectOption[]>(
-    () => [{ value: '', label: 'İl seçin' }, ...mebProvinces.map((p) => ({ value: p, label: p }))],
-    [mebProvinces],
+    () => [{ value: '', label: t('admin.select.province') }, ...mebProvinces.map((p) => ({ value: p, label: p }))],
+    [mebProvinces, t],
   );
 
   const modalDistrictOptions = useMemo<KidsSelectOption[]>(() => {
-    if (!modalMebIl) return [{ value: '', label: 'Önce il seçin' }];
-    return [{ value: '', label: 'İlçe seçin' }, ...modalDistricts.map((d) => ({ value: d, label: d }))];
-  }, [modalMebIl, modalDistricts]);
+    if (!modalMebIl) return [{ value: '', label: t('admin.select.provinceFirst') }];
+    return [{ value: '', label: t('admin.select.district') }, ...modalDistricts.map((d) => ({ value: d, label: d }))];
+  }, [modalMebIl, modalDistricts, t]);
 
   async function onSavePickedSchool() {
     if (!pickName.trim() || !pickProvince.trim() || !pickDistrict.trim()) return;
@@ -293,9 +295,9 @@ export default function KidsTeacherSchoolsPage() {
       });
       setSchools((prev) => [...prev, s].sort((a, b) => a.name.localeCompare(b.name, 'tr')));
       resetMebPickForm();
-      toast.success('Okul kaydedildi — sınıf açarken listeden seçebilirsin.');
+      toast.success(t('schools.saved'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Kaydedilemedi');
+      toast.error(err instanceof Error ? err.message : t('schools.saveFailed'));
     } finally {
       setSavingPick(false);
     }
@@ -314,9 +316,9 @@ export default function KidsTeacherSchoolsPage() {
       });
       setSchools((prev) => [...prev, s].sort((a, b) => a.name.localeCompare(b.name, 'tr')));
       closeAddSchoolModal();
-      toast.success('Okul kaydedildi — sınıf açarken listeden seçebilirsin.');
+      toast.success(t('schools.saved'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Kaydedilemedi');
+      toast.error(err instanceof Error ? err.message : t('schools.saveFailed'));
     } finally {
       setModalCreating(false);
     }
@@ -348,24 +350,24 @@ export default function KidsTeacherSchoolsPage() {
         prev.map((x) => (x.id === id ? updated : x)).sort((a, b) => a.name.localeCompare(b.name, 'tr')),
       );
       setEditingId(null);
-      toast.success('Okul güncellendi');
+      toast.success(t('schools.updated'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Güncellenemedi');
+      toast.error(err instanceof Error ? err.message : t('schools.updateFailed'));
     } finally {
       setSavingId(null);
     }
   }
 
   async function onDelete(id: number) {
-    if (!confirm('Bu okulu silmek istediğine emin misin? Bağlı sınıf varsa silinemez.')) return;
+    if (!confirm(t('schools.deleteConfirm'))) return;
     setDeletingId(id);
     try {
       await kidsDeleteSchool(id);
       setSchools((prev) => prev.filter((x) => x.id !== id));
       if (editingId === id) setEditingId(null);
-      toast.success('Okul silindi');
+      toast.success(t('schools.deleted'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Silinemedi');
+      toast.error(err instanceof Error ? err.message : t('schools.deleteFailed'));
     } finally {
       setDeletingId(null);
     }
@@ -378,14 +380,14 @@ export default function KidsTeacherSchoolsPage() {
   if (authLoading || !user) {
     return (
       <KidsPanelMax>
-        <p className="text-center text-violet-800 dark:text-violet-200">Yükleniyor…</p>
+        <p className="text-center text-violet-800 dark:text-violet-200">{t('common.loading')}</p>
       </KidsPanelMax>
     );
   }
   if (user.role !== 'teacher' && user.role !== 'admin') {
     return (
       <KidsPanelMax>
-        <p className="text-center text-violet-800 dark:text-violet-200">Yönlendiriliyorsun…</p>
+        <p className="text-center text-violet-800 dark:text-violet-200">{t('common.redirecting')}</p>
       </KidsPanelMax>
     );
   }
@@ -399,17 +401,17 @@ export default function KidsTeacherSchoolsPage() {
           href={`${pathPrefix}/ogretmen/panel`}
           className="inline-flex items-center gap-2 text-sm font-bold text-violet-700 hover:text-fuchsia-600 dark:text-violet-300 dark:hover:text-fuchsia-400"
         >
-          <span aria-hidden>←</span> Öğretmen paneli
+          <span aria-hidden>←</span> {t('schools.backTeacherPanel')}
         </Link>
       </div>
 
       <KidsPageHeader
         emoji="🏫"
-        title="Okullarım"
+        title={t('schools.title')}
         subtitle={
           isTeacherOnly
-            ? 'Okullar yönetim tarafından tanımlanır ve size atanır. Aşağıda atandığınız okulları görebilir, gerekirse ad ve adres bilgisini düzenleyebilirsiniz; yeni okul eklemek için yönetimle iletişime geçin.'
-            : 'MEB dizininden okulunu seçip kaydet; listede yoksa okul ekle ile elle ekleyebilirsin. İl ve ilçe her iki yolda da sistemdeki MEB verisiyle aynı kalır.'
+            ? t('schools.teacherOnlySubtitle')
+            : t('schools.subtitle')
         }
       />
 
@@ -417,13 +419,12 @@ export default function KidsTeacherSchoolsPage() {
         <div className="lg:col-span-5">
           <KidsCard tone="sky" className="lg:sticky lg:top-28">
             <h2 className="font-logo text-xl font-bold text-sky-950 dark:text-sky-50">
-              {isTeacherOnly ? 'Okul ataması' : 'Okul ekle'}
+              {isTeacherOnly ? t('schools.assignmentTitle') : t('schools.addTitle')}
             </h2>
             {isTeacherOnly ? (
               <div className="mt-4 rounded-2xl border border-sky-200/80 bg-white/70 p-4 text-sm text-sky-900 dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-100">
                 <p>
-                  Yeni okul kaydı ve kota yönetimi yalnızca <strong>Yönetim</strong> panelinden yapılır. Size atanmış
-                  okullar sağdaki listede görünür.
+                  {t('schools.teacherOnlyCardBody')}
                 </p>
               </div>
             ) : null}
@@ -431,20 +432,18 @@ export default function KidsTeacherSchoolsPage() {
               {!isTeacherOnly ? (
                 <>
               <p>
-                Önce il ve ilçeyi seç, listeden okulunu bul. Bulamazsan{' '}
-                <span className="font-semibold text-sky-950 dark:text-sky-50">Okul ekle</span> ile modalda
-                kayıt oluştur.
+                {t('schools.pickHint')}
               </p>
               {mebProvincesReady && mebProvinces.length === 0 ? (
                 <p className="rounded-2xl border border-amber-200/80 bg-amber-50/80 px-4 py-3 text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100">
-                  Veritabanında MEB okul listesi yok. Sunucuda{' '}
+                  {t('admin.schools.mebListMissingBefore')}{' '}
                   <code className="rounded bg-amber-100/80 px-1 font-mono text-xs dark:bg-amber-900/40">
                     python manage.py sync_meb_schools
                   </code>{' '}
-                  çalıştırılmalı.
+                  {t('admin.schools.mebListMissingAfter')}
                 </p>
               ) : null}
-              <KidsFormField id={mebIlId} label="İl">
+              <KidsFormField id={mebIlId} label={t('schools.province')}>
                 <KidsSelect
                   id={mebIlId}
                   value={mebIl}
@@ -460,7 +459,7 @@ export default function KidsTeacherSchoolsPage() {
                   options={provinceOptions}
                 />
               </KidsFormField>
-              <KidsFormField id={mebIlceId} label="İlçe">
+              <KidsFormField id={mebIlceId} label={t('schools.district')}>
                 <KidsSelect
                   id={mebIlceId}
                   value={mebIlce}
@@ -478,8 +477,8 @@ export default function KidsTeacherSchoolsPage() {
               </KidsFormField>
               <KidsFormField
                 id={mebSchoolId}
-                label="Okul (MEB listesi)"
-                hint="Listeyi açınca üstte arama kutusuyla daraltabilirsin."
+                label={t('schools.mebSchool')}
+                hint={t('schools.mebSchoolHint')}
               >
                 <KidsSelect
                   id={mebSchoolId}
@@ -493,7 +492,7 @@ export default function KidsTeacherSchoolsPage() {
               {mebSchoolYol ? (
                 <div className="rounded-2xl border border-sky-200/80 bg-white/60 p-4 dark:border-sky-800/50 dark:bg-sky-950/20">
                   <p className="text-xs font-bold uppercase tracking-wide text-sky-700 dark:text-sky-300">
-                    Seçilen kayıt
+                    {t('schools.selectedRecord')}
                   </p>
                   <p className="mt-1 text-sm text-sky-950 dark:text-sky-50">
                     {[pickDistrict, pickProvince].filter(Boolean).join(' · ') || '—'}
@@ -501,9 +500,9 @@ export default function KidsTeacherSchoolsPage() {
                   <div className="mt-3">
                     <KidsFormField
                       id={pickNameId}
-                      label="Okul adı"
+                       label={t('schools.schoolName')}
                       required
-                      hint="Gerekirse kısalt veya düzelt; kayıtta bu metin kullanılır."
+                      hint={t('schools.schoolNameHint')}
                     >
                     <input
                       id={pickNameId}
@@ -521,23 +520,23 @@ export default function KidsTeacherSchoolsPage() {
                     disabled={!canSavePick || savingPick}
                     onClick={() => void onSavePickedSchool()}
                   >
-                    {savingPick ? 'Kaydediliyor…' : 'Okulu kaydet'}
+                    {savingPick ? t('profile.saving') : t('schools.saveSchool')}
                   </KidsPrimaryButton>
                 </div>
               ) : null}
 
               {mebIl && mebIlce && !mebSchoolsLoading && mebSchools.length === 0 ? (
                 <p className="rounded-2xl border border-violet-200/60 bg-violet-50/50 px-4 py-3 text-violet-900 dark:border-violet-900/40 dark:bg-violet-950/25 dark:text-violet-100">
-                  Bu ilçe için MEB listesinde kayıt yok. Okulunu aşağıdaki düğmeyle ekleyebilirsin.
+                  {t('schools.noMebSchoolInDistrict')}
                 </p>
               ) : null}
 
               <div className="border-t border-sky-200/60 pt-4 dark:border-sky-800/40">
                 <KidsSecondaryButton type="button" className="w-full sm:w-auto" onClick={openAddSchoolModal}>
-                  Okul ekle (listede yok)
+                  {t('schools.addIfNotListed')}
                 </KidsSecondaryButton>
                 <p className="mt-2 text-xs text-sky-800/70 dark:text-sky-200/70">
-                  İl ve ilçe yine veritabanındaki MEB listesinden seçilir; sadece okul adını sen yazarsın.
+                  {t('schools.manualAddHint')}
                 </p>
               </div>
                 </>
@@ -547,19 +546,19 @@ export default function KidsTeacherSchoolsPage() {
         </div>
 
         <div className="lg:col-span-7">
-          <h2 className="mb-4 font-logo text-xl font-bold text-slate-900 dark:text-white">Kayıtlı okullar</h2>
+          <h2 className="mb-4 font-logo text-xl font-bold text-slate-900 dark:text-white">{t('schools.registered')}</h2>
           {loading ? (
             <KidsCard>
-              <p className="text-center text-violet-700 dark:text-violet-300">Yükleniyor…</p>
+              <p className="text-center text-violet-700 dark:text-violet-300">{t('common.loading')}</p>
             </KidsCard>
           ) : schools.length === 0 ? (
             <KidsEmptyState
               emoji="📍"
-              title="Henüz okul yok"
+              title={t('schools.noneTitle')}
               description={
                 isTeacherOnly
-                  ? 'Size atanmış okul görünmüyorsa yönetimle iletişime geçin.'
-                  : 'Soldan MEB’den seç veya Okul ekle ile kayıt oluştur; ardından sınıf açarken bu okulu seç.'
+                  ? t('schools.noneTeacherOnlyDesc')
+                  : t('schools.noneDesc')
               }
             />
           ) : (
@@ -569,7 +568,7 @@ export default function KidsTeacherSchoolsPage() {
                   <KidsCard className="!p-5">
                     {editingId === s.id ? (
                       <form className="space-y-4" onSubmit={(e) => onSaveEdit(e, s.id)}>
-                        <KidsFormField id={`edit-school-${s.id}-name`} label="Okul adı" required>
+                        <KidsFormField id={`edit-school-${s.id}-name`} label={t('schools.schoolName')} required>
                           <input
                             id={`edit-school-${s.id}-name`}
                             required
@@ -580,7 +579,7 @@ export default function KidsTeacherSchoolsPage() {
                           />
                         </KidsFormField>
                         <div className="grid gap-4 sm:grid-cols-2">
-                          <KidsFormField id={`edit-school-${s.id}-province`} label="İl">
+                          <KidsFormField id={`edit-school-${s.id}-province`} label="Il">
                             <input
                               id={`edit-school-${s.id}-province`}
                               maxLength={100}
@@ -589,7 +588,7 @@ export default function KidsTeacherSchoolsPage() {
                               className={kidsInputClass}
                             />
                           </KidsFormField>
-                          <KidsFormField id={`edit-school-${s.id}-district`} label="İlçe">
+                          <KidsFormField id={`edit-school-${s.id}-district`} label="Ilce">
                             <input
                               id={`edit-school-${s.id}-district`}
                               maxLength={100}
@@ -599,7 +598,7 @@ export default function KidsTeacherSchoolsPage() {
                             />
                           </KidsFormField>
                         </div>
-                        <KidsFormField id={`edit-school-${s.id}-neighborhood`} label="Mahalle">
+                        <KidsFormField id={`edit-school-${s.id}-neighborhood`} label={t('schools.neighborhood')}>
                           <input
                             id={`edit-school-${s.id}-neighborhood`}
                             maxLength={150}
@@ -610,10 +609,10 @@ export default function KidsTeacherSchoolsPage() {
                         </KidsFormField>
                         <div className="flex flex-wrap gap-2">
                           <KidsPrimaryButton type="submit" disabled={savingId === s.id}>
-                            {savingId === s.id ? 'Kaydediliyor…' : 'Kaydet'}
+                            {savingId === s.id ? t('profile.saving') : t('common.save')}
                           </KidsPrimaryButton>
                           <KidsSecondaryButton type="button" onClick={cancelEdit}>
-                            Vazgeç
+                            {t('common.cancel')}
                           </KidsSecondaryButton>
                         </div>
                       </form>
@@ -629,7 +628,7 @@ export default function KidsTeacherSchoolsPage() {
                         </div>
                         <div className="flex shrink-0 gap-2">
                           <KidsSecondaryButton type="button" onClick={() => startEdit(s)}>
-                            Düzenle
+                            {t('parentControls.edit')}
                           </KidsSecondaryButton>
                           {!isTeacherOnly ? (
                             <button
@@ -638,7 +637,7 @@ export default function KidsTeacherSchoolsPage() {
                               disabled={deletingId === s.id}
                               className="inline-flex min-h-10 items-center justify-center rounded-full border-2 border-red-200 px-4 text-sm font-bold text-red-700 hover:bg-red-50 disabled:opacity-50 dark:border-red-900 dark:text-red-300 dark:hover:bg-red-950/40"
                             >
-                              {deletingId === s.id ? '…' : 'Sil'}
+                              {deletingId === s.id ? '…' : t('common.delete')}
                             </button>
                           ) : null}
                         </div>
@@ -669,13 +668,11 @@ export default function KidsTeacherSchoolsPage() {
               id={modalTitleId}
               className="font-logo text-xl font-bold text-slate-900 dark:text-white"
             >
-              Okul ekle
+              {t('schools.addTitle')}
             </h2>
-            <p className="mt-2 text-sm text-slate-600 dark:text-gray-400">
-              Okul MEB listesinde yoksa buradan ekleyebilirsin. İl ve ilçe sistemdeki MEB verisinden seçilir.
-            </p>
+            <p className="mt-2 text-sm text-slate-600 dark:text-gray-400">{t('schools.addModalTeacherBody')}</p>
             <form className="mt-6 space-y-4" onSubmit={onModalCreate}>
-              <KidsFormField id={modalIlId} label="İl">
+              <KidsFormField id={modalIlId} label={t('schools.province')}>
                 <KidsSelect
                   id={modalIlId}
                   value={modalMebIl}
@@ -686,7 +683,7 @@ export default function KidsTeacherSchoolsPage() {
                   options={modalProvinceOptions}
                 />
               </KidsFormField>
-              <KidsFormField id={modalIlceId} label="İlçe">
+              <KidsFormField id={modalIlceId} label={t('schools.district')}>
                 <KidsSelect
                   id={modalIlceId}
                   value={modalMebIlce}
@@ -695,7 +692,7 @@ export default function KidsTeacherSchoolsPage() {
                   disabled={!modalMebIl}
                 />
               </KidsFormField>
-              <KidsFormField id={modalNameId} label="Okul adı" required>
+              <KidsFormField id={modalNameId} label={t('schools.schoolName')} required>
                 <input
                   id={modalNameId}
                   required
@@ -703,13 +700,13 @@ export default function KidsTeacherSchoolsPage() {
                   value={modalName}
                   onChange={(e) => setModalName(e.target.value)}
                   className={kidsInputClass}
-                  placeholder="Resmî veya kullandığın kısa ad"
+                  placeholder={t('schools.shortNamePlaceholder')}
                   autoComplete="organization"
                 />
               </KidsFormField>
               <div className="flex flex-wrap justify-end gap-2 pt-2">
                 <KidsSecondaryButton type="button" onClick={closeAddSchoolModal} disabled={modalCreating}>
-                  İptal
+                  {t('common.cancel')}
                 </KidsSecondaryButton>
                 <KidsPrimaryButton
                   type="submit"
@@ -717,7 +714,7 @@ export default function KidsTeacherSchoolsPage() {
                     modalCreating || !modalName.trim() || !modalMebIl.trim() || !modalMebIlce.trim()
                   }
                 >
-                  {modalCreating ? 'Kaydediliyor…' : 'Kaydet'}
+                  {modalCreating ? t('profile.saving') : t('common.save')}
                 </KidsPrimaryButton>
               </div>
             </form>

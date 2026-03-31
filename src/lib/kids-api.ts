@@ -13,6 +13,7 @@ const MAIN_SITE_API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
 
 export type KidsUserRole = 'admin' | 'teacher' | 'parent' | 'student';
+export type KidsLanguageCode = 'tr' | 'en' | 'ge';
 
 /** Öğrenci için /auth/me yanıtında; öğretmende çoğunlukla null. */
 export type KidsGrowthStage = {
@@ -150,6 +151,9 @@ export type KidsUser = {
   student_login_name?: string | null;
   phone?: string | null;
   linked_students?: KidsLinkedStudent[] | null;
+  preferred_language?: KidsLanguageCode | null;
+  effective_language?: KidsLanguageCode;
+  language_locked_by_teacher?: boolean;
 };
 
 export type KidsSchool = {
@@ -173,6 +177,7 @@ export type KidsClass = {
   description: string;
   /** Örn. `2024-2025`; yeni eğitim yılında sınıfları ayırt etmek için (isteğe bağlı). */
   academic_year_label?: string;
+  language?: KidsLanguageCode;
   /** Her sınıf mutlaka bir okula bağlıdır; adres bilgisi okul kaydındadır. */
   school: KidsSchool;
   teacher: number;
@@ -1385,7 +1390,11 @@ export async function kidsMe(): Promise<KidsUser> {
   return res.json() as Promise<KidsUser>;
 }
 
-export async function kidsPatchMe(body: { first_name?: string; last_name?: string }): Promise<KidsUser> {
+export async function kidsPatchMe(body: {
+  first_name?: string;
+  last_name?: string;
+  preferred_language?: KidsLanguageCode;
+}): Promise<KidsUser> {
   const res = await kidsAuthorizedFetch('/auth/me/', {
     method: 'PATCH',
     body: JSON.stringify(body),
@@ -1585,7 +1594,7 @@ export async function kidsCreateClass(body: {
 
 export async function kidsPatchClass(
   id: number,
-  body: Partial<Pick<KidsClass, 'name' | 'description' | 'academic_year_label'>> & { school_id?: number },
+  body: Partial<Pick<KidsClass, 'name' | 'description' | 'academic_year_label' | 'language'>> & { school_id?: number },
 ) {
   const res = await kidsAuthorizedFetch(`/classes/${id}/`, {
     method: 'PATCH',
@@ -3125,6 +3134,13 @@ export async function kidsPatchAnnouncement(
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Duyuru güncellenemedi');
   return data as KidsAnnouncement;
+}
+
+export async function kidsDeleteAnnouncement(announcementId: number): Promise<void> {
+  const res = await kidsAuthorizedFetch(`/announcements/${announcementId}/`, { method: 'DELETE' });
+  const text = await res.text();
+  const data = readJson<ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Duyuru silinemedi'));
 }
 
 export async function kidsNotificationUnreadCount(): Promise<number> {

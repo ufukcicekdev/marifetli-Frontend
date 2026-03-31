@@ -17,6 +17,7 @@ import {
 } from '@/src/lib/kids-api';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 import { KidsSelect } from '@/src/components/kids/kids-ui';
+import { useKidsI18n } from '@/src/providers/kids-language-provider';
 
 type DraftQuestion = {
   order: number;
@@ -33,6 +34,7 @@ const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
 export default function KidsTeacherTestsPage() {
   const router = useRouter();
   const { user, loading: authLoading, pathPrefix } = useKidsAuth();
+  const { t } = useKidsI18n();
   const [classes, setClasses] = useState<KidsClass[]>([]);
   const [classId, setClassId] = useState<number>(0);
   const [myTests, setMyTests] = useState<KidsTest[]>([]);
@@ -69,12 +71,12 @@ export default function KidsTeacherTestsPage() {
         setMyTests(mine);
         if (rows.length > 0) setClassId(rows[0].id);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : 'Sınıflar yüklenemedi');
+        toast.error(e instanceof Error ? e.message : t('tests.teacherMain.classesLoadError'));
       } finally {
         setLoading(false);
       }
     })();
-  }, [authLoading, user, router, pathPrefix]);
+  }, [authLoading, user, router, pathPrefix, t]);
 
   const myTestOptions = useMemo(
     () => myTests.map((t) => ({ value: String(t.id), label: t.title })),
@@ -96,7 +98,7 @@ export default function KidsTeacherTestsPage() {
     if (newFiles.length === 0) return;
     const valid = newFiles.filter((f) => f.size > 0 && f.size <= MAX_IMAGE_BYTES);
     if (valid.length !== newFiles.length) {
-      toast.error('Bazı görseller boyut limiti nedeniyle alınmadı (max 12MB).');
+      toast.error(t('tests.teacherMain.imageSizeError'));
     }
     setImages((prev) => [...prev, ...valid].slice(0, 10));
   }
@@ -111,7 +113,7 @@ export default function KidsTeacherTestsPage() {
 
   function resetDraftForm() {
     setWorkFromTestId('');
-    setTitle('Yeni Test');
+    setTitle(t('tests.teacherMain.newTestTitle'));
     setInstructions('');
     setDurationMinutes('40');
     setQuestions([]);
@@ -126,7 +128,7 @@ export default function KidsTeacherTestsPage() {
     }
     const row = myTests.find((t) => String(t.id) === testId);
     if (!row) return;
-    setTitle(row.title || 'Yeni Test');
+    setTitle(row.title || t('tests.teacherMain.newTestTitle'));
     setInstructions(row.instructions || '');
     setDurationMinutes(row.duration_minutes != null ? String(row.duration_minutes) : '');
     setClassId(row.kids_class || classId);
@@ -164,7 +166,7 @@ export default function KidsTeacherTestsPage() {
 
   async function onDistribute() {
     if (!distributeTestId) {
-      toast.error('Önce gönderilecek testi seç');
+      toast.error(t('tests.teacherMain.selectTestFirst'));
       return;
     }
     const targetClassIds =
@@ -172,23 +174,23 @@ export default function KidsTeacherTestsPage() {
         ? classes.map((c) => c.id)
         : distributeClassIds;
     if (targetClassIds.length === 0) {
-      toast.error('En az bir hedef sınıf seç');
+      toast.error(t('tests.teacherMain.selectAtLeastOneClass'));
       return;
     }
     setDistributing(true);
     try {
       const out = await kidsDistributeTestToClasses(Number(distributeTestId), targetClassIds);
       if (out.created_count > 0) {
-        toast.success(`${out.created_count} sınıfa gönderildi`);
+        toast.success(`${out.created_count} ${t('tests.teacherMain.sentToClassesSuffix')}`);
       } else {
-        toast('Seçilen sınıflar zaten atanmış ya da aynı sınıf');
+        toast(t('tests.teacherMain.classesAlreadyAssigned'));
       }
       const mine = await kidsListMyCreatedTests().catch(() => []);
       setMyTests(mine);
       setDistributeClassIds([]);
       setDistributeClassPickerId('');
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Sınıflara gönderim başarısız');
+      toast.error(e instanceof Error ? e.message : t('tests.teacherMain.distributeFailed'));
     } finally {
       setDistributing(false);
     }
@@ -196,13 +198,13 @@ export default function KidsTeacherTestsPage() {
 
   async function onExtract() {
     if (images.length === 0) {
-      toast.error('En az bir görsel yüklemelisin');
+      toast.error(t('tests.teacherMain.uploadAtLeastOneImage'));
       return;
     }
     setExtracting(true);
     try {
       const out = await kidsExtractTestQuestions(images);
-      setTitle((out.title || 'Yeni Test').trim());
+      setTitle((out.title || t('tests.teacherMain.newTestTitle')).trim());
       setInstructions((out.instructions || '').trim());
       setQuestions(
         out.questions.map((q, idx) => ({
@@ -215,9 +217,9 @@ export default function KidsTeacherTestsPage() {
           points: q.points || 1,
         })),
       );
-      toast.success(`AI ${out.questions.length} soru çıkardı`);
+      toast.success(`AI ${out.questions.length} ${t('tests.teacherMain.aiExtractedQuestionsSuffix')}`);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'AI çıkarım başarısız');
+      toast.error(e instanceof Error ? e.message : t('tests.teacherMain.aiExtractFailed'));
     } finally {
       setExtracting(false);
     }
@@ -225,20 +227,20 @@ export default function KidsTeacherTestsPage() {
 
   async function onPublish() {
     if (!classId) {
-      toast.error('Sınıf seçmelisin');
+      toast.error(t('tests.teacherMain.mustSelectClass'));
       return;
     }
     if (!title.trim()) {
-      toast.error('Test başlığı zorunlu');
+      toast.error(t('tests.teacherMain.titleRequired'));
       return;
     }
     if (questions.length === 0) {
-      toast.error('En az bir soru gerekli');
+      toast.error(t('tests.teacherMain.needAtLeastOneQuestion'));
       return;
     }
     const hasInvalid = questions.some((q) => !q.stem.trim() || q.choices.length < 2 || !q.correct_choice_key);
     if (hasInvalid) {
-      toast.error('Tüm sorularda metin, en az 2 şık ve doğru cevap seçili olmalı');
+      toast.error(t('tests.teacherMain.invalidQuestions'));
       return;
     }
     setSaving(true);
@@ -266,7 +268,7 @@ export default function KidsTeacherTestsPage() {
       const isEditing = Number.isFinite(editingTestId) && editingTestId > 0;
       if (isEditing) {
         const updated = await kidsPatchTest(editingTestId, payload);
-        toast.success('Test güncellendi.');
+        toast.success(t('tests.teacherMain.updated'));
         setMyTests((prev) => [updated, ...prev.filter((x) => x.id !== updated.id)]);
         setWorkFromTestId(String(updated.id));
       } else {
@@ -274,23 +276,23 @@ export default function KidsTeacherTestsPage() {
           ...payload,
           source_images: images,
         });
-        toast.success('Test kaydedildi. Yukarıdan seçip sınıflara gönderebilirsin.');
+        toast.success(t('tests.teacherMain.savedAndCanDistribute'));
         setMyTests((prev) => [created, ...prev.filter((x) => x.id !== created.id)]);
         setWorkFromTestId(String(created.id));
       }
       setQuestions([]);
       setImages([]);
       setInstructions('');
-      setTitle('Yeni Test');
+      setTitle(t('tests.teacherMain.newTestTitle'));
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Test kaydedilemedi');
+      toast.error(e instanceof Error ? e.message : t('tests.teacherMain.saveFailed'));
     } finally {
       setSaving(false);
     }
   }
 
-  if (authLoading || loading) return <p className="text-center text-sm">Yükleniyor…</p>;
-  if (!user || (user.role !== 'teacher' && user.role !== 'admin')) return <p className="text-center text-sm">Yönlendiriliyorsun…</p>;
+  if (authLoading || loading) return <p className="text-center text-sm">{t('common.loading')}</p>;
+  if (!user || (user.role !== 'teacher' && user.role !== 'admin')) return <p className="text-center text-sm">{t('common.redirecting')}</p>;
   const isEditingDraft = Boolean(workFromTestId && Number(workFromTestId) > 0);
   const canDistribute =
     Boolean(distributeTestId) &&
@@ -299,21 +301,21 @@ export default function KidsTeacherTestsPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <div>
-        <h1 className="font-logo text-2xl font-bold text-violet-950 dark:text-violet-50">Testler</h1>
+        <h1 className="font-logo text-2xl font-bold text-violet-950 dark:text-violet-50">{t('tests.teacherMain.title')}</h1>
         <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-          Test görsellerini yükleyip AI ile soruya dönüştür, düzenle ve sınıfa gönder.
+          {t('tests.teacherMain.subtitle')}
         </p>
       </div>
 
       <section className="rounded-2xl border border-violet-200 bg-white p-4 dark:border-violet-800 dark:bg-gray-900/70">
         <div className="grid gap-3 md:grid-cols-2">
           <label className="text-sm font-semibold text-violet-900 dark:text-violet-100">
-            Yüklediğim testlerden seç (opsiyonel)
+            {t('tests.teacherMain.selectFromUploadedOptional')}
             <div className="mt-1">
               <KidsSelect
                 value={workFromTestId}
                 onChange={applyTestToForm}
-                options={[{ value: '', label: 'Boş form (yeni test)' }, ...myTestOptions]}
+                options={[{ value: '', label: t('tests.teacherMain.emptyForm') }, ...myTestOptions]}
                 searchable
               />
             </div>
@@ -324,25 +326,25 @@ export default function KidsTeacherTestsPage() {
             href={`${pathPrefix}/ogretmen/testler/raporlar`}
             className="inline-flex min-h-10 items-center rounded-xl bg-fuchsia-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-fuchsia-500 focus:outline-none focus:ring-2 focus:ring-fuchsia-400/60"
           >
-            Rapor ekranına git
+            {t('tests.teacherMain.goReports')}
           </Link>
           <button
             type="button"
             onClick={resetDraftForm}
             className="inline-flex min-h-10 items-center rounded-xl border border-violet-300 bg-white px-4 py-2 text-sm font-semibold text-violet-700 shadow-sm transition hover:bg-violet-50 focus:outline-none focus:ring-2 focus:ring-violet-300/60 dark:border-violet-700 dark:bg-gray-900 dark:text-violet-200 dark:hover:bg-violet-950/40"
           >
-            Formu temizle
+            {t('tests.teacherMain.clearForm')}
           </button>
         </div>
       </section>
 
       <section className="rounded-2xl border border-violet-200 bg-white p-4 dark:border-violet-800 dark:bg-gray-900/70">
-        <h2 className="mb-3 text-lg font-bold text-violet-950 dark:text-violet-100">Yüklediğim Testler</h2>
+        <h2 className="mb-3 text-lg font-bold text-violet-950 dark:text-violet-100">{t('tests.teacherMain.uploadedTests')}</h2>
         {myTests.length > 0 ? (
           <div className="mb-4 rounded-xl border border-fuchsia-200 bg-fuchsia-50/60 p-3 dark:border-fuchsia-800 dark:bg-fuchsia-950/20">
-            <h3 className="text-sm font-bold text-fuchsia-900 dark:text-fuchsia-100">Testi Sınıflara Dağıt</h3>
+            <h3 className="text-sm font-bold text-fuchsia-900 dark:text-fuchsia-100">{t('tests.teacherMain.distributeTest')}</h3>
             <p className="mt-1 text-xs text-fuchsia-800 dark:text-fuchsia-200">
-              Bir testi birden fazla sınıfa gönderebilirsin.
+              {t('tests.teacherMain.distributeHint')}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               <button
@@ -354,7 +356,7 @@ export default function KidsTeacherTestsPage() {
                     : 'border border-fuchsia-300 text-fuchsia-800 dark:border-fuchsia-700 dark:text-fuchsia-200'
                 }`}
               >
-                Tüm sınıflarım ({classes.length})
+                {t('tests.teacherMain.allMyClasses')} ({classes.length})
               </button>
               <button
                 type="button"
@@ -365,24 +367,24 @@ export default function KidsTeacherTestsPage() {
                     : 'border border-fuchsia-300 text-fuchsia-800 dark:border-fuchsia-700 dark:text-fuchsia-200'
                 }`}
               >
-                Özel seçim
+                {t('tests.teacherMain.customSelection')}
               </button>
             </div>
             <div className="mt-3 grid gap-3 md:grid-cols-3">
               <div>
-                <label className="text-xs font-semibold text-fuchsia-900 dark:text-fuchsia-100">Test</label>
+                <label className="text-xs font-semibold text-fuchsia-900 dark:text-fuchsia-100">{t('tests.reports.test')}</label>
                 <div className="mt-1">
                   <KidsSelect
                     value={distributeTestId}
                     onChange={(next) => setDistributeTestId(next)}
-                    options={[{ value: '', label: 'Test seç' }, ...myTestOptions]}
+                    options={[{ value: '', label: t('tests.reports.selectTest') }, ...myTestOptions]}
                     searchable
                   />
                 </div>
               </div>
               <div>
                 <label className="text-xs font-semibold text-fuchsia-900 dark:text-fuchsia-100">
-                  Süre (dk)
+                  {t('tests.teacherMain.durationMin')}
                   <input
                     type="number"
                     min={1}
@@ -395,10 +397,10 @@ export default function KidsTeacherTestsPage() {
                     inputMode="numeric"
                   />
                 </label>
-                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">Bu değer kaydettiğin testin süre bilgisidir.</p>
+                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{t('tests.teacherMain.durationHint')}</p>
               </div>
               <div>
-                <label className="text-xs font-semibold text-fuchsia-900 dark:text-fuchsia-100">Hedef sınıflar</label>
+                <label className="text-xs font-semibold text-fuchsia-900 dark:text-fuchsia-100">{t('tests.teacherMain.targetClasses')}</label>
                 {distributeScope === 'custom' ? (
                   <>
                     <div className="mt-1 flex items-center gap-2">
@@ -406,7 +408,7 @@ export default function KidsTeacherTestsPage() {
                         <KidsSelect
                           value={distributeClassPickerId}
                           onChange={(next) => setDistributeClassPickerId(next)}
-                          options={[{ value: '', label: 'Sınıf seç' }, ...distributeCustomClassOptions]}
+                          options={[{ value: '', label: t('tests.reports.selectClass') }, ...distributeCustomClassOptions]}
                           searchable
                         />
                       </div>
@@ -415,7 +417,7 @@ export default function KidsTeacherTestsPage() {
                         onClick={addDistributeClass}
                         className="rounded-lg border border-fuchsia-300 px-2 py-1 text-xs font-bold text-fuchsia-800 dark:border-fuchsia-700 dark:text-fuchsia-200"
                       >
-                        Ekle
+                        {t('tests.teacherMain.add')}
                       </button>
                     </div>
                     <div className="mt-2 flex flex-wrap gap-2">
@@ -424,25 +426,25 @@ export default function KidsTeacherTestsPage() {
                           key={`target-chip-${id}`}
                           className="inline-flex items-center gap-1 rounded-full bg-fuchsia-100 px-2.5 py-1 text-[11px] font-bold text-fuchsia-800 dark:bg-fuchsia-900/40 dark:text-fuchsia-200"
                         >
-                          {classNameById.get(id) || `Sınıf #${id}`}
+                          {classNameById.get(id) || `${t('tests.teacherMain.classLabel')} #${id}`}
                           <button
                             type="button"
                             onClick={() => removeDistributeClass(id)}
                             className="rounded-full border border-fuchsia-300 px-1 text-[10px] dark:border-fuchsia-700"
-                            aria-label="Sınıfı çıkar"
+                            aria-label={t('tests.teacherMain.removeClass')}
                           >
                             x
                           </button>
                         </span>
                       ))}
                       {distributeClassIds.length === 0 ? (
-                        <span className="text-[11px] text-slate-500">Henüz sınıf eklenmedi</span>
+                        <span className="text-[11px] text-slate-500">{t('tests.teacherMain.noClassAdded')}</span>
                       ) : null}
                     </div>
                   </>
                 ) : (
                   <div className="mt-1 rounded-lg border border-fuchsia-200 bg-white p-2 text-xs dark:border-fuchsia-800 dark:bg-gray-900/60">
-                    {`Hedef: tüm sınıflar (${classes.length})`}
+                    {`${t('tests.teacherMain.targetAllClasses')}: (${classes.length})`}
                   </div>
                 )}
               </div>
@@ -453,20 +455,20 @@ export default function KidsTeacherTestsPage() {
               onClick={() => void onDistribute()}
               className="mt-3 rounded-lg bg-fuchsia-600 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-60"
             >
-              {distributing ? 'Gönderiliyor…' : 'Seçilen sınıflara gönder'}
+              {distributing ? t('tests.teacherMain.sending') : t('tests.teacherMain.sendSelectedClasses')}
             </button>
           </div>
         ) : null}
         {myTests.length === 0 ? (
-          <p className="text-sm text-slate-500">Henüz yüklediğin test yok.</p>
+          <p className="text-sm text-slate-500">{t('tests.teacherMain.noUploadedTests')}</p>
         ) : (
           <ul className="space-y-2">
-            {myTests.map((t) => (
-              <li key={`mine-${t.id}`} className="rounded-xl border border-violet-200 px-3 py-2 dark:border-violet-700">
+            {myTests.map((row) => (
+              <li key={`mine-${row.id}`} className="rounded-xl border border-violet-200 px-3 py-2 dark:border-violet-700">
                 <div>
-                  <p className="text-sm font-semibold">{t.title}</p>
+                  <p className="text-sm font-semibold">{row.title}</p>
                   <p className="text-xs text-slate-500">
-                    {t.kids_class ? classNameById.get(t.kids_class) || `Sınıf #${t.kids_class}` : 'Sınıf yok'} · {t.questions?.length || 0} soru
+                    {row.kids_class ? classNameById.get(row.kids_class) || `${t('tests.teacherMain.classLabel')} #${row.kids_class}` : t('tests.teacherMain.noClass')} · {row.questions?.length || 0} {t('tests.reports.question')}
                   </p>
                 </div>
               </li>
@@ -476,7 +478,7 @@ export default function KidsTeacherTestsPage() {
       </section>
 
       <section className="rounded-2xl border border-violet-200 bg-white p-4 dark:border-violet-800 dark:bg-gray-900/70">
-        <h2 className="mb-3 text-lg font-bold text-violet-950 dark:text-violet-100">1) Test kağıdı görsellerini yükle</h2>
+        <h2 className="mb-3 text-lg font-bold text-violet-950 dark:text-violet-100">{t('tests.teacherMain.step1')}</h2>
         <input
           ref={fileInputRef}
           type="file"
@@ -493,25 +495,25 @@ export default function KidsTeacherTestsPage() {
           onClick={() => fileInputRef.current?.click()}
           className="group block w-full rounded-2xl border-2 border-dashed border-violet-300 bg-violet-50/60 p-5 text-left transition hover:border-fuchsia-400 hover:bg-violet-50 dark:border-violet-700 dark:bg-violet-950/20 dark:hover:border-fuchsia-600"
         >
-          <p className="text-sm font-bold text-violet-900 dark:text-violet-100">Dosya seçmek için tıkla</p>
+          <p className="text-sm font-bold text-violet-900 dark:text-violet-100">{t('tests.teacherMain.clickToSelectFiles')}</p>
           <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-            JPG/PNG/WebP desteklenir. Çoklu sayfa yükleyebilirsin (en fazla 10 görsel, her biri max 12MB).
+            {t('tests.teacherMain.uploadHelp')}
           </p>
         </button>
         <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-          Birden fazla sayfa yükleyebilirsin (ornek: 2-3 sayfalık test). Farklı sınıf için ayrı test gönder.
+          {t('tests.teacherMain.uploadHint')}
         </p>
         {images.length > 0 ? (
           <div className="mt-2 flex items-center gap-2 text-xs">
             <span className="rounded-full bg-violet-100 px-2 py-0.5 font-bold text-violet-800 dark:bg-violet-900/40 dark:text-violet-200">
-              {images.length} görsel seçildi
+              {images.length} {t('tests.teacherMain.imagesSelected')}
             </span>
             <button
               type="button"
               onClick={() => setImages([])}
               className="rounded-full border border-slate-300 px-2 py-0.5 font-bold text-slate-700 dark:border-slate-700 dark:text-slate-200"
             >
-              Hepsini kaldır
+              {t('tests.teacherMain.removeAll')}
             </button>
           </div>
         ) : null}
@@ -530,7 +532,7 @@ export default function KidsTeacherTestsPage() {
                   onClick={() => setImages((prev) => prev.filter((_, i) => i !== idx))}
                   className="rounded-full border border-violet-200 px-2 py-0.5 text-xs font-bold text-violet-700 hover:bg-violet-50 dark:border-violet-700 dark:text-violet-200"
                 >
-                  Kaldır
+                  {t('tests.teacherMain.remove')}
                 </button>
               </li>
             ))}
@@ -542,14 +544,14 @@ export default function KidsTeacherTestsPage() {
           onClick={() => void onExtract()}
           className="mt-3 rounded-lg bg-violet-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60"
         >
-          {extracting ? 'AI çalışıyor…' : '2) AI ile soruları çıkar'}
+          {extracting ? t('tests.teacherMain.aiRunning') : t('tests.teacherMain.step2')}
         </button>
       </section>
 
       <section className="rounded-2xl border border-violet-200 bg-white p-4 dark:border-violet-800 dark:bg-gray-900/70">
-        <h2 className="mb-3 text-lg font-bold text-violet-950 dark:text-violet-100">3) Soruları düzelt ve doğru şıkları gir</h2>
+        <h2 className="mb-3 text-lg font-bold text-violet-950 dark:text-violet-100">{t('tests.teacherMain.step3')}</h2>
         <label className="block text-sm font-semibold">
-          Test başlığı
+          {t('tests.teacherMain.testTitle')}
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -557,7 +559,7 @@ export default function KidsTeacherTestsPage() {
           />
         </label>
         <label className="mt-3 block text-sm font-semibold">
-          Açıklama
+          {t('tests.teacherMain.description')}
           <textarea
             value={instructions}
             onChange={(e) => setInstructions(e.target.value)}
@@ -569,7 +571,7 @@ export default function KidsTeacherTestsPage() {
         <div className="mt-4 space-y-4">
           {questions.map((q, qIdx) => (
             <div key={`${q.order}-${qIdx}`} className="rounded-xl border border-violet-200 p-3 dark:border-violet-700">
-              <p className="mb-2 text-sm font-bold">{qIdx + 1}. Soru</p>
+              <p className="mb-2 text-sm font-bold">{qIdx + 1}. {t('tests.teacherMain.questionLabel')}</p>
               <textarea
                 value={q.stem}
                 onChange={(e) => setQuestionField(qIdx, { stem: e.target.value })}
@@ -593,13 +595,13 @@ export default function KidsTeacherTestsPage() {
                 ))}
               </div>
               <div className="mt-2 flex items-center gap-2 text-sm">
-                <span>Doğru şık:</span>
+                <span>{t('tests.teacherMain.correctChoice')}:</span>
                 <div className="w-28">
                   <KidsSelect
                     value={q.correct_choice_key || ''}
                     onChange={(next) => setQuestionField(qIdx, { correct_choice_key: next })}
                     options={[
-                      { value: '', label: 'Seç' },
+                      { value: '', label: t('tests.teacherMain.select') },
                       ...q.choices.map((c) => ({ value: c.key, label: c.key })),
                     ]}
                     searchable={false}
@@ -608,7 +610,7 @@ export default function KidsTeacherTestsPage() {
               </div>
             </div>
           ))}
-          {questions.length === 0 ? <p className="text-sm text-slate-500">Önce AI ile soru çıkarımı yap.</p> : null}
+          {questions.length === 0 ? <p className="text-sm text-slate-500">{t('tests.teacherMain.extractFirst')}</p> : null}
         </div>
 
         <button
@@ -617,7 +619,7 @@ export default function KidsTeacherTestsPage() {
           onClick={() => void onPublish()}
           className="mt-4 rounded-lg bg-fuchsia-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60"
         >
-          {saving ? (isEditingDraft ? 'Güncelleniyor…' : 'Kaydediliyor…') : isEditingDraft ? '4) Güncelle' : '4) Kaydet'}
+          {saving ? (isEditingDraft ? t('tests.teacherMain.updating') : t('tests.teacherMain.saving')) : isEditingDraft ? t('tests.teacherMain.step4Update') : t('tests.teacherMain.step4Save')}
         </button>
       </section>
 

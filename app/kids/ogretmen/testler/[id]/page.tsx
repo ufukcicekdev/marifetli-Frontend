@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import { kidsClassTestReport, kidsGetTest, type KidsTest } from '@/src/lib/kids-api';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
+import { useKidsI18n } from '@/src/providers/kids-language-provider';
 
 type ReportData = Awaited<ReturnType<typeof kidsClassTestReport>>;
 
@@ -15,6 +16,7 @@ export default function KidsTeacherTestReportPage() {
   const testId = Number(params.id);
   const router = useRouter();
   const { user, loading: authLoading, pathPrefix } = useKidsAuth();
+  const { t, language } = useKidsI18n();
   const [test, setTest] = useState<KidsTest | null>(null);
   const [report, setReport] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,18 +40,18 @@ export default function KidsTeacherTestReportPage() {
         setTest(testRow);
         setReport(rep);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : 'Rapor yüklenemedi');
+        toast.error(e instanceof Error ? e.message : t('tests.report.loadError'));
       } finally {
         setLoading(false);
       }
     })();
   }, [authLoading, user, testId, router, pathPrefix]);
 
-  if (authLoading || loading) return <p className="text-center text-sm">Yükleniyor…</p>;
-  if (!report) return <p className="text-center text-sm">Rapor bulunamadı.</p>;
+  if (authLoading || loading) return <p className="text-center text-sm">{t('common.loading')}</p>;
+  if (!report) return <p className="text-center text-sm">{t('tests.report.notFound')}</p>;
 
   function formatSolveDuration(seconds: number | null): string {
-    if (seconds == null) return 'Süre yok';
+    if (seconds == null) return t('tests.report.noDuration');
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     if (mins <= 0) return `${secs} sn`;
@@ -57,10 +59,10 @@ export default function KidsTeacherTestReportPage() {
   }
 
   function formatDateTime(value: string | null): string {
-    if (!value) return '—';
+    if (!value) return '-';
     const d = new Date(value);
-    if (Number.isNaN(d.getTime())) return '—';
-    return d.toLocaleString('tr-TR');
+    if (Number.isNaN(d.getTime())) return '-';
+    return d.toLocaleString(language === 'tr' ? 'tr-TR' : language === 'ge' ? 'de-DE' : 'en-US');
   }
 
   function escapeHtml(value: string): string {
@@ -87,7 +89,7 @@ export default function KidsTeacherTestReportPage() {
     const doc = iframe.contentDocument || iframe.contentWindow?.document;
     if (!doc) {
       iframe.remove();
-      toast.error('Yazdırma başlatılamadı.');
+      toast.error(t('tests.report.printStartFailed'));
       return;
     }
     doc.open();
@@ -144,14 +146,14 @@ table{width:100%;border-collapse:collapse;margin-top:8px} th,td{border:1px solid
 </style></head><body>
 <div class="top"><img src="${logoUrl}" alt="Logo"><div><h1>${escapeHtml(reportTitle)}</h1><div>Marifetli Kids</div></div></div>
 <div class="cards">
-<div class="card"><b>Toplam öğrenci:</b> ${r.students_total}</div>
-<div class="card"><b>Testi gönderen:</b> ${r.students_submitted}</div>
-<div class="card"><b>Ortalama skor:</b> ${r.average_score.toFixed(2)}/100</div>
+<div class="card"><b>${escapeHtml(t('tests.report.totalStudents'))}:</b> ${r.students_total}</div>
+<div class="card"><b>${escapeHtml(t('tests.report.submittedStudents'))}:</b> ${r.students_submitted}</div>
+<div class="card"><b>${escapeHtml(t('tests.report.averageScore'))}:</b> ${r.average_score.toFixed(2)}/100</div>
 </div>
-<h2>Öğrenci Sonuçları</h2>
-<table><thead><tr><th>Öğrenci</th><th>Doğru</th><th>Puan</th><th>Süre</th></tr></thead><tbody>${studentRows}</tbody></table>
-<h2 style="margin-top:18px">Soru Başarı Oranları</h2>
-<table><thead><tr><th>Soru</th><th>Doğru/Deneme</th><th>Başarı</th></tr></thead><tbody>${questionRows}</tbody></table>
+<h2>${escapeHtml(t('tests.report.studentResults'))}</h2>
+<table><thead><tr><th>${escapeHtml(t('tests.report.thStudent'))}</th><th>${escapeHtml(t('tests.report.thCorrect'))}</th><th>${escapeHtml(t('tests.report.thScore'))}</th><th>${escapeHtml(t('tests.report.thDuration'))}</th></tr></thead><tbody>${studentRows}</tbody></table>
+<h2 style="margin-top:18px">${escapeHtml(t('tests.report.questionRates'))}</h2>
+<table><thead><tr><th>${escapeHtml(t('tests.report.thQuestion'))}</th><th>${escapeHtml(t('tests.report.thAttempts'))}</th><th>${escapeHtml(t('tests.report.thSuccess'))}</th></tr></thead><tbody>${questionRows}</tbody></table>
 </body></html>`;
     const fileName = `rapor-${fileSafe(r.class_name)}-${fileSafe(r.title)}-${r.test_id}.html`;
     return { html, fileName };
@@ -177,49 +179,51 @@ table{width:100%;border-collapse:collapse;margin-top:8px} th,td{border:1px solid
   return (
     <div className="mx-auto max-w-5xl space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="font-logo text-2xl font-bold text-violet-950 dark:text-violet-50">{report.title} · Rapor</h1>
+        <h1 className="font-logo text-2xl font-bold text-violet-950 dark:text-violet-50">
+          {report.title} · {t('tests.report.pageTitleSuffix')}
+        </h1>
         <div className="flex flex-wrap items-center gap-2 print:hidden">
           <button
             type="button"
             onClick={onPrint}
             className={actionBtnClass}
           >
-            Yazdır
+            {t('tests.report.print')}
           </button>
           <button
             type="button"
             onClick={onDownloadHtml}
             className={primaryBtnClass}
           >
-            İndir (HTML)
+            {t('tests.report.downloadHtml')}
           </button>
           <Link href={`${pathPrefix}/ogretmen/testler`} className={actionBtnClass}>
-            ← Testler
+            {t('tests.report.backTests')}
           </Link>
         </div>
       </div>
       <div className="hidden items-center gap-2 rounded-lg border border-violet-200 bg-white p-2 print:flex dark:border-violet-800 dark:bg-gray-900/70">
         <img src="/favicon.svg" alt="Marifetli logo" className="h-8 w-8" />
-        <p className="text-sm font-bold">Marifetli Kids - Test Raporu</p>
+        <p className="text-sm font-bold">{t('tests.report.printHeader')}</p>
       </div>
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-xl border border-violet-200 bg-white p-3 dark:border-violet-800 dark:bg-gray-900/70">
-          <p className="text-xs text-slate-500">Toplam öğrenci</p>
+            <p className="text-xs text-slate-500">{t('tests.report.totalStudents')}</p>
           <p className="text-xl font-black">{report.students_total}</p>
         </div>
         <div className="rounded-xl border border-violet-200 bg-white p-3 dark:border-violet-800 dark:bg-gray-900/70">
-          <p className="text-xs text-slate-500">Testi gönderen</p>
+            <p className="text-xs text-slate-500">{t('tests.report.submittedStudents')}</p>
           <p className="text-xl font-black">{report.students_submitted}</p>
         </div>
         <div className="rounded-xl border border-violet-200 bg-white p-3 dark:border-violet-800 dark:bg-gray-900/70">
-          <p className="text-xs text-slate-500">Ortalama skor (100 üzerinden)</p>
+            <p className="text-xs text-slate-500">{t('tests.report.averageScore')}</p>
           <p className="text-xl font-black">{report.average_score.toFixed(2)}</p>
         </div>
       </div>
       <section className="rounded-xl border border-violet-200 bg-white p-3 dark:border-violet-800 dark:bg-gray-900/70">
-        <h2 className="mb-2 text-sm font-bold">Öğrenci Sonuçları</h2>
+        <h2 className="mb-2 text-sm font-bold">{t('tests.report.studentResults')}</h2>
         {report.students.length === 0 ? (
-          <p className="text-xs text-slate-500">Henüz test gönderen öğrenci yok.</p>
+          <p className="text-xs text-slate-500">{t('tests.report.noStudentSubmission')}</p>
         ) : (
           <ul className="space-y-2">
             {report.students.map((s) => {
@@ -233,7 +237,7 @@ table{width:100%;border-collapse:collapse;margin-top:8px} th,td{border:1px solid
                         href={`${pathPrefix}/ogretmen/testler/${testId}/ogrenci/${s.student_id}`}
                         className="inline-flex rounded-full bg-violet-100 px-2.5 py-1 text-[11px] font-bold text-violet-800 dark:bg-violet-900/40 dark:text-violet-200"
                       >
-                        Öğrenci detayı
+                        {t('tests.report.studentDetail')}
                       </Link>
                     </div>
                     <button
@@ -246,8 +250,8 @@ table{width:100%;border-collapse:collapse;margin-top:8px} th,td{border:1px solid
                   </div>
                   {isOpen ? (
                     <div className="border-t border-violet-100 px-3 py-2 text-xs text-slate-600 dark:border-violet-800 dark:text-slate-300">
-                      <p>Başlama: {formatDateTime(s.started_at)}</p>
-                      <p>Teslim: {formatDateTime(s.submitted_at)}</p>
+                      <p>{t('tests.report.startedAt')}: {formatDateTime(s.started_at)}</p>
+                      <p>{t('tests.report.submittedAt')}: {formatDateTime(s.submitted_at)}</p>
                     </div>
                   ) : null}
                 </li>
@@ -257,18 +261,22 @@ table{width:100%;border-collapse:collapse;margin-top:8px} th,td{border:1px solid
         )}
       </section>
       <section className="rounded-xl border border-violet-200 bg-white p-3 dark:border-violet-800 dark:bg-gray-900/70">
-        <h2 className="mb-2 text-sm font-bold">Soru Başarı Oranları</h2>
+        <h2 className="mb-2 text-sm font-bold">{t('tests.report.questionRates')}</h2>
         <ul className="space-y-2">
           {report.question_stats.map((q) => (
             <li key={q.question_id} className="rounded-lg border border-violet-100 px-3 py-2 text-xs dark:border-violet-800">
-              {q.order}. soru · {q.correct_count}/{q.attempt_count} doğru · %{(q.success_rate * 100).toFixed(1)}
+              {t('tests.report.questionStatLine')
+                .replace('{order}', String(q.order))
+                .replace('{correct}', String(q.correct_count))
+                .replace('{attempts}', String(q.attempt_count))
+                .replace('{pct}', (q.success_rate * 100).toFixed(1))}
             </li>
           ))}
         </ul>
       </section>
       {test ? (
         <section className="rounded-xl border border-violet-200 bg-white p-3 dark:border-violet-800 dark:bg-gray-900/70">
-          <h2 className="mb-2 text-sm font-bold">Test Detayları</h2>
+        <h2 className="mb-2 text-sm font-bold">{t('tests.report.testDetails')}</h2>
           <div className="space-y-3">
             {test.questions.map((q) => (
               <div key={q.id} className="rounded-lg border border-violet-100 px-3 py-2 dark:border-violet-800">

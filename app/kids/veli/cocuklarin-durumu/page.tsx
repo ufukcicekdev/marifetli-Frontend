@@ -13,23 +13,7 @@ import {
 import { KidsCard, KidsPanelMax, KidsPrimaryButton, KidsSecondaryButton, KidsSelect } from '@/src/components/kids/kids-ui';
 import { MediaSlider } from '@/src/components/media-slider';
 import type { MediaItem } from '@/src/lib/extract-media';
-
-const HOMEWORK_STATUS_LABEL: Record<string, string> = {
-  published: 'Yayınlandı',
-  student_done: 'Öğrenci yaptı (veli onayı bekliyor)',
-  parent_approved: 'Veli onayladı',
-  parent_rejected: 'Veli eksik işaretledi',
-  teacher_approved: 'Öğretmen onayladı',
-  teacher_revision: 'Öğretmen düzeltme istedi',
-};
-
-const CHALLENGE_STATUS_LABEL: Record<string, string> = {
-  approved: 'Onaylı',
-  completed: 'Tamamlandı',
-  rejected: 'Reddedildi',
-  pending_teacher: 'Öğretmen onayı bekliyor',
-  pending_parent: 'Veli onayı bekliyor',
-};
+import { useKidsI18n } from '@/src/providers/kids-language-provider';
 
 function isImageAttachment(contentType: string, fileName: string): boolean {
   const ct = (contentType || '').toLowerCase();
@@ -37,9 +21,9 @@ function isImageAttachment(contentType: string, fileName: string): boolean {
   return /\.(png|jpe?g|gif|webp|svg)$/i.test(fileName || '');
 }
 
-function filePlaceholderUrl(fileName: string): string {
+function filePlaceholderUrl(fileName: string, label: string): string {
   const ext = (fileName.split('.').pop() || 'DOSYA').toUpperCase().slice(0, 6);
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540"><rect width="960" height="540" fill="#FEF3C7"/><rect x="360" y="120" width="240" height="300" rx="24" fill="#FDE68A"/><path d="M520 120v76c0 13 11 24 24 24h56" fill="#FCD34D"/><path d="M520 120l80 100" stroke="#F59E0B" stroke-width="10"/><text x="480" y="300" text-anchor="middle" font-family="Arial, sans-serif" font-size="40" font-weight="700" fill="#92400E">${ext}</text><text x="480" y="345" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#B45309">Ödev eki</text></svg>`;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540"><rect width="960" height="540" fill="#FEF3C7"/><rect x="360" y="120" width="240" height="300" rx="24" fill="#FDE68A"/><path d="M520 120v76c0 13 11 24 24 24h56" fill="#FCD34D"/><path d="M520 120l80 100" stroke="#F59E0B" stroke-width="10"/><text x="480" y="300" text-anchor="middle" font-family="Arial, sans-serif" font-size="40" font-weight="700" fill="#92400E">${ext}</text><text x="480" y="345" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#B45309">${label}</text></svg>`;
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
@@ -54,11 +38,27 @@ function formatFileSize(sizeBytes: number): string {
 export default function KidsParentChildrenStatusPage() {
   const router = useRouter();
   const { user, loading, pathPrefix } = useKidsAuth();
+  const { t, language } = useKidsI18n();
   const [overview, setOverview] = useState<KidsParentChildOverview[] | null>(null);
   const [overviewLoading, setOverviewLoading] = useState(false);
   const [overviewError, setOverviewError] = useState<string | null>(null);
   const [reviewingSubmissionId, setReviewingSubmissionId] = useState<number | null>(null);
   const [selectedChildId, setSelectedChildId] = useState<string>('');
+  const homeworkStatusLabel: Record<string, string> = {
+    published: t('homework.status.published'),
+    student_done: t('homework.status.studentDone'),
+    parent_approved: t('homework.status.parentApproved'),
+    parent_rejected: t('homework.status.parentRejected'),
+    teacher_approved: t('homework.status.teacherApproved'),
+    teacher_revision: t('homework.status.teacherRevision'),
+  };
+  const challengeStatusLabel: Record<string, string> = {
+    approved: t('childrenStatus.challengeApproved'),
+    completed: t('childrenStatus.challengeCompleted'),
+    rejected: t('childrenStatus.challengeRejected'),
+    pending_teacher: t('childrenStatus.challengePendingTeacher'),
+    pending_parent: t('childrenStatus.challengePendingParent'),
+  };
 
   const loadOverview = useCallback(async () => {
     setOverviewLoading(true);
@@ -72,13 +72,13 @@ export default function KidsParentChildrenStatusPage() {
         return '';
       });
     } catch (e) {
-      setOverviewError(e instanceof Error ? e.message : 'Durum özeti alınamadı');
+      setOverviewError(e instanceof Error ? e.message : t('childrenStatus.overviewError'));
       setOverview(null);
       setSelectedChildId('');
     } finally {
       setOverviewLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     if (loading) return;
@@ -97,10 +97,10 @@ export default function KidsParentChildrenStatusPage() {
     setReviewingSubmissionId(submissionId);
     try {
       await kidsParentReviewHomeworkSubmission(submissionId, { approved: true });
-      toast.success('Teslim öğretmene gönderildi.');
+      toast.success(t('parent.panel.reviewSent'));
       await loadOverview();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Onay kaydedilemedi');
+      toast.error(e instanceof Error ? e.message : t('parent.panel.reviewSaveFailed'));
     } finally {
       setReviewingSubmissionId(null);
     }
@@ -109,7 +109,7 @@ export default function KidsParentChildrenStatusPage() {
   if (loading || !user || user.role !== 'parent') {
     return (
       <KidsPanelMax>
-        <p className="text-center text-violet-800 dark:text-violet-200">Yükleniyor…</p>
+        <p className="text-center text-violet-800 dark:text-violet-200">{t('common.loading')}</p>
       </KidsPanelMax>
     );
   }
@@ -121,25 +121,25 @@ export default function KidsParentChildrenStatusPage() {
     <KidsPanelMax>
       <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="font-logo text-2xl font-bold text-slate-900 dark:text-white">Çocukların Durumu</h1>
+          <h1 className="font-logo text-2xl font-bold text-slate-900 dark:text-white">{t('parent.panel.childrenStatusTitle')}</h1>
           <p className="mt-2 text-sm text-slate-600 dark:text-gray-400">
-            Challenge geçmişi, ödev geçmişi ve bekleyen veli onaylarını bu ekrandan takip edebilirsin.
+            {t('childrenStatus.subtitle')}
           </p>
         </div>
         <KidsSecondaryButton type="button" onClick={() => void loadOverview()} disabled={overviewLoading}>
-          {overviewLoading ? 'Yenileniyor…' : 'Yenile'}
+          {overviewLoading ? t('parent.panel.refreshing') : t('parent.panel.refresh')}
         </KidsSecondaryButton>
       </div>
 
       {childrenList.length > 1 ? (
         <div className="mb-4 max-w-sm">
-          <p className="mb-1 text-xs font-semibold text-slate-700 dark:text-slate-300">Çocuk seç</p>
+          <p className="mb-1 text-xs font-semibold text-slate-700 dark:text-slate-300">{t('childrenStatus.selectChild')}</p>
           <KidsSelect
             value={selectedChild ? String(selectedChild.id) : ''}
             onChange={setSelectedChildId}
             options={childrenList.map((c) => ({
               value: String(c.id),
-              label: `${c.first_name} ${c.last_name}`.trim() || `Çocuk #${c.id}`,
+              label: `${c.first_name} ${c.last_name}`.trim() || `${t('childrenStatus.child')} #${c.id}`,
             }))}
           />
         </div>
@@ -163,7 +163,7 @@ export default function KidsParentChildrenStatusPage() {
 
             {(c.pending_parent_actions ?? []).length > 0 ? (
               <div className="mt-4 rounded-xl border border-violet-200 bg-violet-50/80 px-3 py-2 dark:border-violet-800 dark:bg-violet-950/40">
-                <p className="text-xs font-bold text-violet-900 dark:text-violet-100">Veli kontrolü bekleyen ödevler</p>
+              <p className="text-xs font-bold text-violet-900 dark:text-violet-100">{t('childrenStatus.pendingParentHomeworks')}</p>
                 <ul className="mt-2 space-y-2">
                   {(c.pending_parent_actions ?? []).map((it, idx) => (
                     <li
@@ -179,7 +179,7 @@ export default function KidsParentChildrenStatusPage() {
                         disabled={reviewingSubmissionId === it.submission_id}
                         onClick={() => void markSubmittedReviewed(it.submission_id)}
                       >
-                        {reviewingSubmissionId === it.submission_id ? 'Kaydediliyor…' : 'Teslim edildi'}
+                        {reviewingSubmissionId === it.submission_id ? t('profile.saving') : t('childrenStatus.submitted')}
                       </KidsPrimaryButton>
                     </li>
                   ))}
@@ -189,10 +189,10 @@ export default function KidsParentChildrenStatusPage() {
 
             <div className="mt-5">
               <p className="text-xs font-bold uppercase tracking-wide text-amber-800 dark:text-amber-200">
-                Challenge geçmişi
+                {t('childrenStatus.challengeHistory')}
               </p>
               {(c.challenges ?? []).length === 0 ? (
-                <p className="mt-2 text-sm text-amber-900/75 dark:text-amber-100/70">Henüz challenge kaydı yok.</p>
+                <p className="mt-2 text-sm text-amber-900/75 dark:text-amber-100/70">{t('childrenStatus.noChallengeRecord')}</p>
               ) : (
                 <ul className="mt-3 space-y-2">
                   {(c.challenges ?? []).map((ch, idx) => (
@@ -202,7 +202,7 @@ export default function KidsParentChildrenStatusPage() {
                     >
                       <p className="font-semibold text-slate-900 dark:text-white">{ch.title}</p>
                       <p className="text-xs text-slate-600 dark:text-gray-400">
-                        {ch.class_name} · {CHALLENGE_STATUS_LABEL[ch.status] ?? ch.status}
+                        {ch.class_name} · {challengeStatusLabel[ch.status] ?? ch.status}
                       </p>
                     </li>
                   ))}
@@ -211,11 +211,9 @@ export default function KidsParentChildrenStatusPage() {
             </div>
 
             <div className="mt-5">
-              <p className="text-xs font-bold uppercase tracking-wide text-amber-800 dark:text-amber-200">
-                Ödev geçmişi
-              </p>
+                <p className="text-xs font-bold uppercase tracking-wide text-amber-800 dark:text-amber-200">{t('childrenStatus.homeworkHistory')}</p>
               {(c.homework_history ?? []).length === 0 ? (
-                <p className="mt-2 text-sm text-amber-900/75 dark:text-amber-100/70">Henüz ödev kaydı yok.</p>
+                <p className="mt-2 text-sm text-amber-900/75 dark:text-amber-100/70">{t('childrenStatus.noHomeworkRecord')}</p>
               ) : (
                 <ul className="mt-3 space-y-2">
                   {(c.homework_history ?? []).map((hw) => (
@@ -225,11 +223,11 @@ export default function KidsParentChildrenStatusPage() {
                     >
                       <p className="font-semibold text-slate-900 dark:text-white">{hw.title}</p>
                       <p className="text-xs text-slate-600 dark:text-gray-400">
-                        {hw.class_name} · {HOMEWORK_STATUS_LABEL[hw.status] ?? hw.status}
+                        {hw.class_name} · {homeworkStatusLabel[hw.status] ?? hw.status}
                       </p>
                       {(hw.teacher_display || hw.teacher_subject) ? (
                         <p className="mt-1 text-xs text-amber-800/90 dark:text-amber-200/80">
-                          {hw.teacher_display || 'Öğretmen'}
+                          {hw.teacher_display || t('childrenStatus.teacher')}
                           {hw.teacher_subject ? ` (${hw.teacher_subject})` : ''}
                         </p>
                       ) : null}
@@ -238,28 +236,28 @@ export default function KidsParentChildrenStatusPage() {
                       ) : null}
                       {hw.due_at ? (
                         <p className="mt-1 text-xs text-violet-800/90 dark:text-violet-200/80">
-                          Son teslim: {new Date(hw.due_at).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}
+                          {t('teacherHomework.dueAt')}: {new Date(hw.due_at).toLocaleString(language, { dateStyle: 'short', timeStyle: 'short' })}
                         </p>
                       ) : null}
                       <div className="mt-2 grid gap-1 text-xs text-slate-700 dark:text-slate-300">
                         {hw.student_done_at ? (
-                          <p>Ogrenci tamamladi: {new Date(hw.student_done_at).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}</p>
+                          <p>{t('childrenStatus.studentCompleted')}: {new Date(hw.student_done_at).toLocaleString(language, { dateStyle: 'short', timeStyle: 'short' })}</p>
                         ) : null}
                         {hw.parent_reviewed_at ? (
-                          <p>Veli degerlendirdi: {new Date(hw.parent_reviewed_at).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}</p>
+                          <p>{t('childrenStatus.parentReviewed')}: {new Date(hw.parent_reviewed_at).toLocaleString(language, { dateStyle: 'short', timeStyle: 'short' })}</p>
                         ) : null}
                         {hw.teacher_reviewed_at ? (
-                          <p>Ogretmen degerlendirdi: {new Date(hw.teacher_reviewed_at).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' })}</p>
+                          <p>{t('childrenStatus.teacherReviewed')}: {new Date(hw.teacher_reviewed_at).toLocaleString(language, { dateStyle: 'short', timeStyle: 'short' })}</p>
                         ) : null}
                       </div>
                       {hw.student_note ? (
-                        <p className="mt-1 text-xs italic text-slate-700 dark:text-slate-200">Ogrenci notu: "{hw.student_note}"</p>
+                        <p className="mt-1 text-xs italic text-slate-700 dark:text-slate-200">{t('childrenStatus.studentNote')}: "{hw.student_note}"</p>
                       ) : null}
                       {hw.parent_note ? (
-                        <p className="mt-1 text-xs italic text-amber-900 dark:text-amber-100">Veli notu: "{hw.parent_note}"</p>
+                        <p className="mt-1 text-xs italic text-amber-900 dark:text-amber-100">{t('childrenStatus.parentNote')}: "{hw.parent_note}"</p>
                       ) : null}
                       {hw.teacher_note ? (
-                        <p className="mt-1 text-xs italic text-amber-900 dark:text-amber-100">Ogretmen notu: "{hw.teacher_note}"</p>
+                        <p className="mt-1 text-xs italic text-amber-900 dark:text-amber-100">{t('childrenStatus.teacherNote')}: "{hw.teacher_note}"</p>
                       ) : null}
                       {Array.isArray(hw.attachments) && hw.attachments.length > 0 ? (
                         <div className="mt-2 space-y-2">
@@ -267,7 +265,7 @@ export default function KidsParentChildrenStatusPage() {
                             items={hw.attachments.map<MediaItem>((att) => ({
                               url: isImageAttachment(att.content_type, att.original_name)
                                 ? att.url
-                                : filePlaceholderUrl(att.original_name || 'dosya'),
+                                : filePlaceholderUrl(att.original_name || 'dosya', t('homework.attachmentLabel')),
                               type: 'image',
                             }))}
                             className="h-44"
@@ -277,7 +275,7 @@ export default function KidsParentChildrenStatusPage() {
                           <ul className="space-y-1 text-xs text-slate-700 dark:text-slate-300">
                             {hw.attachments.map((att) => (
                               <li key={att.id} className="flex flex-wrap items-center gap-2">
-                                <span className="font-medium">{att.original_name || 'Dosya'}</span>
+                                <span className="font-medium">{att.original_name || t('messageDetail.file')}</span>
                                 {att.size_bytes ? <span>{formatFileSize(att.size_bytes)}</span> : null}
                                 <a
                                   href={att.url}
@@ -286,7 +284,7 @@ export default function KidsParentChildrenStatusPage() {
                                   download={att.original_name || true}
                                   className="rounded-full border border-amber-300 px-2 py-0.5 font-semibold text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-200 dark:hover:bg-amber-900/40"
                                 >
-                                  Gor / Indir
+                                  {t('announcements.viewDownload')}
                                 </a>
                               </li>
                             ))}
@@ -303,7 +301,7 @@ export default function KidsParentChildrenStatusPage() {
           })()
         ) : (
           <KidsCard tone="amber">
-            <p className="text-sm text-amber-900/80 dark:text-amber-100/80">Görüntülenecek çocuk bulunamadı.</p>
+            <p className="text-sm text-amber-900/80 dark:text-amber-100/80">{t('childrenStatus.noChildToDisplay')}</p>
           </KidsCard>
         )}
       </div>

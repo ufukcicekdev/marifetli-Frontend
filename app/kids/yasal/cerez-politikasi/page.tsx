@@ -3,9 +3,9 @@ import { MarifetliKidsCookiesContent } from '@/src/components/legal/marifetli-ki
 
 export default function KidsYasalCerezPage() {
   return (
-    <MarifetliKidsLegalPageShell title="Çerez Politikası — Marifetli Kids" variant="kids">
+    <MarifetliKidsLegalPageShell title="Cerez Politikasi - Marifetli Kids" variant="kids">
       <p className="mb-4 text-sm font-semibold text-violet-900 dark:text-violet-100">
-        ÇEREZ POLİTİKASI – MARİFETLİ KIDS
+        CEREZ POLITIKASI - MARIFETLI KIDS
       </p>
       <MarifetliKidsCookiesContent variant="kids" />
     </MarifetliKidsLegalPageShell>

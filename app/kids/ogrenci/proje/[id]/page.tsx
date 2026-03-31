@@ -18,6 +18,7 @@ import {
   type KidsSubmissionRecord,
 } from '@/src/lib/kids-api';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
+import { useKidsI18n } from '@/src/providers/kids-language-provider';
 import {
   KidsAssignmentRoundStepper,
   canNavigateToAssignmentRound,
@@ -38,7 +39,7 @@ function readVideoDuration(file: File): Promise<number> {
     };
     v.onerror = () => {
       URL.revokeObjectURL(url);
-      reject(new Error('Video okunamadı'));
+      reject(new Error('Video could not be read'));
     };
     v.src = url;
   });
@@ -49,6 +50,7 @@ export default function KidsStudentAssignmentPage() {
   const router = useRouter();
   const assignmentId = Number(params.id);
   const { user, loading: authLoading, pathPrefix } = useKidsAuth();
+  const { t } = useKidsI18n();
 
   const [assignment, setAssignment] = useState<KidsAssignment | null>(null);
   const [loading, setLoading] = useState(true);
@@ -132,18 +134,18 @@ export default function KidsStudentAssignmentPage() {
         const slot = bundle.rounds.find((r) => r.round_number === initial);
         hydrateForm(slot?.submission ?? null, found);
       } catch {
-        toast.error('Kayıtlı teslim bilgisi alınamadı');
+        toast.error(t('projectDetail.savedLoadError'));
         setRoundSlots([]);
         setTotalRounds(Math.max(1, found.submission_rounds ?? 1));
         setActiveRound(1);
         hydrateForm(null, found);
       }
     } catch {
-      toast.error('Challenge yüklenemedi');
+      toast.error(t('projectDetail.loadError'));
     } finally {
       setLoading(false);
     }
-  }, [assignmentId, hydrateForm]);
+  }, [assignmentId, hydrateForm, t]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -207,7 +209,7 @@ export default function KidsStudentAssignmentPage() {
       submissionGate.ok &&
       !canNavigateToAssignmentRound(r, roundSlots, totalRounds, true)
     ) {
-      toast.error(`Önce “Adım ${r - 1}” teslimini tamamlamalısın.`);
+      toast.error(t('projectDetail.roundLocked').replace('{round}', String(r - 1)));
       return;
     }
     const slot = roundSlots.find((x) => x.round_number === r);
@@ -227,13 +229,15 @@ export default function KidsStudentAssignmentPage() {
       const sec = await readVideoDuration(f);
       if (sec > assignment.video_max_seconds + 0.5) {
         toast.error(
-          `Video süresi çok uzun (yaklaşık ${Math.ceil(sec)} sn). En fazla ${assignment.video_max_seconds} sn olmalı.`,
+          t('projectDetail.videoTooLong')
+            .replace('{current}', String(Math.ceil(sec)))
+            .replace('{max}', String(assignment.video_max_seconds)),
         );
       } else {
-        toast.success(`Süre uygun görünüyor (~${Math.ceil(sec)} sn). Linki aşağıya yapıştırmayı unutma.`);
+        toast.success(t('projectDetail.videoDurationOk').replace('{current}', String(Math.ceil(sec))));
       }
     } catch {
-      toast.error('Video kontrol edilemedi');
+      toast.error(t('projectDetail.videoCheckFailed'));
     }
     e.target.value = '';
   }
@@ -242,7 +246,7 @@ export default function KidsStudentAssignmentPage() {
     const f = e.target.files?.[0];
     if (!f || !assignment) return;
     if (imageUrls.length >= maxStepImages) {
-      toast.error(`En fazla ${maxStepImages} görsel ekleyebilirsin.`);
+      toast.error(t('projectDetail.maxImages').replace('{count}', String(maxStepImages)));
       e.target.value = '';
       return;
     }
@@ -250,9 +254,9 @@ export default function KidsStudentAssignmentPage() {
     try {
       const { url } = await kidsUploadSubmissionImage(f);
       setImageUrls((prev) => [...prev, url]);
-      toast.success('Görsel eklendi');
+      toast.success(t('projectDetail.imageAdded'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Görsel yüklenemedi');
+      toast.error(err instanceof Error ? err.message : t('projectDetail.imageUploadFailed'));
     } finally {
       setUploadingImage(false);
       e.target.value = '';
@@ -317,7 +321,7 @@ export default function KidsStudentAssignmentPage() {
       } catch {
         hydrateForm(rec, assignment);
       }
-      toast.success(isUpdate ? 'Teslimin güncellendi' : 'Teslim alındı');
+      toast.success(isUpdate ? t('projectDetail.updated') : t('projectDetail.received'));
       if (!isUpdate) {
         const tr = Math.max(
           1,
@@ -334,7 +338,7 @@ export default function KidsStudentAssignmentPage() {
           setActiveRound(next);
           hydrateForm(nextSlot?.submission ?? null, assignment);
           if (showMotivation) {
-            setMotivationMessage(kidsPickStepMotivationMessage(false));
+            setMotivationMessage(kidsPickStepMotivationMessage(false, t));
             setMotivationIsFinal(false);
             motivationNavRef.current = { kind: 'next', next };
             setMotivationOpen(true);
@@ -343,7 +347,7 @@ export default function KidsStudentAssignmentPage() {
           }
         } else {
           if (showMotivation) {
-            setMotivationMessage(kidsPickStepMotivationMessage(true));
+            setMotivationMessage(kidsPickStepMotivationMessage(true, t));
             setMotivationIsFinal(true);
             motivationNavRef.current = { kind: 'projects' };
             setMotivationOpen(true);
@@ -353,24 +357,24 @@ export default function KidsStudentAssignmentPage() {
         }
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Kaydedilemedi');
+      toast.error(err instanceof Error ? err.message : t('common.saveFailed'));
     } finally {
       setSubmitting(false);
     }
   }
 
   if (authLoading || !user || user.role !== 'student') {
-    return <p className="text-center text-gray-600">Yükleniyor…</p>;
+    return <p className="text-center text-gray-600">{t('common.loading')}</p>;
   }
   if (loading) {
-    return <p className="text-center text-gray-600">Yükleniyor…</p>;
+    return <p className="text-center text-gray-600">{t('common.loading')}</p>;
   }
   if (!assignment) {
     return (
       <div className="mx-auto max-w-lg text-center">
-        <p className="text-gray-600 dark:text-gray-400">Bu challenge bulunamadı veya sana atanmadı.</p>
+        <p className="text-gray-600 dark:text-gray-400">{t('projectDetail.notFound')}</p>
         <Link href={`${pathPrefix}/ogrenci/projeler`} className="mt-4 inline-block text-brand hover:underline">
-          Challenges’a dön
+          {t('projectDetail.backChallenges')}
         </Link>
       </div>
     );
@@ -385,7 +389,7 @@ export default function KidsStudentAssignmentPage() {
         href={`${pathPrefix}/ogrenci/projeler`}
         className="inline-flex text-sm font-bold text-fuchsia-700 hover:underline dark:text-fuchsia-300"
       >
-        ← Challenges
+        ← {t('projectDetail.backChallenges')}
       </Link>
       <div className="rounded-[1.75rem] border-4 border-white/90 bg-gradient-to-br from-violet-500 via-fuchsia-500 to-amber-400 p-1 shadow-xl shadow-fuchsia-500/20 dark:border-violet-900/50 dark:from-violet-800 dark:via-fuchsia-800 dark:to-amber-700">
         <div className="rounded-2xl bg-white/95 px-5 py-6 dark:bg-gray-950/95 sm:px-7 sm:py-7">
@@ -400,7 +404,7 @@ export default function KidsStudentAssignmentPage() {
           ) : null}
           {assignment.materials ? (
             <div className="mt-4 rounded-2xl border-2 border-sky-200 bg-gradient-to-r from-sky-50 to-cyan-50 p-4 text-sm dark:border-sky-800 dark:from-sky-950/50 dark:to-cyan-950/40">
-              <span className="font-logo font-bold text-sky-900 dark:text-sky-100">🧰 Malzemeler</span>
+              <span className="font-logo font-bold text-sky-900 dark:text-sky-100">🧰 {t('teacherClass.assignments.materials')}</span>
               <p className="mt-2 whitespace-pre-wrap font-medium text-sky-900/90 dark:text-sky-100/90">
                 {assignment.materials}
               </p>
@@ -408,10 +412,10 @@ export default function KidsStudentAssignmentPage() {
           ) : null}
           <p className="mt-4 text-xs font-semibold text-violet-700/80 dark:text-violet-300/90">
             {assignment.require_video && !assignment.require_image
-              ? `🎬 Video teslimi · en fazla ${assignment.video_max_seconds} sn`
+                  ? t('projectDetail.submitModeVideo').replace('{max}', String(assignment.video_max_seconds))
               : assignment.require_image && !assignment.require_video
-                ? `📝 Adım adım yazılı teslim + her tur için 1 görsel.`
-                : `🎬📝 Video süre sınırı: ${assignment.video_max_seconds} sn${assignment.require_image ? ' · Görsel veya video seçebilirsin' : ''}`}
+                ? t('projectDetail.submitModeSteps')
+                : t('projectDetail.submitModeBoth').replace('{max}', String(assignment.video_max_seconds))}
           </p>
           <KidsAssignmentRoundStepper
             totalRounds={totalRounds}
@@ -432,10 +436,10 @@ export default function KidsStudentAssignmentPage() {
       {!submissionGate.ok ? (
         <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
           {submissionGate.phase === 'not_yet'
-            ? 'Teslim dönemi henüz başlamadı. Başlangıç zamanından sonra bu sayfadan teslim edebilirsin.'
+            ? t('projectDetail.windowNotStarted')
             : existingSubmission
-              ? 'Teslim süresi sona erdi. Gönderdiğin içerik aşağıda salt okunur; yeni teslim veya düzenleme yapılamaz. Öğretmen geri bildirimin varsa yine görüntülenir.'
-              : 'Teslim süresi sona erdi. Artık bu challenge’a teslim gönderemez veya düzenleyemezsin.'}
+              ? t('projectDetail.windowEndedReadonly')
+              : t('projectDetail.windowEnded')}
         </div>
       ) : null}
 
@@ -444,9 +448,9 @@ export default function KidsStudentAssignmentPage() {
           <p className="text-lg" aria-hidden>
             ⭐
           </p>
-          <p className="font-semibold">Challenge yıldızı</p>
+          <p className="font-semibold">{t('projectDetail.starTitle')}</p>
           <p className="mt-1 leading-relaxed">
-            Öğretmen bu teslimi bu challenge’da öne çıkardı. Rozet yolunda da görünecek.
+            {t('projectDetail.starBody')}
           </p>
         </div>
       ) : null}
@@ -466,25 +470,25 @@ export default function KidsStudentAssignmentPage() {
 
       {submissionClosed && !existingSubmission ? (
         <p className="rounded-2xl border-2 border-rose-200 bg-gradient-to-r from-rose-50 to-amber-50 px-4 py-4 text-sm font-semibold text-rose-900 dark:border-rose-900 dark:from-rose-950/40 dark:to-amber-950/30 dark:text-rose-100">
-          Bu challenge için süre dolmadan teslim göndermemişsin; artık teslim eklenemez.
+          {t('projectDetail.missedWindow')}
         </p>
       ) : showReadOnlySubmission && existingSubmission ? (
         <div className="rounded-[1.75rem] border-4 border-fuchsia-200/90 bg-gradient-to-br from-violet-200/40 via-fuchsia-100/50 to-amber-100/40 p-1 shadow-xl dark:border-fuchsia-900/50 dark:from-violet-950/40 dark:via-fuchsia-950/30 dark:to-amber-950/20">
           <div className="space-y-5 rounded-2xl bg-white/95 p-6 dark:bg-gray-950/95 sm:p-7">
             <div>
               <h2 className="font-logo flex items-center gap-2 text-xl font-black text-violet-800 dark:text-violet-200">
-                <span aria-hidden>📦</span> Teslimin
+                <span aria-hidden>📦</span> {t('projectDetail.yourSubmission')}
                 {totalRounds > 1 ? (
                   <span className="text-base font-black text-fuchsia-700 dark:text-fuchsia-300">
                     {' '}
-                    · Adım {activeRound}
+                    · {t('projectDetail.step')} {activeRound}
                   </span>
                 ) : null}
               </h2>
               <p className="mt-1 text-sm font-semibold text-violet-600/90 dark:text-violet-300/90">
                 {submissionClosed
-                  ? '⏳ Süre doldu — yalnızca okuyabilirsin.'
-                  : '🔒 Öğretmen değerlendirdi — artık düzenlenemez.'}
+                  ? `⏳ ${t('projectDetail.readonlyTimeUp')}`
+                  : `🔒 ${t('projectDetail.readonlyReviewed')}`}
               </p>
             </div>
             {existingSubmission.kind === 'steps' ? (
@@ -495,7 +499,7 @@ export default function KidsStudentAssignmentPage() {
                     className="rounded-2xl border-2 border-violet-200/70 bg-gradient-to-br from-violet-50/90 to-white p-4 dark:border-violet-800 dark:from-violet-950/40 dark:to-gray-950"
                   >
                     <p className="font-logo text-xs font-black uppercase tracking-wide text-fuchsia-600 dark:text-fuchsia-400">
-                      ✏️ Adım {i + 1}
+                      ✏️ {t('projectDetail.step')} {i + 1}
                     </p>
                     <p className="mt-2 whitespace-pre-wrap text-sm font-medium text-slate-800 dark:text-gray-100">
                       {s.text || '—'}
@@ -504,7 +508,7 @@ export default function KidsStudentAssignmentPage() {
                 ))}
                 {(existingSubmission.steps_payload?.image_urls ?? []).length > 0 ? (
                   <div className="rounded-2xl border-2 border-amber-300/70 bg-gradient-to-r from-amber-50 to-orange-50 p-4 dark:border-amber-800 dark:from-amber-950/40 dark:to-orange-950/30">
-                    <p className="font-logo text-sm font-black text-amber-900 dark:text-amber-100">🖼 Görselin</p>
+                    <p className="font-logo text-sm font-black text-amber-900 dark:text-amber-100">🖼 {t('projectDetail.yourImage')}</p>
                     <ul className="mt-3 flex flex-wrap gap-3">
                       {(existingSubmission.steps_payload?.image_urls ?? []).map((url, idx) => (
                         <li
@@ -520,7 +524,7 @@ export default function KidsStudentAssignmentPage() {
               </div>
             ) : (
               <div className="rounded-2xl border-2 border-sky-300/70 bg-gradient-to-br from-sky-50 to-cyan-50 p-4 dark:border-sky-800 dark:from-sky-950/40 dark:to-cyan-950/30">
-                <p className="font-logo text-sm font-black text-sky-900 dark:text-sky-100">🎬 Video</p>
+                <p className="font-logo text-sm font-black text-sky-900 dark:text-sky-100">🎬 {t('projectDetail.video')}</p>
                 {existingSubmission.video_url ? (
                   <a
                     href={existingSubmission.video_url}
@@ -531,13 +535,13 @@ export default function KidsStudentAssignmentPage() {
                     {existingSubmission.video_url}
                   </a>
                 ) : (
-                  <p className="mt-2 text-sm font-medium text-gray-600 dark:text-gray-400">Bağlantı yok</p>
+                  <p className="mt-2 text-sm font-medium text-gray-600 dark:text-gray-400">{t('projectDetail.noLink')}</p>
                 )}
               </div>
             )}
             <div className="rounded-2xl border-2 border-emerald-200/80 bg-gradient-to-r from-emerald-50/90 to-teal-50/80 p-4 dark:border-emerald-900 dark:from-emerald-950/35 dark:to-teal-950/30">
               <p className="font-logo text-xs font-black uppercase tracking-wide text-emerald-800 dark:text-emerald-200">
-                💬 Kısa özet
+                💬 {t('projectDetail.shortSummary')}
               </p>
               <p className="mt-2 whitespace-pre-wrap text-sm font-medium text-emerald-950 dark:text-emerald-50">
                 {existingSubmission.caption?.trim() ? existingSubmission.caption : '—'}
@@ -555,9 +559,9 @@ export default function KidsStudentAssignmentPage() {
               🚀
             </span>
             <h2 className="font-logo text-lg font-black text-violet-900 dark:text-violet-100">
-              Teslimini yükle
+              {t('projectDetail.uploadSubmission')}
               {totalRounds > 1 ? (
-                <span className="text-fuchsia-700 dark:text-fuchsia-300"> · Adım {activeRound}</span>
+                <span className="text-fuchsia-700 dark:text-fuchsia-300"> · {t('projectDetail.step')} {activeRound}</span>
               ) : null}
             </h2>
           </div>
@@ -573,7 +577,7 @@ export default function KidsStudentAssignmentPage() {
                   onChange={() => setKind('steps')}
                   className="accent-fuchsia-600"
                 />
-                📝 Adım adım
+                📝 {t('projectDetail.stepByStep')}
               </label>
               <label className="flex cursor-pointer items-center gap-2 rounded-2xl border-2 border-violet-200 bg-white/80 px-4 py-2 has-[:checked]:border-fuchsia-500 has-[:checked]:bg-fuchsia-50 dark:border-violet-800 dark:bg-violet-950/40 dark:has-[:checked]:border-fuchsia-400 dark:has-[:checked]:bg-fuchsia-950/40">
                 <input
@@ -584,16 +588,16 @@ export default function KidsStudentAssignmentPage() {
                   onChange={() => setKind('video')}
                   className="accent-fuchsia-600"
                 />
-                🎬 Video
+                🎬 {t('projectDetail.video')}
               </label>
             </div>
           ) : submissionMode === 'video_only' ? (
             <p className="rounded-xl bg-sky-100/80 px-3 py-2 text-sm font-bold text-sky-900 dark:bg-sky-950/50 dark:text-sky-100">
-              Bu challenge için video teslimi gerekir.
+              {t('projectDetail.videoRequired')}
             </p>
           ) : (
             <p className="rounded-xl bg-violet-100/80 px-3 py-2 text-sm font-bold text-violet-900 dark:bg-violet-950/50 dark:text-violet-100">
-              Bu challenge için adım adım yazılı teslim gerekir.
+              {t('projectDetail.stepsRequired')}
             </p>
           )}
 
@@ -602,7 +606,7 @@ export default function KidsStudentAssignmentPage() {
               {steps.map((s, i) => (
                 <div key={i}>
                   <label className="font-logo text-sm font-black text-fuchsia-800 dark:text-fuchsia-200">
-                    ✏️ Adım {i + 1}
+                    ✏️ {t('projectDetail.step')} {i + 1}
                   </label>
                   <textarea
                     value={s.text}
@@ -614,7 +618,7 @@ export default function KidsStudentAssignmentPage() {
                     }}
                     rows={3}
                     className={`mt-2 ${inputPlay}`}
-                    placeholder="Ne yaptın? Buraya yaz…"
+                    placeholder={t('projectDetail.stepPlaceholder')}
                   />
                 </div>
               ))}
@@ -624,15 +628,15 @@ export default function KidsStudentAssignmentPage() {
                 onClick={() => setSteps([...steps, { text: '' }])}
                 className="text-sm font-black text-fuchsia-700 underline-offset-2 hover:underline disabled:opacity-50 dark:text-fuchsia-300"
               >
-                + Bir adım daha ekle
+                + {t('projectDetail.addStep')}
               </button>
               {assignment.require_image ? (
                 <div className="rounded-2xl border-2 border-amber-300/90 bg-gradient-to-br from-amber-50 via-orange-50/80 to-yellow-50/60 p-4 shadow-inner dark:border-amber-800 dark:from-amber-950/40 dark:via-orange-950/30 dark:to-yellow-950/20">
                   <p className="font-logo text-sm font-black text-amber-950 dark:text-amber-100">
-                    🖼 Görsel
+                    🖼 {t('projectDetail.image')}
                   </p>
                   <p className="mt-1 text-xs font-semibold text-amber-900/85 dark:text-amber-200/90">
-                    JPEG, PNG veya WebP · tur başına 1 görsel
+                    {t('projectDetail.imageHint')}
                   </p>
                   {imageUrls.length > 0 ? (
                     <ul className="mt-3 flex flex-wrap gap-2">
@@ -647,7 +651,7 @@ export default function KidsStudentAssignmentPage() {
                             disabled={formLocked}
                             onClick={() => removeImageAt(idx)}
                             className="absolute right-1 top-1 flex h-7 w-7 items-center justify-center rounded-full bg-rose-500 text-sm font-black text-white shadow hover:bg-rose-600 disabled:opacity-50"
-                            aria-label="Görseli kaldır"
+                            aria-label={t('projectDetail.removeImage')}
                           >
                             ×
                           </button>
@@ -657,7 +661,7 @@ export default function KidsStudentAssignmentPage() {
                   ) : null}
                   <div className="mt-3">
                     <label className="text-xs font-black uppercase tracking-wide text-amber-900 dark:text-amber-200">
-                      📤 Görsel seç
+                      📤 {t('projectDetail.selectImage')}
                     </label>
                     <input
                       type="file"
@@ -676,7 +680,7 @@ export default function KidsStudentAssignmentPage() {
             <div className="space-y-4 rounded-2xl border-2 border-sky-300/80 bg-gradient-to-br from-sky-50 to-cyan-50/80 p-4 dark:border-sky-800 dark:from-sky-950/40 dark:to-cyan-950/30">
               <div>
                 <label className="text-sm font-black text-sky-900 dark:text-sky-100">
-                  🎥 Video dosyası (süre kontrolü)
+                  🎥 {t('projectDetail.videoFile')}
                 </label>
                 <input
                   type="file"
@@ -687,13 +691,13 @@ export default function KidsStudentAssignmentPage() {
                 />
               </div>
               <div>
-                <label className="text-sm font-black text-sky-900 dark:text-sky-100">🔗 Video bağlantısı</label>
+                <label className="text-sm font-black text-sky-900 dark:text-sky-100">🔗 {t('projectDetail.videoLink')}</label>
                 <input
                   value={videoUrl}
                   disabled={formLocked}
                   onChange={(e) => setVideoUrl(e.target.value)}
                   className={`mt-2 ${inputPlay}`}
-                  placeholder="YouTube, Drive…"
+                  placeholder={t('projectDetail.videoLinkPlaceholder')}
                 />
               </div>
             </div>
@@ -701,7 +705,7 @@ export default function KidsStudentAssignmentPage() {
 
           <div>
             <label className="font-logo text-sm font-black text-emerald-800 dark:text-emerald-200">
-              💬 Kısa açıklama / özet
+              💬 {t('projectDetail.caption')}
             </label>
             <textarea
               value={caption}
@@ -709,7 +713,7 @@ export default function KidsStudentAssignmentPage() {
               onChange={(e) => setCaption(e.target.value)}
               rows={2}
               className={`mt-2 ${inputPlay}`}
-              placeholder="İstersen bir cümleyle özetle…"
+              placeholder={t('projectDetail.captionPlaceholder')}
             />
           </div>
 
@@ -719,10 +723,10 @@ export default function KidsStudentAssignmentPage() {
             className="w-full rounded-2xl bg-gradient-to-r from-violet-600 via-fuchsia-600 to-amber-500 py-4 text-base font-black text-white shadow-lg shadow-fuchsia-500/30 transition hover:brightness-105 disabled:opacity-50"
           >
             {submitting
-              ? 'Gönderiliyor…'
+              ? t('common.loading')
               : existingSubmission
-                ? '✨ Güncelle'
-                : '🎉 Teslim et'}
+                ? `✨ ${t('projectDetail.update')}`
+                : `🎉 ${t('projectDetail.submit')}`}
           </button>
         </form>
       )}

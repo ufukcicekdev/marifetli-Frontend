@@ -9,6 +9,7 @@ import { HEADER_HEIGHT_PX } from '@/src/components/header';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import { KidsNotificationBell } from '@/src/components/kids/kids-notification-bell';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
+import { useKidsI18n } from '@/src/providers/kids-language-provider';
 import { Palette, Sparkles } from 'lucide-react';
 type KidsHeaderProps = {
   pathPrefix: string;
@@ -18,6 +19,7 @@ export function KidsHeader({ pathPrefix }: KidsHeaderProps) {
   const sidebarToggle = useSidebarStore((s) => s.toggle);
   const homeHref = pathPrefix || '/';
   const { user, logout } = useKidsAuth();
+  const { t } = useKidsI18n();
   const isKidsAdmin = user?.role === 'admin';
   const brandHref = homeHref;
   const [menuOpen, setMenuOpen] = useState(false);
@@ -50,8 +52,8 @@ export function KidsHeader({ pathPrefix }: KidsHeaderProps) {
             type="button"
             onClick={sidebarToggle}
             className="header-nav-btn rounded-xl px-2 text-violet-800 hover:bg-violet-100 dark:text-violet-200 dark:hover:bg-violet-900/40 sm:px-2"
-            title="Menü"
-            aria-label="Menüyü aç"
+            title={t('header.menu')}
+            aria-label={t('header.menu')}
           >
             <svg className="h-5 w-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -88,7 +90,7 @@ export function KidsHeader({ pathPrefix }: KidsHeaderProps) {
                 type="button"
                 onClick={() => setMenuOpen((o) => !o)}
                 className="header-nav-btn gap-1.5 px-1 text-violet-900 hover:bg-violet-100 dark:text-violet-100 dark:hover:bg-violet-900/40"
-                aria-label="Profil menüsünü aç"
+                aria-label={t('header.profileMenu')}
                 aria-haspopup="menu"
                 aria-expanded={menuOpen}
               >
@@ -130,7 +132,7 @@ export function KidsHeader({ pathPrefix }: KidsHeaderProps) {
                       <p className="truncate text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
                     ) : null}
                     {isKidsAdmin ? (
-                      <p className="mt-1 text-xs font-medium text-violet-600 dark:text-violet-300">Yönetici</p>
+                      <p className="mt-1 text-xs font-medium text-violet-600 dark:text-violet-300">{t('header.admin')}</p>
                     ) : null}
                   </div>
                   <Link
@@ -139,7 +141,7 @@ export function KidsHeader({ pathPrefix }: KidsHeaderProps) {
                     onClick={() => setMenuOpen(false)}
                     role="menuitem"
                   >
-                    Bildirimler
+                    {t('header.notifications')}
                   </Link>
                   <Link
                     href={`${pathPrefix}/profil`}
@@ -147,7 +149,7 @@ export function KidsHeader({ pathPrefix }: KidsHeaderProps) {
                     onClick={() => setMenuOpen(false)}
                     role="menuitem"
                   >
-                    Profilim
+                    {t('header.profile')}
                   </Link>
                   <hr className="my-1 border-violet-100 dark:border-violet-800" />
                   <button
@@ -159,7 +161,7 @@ export function KidsHeader({ pathPrefix }: KidsHeaderProps) {
                     }}
                     role="menuitem"
                   >
-                    Çıkış
+                    {t('header.logout')}
                   </button>
                 </div>
               )}
@@ -169,7 +171,7 @@ export function KidsHeader({ pathPrefix }: KidsHeaderProps) {
               href={kidsLoginPortalHref(pathPrefix)}
               className="header-nav-btn hidden rounded-xl border-2 border-transparent bg-gradient-to-r from-violet-500 to-fuchsia-500 px-3 font-semibold text-white shadow-md hover:from-violet-600 hover:to-fuchsia-600 sm:inline-flex"
             >
-              Giriş
+              {t('header.login')}
             </Link>
           )}
         </div>
@@ -179,7 +181,7 @@ export function KidsHeader({ pathPrefix }: KidsHeaderProps) {
         <div className="w-full max-w-2xl">
           <div className="flex items-center justify-center gap-2 rounded-full border-2 border-amber-300/70 bg-gradient-to-r from-amber-100/95 via-white to-sky-100/95 px-4 py-2 text-center text-sm font-semibold text-amber-950 shadow-sm dark:border-amber-600/40 dark:from-amber-950/60 dark:via-gray-900/90 dark:to-sky-950/60 dark:text-amber-50">
             <Sparkles className="h-4 w-4" aria-hidden />
-            <span>Çocuklar için renkli, güvenli challenge dünyası</span>
+            <span>{t('header.tagline')}</span>
             <Palette className="h-4 w-4" aria-hidden />
           </div>
         </div>
