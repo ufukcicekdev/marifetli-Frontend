@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useEffect, useMemo } from 'react';
 import { useSidebarStore } from '@/src/stores/sidebar-store';
 import { ThemeToggle } from '@/src/components/theme-toggle';
-import { HEADER_HEIGHT_PX } from '@/src/components/header';
+import { KIDS_HEADER_HEIGHT_PX } from '@/src/components/kids/kids-header';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import { useAuthStore } from '@/src/stores/auth-store';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
@@ -69,7 +69,7 @@ export function KidsNavMegaMenu({ pathPrefix }: KidsNavMegaMenuProps) {
 
   if (!isOpen) return null;
 
-  const top = HEADER_HEIGHT_PX;
+  const top = KIDS_HEADER_HEIGHT_PX;
 
   return (
     <>

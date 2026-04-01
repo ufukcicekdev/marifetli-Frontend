@@ -22,6 +22,7 @@ import { GamificationRoadmapModal } from '@/src/components/gamification-roadmap-
 import { RecentUnlockPoller } from '@/src/components/recent-unlock-poller';
 import { CategoryExpertChatPanel } from '@/src/components/category-expert-chat-panel';
 import { SiteAuthProfileSync } from '@/src/components/site-auth-profile-sync';
+import { SiteMobileBottomNav } from '@/src/components/site-mobile-bottom-nav';
 
 export function RootLayoutShell({
   children,
@@ -61,18 +62,19 @@ export function RootLayoutShell({
         ) : (
           <>
             <NavMegaMenu />
-            <div className="flex min-h-screen pt-[104px] flex-col">
+            <div className="flex min-h-screen flex-col pt-[104px] pb-[calc(4.75rem+env(safe-area-inset-bottom))] md:pb-0">
               <MainContentWrapper>
                 <VerifyEmailBanner />
                 <OnboardingBanner />
                 {children}
               </MainContentWrapper>
-              <div className="mt-auto shrink-0 relative z-10">
+              <div className="relative z-10 mt-auto shrink-0">
                 <SiteFooter />
               </div>
             </div>
           </>
         )}
+        <SiteMobileBottomNav />
       </OnboardingGuard>
       <CategoryExpertChatPanel />
       <AchievementUnlockedModal />

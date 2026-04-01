@@ -1,12 +1,12 @@
 'use client';
 
 import { ThemeProvider } from '@/src/components/theme-provider';
-import { HEADER_HEIGHT_PX } from '@/src/components/header';
 import { useSidebarStore } from '@/src/stores/sidebar-store';
-import { KidsHeader } from '@/src/components/kids/kids-header';
+import { KidsHeader, KIDS_HEADER_HEIGHT_PX } from '@/src/components/kids/kids-header';
 import { KidsSidebar } from '@/src/components/kids/kids-sidebar';
 import { KidsNavMegaMenu } from '@/src/components/kids/kids-nav-mega-menu';
 import { KidsFooter } from '@/src/components/kids/kids-footer';
+import { KidsMobileBottomNav } from '@/src/components/kids/kids-mobile-bottom-nav';
 import { KidsAuthProvider } from '@/src/providers/kids-auth-provider';
 import { KidsLanguageProvider } from '@/src/providers/kids-language-provider';
 import { KidsPushHandler } from '@/src/components/kids/kids-push-handler';
@@ -28,9 +28,11 @@ export function KidsShell({ pathPrefix, children }: KidsShellProps) {
         <KidsLanguageProvider>
           <KidsPushHandler />
           <KidsHeader pathPrefix={pathPrefix} />
-          <div className="flex min-h-screen" style={{ paddingTop: HEADER_HEIGHT_PX }}>
+          <div className="flex min-h-screen" style={{ paddingTop: KIDS_HEADER_HEIGHT_PX }}>
             {KIDS_USE_SIDEBAR ? (
-              <KidsSidebar pathPrefix={pathPrefix} />
+              <div className="hidden lg:block">
+                <KidsSidebar pathPrefix={pathPrefix} />
+              </div>
             ) : (
               <KidsNavMegaMenu pathPrefix={pathPrefix} />
             )}
@@ -39,7 +41,7 @@ export function KidsShell({ pathPrefix, children }: KidsShellProps) {
                 KIDS_USE_SIDEBAR ? (isOpen ? 'lg:pl-64' : 'lg:pl-16') : ''
               }`}
             >
-              <main className="relative flex-1 min-w-0 overflow-x-clip px-3 py-6 sm:px-5 sm:py-8">
+              <main className="relative flex-1 min-w-0 overflow-x-clip px-3 pt-1 pb-[calc(4.75rem+env(safe-area-inset-bottom))] sm:px-5 sm:pt-3 sm:pb-[calc(4.75rem+env(safe-area-inset-bottom))] md:pb-8">
                 <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
                   <div className="absolute -right-24 top-0 h-72 w-72 rounded-full bg-fuchsia-400/15 blur-3xl dark:bg-fuchsia-600/10" />
                   <div className="absolute -left-20 bottom-0 h-96 w-96 rounded-full bg-amber-300/20 blur-3xl dark:bg-amber-600/10" />
@@ -50,6 +52,7 @@ export function KidsShell({ pathPrefix, children }: KidsShellProps) {
               <KidsFooter pathPrefix={pathPrefix} />
             </div>
           </div>
+          <KidsMobileBottomNav pathPrefix={pathPrefix} />
         </KidsLanguageProvider>
       </KidsAuthProvider>
     </ThemeProvider>

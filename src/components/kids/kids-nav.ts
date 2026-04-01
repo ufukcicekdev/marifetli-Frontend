@@ -70,6 +70,111 @@ export function normalizeKidsPath(path: string) {
   return path;
 }
 
+/** Mobil alt menü (Instagram tarzı 5 slot): ortadaki öğe vurgulu. */
+export type KidsMobileBottomKind = 'link' | 'center';
+
+export type KidsMobileBottomItem = {
+  href: string;
+  labelKey: string;
+  icon: NavIconName;
+  kind: KidsMobileBottomKind;
+};
+
+export function kidsMobileBottomItems(
+  pathPrefix: string,
+  role: KidsUserRole | null,
+  options?: { siteAdmin?: boolean },
+): KidsMobileBottomItem[] {
+  const p = pathPrefix;
+  const siteMainAdmin = Boolean(options?.siteAdmin);
+  const home = kidsHomeHref(p);
+
+  if (!role) {
+    return [
+      { kind: 'link', href: home, labelKey: 'nav.home', icon: 'home' },
+      { kind: 'link', href: `${p}/menu`, labelKey: 'kids.bottomNav.menu', icon: 'all' },
+      { kind: 'center', href: kidsLoginPortalHref(p, 'ogrenci'), labelKey: 'landing.login', icon: 'login' },
+      { kind: 'link', href: `${p}/ogrenci/oyun-merkezi`, labelKey: 'nav.gameCenter', icon: 'gamepad' },
+      { kind: 'link', href: '/', labelKey: 'sidebar.mainSite', icon: 'site' },
+    ];
+  }
+
+  if (role === 'admin') {
+    return [
+      { kind: 'link', href: home, labelKey: 'nav.home', icon: 'home' },
+      { kind: 'link', href: `${p}/menu`, labelKey: 'kids.bottomNav.menu', icon: 'all' },
+      { kind: 'center', href: `${p}/ogretmen/panel`, labelKey: 'nav.teacherPanel', icon: 'teacher' },
+      { kind: 'link', href: `${p}/bildirimler`, labelKey: 'nav.notifications', icon: 'bell' },
+      { kind: 'link', href: `${p}/profil`, labelKey: 'nav.profile', icon: 'profile' },
+    ];
+  }
+
+  if (role === 'teacher') {
+    return [
+      { kind: 'link', href: home, labelKey: 'nav.home', icon: 'home' },
+      { kind: 'link', href: `${p}/menu`, labelKey: 'kids.bottomNav.menu', icon: 'all' },
+      { kind: 'center', href: `${p}/ogretmen/panel`, labelKey: 'nav.teacherPanel', icon: 'teacher' },
+      { kind: 'link', href: `${p}/mesajlar`, labelKey: 'nav.messages', icon: 'chat' },
+      { kind: 'link', href: `${p}/profil`, labelKey: 'nav.profile', icon: 'profile' },
+    ];
+  }
+
+  if (role === 'student') {
+    return [
+      { kind: 'link', href: home, labelKey: 'nav.home', icon: 'home' },
+      { kind: 'link', href: `${p}/menu`, labelKey: 'kids.bottomNav.menu', icon: 'all' },
+      { kind: 'center', href: `${p}/ogrenci/oyun-merkezi`, labelKey: 'nav.gameCenter', icon: 'gamepad' },
+      { kind: 'link', href: `${p}/bildirimler`, labelKey: 'nav.notifications', icon: 'bell' },
+      { kind: 'link', href: `${p}/profil`, labelKey: 'nav.profile', icon: 'profile' },
+    ];
+  }
+
+  if (role === 'parent') {
+    return [
+      { kind: 'link', href: home, labelKey: 'nav.home', icon: 'home' },
+      { kind: 'link', href: `${p}/menu`, labelKey: 'kids.bottomNav.menu', icon: 'all' },
+      { kind: 'center', href: `${p}/veli/cocuklarin-durumu`, labelKey: 'nav.childrenStatus', icon: 'student' },
+      { kind: 'link', href: `${p}/bildirimler`, labelKey: 'nav.notifications', icon: 'bell' },
+      { kind: 'link', href: `${p}/profil`, labelKey: 'nav.profile', icon: 'profile' },
+    ];
+  }
+
+  if (siteMainAdmin) {
+    return [
+      { kind: 'link', href: home, labelKey: 'nav.home', icon: 'home' },
+      { kind: 'link', href: `${p}/menu`, labelKey: 'kids.bottomNav.menu', icon: 'all' },
+      { kind: 'center', href: `${p}/ogretmen/panel`, labelKey: 'nav.teacherPanel', icon: 'teacher' },
+      { kind: 'link', href: `${p}/bildirimler`, labelKey: 'nav.notifications', icon: 'bell' },
+      { kind: 'link', href: `${p}/profil`, labelKey: 'nav.profile', icon: 'profile' },
+    ];
+  }
+
+  return [
+    { kind: 'link', href: home, labelKey: 'nav.home', icon: 'home' },
+    { kind: 'link', href: `${p}/menu`, labelKey: 'kids.bottomNav.menu', icon: 'all' },
+    { kind: 'center', href: kidsLoginPortalHref(p, 'ogrenci'), labelKey: 'landing.login', icon: 'login' },
+    { kind: 'link', href: `${p}/ogrenci/oyun-merkezi`, labelKey: 'nav.gameCenter', icon: 'gamepad' },
+    { kind: 'link', href: '/', labelKey: 'sidebar.mainSite', icon: 'site' },
+  ];
+}
+
+export function isKidsMobileBottomActive(
+  pathname: string | null,
+  item: KidsMobileBottomItem,
+  pathPrefix: string,
+): boolean {
+  if (!pathname) return false;
+  const p = pathname.split('?')[0] || '';
+  const baseHref = item.href.split('?')[0] || item.href;
+  if (baseHref.endsWith('/menu') || baseHref === '/menu') {
+    return p === baseHref || p.startsWith(`${baseHref}/`);
+  }
+  if (baseHref === '/') {
+    return p === '/' && !pathname.startsWith('/kids');
+  }
+  return isKidsNavActive(pathname, baseHref, pathPrefix);
+}
+
 export function isKidsNavActive(pathname: string | null, href: string, pathPrefix: string) {
   if (!pathname) return false;
   const p = normalizeKidsPath(pathname);

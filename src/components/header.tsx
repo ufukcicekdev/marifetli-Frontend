@@ -145,7 +145,17 @@ export function Header() {
           {/* Sol: sidebar açma — sidebar modunda sadece mobilde hamburger görünür; masaüstünde div spacer kalır */}
           <div className="flex items-center shrink-0 min-w-0 w-9 sm:w-auto sm:min-w-0">
             <button
-              onClick={sidebarToggle}
+              onClick={() => {
+                if (
+                  useSidebar &&
+                  typeof window !== 'undefined' &&
+                  !window.matchMedia('(min-width: 1024px)').matches
+                ) {
+                  router.push('/menu');
+                  return;
+                }
+                sidebarToggle();
+              }}
               className={`header-nav-btn px-2 sm:px-2 text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-white/15 ${useSidebar ? 'lg:!hidden' : ''}`}
               title="Menü"
               aria-label="Menüyü aç"

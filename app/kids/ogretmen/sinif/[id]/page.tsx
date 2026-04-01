@@ -152,6 +152,7 @@ function KidsTeacherClassPageContent() {
   /** Son teslim (zorunlu), `YYYY-MM-DDTHH:mm` */
   const [asgCloseAt, setAsgCloseAt] = useState('');
   const [asgSaving, setAsgSaving] = useState(false);
+  const [isNewChallengeOpen, setIsNewChallengeOpen] = useState(false);
   const [editAssignment, setEditAssignment] = useState<KidsAssignment | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editPurpose, setEditPurpose] = useState('');
@@ -179,6 +180,7 @@ function KidsTeacherClassPageContent() {
   const asgTitleId = useId();
   const asgOpenAtId = useId();
   const asgCloseAtId = useId();
+  const newChallengeSectionId = useId();
   const editAsgTitleId = useId();
   const editAsgOpenAtId = useId();
   const editAsgCloseAtId = useId();
@@ -413,7 +415,7 @@ function KidsTeacherClassPageContent() {
           <span className="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-bold tabular-nums text-violet-900 dark:bg-violet-950/60 dark:text-violet-100">
             {subN}/{enr}
           </span>
-          <span className="max-w-[4.5rem] text-center text-[10px] font-medium leading-tight text-slate-400 dark:text-gray-500">
+          <span className="max-w-18 text-center text-[10px] font-medium leading-tight text-slate-400 dark:text-gray-500">
             {t('teacherClass.assignments.card.submissionRatio')}
           </span>
           <KidsSecondaryButton
@@ -765,7 +767,7 @@ function KidsTeacherClassPageContent() {
   const canEditClassIdentity = user.role === 'admin';
 
   return (
-    <KidsPanelMax className={tab === 'assignments' || tab === 'peer' ? '!max-w-6xl' : ''}>
+    <KidsPanelMax className={tab === 'assignments' || tab === 'peer' ? 'max-w-6xl!' : ''}>
       <div className="mb-6">
         <Link
           href={`${pathPrefix}/ogretmen/panel`}
@@ -1098,14 +1100,14 @@ function KidsTeacherClassPageContent() {
       )}
 
       {tab === 'assignments' && (
-        <div className="flex min-h-0 flex-col gap-3 lg:max-h-[min(720px,calc(100dvh-13rem))] lg:min-h-[380px]">
+        <div className="flex flex-col gap-3">
           <p className="text-sm text-slate-600 dark:text-gray-400 lg:hidden">
             {t('teacherClass.assignments.mobileHint')}
           </p>
-          <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-2 lg:gap-6 lg:overflow-hidden">
-            <KidsCard className="flex min-h-[260px] flex-col overflow-hidden lg:min-h-0">
+          <div className="grid gap-4 lg:grid-cols-2 lg:gap-6">
+            <KidsCard className="order-2 flex min-h-[260px] flex-col lg:order-1 lg:min-h-0">
               <div className="shrink-0">
-              <h2 className="font-logo text-lg font-bold text-slate-900 dark:text-white">{t('teacherClass.assignments.newTitle')}</h2>
+                <h2 className="font-logo text-lg font-bold text-slate-900 dark:text-white">{t('teacherClass.assignments.newTitle')}</h2>
                 <p className="mt-1 text-sm text-slate-600 dark:text-gray-400">
                   {t('teacherClass.assignments.newSubtitle')}
                   {assignmentVideoEnabled
@@ -1113,162 +1115,174 @@ function KidsTeacherClassPageContent() {
                     : ` ${t('teacherClass.assignments.videoDisabled')}`}
                 </p>
               </div>
-              <div className="mt-4 min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 [-webkit-overflow-scrolling:touch]">
+
+              <button
+                type="button"
+                className="mt-4 flex w-full items-center justify-between rounded-2xl border border-violet-200/80 bg-violet-50/60 px-4 py-3 text-left text-sm font-bold text-violet-900 dark:border-violet-800/50 dark:bg-violet-950/30 dark:text-violet-100 lg:hidden"
+                onClick={() => setIsNewChallengeOpen((v) => !v)}
+                aria-expanded={isNewChallengeOpen}
+                aria-controls={newChallengeSectionId}
+              >
+                <span>{t('teacherClass.assignments.newTitle')}</span>
+                <span aria-hidden>{isNewChallengeOpen ? '▲' : '▼'}</span>
+              </button>
+
+              <div id={newChallengeSectionId} className={`mt-4 ${isNewChallengeOpen ? 'block' : 'hidden'} lg:block`}>
                 <form className="space-y-4" onSubmit={createAssignment}>
-              <KidsFormField id={asgTitleId} label={t('teacherClass.assignments.title')} required>
-                <input
-                  id={asgTitleId}
-                  required
-                  value={asgTitle}
-                  onChange={(e) => setAsgTitle(e.target.value)}
-                  className={kidsInputClass}
-                  placeholder={t('teacherClass.assignments.titlePlaceholder')}
-                />
-              </KidsFormField>
-              <KidsFormField id="asg-purpose" label={t('teacherClass.assignments.purpose')}>
-                <textarea
-                  id="asg-purpose"
-                  value={asgPurpose}
-                  onChange={(e) => setAsgPurpose(e.target.value)}
-                  rows={2}
-                  className={kidsTextareaClass}
-                />
-              </KidsFormField>
-              <KidsFormField id="asg-mat" label={t('teacherClass.assignments.materials')}>
-                <textarea
-                  id="asg-mat"
-                  value={asgMaterials}
-                  onChange={(e) => setAsgMaterials(e.target.value)}
-                  rows={2}
-                  className={kidsTextareaClass}
-                  placeholder={t('teacherClass.assignments.materialsPlaceholder')}
-                />
-              </KidsFormField>
-              <KidsFormField
-                id={asgOpenAtId}
-                label={t('teacherClass.assignments.openAt')}
-                required
-                hint={t('teacherClass.assignments.openAtHint')}
-              >
-                <KidsDateTimeField
-                  id={asgOpenAtId}
-                  value={asgOpenAt}
-                  onChange={setAsgOpenAt}
-                  required
-                  placeholder={t('teacherClass.assignments.openAtPlaceholder')}
-                />
-              </KidsFormField>
-              <KidsFormField
-                id={asgCloseAtId}
-                label={t('teacherClass.assignments.closeAt')}
-                required
-                hint={t('teacherClass.assignments.closeAtHint')}
-              >
-                <KidsDateTimeField
-                  id={asgCloseAtId}
-                  value={asgCloseAt}
-                  onChange={setAsgCloseAt}
-                  required
-                  placeholder={t('teacherClass.assignments.closeAtPlaceholder')}
-                />
-              </KidsFormField>
-              <fieldset className="rounded-2xl border-2 border-violet-100 bg-violet-50/50 p-4 dark:border-violet-900/40 dark:bg-violet-950/30">
-                <legend className="px-2 text-sm font-bold text-violet-900 dark:text-violet-100">
-                  {t('teacherClass.assignments.rules')}
-                </legend>
-                <p className="mt-2 text-sm text-slate-600 dark:text-gray-400">
-                  {t('teacherClass.assignments.rulesHint')}
-                </p>
-                <div
-                  className={`mt-3 grid gap-3 ${assignmentVideoEnabled ? 'sm:grid-cols-2' : 'sm:grid-cols-1'}`}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setAsgMediaType('image')}
-                    className={`rounded-2xl border-2 p-4 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-500 ${
-                      asgMediaType === 'image'
-                        ? 'border-violet-500 bg-white shadow-md shadow-violet-500/15 ring-2 ring-violet-300/60 dark:border-violet-400 dark:bg-violet-950/40 dark:ring-violet-600/40'
-                        : 'border-violet-200/80 bg-white/60 hover:border-violet-300 dark:border-violet-800/60 dark:bg-gray-900/40 dark:hover:border-violet-700'
-                    }`}
-                  >
-                    <span className="text-2xl" aria-hidden>
-                      🖼️
-                    </span>
-                    <span className="mt-2 block font-logo text-base font-bold text-slate-900 dark:text-white">
-                      {t('teacherClass.assignments.imageMode')}
-                    </span>
-                    <span className="mt-1 block text-xs text-slate-600 dark:text-gray-400">
-                      {t('teacherClass.assignments.imageModeHint')}
-                    </span>
-                  </button>
-                  {assignmentVideoEnabled ? (
-                    <button
-                      type="button"
-                      onClick={() => setAsgMediaType('video')}
-                      className={`rounded-2xl border-2 p-4 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-500 ${
-                        asgMediaType === 'video'
-                          ? 'border-violet-500 bg-white shadow-md shadow-violet-500/15 ring-2 ring-violet-300/60 dark:border-violet-400 dark:bg-violet-950/40 dark:ring-violet-600/40'
-                          : 'border-violet-200/80 bg-white/60 hover:border-violet-300 dark:border-violet-800/60 dark:bg-gray-900/40 dark:hover:border-violet-700'
-                      }`}
-                    >
-                      <span className="text-2xl" aria-hidden>
-                        🎬
-                      </span>
-                      <span className="mt-2 block font-logo text-base font-bold text-slate-900 dark:text-white">
-                        {t('teacherClass.assignments.videoMode')}
-                      </span>
-                      <span className="mt-1 block text-xs text-slate-600 dark:text-gray-400">
-                        {t('teacherClass.assignments.videoModeHint')}
-                      </span>
-                    </button>
-                  ) : null}
-                </div>
-                {asgMediaType === 'video' ? (
-                  <div className="mt-4">
-                    <label htmlFor="asg-video-duration" className={`${kidsLabelClass} block`}>
-                      {t('teacherClass.assignments.videoLimit')}
-                    </label>
-                    <p className="mb-2 text-xs text-slate-500 dark:text-gray-400">
-                      {t('teacherClass.assignments.videoLimitHint')}
-                    </p>
-                    <KidsSelect
-                      id="asg-video-duration"
-                      value={String(asgVideoSec)}
-                      onChange={(v) => setAsgVideoSec(Number(v) as 60 | 120 | 180)}
-                      options={videoDurationOptions}
+                  <KidsFormField id={asgTitleId} label={t('teacherClass.assignments.title')} required>
+                    <input
+                      id={asgTitleId}
+                      required
+                      value={asgTitle}
+                      onChange={(e) => setAsgTitle(e.target.value)}
+                      className={kidsInputClass}
+                      placeholder={t('teacherClass.assignments.titlePlaceholder')}
                     />
-                  </div>
-                ) : null}
-                <div className="mt-4">
-                  <label htmlFor="asg-submission-rounds" className={`${kidsLabelClass} block`}>
-                    {t('teacherClass.assignments.roundCount')}
-                  </label>
-                  <p className="mb-2 text-xs text-slate-500 dark:text-gray-400">
-                    {t('teacherClass.assignments.roundCountHint')}
-                  </p>
-                  <KidsSelect
-                    id="asg-submission-rounds"
-                    value={String(asgSubmissionRounds)}
-                    onChange={(v) => setAsgSubmissionRounds(Number(v) as 1 | 2 | 3 | 4 | 5)}
-                    options={submissionRoundsOptions}
-                  />
-                </div>
-              </fieldset>
-              <KidsPrimaryButton type="submit" disabled={asgSaving}>
-                {asgSaving ? t('profile.saving') : t('teacherClass.assignments.publish')}
-              </KidsPrimaryButton>
+                  </KidsFormField>
+                  <KidsFormField id="asg-purpose" label={t('teacherClass.assignments.purpose')}>
+                    <textarea
+                      id="asg-purpose"
+                      value={asgPurpose}
+                      onChange={(e) => setAsgPurpose(e.target.value)}
+                      rows={2}
+                      className={kidsTextareaClass}
+                    />
+                  </KidsFormField>
+                  <KidsFormField id="asg-mat" label={t('teacherClass.assignments.materials')}>
+                    <textarea
+                      id="asg-mat"
+                      value={asgMaterials}
+                      onChange={(e) => setAsgMaterials(e.target.value)}
+                      rows={2}
+                      className={kidsTextareaClass}
+                      placeholder={t('teacherClass.assignments.materialsPlaceholder')}
+                    />
+                  </KidsFormField>
+                  <KidsFormField
+                    id={asgOpenAtId}
+                    label={t('teacherClass.assignments.openAt')}
+                    required
+                    hint={t('teacherClass.assignments.openAtHint')}
+                  >
+                    <KidsDateTimeField
+                      id={asgOpenAtId}
+                      value={asgOpenAt}
+                      onChange={setAsgOpenAt}
+                      required
+                      placeholder={t('teacherClass.assignments.openAtPlaceholder')}
+                    />
+                  </KidsFormField>
+                  <KidsFormField
+                    id={asgCloseAtId}
+                    label={t('teacherClass.assignments.closeAt')}
+                    required
+                    hint={t('teacherClass.assignments.closeAtHint')}
+                  >
+                    <KidsDateTimeField
+                      id={asgCloseAtId}
+                      value={asgCloseAt}
+                      onChange={setAsgCloseAt}
+                      required
+                      placeholder={t('teacherClass.assignments.closeAtPlaceholder')}
+                    />
+                  </KidsFormField>
+                  <fieldset className="rounded-2xl border-2 border-violet-100 bg-violet-50/50 p-4 dark:border-violet-900/40 dark:bg-violet-950/30">
+                    <legend className="px-2 text-sm font-bold text-violet-900 dark:text-violet-100">
+                      {t('teacherClass.assignments.rules')}
+                    </legend>
+                    <p className="mt-2 text-sm text-slate-600 dark:text-gray-400">
+                      {t('teacherClass.assignments.rulesHint')}
+                    </p>
+                    <div
+                      className={`mt-3 grid gap-3 ${assignmentVideoEnabled ? 'sm:grid-cols-2' : 'sm:grid-cols-1'}`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setAsgMediaType('image')}
+                        className={`rounded-2xl border-2 p-4 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-500 ${
+                          asgMediaType === 'image'
+                            ? 'border-violet-500 bg-white shadow-md shadow-violet-500/15 ring-2 ring-violet-300/60 dark:border-violet-400 dark:bg-violet-950/40 dark:ring-violet-600/40'
+                            : 'border-violet-200/80 bg-white/60 hover:border-violet-300 dark:border-violet-800/60 dark:bg-gray-900/40 dark:hover:border-violet-700'
+                        }`}
+                      >
+                        <span className="text-2xl" aria-hidden>
+                          🖼️
+                        </span>
+                        <span className="mt-2 block font-logo text-base font-bold text-slate-900 dark:text-white">
+                          {t('teacherClass.assignments.imageMode')}
+                        </span>
+                        <span className="mt-1 block text-xs text-slate-600 dark:text-gray-400">
+                          {t('teacherClass.assignments.imageModeHint')}
+                        </span>
+                      </button>
+                      {assignmentVideoEnabled ? (
+                        <button
+                          type="button"
+                          onClick={() => setAsgMediaType('video')}
+                          className={`rounded-2xl border-2 p-4 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-500 ${
+                            asgMediaType === 'video'
+                              ? 'border-violet-500 bg-white shadow-md shadow-violet-500/15 ring-2 ring-violet-300/60 dark:border-violet-400 dark:bg-violet-950/40 dark:ring-violet-600/40'
+                              : 'border-violet-200/80 bg-white/60 hover:border-violet-300 dark:border-violet-800/60 dark:bg-gray-900/40 dark:hover:border-violet-700'
+                          }`}
+                        >
+                          <span className="text-2xl" aria-hidden>
+                            🎬
+                          </span>
+                          <span className="mt-2 block font-logo text-base font-bold text-slate-900 dark:text-white">
+                            {t('teacherClass.assignments.videoMode')}
+                          </span>
+                          <span className="mt-1 block text-xs text-slate-600 dark:text-gray-400">
+                            {t('teacherClass.assignments.videoModeHint')}
+                          </span>
+                        </button>
+                      ) : null}
+                    </div>
+                    {asgMediaType === 'video' ? (
+                      <div className="mt-4">
+                        <label htmlFor="asg-video-duration" className={`${kidsLabelClass} block`}>
+                          {t('teacherClass.assignments.videoLimit')}
+                        </label>
+                        <p className="mb-2 text-xs text-slate-500 dark:text-gray-400">
+                          {t('teacherClass.assignments.videoLimitHint')}
+                        </p>
+                        <KidsSelect
+                          id="asg-video-duration"
+                          value={String(asgVideoSec)}
+                          onChange={(v) => setAsgVideoSec(Number(v) as 60 | 120 | 180)}
+                          options={videoDurationOptions}
+                        />
+                      </div>
+                    ) : null}
+                    <div className="mt-4">
+                      <label htmlFor="asg-submission-rounds" className={`${kidsLabelClass} block`}>
+                        {t('teacherClass.assignments.roundCount')}
+                      </label>
+                      <p className="mb-2 text-xs text-slate-500 dark:text-gray-400">
+                        {t('teacherClass.assignments.roundCountHint')}
+                      </p>
+                      <KidsSelect
+                        id="asg-submission-rounds"
+                        value={String(asgSubmissionRounds)}
+                        onChange={(v) => setAsgSubmissionRounds(Number(v) as 1 | 2 | 3 | 4 | 5)}
+                        options={submissionRoundsOptions}
+                      />
+                    </div>
+                  </fieldset>
+                  <KidsPrimaryButton type="submit" disabled={asgSaving}>
+                    {asgSaving ? t('profile.saving') : t('teacherClass.assignments.publish')}
+                  </KidsPrimaryButton>
                 </form>
               </div>
             </KidsCard>
 
-            <KidsCard className="flex min-h-[280px] flex-col overflow-hidden lg:min-h-0">
+            <KidsCard className="order-1 flex min-h-[280px] flex-col lg:order-2 lg:min-h-0">
               <div className="shrink-0">
                 <h2 className="font-logo text-lg font-bold text-slate-900 dark:text-white">{t('teacherClass.assignments.listTitle')}</h2>
                 <p className="mt-1 text-xs text-slate-500 dark:text-gray-400">
                   {t('teacherClass.assignments.listHint')}
                 </p>
               </div>
-              <div className="mt-3 min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain pr-1 [-webkit-overflow-scrolling:touch]">
+              <div className="mt-3 space-y-6">
                 {assignments.length === 0 ? (
                   <p className="text-sm text-slate-500 dark:text-gray-400">{t('teacherClass.assignments.empty')}</p>
                 ) : (
@@ -1287,7 +1301,7 @@ function KidsTeacherClassPageContent() {
                           {plannedAssignments.map((a) => (
                             <li
                               key={a.id}
-                              className="rounded-2xl border-2 border-amber-200/90 bg-gradient-to-br from-amber-50/90 to-white px-4 py-3 dark:border-amber-800/60 dark:from-amber-950/40 dark:to-gray-900/50"
+                              className="rounded-2xl border-2 border-amber-200/90 bg-linear-to-br from-amber-50/90 to-white px-4 py-3 dark:border-amber-800/60 dark:from-amber-950/40 dark:to-gray-900/50"
                             >
                               {assignmentCardBody(a)}
                             </li>
@@ -1469,7 +1483,7 @@ function KidsTeacherClassPageContent() {
                 champion.top.map((row, i) => (
                   <li
                     key={row.student.id}
-                    className="flex flex-col gap-2 rounded-2xl bg-gradient-to-r from-amber-100 to-orange-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:from-amber-950/50 dark:to-orange-950/40"
+                    className="flex flex-col gap-2 rounded-2xl bg-linear-to-r from-amber-100 to-orange-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:from-amber-950/50 dark:to-orange-950/40"
                   >
                     <div className="min-w-0 flex-1">
                       <p className="font-bold text-amber-950 dark:text-amber-50">

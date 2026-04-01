@@ -476,7 +476,7 @@ export function KidsSelect({
         onClick={() => !disabled && setOpen((o) => !o)}
         className={`flex w-full min-h-[48px] items-center justify-between gap-2 rounded-2xl border-2 border-violet-200/80 bg-white px-4 py-3 text-left text-base font-medium text-slate-900 shadow-sm outline-none transition hover:border-violet-300 focus:border-violet-500 focus:ring-4 focus:ring-violet-400/25 disabled:cursor-not-allowed disabled:opacity-50 dark:border-violet-800/60 dark:bg-gray-800/90 dark:text-white dark:hover:border-violet-700 dark:focus:border-violet-400 dark:focus:ring-violet-500/20 ${buttonClassName}`}
       >
-        <span className="min-w-0 truncate">{selected?.label ?? '—'}</span>
+        <span className="block min-w-0 max-w-full flex-1 truncate">{selected?.label ?? '—'}</span>
         <svg
           className={`h-5 w-5 shrink-0 text-violet-600 transition dark:text-violet-300 ${open ? 'rotate-180' : ''}`}
           fill="none"

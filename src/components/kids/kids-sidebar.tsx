@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { useSidebarStore } from '@/src/stores/sidebar-store';
 import { ThemeToggle } from '@/src/components/theme-toggle';
-import { HEADER_HEIGHT_PX } from '@/src/components/header';
+import { KIDS_HEADER_HEIGHT_PX } from '@/src/components/kids/kids-header';
 import { isKidsNavActive, kidsNavLinks } from '@/src/components/kids/kids-nav';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import { useAuthStore } from '@/src/stores/auth-store';
@@ -18,8 +18,8 @@ import { kidsPatchMe, type KidsLanguageCode } from '@/src/lib/kids-api';
 
 const SIDEBAR_PLACEHOLDER = (
   <aside
-    className="fixed bottom-0 left-0 top-[104px] z-30 w-16 shrink-0 border-r border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"
-    style={{ top: HEADER_HEIGHT_PX }}
+    className="fixed bottom-0 left-0 z-30 w-16 shrink-0 border-r border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"
+    style={{ top: KIDS_HEADER_HEIGHT_PX }}
     aria-label="Navigasyon"
     aria-hidden="true"
   />
@@ -92,7 +92,7 @@ export function KidsSidebar({ pathPrefix }: KidsSidebarProps) {
           dark:border-violet-800/70 dark:bg-gray-900 lg:z-30 lg:shadow-none
           ${isOpen ? 'w-64 translate-x-0' : 'w-16 -translate-x-full lg:translate-x-0'}
         `}
-        style={{ top: HEADER_HEIGHT_PX }}
+        style={{ top: KIDS_HEADER_HEIGHT_PX }}
         aria-label={t('sidebar.menu')}
       >
         <button

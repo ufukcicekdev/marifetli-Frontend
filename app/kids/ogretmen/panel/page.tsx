@@ -50,11 +50,13 @@ export default function KidsTeacherPanelPage() {
   const [schoolClasses, setSchoolClasses] = useState<KidsSchoolDirectoryClassRow[]>([]);
   const [schoolClassesLoading, setSchoolClassesLoading] = useState(false);
   const [joiningClassId, setJoiningClassId] = useState<number | null>(null);
+  const [isCreateSectionOpen, setIsCreateSectionOpen] = useState(false);
   const classGradeId = useId();
   const classSectionId = useId();
   const descId = useId();
   const academicYearId = useId();
   const schoolSelectId = useId();
+  const createSectionId = useId();
 
   const load = useCallback(async () => {
     try {
@@ -194,7 +196,7 @@ export default function KidsTeacherPanelPage() {
   const selectedSchool = schools.find((s) => String(s.id) === schoolId) ?? null;
   const lockedAcademicYearLabel = (selectedSchool?.default_academic_year_label || '').trim();
   return (
-    <KidsPanelMax>
+    <KidsPanelMax className="overflow-x-hidden">
       <KidsPageHeader
         emoji="👩‍🏫"
         title={t('teacher.panel.greeting').replace('{name}', firstName)}
@@ -202,8 +204,8 @@ export default function KidsTeacherPanelPage() {
         compactOnMobile
       />
 
-      <div className="grid gap-8 lg:grid-cols-12 lg:gap-10">
-        <div className="lg:col-span-5">
+      <div className="grid gap-5 sm:gap-8 lg:grid-cols-12 lg:gap-10">
+        <div className="order-2 lg:order-1 lg:col-span-5">
           <KidsCard tone="emerald" className="lg:sticky lg:top-28">
             {loading ? (
               <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
@@ -272,163 +274,181 @@ export default function KidsTeacherPanelPage() {
                   </div>
                 </div>
 
-                <div className="mb-6 border-t border-emerald-200/70 pt-5 dark:border-emerald-800/40">
-                  <p className="text-xs font-bold uppercase tracking-wide text-emerald-800/90 dark:text-emerald-200/90">
-                    {t('teacher.panel.currentClassesInSchool')}
-                  </p>
-                  {schoolClassesLoading ? (
-                    <p className="mt-2 text-sm text-emerald-900/80 dark:text-emerald-100/80">{t('common.loading')}</p>
-                  ) : schoolClasses.length === 0 ? (
-                    <p className="mt-2 text-sm text-emerald-900/80 dark:text-emerald-100/80">
-                      {t('teacher.panel.noClassInSelectedSchool')}
-                    </p>
-                  ) : (
-                    <ul className="mt-3 space-y-2">
-                      {schoolClasses.map((row) => (
-                        <li
-                          key={row.id}
-                          className="rounded-xl border border-emerald-200/80 bg-white/80 px-3 py-2 dark:border-emerald-800/50 dark:bg-emerald-950/25"
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="font-semibold text-emerald-950 dark:text-emerald-50">{row.name}</p>
-                              <p className="text-xs text-emerald-800/80 dark:text-emerald-200/80">
-                                {t('teacher.panel.classTeacher')}: {row.teacher_display}
-                              </p>
-                            </div>
-                            {row.is_assigned ? (
-                              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100">
-                                {t('teacher.panel.alreadyAssigned')}
-                              </span>
-                            ) : (
-                              <KidsSecondaryButton
-                                type="button"
-                                disabled={joiningClassId === row.id}
-                                onClick={() => void onJoinExistingClass(row)}
-                                className="border-emerald-300 text-emerald-900 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-100 dark:hover:bg-emerald-900/30"
-                              >
-                                {joiningClassId === row.id ? t('teacher.panel.joining') : t('teacher.panel.joinClass')}
-                              </KidsSecondaryButton>
-                            )}
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
+                <button
+                  type="button"
+                  className="mb-4 flex w-full items-center justify-between rounded-2xl border border-emerald-200/80 bg-emerald-50/70 px-4 py-3 text-left text-sm font-bold text-emerald-900 dark:border-emerald-800/50 dark:bg-emerald-950/30 dark:text-emerald-100 lg:hidden"
+                  onClick={() => setIsCreateSectionOpen((v) => !v)}
+                  aria-expanded={isCreateSectionOpen}
+                  aria-controls={createSectionId}
+                >
+                  <span>{t('teacher.panel.createClass')}</span>
+                  <span aria-hidden>{isCreateSectionOpen ? '▲' : '▼'}</span>
+                </button>
 
-                <form className="space-y-8" onSubmit={onCreate} id="yeni-sinif-form">
-                  <div className="space-y-3">
+                <div id={createSectionId} className={`${isCreateSectionOpen ? 'block' : 'hidden'} lg:block`}>
+                  <div className="mb-6 border-t border-emerald-200/70 pt-5 dark:border-emerald-800/40">
                     <p className="text-xs font-bold uppercase tracking-wide text-emerald-800/90 dark:text-emerald-200/90">
-                      {t('teacher.panel.step1')}
+                      {t('teacher.panel.currentClassesInSchool')}
                     </p>
-                    <KidsFormField
-                      id={schoolSelectId}
-                      label={t('teacher.panel.whichSchool')}
-                      required
-                      hint={t('teacher.panel.whichSchoolHint')}
-                    >
-                      <KidsSelect
-                        id={schoolSelectId}
-                        value={schoolId}
-                        onChange={setSchoolId}
-                        disabled={schools.length === 0}
-                        options={schools.map((s) => ({
-                          value: String(s.id),
-                          label: kidsSchoolLocationLine(s) || s.name,
-                        }))}
-                      />
-                    </KidsFormField>
+                    {schoolClassesLoading ? (
+                      <p className="mt-2 text-sm text-emerald-900/80 dark:text-emerald-100/80">{t('common.loading')}</p>
+                    ) : schoolClasses.length === 0 ? (
+                      <p className="mt-2 text-sm text-emerald-900/80 dark:text-emerald-100/80">
+                        {t('teacher.panel.noClassInSelectedSchool')}
+                      </p>
+                    ) : (
+                      <ul className="mt-3 space-y-2">
+                        {schoolClasses.map((row) => (
+                          <li
+                            key={row.id}
+                            className="rounded-xl border border-emerald-200/80 bg-white/80 px-3 py-2 dark:border-emerald-800/50 dark:bg-emerald-950/25"
+                          >
+                            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                              <div className="min-w-0">
+                                <p className="font-semibold text-emerald-950 dark:text-emerald-50">{row.name}</p>
+                                <p className="text-xs text-emerald-800/80 dark:text-emerald-200/80">
+                                  {t('teacher.panel.classTeacher')}: {row.teacher_display}
+                                </p>
+                              </div>
+                              {row.is_assigned ? (
+                                <span className="self-start rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-900 dark:bg-emerald-900/40 dark:text-emerald-100">
+                                  {t('teacher.panel.alreadyAssigned')}
+                                </span>
+                              ) : (
+                                <KidsSecondaryButton
+                                  type="button"
+                                  disabled={joiningClassId === row.id}
+                                  onClick={() => void onJoinExistingClass(row)}
+                                  className="w-full border-emerald-300 text-emerald-900 hover:bg-emerald-50 sm:w-auto dark:border-emerald-700 dark:text-emerald-100 dark:hover:bg-emerald-900/30"
+                                >
+                                  {joiningClassId === row.id ? t('teacher.panel.joining') : t('teacher.panel.joinClass')}
+                                </KidsSecondaryButton>
+                              )}
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
 
-                  <div className="space-y-4 border-t border-emerald-200/70 pt-6 dark:border-emerald-800/40">
-                    <p className="text-xs font-bold uppercase tracking-wide text-emerald-800/90 dark:text-emerald-200/90">
-                      {t('teacher.panel.step2')}
-                    </p>
-                    <div className="grid gap-4 sm:grid-cols-2">
+                  <form className="space-y-6 sm:space-y-8" onSubmit={onCreate} id="yeni-sinif-form">
+                    <div className="space-y-3">
+                      <p className="text-xs font-bold uppercase tracking-wide text-emerald-800/90 dark:text-emerald-200/90">
+                        {t('teacher.panel.step1')}
+                      </p>
                       <KidsFormField
-                        id={classGradeId}
-                        label={t('teacher.panel.classLevel')}
+                        id={schoolSelectId}
+                        label={t('teacher.panel.whichSchool')}
                         required
-                        hint={t('teacher.panel.classLevelHint')}
+                        hint={t('teacher.panel.whichSchoolHint')}
                       >
                         <KidsSelect
+                          id={schoolSelectId}
+                          value={schoolId}
+                          onChange={setSchoolId}
+                          disabled={schools.length === 0}
+                          options={schools.map((s) => ({
+                            value: String(s.id),
+                            label: s.name,
+                          }))}
+                        />
+                        {selectedSchool ? (
+                          <p className="text-xs leading-relaxed text-emerald-800/80 dark:text-emerald-200/80">
+                            {kidsSchoolLocationLine(selectedSchool) || selectedSchool.name}
+                          </p>
+                        ) : null}
+                      </KidsFormField>
+                    </div>
+
+                    <div className="space-y-4 border-t border-emerald-200/70 pt-6 dark:border-emerald-800/40">
+                      <p className="text-xs font-bold uppercase tracking-wide text-emerald-800/90 dark:text-emerald-200/90">
+                        {t('teacher.panel.step2')}
+                      </p>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <KidsFormField
                           id={classGradeId}
-                          value={classGrade}
-                          onChange={setClassGrade}
-                          options={KIDS_CLASS_GRADE_OPTIONS}
-                          searchable={false}
+                          label={t('teacher.panel.classLevel')}
+                          required
+                          hint={t('teacher.panel.classLevelHint')}
+                        >
+                          <KidsSelect
+                            id={classGradeId}
+                            value={classGrade}
+                            onChange={setClassGrade}
+                            options={KIDS_CLASS_GRADE_OPTIONS}
+                            searchable={false}
+                          />
+                        </KidsFormField>
+                        <KidsFormField
+                          id={classSectionId}
+                          label={t('teacher.panel.section')}
+                          required
+                          hint={t('teacher.panel.sectionHint')}
+                        >
+                          <KidsSelect
+                            id={classSectionId}
+                            value={classSection}
+                            onChange={setClassSection}
+                            options={KIDS_CLASS_SECTION_OPTIONS}
+                            searchable
+                          />
+                        </KidsFormField>
+                      </div>
+                      <p className="-mt-1 text-sm text-emerald-900/75 dark:text-emerald-100/75" id={`${classGradeId}-preview`}>
+                        {t('teacher.panel.generatedName')}{' '}
+                        <strong className="font-logo text-emerald-950 dark:text-emerald-50">
+                          {kidsBuildStandardClassName(classGrade, classSection)}
+                        </strong>
+                      </p>
+
+                      <KidsFormField
+                        id={academicYearId}
+                        label={t('teacher.panel.academicYear')}
+                        hint={t('teacher.panel.academicYearHint')}
+                      >
+                        <input
+                          id={academicYearId}
+                          value={lockedAcademicYearLabel || t('teacher.panel.notDefinedYet')}
+                          readOnly
+                          disabled
+                          className={kidsInputClass}
                         />
                       </KidsFormField>
+
                       <KidsFormField
-                        id={classSectionId}
-                        label={t('teacher.panel.section')}
-                        required
-                        hint={t('teacher.panel.sectionHint')}
+                        id={descId}
+                        label={t('teacherHomework.description')}
+                        hint={t('teacher.panel.descriptionHint')}
                       >
-                        <KidsSelect
-                          id={classSectionId}
-                          value={classSection}
-                          onChange={setClassSection}
-                          options={KIDS_CLASS_SECTION_OPTIONS}
-                          searchable
+                        <textarea
+                          id={descId}
+                          value={description}
+                          onChange={(e) => setDescription(e.target.value)}
+                          rows={3}
+                          maxLength={2000}
+                          className={kidsTextareaClass}
+                          placeholder={t('teacher.panel.descriptionPlaceholder')}
+                          aria-describedby={`${descId}-hint`}
                         />
                       </KidsFormField>
                     </div>
-                    <p className="-mt-1 text-sm text-emerald-900/75 dark:text-emerald-100/75" id={`${classGradeId}-preview`}>
-                      {t('teacher.panel.generatedName')}{' '}
-                      <strong className="font-logo text-emerald-950 dark:text-emerald-50">
-                        {kidsBuildStandardClassName(classGrade, classSection)}
-                      </strong>
-                    </p>
 
-                    <KidsFormField
-                      id={academicYearId}
-                      label={t('teacher.panel.academicYear')}
-                      hint={t('teacher.panel.academicYearHint')}
-                    >
-                      <input
-                        id={academicYearId}
-                        value={lockedAcademicYearLabel || t('teacher.panel.notDefinedYet')}
-                        readOnly
-                        disabled
-                        className={kidsInputClass}
-                      />
-                    </KidsFormField>
-
-                    <KidsFormField
-                      id={descId}
-                      label={t('teacherHomework.description')}
-                      hint={t('teacher.panel.descriptionHint')}
-                    >
-                      <textarea
-                        id={descId}
-                        value={description}
-                        onChange={(e) => setDescription(e.target.value)}
-                        rows={3}
-                        maxLength={2000}
-                        className={kidsTextareaClass}
-                        placeholder={t('teacher.panel.descriptionPlaceholder')}
-                        aria-describedby={`${descId}-hint`}
-                      />
-                    </KidsFormField>
-                  </div>
-
-                  <div className="flex flex-col gap-3 border-t border-emerald-200/70 pt-6 dark:border-emerald-800/40 sm:flex-row sm:items-center sm:justify-between">
-                    <KidsPrimaryButton type="submit" disabled={creating} className="w-full sm:w-auto">
-                      {creating ? t('teacher.panel.creating') : t('teacher.panel.createClass')}
-                    </KidsPrimaryButton>
-                    <p className="text-center text-xs text-emerald-800/70 dark:text-emerald-200/70 sm:max-w-[14rem] sm:text-left">
-                      {t('teacher.panel.afterCreateHint')}
-                    </p>
-                  </div>
-                </form>
+                    <div className="flex flex-col gap-3 border-t border-emerald-200/70 pt-6 dark:border-emerald-800/40 sm:flex-row sm:items-center sm:justify-between">
+                      <KidsPrimaryButton type="submit" disabled={creating} className="w-full sm:w-auto">
+                        {creating ? t('teacher.panel.creating') : t('teacher.panel.createClass')}
+                      </KidsPrimaryButton>
+                      <p className="text-center text-xs text-emerald-800/70 dark:text-emerald-200/70 sm:max-w-56 sm:text-left">
+                        {t('teacher.panel.afterCreateHint')}
+                      </p>
+                    </div>
+                  </form>
+                </div>
               </>
             )}
           </KidsCard>
         </div>
 
-        <div className="lg:col-span-7">
+        <div className="order-1 lg:order-2 lg:col-span-7">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <h2 className="font-logo text-xl font-bold text-slate-900 dark:text-white">{t('teacher.panel.myClasses')}</h2>
             {!loading && classes.length > 0 ? (
@@ -460,11 +480,11 @@ export default function KidsTeacherPanelPage() {
                   <li key={c.id}>
                     <Link
                       href={`${pathPrefix}/ogretmen/sinif/${c.id}`}
-                      className="group flex items-center justify-between gap-4 rounded-3xl border-2 border-violet-100 bg-white/90 p-5 shadow-md transition hover:border-fuchsia-300 hover:shadow-lg hover:shadow-fuchsia-500/10 dark:border-violet-900/40 dark:bg-gray-900/70 dark:hover:border-fuchsia-700"
+                      className="group flex flex-col items-start gap-3 rounded-3xl border-2 border-violet-100 bg-white/90 p-5 shadow-md transition hover:border-fuchsia-300 hover:shadow-lg hover:shadow-fuchsia-500/10 sm:flex-row sm:items-center sm:justify-between sm:gap-4 dark:border-violet-900/40 dark:bg-gray-900/70 dark:hover:border-fuchsia-700"
                     >
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-logo text-lg font-bold text-slate-900 dark:text-white">{c.name}</p>
+                          <p className="font-logo wrap-break-word text-lg font-bold text-slate-900 dark:text-white">{c.name}</p>
                           {(c.academic_year_label || '').trim() ? (
                             <span className="rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-bold text-violet-800 dark:bg-violet-900/60 dark:text-violet-200">
                               {(c.academic_year_label || '').trim()}
@@ -472,20 +492,21 @@ export default function KidsTeacherPanelPage() {
                           ) : null}
                         </div>
                         {locLine ? (
-                          <p className="mt-1 line-clamp-1 text-sm font-medium text-emerald-800/90 dark:text-emerald-200/90">
+                          <p className="mt-1 wrap-break-word text-sm font-medium text-emerald-800/90 dark:text-emerald-200/90 sm:line-clamp-1">
                             {locLine}
                           </p>
                         ) : null}
                         {c.description ? (
-                          <p className="mt-1 line-clamp-2 text-sm text-slate-600 dark:text-gray-400">
+                          <p className="mt-1 wrap-break-word text-sm text-slate-600 dark:text-gray-400 sm:line-clamp-2">
                             {c.description}
                           </p>
                         ) : !locLine ? (
                           <p className="mt-1 text-sm text-slate-400 dark:text-gray-500">{t('teacher.panel.noDescription')}</p>
                         ) : null}
                       </div>
-                      <span className="shrink-0 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500 px-4 py-2 text-sm font-bold text-white opacity-90 transition group-hover:opacity-100">
-                        {t('teacher.panel.manage')} →
+                      <span className="inline-flex w-full items-center justify-center rounded-full bg-linear-to-r from-violet-500 to-fuchsia-500 px-4 py-2 text-sm font-bold text-white opacity-90 transition group-hover:opacity-100 sm:w-auto">
+                        <span className="sm:hidden">{t('teacher.panel.manage')}</span>
+                        <span className="hidden sm:inline">{t('teacher.panel.manage')} →</span>
                       </span>
                     </Link>
                   </li>

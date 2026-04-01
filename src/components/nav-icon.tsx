@@ -80,7 +80,9 @@ const ICON_COLOR: Record<NavIconName, string> = {
 
 export function NavIcon({ name, className = 'h-4 w-4' }: { name: NavIconName; className?: string }): ReactNode {
   const tone = ICON_COLOR[name];
-  const cls = `${className} ${tone}`;
+  /** Özel text-* rengi verildiyse varsayılan tona ekleme (ör. alt menü orta düğmesi). */
+  const useTone = !/\btext-[a-zA-Z0-9/[\].%-]+/.test(className || '');
+  const cls = useTone ? `${className} ${tone}` : className;
   switch (name) {
     case 'home':
       return <Home className={cls} aria-hidden />;

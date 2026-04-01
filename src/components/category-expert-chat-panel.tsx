@@ -34,6 +34,7 @@ export function CategoryExpertChatPanel() {
   const [subId, setSubId] = useState<number | ''>('');
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<ChatMsg[]>([]);
+  const [fabHidden, setFabHidden] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
 
   const { data: cfg, isLoading: cfgLoading } = useQuery({
@@ -171,14 +172,34 @@ export function CategoryExpertChatPanel() {
   return (
     <>
       {/* FAB */}
-      {!open && (
+      {!open && !fabHidden && (
         <button
           type="button"
           onClick={() => togglePanel()}
-          className="fixed bottom-5 right-4 sm:bottom-6 sm:right-6 z-[88] flex items-center gap-2 px-4 py-3 rounded-full shadow-lg bg-brand hover:bg-brand-hover text-white text-sm font-semibold border border-white/20"
+          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-[88] flex items-center gap-2 rounded-full border border-white/20 bg-brand px-4 py-3 text-sm font-semibold text-white shadow-lg hover:bg-brand-hover sm:bottom-6 sm:right-6"
           aria-expanded={open}
           aria-controls="category-expert-chat-panel"
         >
+          <span
+            role="button"
+            tabIndex={0}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setFabHidden(true);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                e.stopPropagation();
+                setFabHidden(true);
+              }
+            }}
+            className="-ml-1 inline-flex h-5 w-5 items-center justify-center rounded-full bg-white/20 text-[11px] leading-none hover:bg-white/30"
+            aria-label="Uzmana sor düğmesini gizle"
+          >
+            ×
+          </span>
           <span className="text-lg leading-none" aria-hidden>
             🧠
           </span>
