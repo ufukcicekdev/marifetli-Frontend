@@ -24,7 +24,8 @@ export function CategoryExpertChatPanel() {
   const pathname = usePathname();
   const isKidsPortal = pathname === '/kids' || pathname.startsWith('/kids/');
   const topOffset = isKidsPortal ? 52 : 104;
-  const bottomOffset = isKidsPortal ? 'calc(4.75rem + env(safe-area-inset-bottom))' : '0px';
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const bottomOffset = isMobileViewport ? 'calc(4.75rem + env(safe-area-inset-bottom))' : '0px';
   const fullPageHref = isKidsPortal ? '/kids/uzman' : '/uzman';
   const queryClient = useQueryClient();
   const { isAuthenticated, user } = useAuthStore();
@@ -109,6 +110,16 @@ export function CategoryExpertChatPanel() {
       document.body.style.overflow = prev;
     };
   }, [open]);
+
+  useEffect(() => {
+    const updateViewport = () => {
+      if (typeof window === 'undefined') return;
+      setIsMobileViewport(window.matchMedia('(max-width: 767px)').matches);
+    };
+    updateViewport();
+    window.addEventListener('resize', updateViewport);
+    return () => window.removeEventListener('resize', updateViewport);
+  }, []);
 
   useEffect(() => {
     listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: 'smooth' });
