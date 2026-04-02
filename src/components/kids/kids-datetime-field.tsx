@@ -5,11 +5,13 @@ import {
   forwardRef,
   useMemo,
   useRef,
+  type ReactNode,
   type InputHTMLAttributes,
   type MutableRefObject,
   type Ref,
   type RefObject,
 } from 'react';
+import { createPortal } from 'react-dom';
 import DatePicker, { registerLocale } from 'react-datepicker';
 import { Calendar } from 'lucide-react';
 import { tr } from 'date-fns/locale';
@@ -75,7 +77,7 @@ const KidsDatePickerInput = forwardRef<HTMLInputElement, KidsDatePickerInputProp
           className={`${kidsDateTimeInputClass} min-h-0 cursor-pointer ${className ?? ''}`}
         />
         <Calendar
-          className="pointer-events-none absolute top-1/2 z-[1] size-[1.125rem] -translate-y-1/2 text-violet-600 opacity-90 dark:text-violet-300"
+          className="pointer-events-none absolute top-1/2 z-1 size-4.5 -translate-y-1/2 text-violet-600 opacity-90 dark:text-violet-300"
           style={{ right: iconRight }}
           strokeWidth={2}
           aria-hidden
@@ -107,6 +109,12 @@ export function KidsDateTimeField({
 }: KidsDateTimeFieldProps) {
   const selected = useMemo(() => localStringToDate(value), [value]);
   const popperAnchorRef = useRef<HTMLInputElement | null>(null);
+  const insideDialog = Boolean(popperAnchorRef.current?.closest('dialog[open]'));
+  const popperContainer = useMemo(() => {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return undefined;
+    if (insideDialog) return undefined;
+    return ({ children }: { children?: ReactNode }): ReactNode => createPortal(children ?? null, document.body);
+  }, [insideDialog]);
 
   return (
     <DatePicker
@@ -141,6 +149,7 @@ export function KidsDateTimeField({
       popperTargetRef={popperAnchorRef}
       showPopperArrow={false}
       popperProps={{ strategy: 'fixed' }}
+      popperContainer={popperContainer}
       popperModifiers={[shift({ padding: 12 })]}
     />
   );

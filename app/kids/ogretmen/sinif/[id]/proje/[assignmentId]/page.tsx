@@ -142,6 +142,17 @@ export default function KidsTeacherProjectDetailPage() {
     if (!stillVisible) setActiveReviewSubmissionId(null);
   }, [activeReviewSubmissionId, filter, visibleSubmissions]);
 
+  const filterLabel = useMemo<Record<FilterTab, string>>(
+    () => ({
+      pending: t('teacherProjectDetail.filter.pending'),
+      all: t('teacherProjectDetail.filter.all'),
+      done: t('teacherProjectDetail.filter.done'),
+      star: t('teacherProjectDetail.filter.star'),
+      missing: t('teacherProjectDetail.filter.missing'),
+    }),
+    [t],
+  );
+
   if (authLoading || !user || (user.role !== 'teacher' && user.role !== 'admin')) {
     return (
       <KidsPanelMax>
@@ -161,17 +172,6 @@ export default function KidsTeacherProjectDetailPage() {
   const subN = assignment.submission_count ?? submissions.length;
   const enr = assignment.enrolled_student_count ?? 0;
   const windowLine = kidsFormatAssignmentWindowTr(assignment);
-
-  const filterLabel = useMemo<Record<FilterTab, string>>(
-    () => ({
-      pending: t('teacherProjectDetail.filter.pending'),
-      all: t('teacherProjectDetail.filter.all'),
-      done: t('teacherProjectDetail.filter.done'),
-      star: t('teacherProjectDetail.filter.star'),
-      missing: t('teacherProjectDetail.filter.missing'),
-    }),
-    [t],
-  );
 
   function FilterBtn({ value, children }: { value: FilterTab; children: ReactNode }) {
     const on = filter === value;
@@ -277,7 +277,7 @@ export default function KidsTeacherProjectDetailPage() {
             <p className="mt-0.5 text-xs text-slate-600 dark:text-gray-400">{t('teacherProjectDetail.submissionsHelp')}</p>
           </div>
           <div
-            className="rounded-2xl bg-gradient-to-r from-violet-300 via-fuchsia-200 to-amber-200 p-1.5 shadow-inner dark:from-violet-800 dark:via-fuchsia-900 dark:to-amber-900/80"
+            className="rounded-2xl bg-linear-to-r from-violet-300 via-fuchsia-200 to-amber-200 p-1.5 shadow-inner dark:from-violet-800 dark:via-fuchsia-900 dark:to-amber-900/80"
             role="tablist"
             aria-label={t('teacherProjectDetail.submissionFilterAria')}
           >

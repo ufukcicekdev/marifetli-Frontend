@@ -74,6 +74,7 @@ export default function KidsTeacherHomeworksPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [creating, setCreating] = useState(false);
   const [homeworks, setHomeworks] = useState<KidsHomework[]>([]);
+  const [selectedHomeworkId, setSelectedHomeworkId] = useState<number | null>(null);
   const [editingHomeworkId, setEditingHomeworkId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
@@ -124,6 +125,15 @@ export default function KidsTeacherHomeworksPage() {
   }, [editPreviewItems]);
 
   const selectedClassId = useMemo(() => Number(classId || 0), [classId]);
+  const selectedHomework = useMemo(
+    () => homeworks.find((hw) => hw.id === selectedHomeworkId) ?? null,
+    [homeworks, selectedHomeworkId],
+  );
+  const filteredInbox = useMemo(() => {
+    const byClass = inbox.filter((sub) => Number(sub.homework.kids_class) === selectedClassId);
+    if (!selectedHomeworkId) return byClass;
+    return byClass.filter((sub) => sub.homework.id === selectedHomeworkId);
+  }, [inbox, selectedClassId, selectedHomeworkId]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -144,15 +154,21 @@ export default function KidsTeacherHomeworksPage() {
   const loadClassHomeworks = useCallback(async (cid: number) => {
     if (!cid) {
       setHomeworks([]);
+      setSelectedHomeworkId(null);
       return;
     }
     try {
       const list = await kidsListClassHomeworks(cid);
       setHomeworks(list);
+      setSelectedHomeworkId((prev) => {
+        if (prev && list.some((hw) => hw.id === prev)) return prev;
+        return list.length > 0 ? list[0].id : null;
+      });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('teacherHomework.classHomeworksLoadError'));
     }
   }, []);
+
 
   useEffect(() => {
     if (authLoading) return;
@@ -427,7 +443,14 @@ export default function KidsTeacherHomeworksPage() {
               <p className="text-sm text-indigo-900/80 dark:text-indigo-100/80">{t('teacherHomework.noHomeworkClass')}</p>
             ) : (
               homeworks.map((hw) => (
-                <div key={hw.id} className="rounded-xl border border-indigo-200/70 px-3 py-2 dark:border-indigo-700/60">
+                <div
+                  key={hw.id}
+                  className={`rounded-xl border px-3 py-2 transition ${
+                    selectedHomeworkId === hw.id
+                      ? 'border-indigo-500/80 bg-indigo-50/70 dark:border-indigo-400/70 dark:bg-indigo-900/30'
+                      : 'border-indigo-200/70 dark:border-indigo-700/60'
+                  }`}
+                >
                   {editingHomeworkId === hw.id ? (
                     <div className="space-y-2">
                       <input
@@ -444,65 +467,6 @@ export default function KidsTeacherHomeworksPage() {
                         placeholder={t('teacherHomework.description')}
                       />
                       <KidsDateTimeField id={`edit-due-${hw.id}`} value={editDueAtLocal} onChange={setEditDueAtLocal} />
-                      <div className="rounded-lg border border-indigo-200/70 bg-white/70 p-2 dark:border-indigo-800/50 dark:bg-slate-900/60">
-                          <p className="text-xs font-semibold text-indigo-900 dark:text-indigo-100">{t('teacherHomework.currentAttachments')}</p>
-                        {Array.isArray(hw.attachments) && hw.attachments.length > 0 ? (
-                          <ul className="mt-1 space-y-1 text-xs">
-                            {hw.attachments.map((att) => (
-                              <li key={att.id} className="flex items-center justify-between gap-2">
-                                <span className="truncate text-slate-700 dark:text-slate-200">{att.original_name || t('messageDetail.file')}</span>
-                                <button
-                                  type="button"
-                                  onClick={() => void deleteHomeworkAttachment(hw.id, att.id)}
-                                  disabled={deletingAttachmentId === att.id || editSaving}
-                                  className="rounded-full border border-rose-300 px-2 py-0.5 text-rose-700 hover:bg-rose-50 disabled:opacity-60 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950/40"
-                                >
-                                  {deletingAttachmentId === att.id ? t('announcements.deleting') : t('announcements.deleteCurrentAttachment')}
-                                </button>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t('announcements.noExistingAttachment')}</p>
-                        )}
-                      </div>
-                      <div className="rounded-lg border border-indigo-200/70 bg-indigo-50/40 p-2 dark:border-indigo-800/50 dark:bg-indigo-950/20">
-                        <p className="text-xs font-semibold text-indigo-900 dark:text-indigo-100">{t('announcements.newAttachments')}</p>
-                        {editPreviewItems.length > 0 ? (
-                          <MediaSlider items={editPreviewItems} className="mt-1 h-36" alt="Homework attachment preview" fit="contain" />
-                        ) : null}
-                        <div className="mt-1 flex items-center justify-between">
-                          <input
-                            id={`edit-homework-files-${hw.id}`}
-                            type="file"
-                            multiple
-                            onChange={(e) => appendEditFiles(Array.from(e.target.files || []))}
-                            className="hidden"
-                          />
-                          <label htmlFor={`edit-homework-files-${hw.id}`} className="cursor-pointer text-xs font-semibold text-indigo-700 hover:text-indigo-500 dark:text-indigo-200">
-                            {t('announcements.addFile')}
-                          </label>
-                          <span className="text-[11px] text-slate-500 dark:text-slate-400">{t('announcements.attachmentHintShort')}</span>
-                        </div>
-                        {editFiles.length > 0 ? (
-                          <ul className="mt-1 space-y-1 text-xs text-slate-600 dark:text-slate-300">
-                            {editFiles.map((f) => (
-                              <li key={`${hw.id}-${f.name}-${f.size}-${f.lastModified}`} className="flex items-center justify-between gap-2">
-                                <span className="truncate">
-                                  {f.name} ({formatFileSize(f.size)})
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => removeEditFile(f)}
-                                  className="rounded-full border border-rose-300 px-2 py-0.5 text-rose-700 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950/40"
-                                >
-                                  {t('messageDetail.remove')}
-                                </button>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : null}
-                      </div>
                       <div className="flex justify-end gap-2">
                         <KidsSecondaryButton type="button" onClick={cancelEditHomework} disabled={editSaving}>
                           {t('common.cancel')}
@@ -516,13 +480,9 @@ export default function KidsTeacherHomeworksPage() {
                     <>
                       <div className="flex items-start justify-between gap-2">
                         <p className="font-semibold text-slate-900 dark:text-white">{hw.title}</p>
-                        <button
-                          type="button"
-                          onClick={() => startEditHomework(hw)}
-                          className="rounded-full border border-indigo-300 px-2.5 py-0.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 dark:border-indigo-700 dark:text-indigo-200 dark:hover:bg-indigo-900/40"
-                        >
-                          {t('announcements.edit')}
-                        </button>
+                        <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[11px] font-bold text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-200">
+                          {filteredInbox.filter((sub) => sub.homework.id === hw.id).length}
+                        </span>
                       </div>
                       <p className="text-xs text-slate-600 dark:text-slate-300">{hw.description || t('teacherHomework.noDescription')}</p>
                       {hw.due_at ? (
@@ -530,21 +490,28 @@ export default function KidsTeacherHomeworksPage() {
                           {t('teacherHomework.dueAt')}: {new Date(hw.due_at).toLocaleString(language, { dateStyle: 'short', timeStyle: 'short' })}
                         </p>
                       ) : null}
-                      {Array.isArray(hw.attachments) && hw.attachments.length > 0 ? (
-                        <div className="mt-2">
-                          <MediaSlider
-                            items={hw.attachments.map((att) => ({
-                              url: isImageAttachment(att.content_type, att.original_name)
-                                ? att.url
-                                : filePlaceholderUrl(att.original_name || 'dosya', t('homework.attachmentLabel')),
-                              type: 'image',
-                            }))}
-                            className="h-40"
-                            alt={hw.title}
-                            fit="contain"
-                          />
-                        </div>
-                      ) : null}
+                      <div className="mt-2 flex justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedHomeworkId(hw.id);
+                            startEditHomework(hw);
+                          }}
+                          className="rounded-full border border-indigo-300 px-2.5 py-0.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 dark:border-indigo-700 dark:text-indigo-200 dark:hover:bg-indigo-900/40"
+                        >
+                          {t('announcements.edit')}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedHomeworkId(hw.id);
+                            router.push(`${pathPrefix}/ogretmen/odevler/${hw.id}`);
+                          }}
+                          className="rounded-full border border-violet-300 px-2.5 py-0.5 text-xs font-semibold text-violet-700 hover:bg-violet-100 dark:border-violet-700 dark:text-violet-200 dark:hover:bg-violet-900/40"
+                        >
+                          Teslimler →
+                        </button>
+                      </div>
                     </>
                   )}
                 </div>
@@ -555,12 +522,14 @@ export default function KidsTeacherHomeworksPage() {
       </div>
 
       <KidsCard tone="amber" className="mt-6">
-        <h2 className="font-logo text-lg font-bold text-amber-950 dark:text-amber-50">{t('teacherHomework.parentApprovedInbox')}</h2>
+        <h2 className="font-logo text-lg font-bold text-amber-950 dark:text-amber-50">
+          {selectedHomework ? `${t('teacherHomework.parentApprovedInbox')} - ${selectedHomework.title}` : t('teacherHomework.parentApprovedInbox')}
+        </h2>
         <div className="mt-3 space-y-2">
-          {inbox.length === 0 ? (
+          {filteredInbox.length === 0 ? (
             <p className="text-sm text-amber-900/80 dark:text-amber-100/80">{t('teacherHomework.noPendingInbox')}</p>
           ) : (
-            inbox.map((sub) => (
+            filteredInbox.map((sub) => (
               <div key={sub.id} className="rounded-xl border border-amber-200/80 p-3 dark:border-amber-700/60">
                 <p className="font-semibold text-slate-900 dark:text-white">{sub.homework.title}</p>
                 <p className="text-xs text-slate-700 dark:text-slate-300">

@@ -402,6 +402,17 @@ export type KidsHomeworkSubmission = {
   updated_at: string;
 };
 
+export type KidsHomeworkSubmissionOverview = {
+  homework: KidsHomework;
+  summary: {
+    total: number;
+    submitted: number;
+    not_submitted: number;
+    status_counts: Record<string, number>;
+  };
+  submissions: KidsHomeworkSubmission[];
+};
+
 export type KidsEnrollment = {
   id: number;
   kids_class: number;
@@ -2525,6 +2536,28 @@ export async function kidsTeacherReviewHomeworkSubmission(
     throw new Error(kidsFirstApiErrorMessage(data, 'Ödev değerlendirmesi kaydedilemedi'));
   }
   return data as KidsHomeworkSubmission;
+}
+
+export async function kidsListHomeworkSubmissionsByHomework(
+  classId: number,
+  homeworkId: number,
+): Promise<KidsHomeworkSubmissionOverview> {
+  const res = await kidsAuthorizedFetch(
+    `/classes/${classId}/homeworks/${homeworkId}/submissions/`,
+    { method: 'GET' },
+  );
+  if (!res.ok) throw new Error('Ödev teslim detayları yüklenemedi');
+  return res.json() as Promise<KidsHomeworkSubmissionOverview>;
+}
+
+export async function kidsListTeacherHomeworkSubmissionsByHomework(
+  homeworkId: number,
+): Promise<KidsHomeworkSubmissionOverview> {
+  const res = await kidsAuthorizedFetch(`/teacher/homeworks/${homeworkId}/submissions/`, {
+    method: 'GET',
+  });
+  if (!res.ok) throw new Error('Ödev teslim detayları yüklenemedi');
+  return res.json() as Promise<KidsHomeworkSubmissionOverview>;
 }
 
 export type FreestyleItem = {
