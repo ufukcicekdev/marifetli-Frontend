@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
@@ -20,6 +21,11 @@ type ChatMsg = { id: string; role: 'user' | 'assistant'; text: string };
  * Özellik kapalıysa hiç render etmez.
  */
 export function CategoryExpertChatPanel() {
+  const pathname = usePathname();
+  const isKidsPortal = pathname === '/kids' || pathname.startsWith('/kids/');
+  const topOffset = isKidsPortal ? 52 : 104;
+  const bottomOffset = isKidsPortal ? 'calc(4.75rem + env(safe-area-inset-bottom))' : '0px';
+  const fullPageHref = isKidsPortal ? '/kids/uzman' : '/uzman';
   const queryClient = useQueryClient();
   const { isAuthenticated, user } = useAuthStore();
   const openAuth = useAuthModalStore((s) => s.open);
@@ -68,11 +74,14 @@ export function CategoryExpertChatPanel() {
     if (!categoriesRaw || !cfg?.categories?.length) return [];
     const all = buildCategoriesTree(categoriesRaw);
     const byId = new Map(all.map((m) => [m.id, m]));
-    return cfg.categories
+    const cfgCategories = isKidsPortal
+      ? cfg.categories.filter((c) => (c.slug || '').startsWith('kids-'))
+      : cfg.categories;
+    return cfgCategories
       .map((c) => byId.get(c.id))
       .filter((m): m is CategoryWithSubs => Boolean(m))
       .map((m) => ({ ...m, subcategories: [] }));
-  }, [categoriesRaw, cfg?.categories]);
+  }, [categoriesRaw, cfg?.categories, isKidsPortal]);
 
   useEffect(() => {
     if (!open || preselectMainCategoryId == null) return;
@@ -176,7 +185,7 @@ export function CategoryExpertChatPanel() {
         <button
           type="button"
           onClick={() => togglePanel()}
-          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-[88] flex items-center gap-2 rounded-full border border-white/20 bg-brand px-4 py-3 text-sm font-semibold text-white shadow-lg hover:bg-brand-hover sm:bottom-6 sm:right-6"
+          className="fixed bottom-[calc(5rem+env(safe-area-inset-bottom))] right-4 z-88 flex items-center gap-2 rounded-full border border-white/20 bg-brand px-4 py-3 text-sm font-semibold text-white shadow-lg hover:bg-brand-hover sm:bottom-6 sm:right-6"
           aria-expanded={open}
           aria-controls="category-expert-chat-panel"
         >
@@ -212,7 +221,8 @@ export function CategoryExpertChatPanel() {
         <button
           type="button"
           aria-label="Paneli kapat"
-          className="fixed inset-0 top-[104px] z-[92] bg-black/40 md:hidden"
+          className="fixed inset-0 z-92 bg-black/40 md:hidden"
+          style={{ top: topOffset, bottom: bottomOffset }}
           onClick={closePanel}
         />
       )}
@@ -220,9 +230,10 @@ export function CategoryExpertChatPanel() {
       {/* Panel */}
       <aside
         id="category-expert-chat-panel"
-        className={`fixed top-[104px] right-0 bottom-0 z-[93] w-full max-w-md flex flex-col bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 shadow-2xl transition-transform duration-300 ease-out ${
+        className={`fixed right-0 bottom-0 z-93 w-full max-w-md flex flex-col bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 shadow-2xl transition-transform duration-300 ease-out ${
           open ? 'translate-x-0' : 'translate-x-full pointer-events-none'
         }`}
+        style={{ top: topOffset, bottom: bottomOffset }}
         aria-hidden={!open}
       >
         <header className="shrink-0 flex items-start gap-2 p-3 border-b border-gray-200 dark:border-gray-800">
@@ -252,7 +263,7 @@ export function CategoryExpertChatPanel() {
               </svg>
             </button>
             <Link
-              href="/uzman"
+              href={fullPageHref}
               onClick={closePanel}
               className="text-xs font-medium text-brand hover:underline whitespace-nowrap"
             >

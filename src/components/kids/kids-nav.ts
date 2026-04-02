@@ -22,6 +22,7 @@ export function kidsNavLinks(
       { href: kidsHomeHref(p), labelKey: 'nav.home', icon: 'home' },
       { href: KIDS_SITE_MANAGEMENT_HREF, labelKey: 'nav.admin', icon: 'admin' },
       { href: `${p}/ogretmen/panel`, labelKey: 'nav.teacherPanel', icon: 'teacher' },
+      { href: `${p}/uzman`, labelKey: 'nav.askExpert', icon: 'expert' },
       { href: `${p}/bildirimler`, labelKey: 'nav.notifications', icon: 'bell' },
       { href: `${p}/profil`, labelKey: 'nav.profile', icon: 'profile' },
     ];
@@ -37,6 +38,7 @@ export function kidsNavLinks(
     items.push({ href: `${p}/ogretmen/panel`, labelKey: 'nav.teacherPanel', icon: 'teacher' });
     items.push({ href: `${p}/ogretmen/odevler`, labelKey: 'nav.homeworks', icon: 'challenge' });
     items.push({ href: `${p}/ogretmen/testler`, labelKey: 'nav.tests', icon: 'challenge' });
+    items.push({ href: `${p}/uzman`, labelKey: 'nav.askExpert', icon: 'expert' });
   }
   if (role === 'student') {
     items.push({ href: `${p}/ogrenci/panel`, labelKey: 'nav.studentPanel', icon: 'student' });
@@ -50,6 +52,7 @@ export function kidsNavLinks(
     items.push({ href: `${p}/veli/panel`, labelKey: 'nav.parentPanel', icon: 'parent' });
     items.push({ href: `${p}/veli/cocuklarin-durumu`, labelKey: 'nav.childrenStatus', icon: 'student' });
     items.push({ href: `${p}/veli/ebeveyn-kontrolleri`, labelKey: 'nav.parentControls', icon: 'timer' });
+    items.push({ href: `${p}/uzman`, labelKey: 'nav.askExpert', icon: 'expert' });
   }
   if (role && role !== 'student') {
     items.push({ href: `${p}/mesajlar`, labelKey: 'nav.messages', icon: 'chat' });

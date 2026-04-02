@@ -11,6 +11,7 @@ import { KidsAuthProvider } from '@/src/providers/kids-auth-provider';
 import { KidsLanguageProvider } from '@/src/providers/kids-language-provider';
 import { KidsPushHandler } from '@/src/components/kids/kids-push-handler';
 import { SiteAuthProfileSync } from '@/src/components/site-auth-profile-sync';
+import { CategoryExpertChatPanel } from '@/src/components/category-expert-chat-panel';
 import { KIDS_USE_SIDEBAR } from '@/src/lib/kids-config';
 
 type KidsShellProps = {
@@ -47,12 +48,13 @@ export function KidsShell({ pathPrefix, children }: KidsShellProps) {
                   <div className="absolute -left-20 bottom-0 h-96 w-96 rounded-full bg-amber-300/20 blur-3xl dark:bg-amber-600/10" />
                   <div className="absolute left-1/3 top-1/4 h-40 w-40 rounded-full bg-sky-400/10 blur-2xl dark:bg-sky-500/10" />
                 </div>
-                <div className="relative z-[1]">{children}</div>
+                <div className="relative z-1">{children}</div>
               </main>
               <KidsFooter pathPrefix={pathPrefix} />
             </div>
           </div>
           <KidsMobileBottomNav pathPrefix={pathPrefix} />
+          <CategoryExpertChatPanel />
         </KidsLanguageProvider>
       </KidsAuthProvider>
     </ThemeProvider>

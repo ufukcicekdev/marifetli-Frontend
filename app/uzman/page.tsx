@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { usePathname } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import api from '@/src/lib/api';
@@ -15,6 +16,8 @@ type CategoryItem = { id: number; name: string; slug: string; subcategories?: Ca
 
 export default function UzmanPage() {
   const queryClient = useQueryClient();
+  const pathname = usePathname();
+  const kidsMode = pathname.startsWith('/kids/');
   const { isAuthenticated, user } = useAuthStore();
   const openAuth = useAuthModalStore((s) => s.open);
   const [mainId, setMainId] = useState<number | ''>('');
@@ -54,7 +57,10 @@ export default function UzmanPage() {
     if (!categoriesRaw || !cfg?.categories?.length) return [];
     const all = buildCategoriesTree(categoriesRaw);
     const byId = new Map(all.map((m) => [m.id, m]));
-    return cfg.categories.flatMap((c) => {
+    const filteredCfg = kidsMode
+      ? cfg.categories.filter((c) => (c.slug || '').startsWith('kids-'))
+      : cfg.categories;
+    return filteredCfg.flatMap((c) => {
       const m = byId.get(c.id);
       if (!m) return [];
       const node: CategoryWithSubs = {
@@ -65,7 +71,7 @@ export default function UzmanPage() {
       };
       return [node];
     });
-  }, [categoriesRaw, cfg?.categories]);
+  }, [categoriesRaw, cfg?.categories, kidsMode]);
 
   const askMutation = useMutation({
     mutationFn: () =>
@@ -129,7 +135,7 @@ export default function UzmanPage() {
           Bu özellik şu an kapalı. Yönetici olarak açmak için sunucuda{' '}
           <code className="text-sm bg-gray-100 dark:bg-gray-800 px-1 rounded">CATEGORY_EXPERT_ENABLED=True</code> ayarlayın.
         </p>
-        <Link href="/sorular" className="inline-block mt-6 text-brand hover:text-brand-hover font-medium">
+        <Link href={kidsMode ? '/kids' : '/sorular'} className="inline-block mt-6 text-brand hover:text-brand-hover font-medium">
           ← Sorulara dön
         </Link>
       </div>
@@ -143,7 +149,7 @@ export default function UzmanPage() {
         <p className="text-amber-700 dark:text-amber-300">
           Özellik açık ancak yanıt üreticisi hazır değil (ör. Gemini API anahtarı veya sağlayıcı yapılandırması).
         </p>
-        <Link href="/sorular" className="inline-block mt-6 text-brand hover:text-brand-hover font-medium">
+        <Link href={kidsMode ? '/kids' : '/sorular'} className="inline-block mt-6 text-brand hover:text-brand-hover font-medium">
           ← Sorulara dön
         </Link>
       </div>
@@ -186,8 +192,8 @@ export default function UzmanPage() {
             sunması beklenir.
           </p>
         </div>
-        <Link href="/sorular" className="text-sm font-medium text-brand hover:text-brand-hover shrink-0">
-          ← Sorular
+        <Link href={kidsMode ? '/kids' : '/sorular'} className="text-sm font-medium text-brand hover:text-brand-hover shrink-0">
+          ← {kidsMode ? 'Kids Anasayfa' : 'Sorular'}
         </Link>
       </div>
 
@@ -317,12 +323,12 @@ export default function UzmanPage() {
       {historyDetail ? (
         <>
           <div
-            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-100 bg-black/60 backdrop-blur-sm"
             aria-hidden
             onClick={() => setHistoryDetail(null)}
           />
           <div
-            className="fixed left-1/2 top-1/2 z-[101] w-[min(92vw,560px)] max-h-[min(88vh,720px)] -translate-x-1/2 -translate-y-1/2 flex flex-col rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl"
+            className="fixed left-1/2 top-1/2 z-101 w-[min(92vw,560px)] max-h-[min(88vh,720px)] -translate-x-1/2 -translate-y-1/2 flex flex-col rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl"
             role="dialog"
             aria-modal="true"
             aria-labelledby="expert-history-modal-title"

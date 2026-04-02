@@ -25,6 +25,7 @@ function navDescription(item: KidsNavItem, t: (key: string) => string): string {
     'nav.gameCenter': t('nav.desc.gameCenter'),
     'nav.parentPanel': t('nav.desc.parentPanel'),
     'nav.parentControls': t('nav.desc.parentControls'),
+    'nav.askExpert': t('nav.desc.askExpert'),
     'nav.notifications': t('nav.desc.notifications'),
     'nav.profile': t('nav.desc.profile'),
     'nav.login': t('nav.desc.login'),
@@ -97,7 +98,7 @@ export function KidsNavMegaMenu({ pathPrefix }: KidsNavMegaMenuProps) {
                   <Link
                     href={kidsLoginPortalHref(pathPrefix)}
                     onClick={close}
-                    className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-600 py-3 text-sm font-bold text-white shadow-md hover:from-violet-500 hover:to-fuchsia-500"
+                    className="flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-linear-to-r from-violet-600 to-fuchsia-600 py-3 text-sm font-bold text-white shadow-md hover:from-violet-500 hover:to-fuchsia-500"
                   >
                   <span aria-hidden>
                     <NavIcon name="login" className="h-4 w-4 text-white" />
