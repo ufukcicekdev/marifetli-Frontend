@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import NextImage from 'next/image';
 import { jsPDF } from 'jspdf';
 import {
   Backpack,
@@ -134,6 +135,7 @@ function certificateSvg(
   row: KidsAchievementCertificate,
   studentName: string,
   t: (key: string) => string,
+  logoDataUrl: string | null,
 ): string {
   const bg =
     row.level === 'gold'
@@ -159,13 +161,25 @@ function certificateSvg(
   const lineFor = escapeXml(t('student.certificate.svg.lineForRecipient'));
   const sigLeft = escapeXml(t('student.certificate.svg.signatureStudent'));
   const sigRight = escapeXml(t('student.certificate.svg.signatureBrand'));
+  const logoHref = logoDataUrl ? escapeXml(logoDataUrl) : '';
   return `
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="980" viewBox="0 0 1400 980">
+  <defs>
+    <linearGradient id="kidsBadgeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#f97316" />
+    </linearGradient>
+  </defs>
   <rect width="1400" height="980" fill="#f8fafc"/>
   <rect x="36" y="36" width="1328" height="908" rx="34" fill="white" stroke="${bg}" stroke-width="12"/>
-  <rect x="76" y="88" width="1248" height="140" rx="26" fill="${bg}"/>
-  <text x="700" y="150" text-anchor="middle" font-size="54" font-weight="700" fill="#1f2937">${brand}</text>
-  <text x="700" y="198" text-anchor="middle" font-size="28" font-weight="600" fill="#334155">${subtitle}</text>
+  <rect x="76" y="88" width="1248" height="92" rx="18" fill="${bg}"/>
+
+  ${logoHref ? `<image href="${logoHref}" x="596" y="105" width="34" height="34" preserveAspectRatio="xMidYMid meet" />` : ''}
+  <text x="628" y="132" text-anchor="start" font-family="Outfit, system-ui, -apple-system, Segoe UI, Arial, sans-serif" font-size="31" font-weight="600" letter-spacing="-0.35" fill="#111827">arifetli</text>
+  <rect x="744" y="109" width="88" height="28" rx="9" fill="url(#kidsBadgeGrad)"/>
+  <text x="788" y="128.5" text-anchor="middle" font-family="Outfit, system-ui, -apple-system, Segoe UI, Arial, sans-serif" font-size="13.5" font-weight="800" fill="white" letter-spacing="0.55">KIDS</text>
+
+  <text x="700" y="157" text-anchor="middle" font-family="Outfit, system-ui, -apple-system, Segoe UI, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#334155">${subtitle}</text>
 
   <text x="700" y="320" text-anchor="middle" font-size="42" font-weight="700" fill="#111827">${title}</text>
   <text x="700" y="390" text-anchor="middle" font-size="30" font-weight="600" fill="#374151">${lineThis}</text>
@@ -183,12 +197,38 @@ function certificateSvg(
 </svg>`;
 }
 
+let certificateLogoDataUrlCache: string | null | undefined;
+
+async function certificateLogoDataUrl(): Promise<string | null> {
+  if (certificateLogoDataUrlCache !== undefined) return certificateLogoDataUrlCache;
+  try {
+    const res = await fetch('/logo.png');
+    if (!res.ok) {
+      certificateLogoDataUrlCache = null;
+      return null;
+    }
+    const blob = await res.blob();
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ''));
+      reader.onerror = () => reject(new Error('logo_read_failed'));
+      reader.readAsDataURL(blob);
+    });
+    certificateLogoDataUrlCache = dataUrl || null;
+    return certificateLogoDataUrlCache;
+  } catch {
+    certificateLogoDataUrlCache = null;
+    return null;
+  }
+}
+
 async function certificatePngDataUrl(
   row: KidsAchievementCertificate,
   studentName: string,
   t: (key: string) => string,
 ): Promise<string> {
-  const svg = certificateSvg(row, studentName, t);
+  const logoDataUrl = await certificateLogoDataUrl();
+  const svg = certificateSvg(row, studentName, t, logoDataUrl);
   const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   try {
@@ -258,9 +298,28 @@ function AchievementCertificates({
         <h2 className="font-logo flex items-center gap-2 text-xl font-black text-indigo-900 dark:text-indigo-100">
           <Trophy className="h-5 w-5" aria-hidden /> {t('student.dashboard.certificatesTitle')}
         </h2>
-        <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-black text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300">
-          {t('student.dashboard.certificatesBadge')}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="font-logo inline-flex items-center gap-0.5 rounded-full border border-indigo-200 bg-white px-2 py-1 text-[11px] font-semibold text-indigo-900 dark:border-indigo-800 dark:bg-gray-900 dark:text-indigo-100">
+            <NextImage
+              src="/logo.png"
+              alt=""
+              width={16}
+              height={16}
+              className="h-4 w-4 object-contain"
+              aria-hidden
+            />
+            <span lang="en" className="leading-none">arifetli</span>
+            <span
+              lang="en"
+              className="ml-1 rounded-lg bg-linear-to-r from-amber-400 to-orange-400 px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide text-white"
+            >
+              KIDS
+            </span>
+          </span>
+          <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-black text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300">
+            {t('student.dashboard.certificatesBadge')}
+          </span>
+        </div>
       </div>
       <ul className="mt-4 grid gap-3 sm:grid-cols-2">
         {certificates.map((row) => (
