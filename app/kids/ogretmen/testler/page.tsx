@@ -27,6 +27,8 @@ type DraftQuestion = {
   choices: { key: string; text: string }[];
   correct_choice_key: string;
   points: number;
+  /** Kaynak görsel sayfası (1-based); çoklu sayfada zorunlu. */
+  source_page_order: number;
 };
 
 const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
@@ -82,6 +84,11 @@ export default function KidsTeacherTestsPage() {
     () => myTests.map((t) => ({ value: String(t.id), label: t.title })),
     [myTests],
   );
+  const editingRow = useMemo(
+    () => (workFromTestId ? myTests.find((x) => String(x.id) === workFromTestId) ?? null : null),
+    [myTests, workFromTestId],
+  );
+  const sourcePageCount = Math.max(images.length, editingRow?.source_images?.length ?? 0);
   const classNameById = useMemo(() => {
     const map = new Map<number, string>();
     classes.forEach((c) => map.set(c.id, c.name));
@@ -144,6 +151,7 @@ export default function KidsTeacherTestsPage() {
         })),
         correct_choice_key: q.correct_choice_key || '',
         points: q.points || 1,
+        source_page_order: q.source_page_order ?? 1,
       })),
     );
   }
@@ -215,6 +223,7 @@ export default function KidsTeacherTestsPage() {
           choices: (q.choices || []).map((c, cIdx) => ({ key: c.key || String.fromCharCode(65 + cIdx), text: c.text || '' })),
           correct_choice_key: q.correct_choice_key || '',
           points: q.points || 1,
+          source_page_order: typeof q.source_page_order === 'number' && q.source_page_order >= 1 ? q.source_page_order : 1,
         })),
       );
       toast.success(`AI ${out.questions.length} ${t('tests.teacherMain.aiExtractedQuestionsSuffix')}`);
@@ -254,15 +263,23 @@ export default function KidsTeacherTestsPage() {
         instructions: instructions.trim(),
         duration_minutes: duration,
         status: 'draft',
-        questions: questions.map((q, idx) => ({
-          order: idx + 1,
-          stem: q.stem.trim(),
-          topic: q.topic.trim(),
-          subtopic: q.subtopic.trim(),
-          choices: q.choices.map((c, cIdx) => ({ key: c.key || String.fromCharCode(65 + cIdx), text: c.text.trim() })),
-          correct_choice_key: q.correct_choice_key,
-          points: q.points || 1,
-        })),
+        questions: questions.map((q, idx) => {
+          const base = {
+            order: idx + 1,
+            stem: q.stem.trim(),
+            topic: q.topic.trim(),
+            subtopic: q.subtopic.trim(),
+            choices: q.choices.map((c, cIdx) => ({ key: c.key || String.fromCharCode(65 + cIdx), text: c.text.trim() })),
+            correct_choice_key: q.correct_choice_key,
+            points: q.points || 1,
+          };
+          return sourcePageCount > 1
+            ? {
+                ...base,
+                source_page_order: Math.min(sourcePageCount, Math.max(1, q.source_page_order || 1)),
+              }
+            : base;
+        }),
       } as const;
       const editingTestId = Number(workFromTestId);
       const isEditing = Number.isFinite(editingTestId) && editingTestId > 0;
@@ -319,6 +336,7 @@ export default function KidsTeacherTestsPage() {
                 searchable
               />
             </div>
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t('tests.teacherMain.editViaSelectHint')}</p>
           </label>
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -339,7 +357,7 @@ export default function KidsTeacherTestsPage() {
       </section>
 
       <section className="rounded-2xl border border-violet-200 bg-white p-4 dark:border-violet-800 dark:bg-gray-900/70">
-        <h2 className="mb-3 text-lg font-bold text-violet-950 dark:text-violet-100">{t('tests.teacherMain.uploadedTests')}</h2>
+        <h2 className="mb-3 text-lg font-bold text-violet-950 dark:text-violet-100">{t('tests.teacherMain.distributeSectionTitle')}</h2>
         {myTests.length > 0 ? (
           <div className="mb-4 rounded-xl border border-fuchsia-200 bg-fuchsia-50/60 p-3 dark:border-fuchsia-800 dark:bg-fuchsia-950/20">
             <h3 className="text-sm font-bold text-fuchsia-900 dark:text-fuchsia-100">{t('tests.teacherMain.distributeTest')}</h3>
@@ -461,20 +479,7 @@ export default function KidsTeacherTestsPage() {
         ) : null}
         {myTests.length === 0 ? (
           <p className="text-sm text-slate-500">{t('tests.teacherMain.noUploadedTests')}</p>
-        ) : (
-          <ul className="space-y-2">
-            {myTests.map((row) => (
-              <li key={`mine-${row.id}`} className="rounded-xl border border-violet-200 px-3 py-2 dark:border-violet-700">
-                <div>
-                  <p className="text-sm font-semibold">{row.title}</p>
-                  <p className="text-xs text-slate-500">
-                    {row.kids_class ? classNameById.get(row.kids_class) || `${t('tests.teacherMain.classLabel')} #${row.kids_class}` : t('tests.teacherMain.noClass')} · {row.questions?.length || 0} {t('tests.reports.question')}
-                  </p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+        ) : null}
       </section>
 
       <section className="rounded-2xl border border-violet-200 bg-white p-4 dark:border-violet-800 dark:bg-gray-900/70">
@@ -594,7 +599,7 @@ export default function KidsTeacherTestsPage() {
                   </div>
                 ))}
               </div>
-              <div className="mt-2 flex items-center gap-2 text-sm">
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
                 <span>{t('tests.teacherMain.correctChoice')}:</span>
                 <div className="w-28">
                   <KidsSelect
@@ -608,6 +613,24 @@ export default function KidsTeacherTestsPage() {
                   />
                 </div>
               </div>
+              {sourcePageCount > 1 ? (
+                <div className="mt-2">
+                  <p className="text-xs text-slate-600 dark:text-slate-400">{t('tests.teacherMain.sourcePageHelp')}</p>
+                  <div className="mt-1 w-full max-w-xs">
+                    <KidsSelect
+                      value={String(q.source_page_order || 1)}
+                      onChange={(next) =>
+                        setQuestionField(qIdx, { source_page_order: Math.max(1, Number(next) || 1) })
+                      }
+                      options={Array.from({ length: sourcePageCount }, (_, i) => ({
+                        value: String(i + 1),
+                        label: `${t('tests.teacherMain.sourcePage')} ${i + 1}`,
+                      }))}
+                      searchable={false}
+                    />
+                  </div>
+                </div>
+              ) : null}
             </div>
           ))}
           {questions.length === 0 ? <p className="text-sm text-slate-500">{t('tests.teacherMain.extractFirst')}</p> : null}

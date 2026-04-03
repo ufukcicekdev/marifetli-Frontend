@@ -13,12 +13,9 @@ import {
   kidsListClassHomeworks,
   kidsListClasses,
   kidsPatchClassHomework,
-  kidsTeacherHomeworkInbox,
-  kidsTeacherReviewHomeworkSubmission,
   kidsUploadHomeworkAttachment,
   type KidsClass,
   type KidsHomework,
-  type KidsHomeworkSubmission,
 } from '@/src/lib/kids-api';
 import { KidsDateTimeField } from '@/src/components/kids/kids-datetime-field';
 import { MediaSlider } from '@/src/components/media-slider';
@@ -82,9 +79,7 @@ export default function KidsTeacherHomeworksPage() {
   const [editFiles, setEditFiles] = useState<File[]>([]);
   const [editSaving, setEditSaving] = useState(false);
   const [deletingAttachmentId, setDeletingAttachmentId] = useState<number | null>(null);
-  const [inbox, setInbox] = useState<KidsHomeworkSubmission[]>([]);
   const [loading, setLoading] = useState(true);
-  const [reviewingId, setReviewingId] = useState<number | null>(null);
   const classSelectId = useId();
   const titleId = useId();
   const descriptionId = useId();
@@ -129,18 +124,11 @@ export default function KidsTeacherHomeworksPage() {
     () => homeworks.find((hw) => hw.id === selectedHomeworkId) ?? null,
     [homeworks, selectedHomeworkId],
   );
-  const filteredInbox = useMemo(() => {
-    const byClass = inbox.filter((sub) => Number(sub.homework.kids_class) === selectedClassId);
-    if (!selectedHomeworkId) return byClass;
-    return byClass.filter((sub) => sub.homework.id === selectedHomeworkId);
-  }, [inbox, selectedClassId, selectedHomeworkId]);
-
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [classList, pendingInbox] = await Promise.all([kidsListClasses(), kidsTeacherHomeworkInbox()]);
+      const classList = await kidsListClasses();
       setClasses(classList);
-      setInbox(pendingInbox);
       if (!classId && classList.length > 0) {
         setClassId(String(classList[0].id));
       }
@@ -212,24 +200,11 @@ export default function KidsTeacherHomeworksPage() {
       setDueAtLocal('');
       setFiles([]);
       toast.success(t('teacherHomework.published'));
-      await Promise.all([loadClassHomeworks(selectedClassId), load()]);
+      await loadClassHomeworks(selectedClassId);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('teacherHomework.createFailed'));
     } finally {
       setCreating(false);
-    }
-  }
-
-  async function reviewSubmission(submissionId: number, approved: boolean) {
-    setReviewingId(submissionId);
-    try {
-      await kidsTeacherReviewHomeworkSubmission(submissionId, { approved });
-      toast.success(approved ? t('teacherHomework.approved') : t('teacherHomework.revisionRequested'));
-      await load();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('teacherHomework.reviewSaveFailed'));
-    } finally {
-      setReviewingId(null);
     }
   }
 
@@ -480,9 +455,6 @@ export default function KidsTeacherHomeworksPage() {
                     <>
                       <div className="flex items-start justify-between gap-2">
                         <p className="font-semibold text-slate-900 dark:text-white">{hw.title}</p>
-                        <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[11px] font-bold text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-200">
-                          {filteredInbox.filter((sub) => sub.homework.id === hw.id).length}
-                        </span>
                       </div>
                       <p className="text-xs text-slate-600 dark:text-slate-300">{hw.description || t('teacherHomework.noDescription')}</p>
                       {hw.due_at ? (
@@ -520,42 +492,6 @@ export default function KidsTeacherHomeworksPage() {
           </div>
         </KidsCard>
       </div>
-
-      <KidsCard tone="amber" className="mt-6">
-        <h2 className="font-logo text-lg font-bold text-amber-950 dark:text-amber-50">
-          {selectedHomework ? `${t('teacherHomework.parentApprovedInbox')} - ${selectedHomework.title}` : t('teacherHomework.parentApprovedInbox')}
-        </h2>
-        <div className="mt-3 space-y-2">
-          {filteredInbox.length === 0 ? (
-            <p className="text-sm text-amber-900/80 dark:text-amber-100/80">{t('teacherHomework.noPendingInbox')}</p>
-          ) : (
-            filteredInbox.map((sub) => (
-              <div key={sub.id} className="rounded-xl border border-amber-200/80 p-3 dark:border-amber-700/60">
-                <p className="font-semibold text-slate-900 dark:text-white">{sub.homework.title}</p>
-                <p className="text-xs text-slate-700 dark:text-slate-300">
-                  {sub.student.first_name} {sub.student.last_name}
-                </p>
-                <div className="mt-2 flex gap-2">
-                  <KidsPrimaryButton
-                    type="button"
-                    disabled={reviewingId !== null}
-                    onClick={() => void reviewSubmission(sub.id, true)}
-                  >
-                    {reviewingId === sub.id ? '...' : t('teacherHomework.approve')}
-                  </KidsPrimaryButton>
-                  <KidsSecondaryButton
-                    type="button"
-                    disabled={reviewingId !== null}
-                    onClick={() => void reviewSubmission(sub.id, false)}
-                  >
-                    {t('teacherHomework.askRevision')}
-                  </KidsSecondaryButton>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      </KidsCard>
     </KidsPanelMax>
   );
 }

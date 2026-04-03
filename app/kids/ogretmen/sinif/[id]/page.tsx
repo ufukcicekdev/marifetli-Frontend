@@ -20,10 +20,12 @@ import {
   kidsListSchools,
   kidsPatchClass,
   kidsRemoveEnrollment,
-  KIDS_CLASS_GRADE_OPTIONS,
+  KIDS_CLASS_NUMERIC_GRADE_OPTIONS,
   KIDS_CLASS_SECTION_OPTIONS,
+  KIDS_CLASS_SPECIAL_GRADE,
   kidsAcademicYearSelectOptions,
   kidsBuildStandardClassName,
+  kidsBuildTeacherPanelClassName,
   kidsParseStandardClassName,
   kidsSchoolLocationLine,
   kidsTeacherAppConfig,
@@ -34,9 +36,18 @@ import {
   kidsWeeklyChampion,
   kidsTeacherClassPeerChallenges,
   kidsTeacherReviewPeerChallenge,
+  kidsGetKindergartenDailyBoard,
+  kidsPatchKindergartenDailyRecord,
+  kidsPostKindergartenBulk,
+  kidsPutKindergartenDayPlan,
+  kidsSendKindergartenEndOfDay,
   type KidsAssignment,
   type KidsClass,
+  type KidsClassKind,
   type KidsEnrollment,
+  type KidsKindergartenDailyBoardResponse,
+  type KidsKindergartenDailyRecordRow,
+  type KidsKindergartenSlotItem,
   type KidsPeerChallenge,
   type KidsPeerChallengeStatus,
   type KidsSchool,
@@ -60,21 +71,30 @@ import {
   kidsTextareaClass,
 } from '@/src/components/kids/kids-ui';
 import { KidsDateTimeField } from '@/src/components/kids/kids-datetime-field';
+import { KidsKgSlotsEditor } from '@/src/components/kids/kids-kg-slots-editor';
 
 const VIDEO_DURATION_VALUES = [60, 120, 180] as const;
 const SUBMISSION_ROUNDS_VALUES = [1, 2, 3, 4, 5] as const;
 const INVITE_DAYS_VALUES = [3, 7, 14, 30] as const;
 
-type TabId = 'general' | 'invite' | 'students' | 'assignments' | 'peer' | 'stars';
+type TabId = 'general' | 'invite' | 'students' | 'kindergarten' | 'assignments' | 'peer' | 'stars';
 
-const TAB_IDS: TabId[] = ['general', 'invite', 'students', 'assignments', 'peer', 'stars'];
+const TEACHER_CLASS_TAB_IDS: TabId[] = [
+  'general',
+  'invite',
+  'students',
+  'kindergarten',
+  'assignments',
+  'peer',
+  'stars',
+];
 
 function tabFromSearchParam(raw: string | null): TabId | null {
   if (!raw) return null;
-  return TAB_IDS.includes(raw as TabId) ? (raw as TabId) : null;
+  return TEACHER_CLASS_TAB_IDS.includes(raw as TabId) ? (raw as TabId) : null;
 }
 
-const TABS: { id: TabId; labelKey: string; icon: string }[] = [
+const BASE_TEACHER_TABS: { id: TabId; labelKey: string; icon: string }[] = [
   { id: 'general', labelKey: 'teacherClass.tabs.class', icon: '⚙️' },
   { id: 'invite', labelKey: 'teacherClass.tabs.invite', icon: '✉️' },
   { id: 'students', labelKey: 'teacherClass.tabs.students', icon: '🧒' },
@@ -82,6 +102,66 @@ const TABS: { id: TabId; labelKey: string; icon: string }[] = [
   { id: 'peer', labelKey: 'teacherClass.tabs.competitions', icon: '🏆' },
   { id: 'stars', labelKey: 'teacherClass.tabs.star', icon: '⭐' },
 ];
+
+const PRESCHOOL_DAILY_TAB = {
+  id: 'kindergarten' as const,
+  labelKey: 'teacherClass.tabs.preschoolDaily',
+  icon: '📋',
+};
+
+function localDateInputValue(d = new Date()): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function isKidsPreschoolClass(c: KidsClass | null | undefined): boolean {
+  const k = c?.class_kind;
+  return k === 'anasinifi' || k === 'kindergarten';
+}
+
+function kgStudentDisplayName(st: { id: number; first_name: string; last_name: string }): string {
+  const n = `${st.first_name} ${st.last_name}`.trim();
+  return n || `#${st.id}`;
+}
+
+function KidsKgTriToggle({
+  value,
+  disabled,
+  onChange,
+  labels,
+}: {
+  value: boolean | null;
+  disabled?: boolean;
+  onChange: (v: boolean | null) => void;
+  labels: { unset: string; yes: string; no: string };
+}) {
+  const opts: [boolean | null, string][] = [
+    [null, labels.unset],
+    [true, labels.yes],
+    [false, labels.no],
+  ];
+  return (
+    <div className="flex flex-wrap gap-1">
+      {opts.map(([v, lab]) => (
+        <button
+          key={String(v)}
+          type="button"
+          disabled={disabled}
+          onClick={() => onChange(v)}
+          className={`rounded-lg border-2 px-2 py-1 text-xs font-bold transition disabled:opacity-50 ${
+            value === v
+              ? 'border-violet-500 bg-violet-100 text-violet-900 dark:border-violet-400 dark:bg-violet-950/50 dark:text-violet-100'
+              : 'border-slate-200 bg-white text-slate-600 hover:border-violet-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300'
+          }`}
+        >
+          {lab}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function peerRowStatusTr(s: KidsPeerChallengeStatus, t: (key: string) => string): string {
   switch (s) {
@@ -168,6 +248,22 @@ function KidsTeacherClassPageContent() {
   const [deletingClass, setDeletingClass] = useState(false);
   const [removingEnrollmentId, setRemovingEnrollmentId] = useState<number | null>(null);
 
+  const [kgDate, setKgDate] = useState(() => localDateInputValue());
+  const [kgBoard, setKgBoard] = useState<KidsKindergartenDailyBoardResponse | null>(null);
+  const [kgPlanDraft, setKgPlanDraft] = useState('');
+  const [kgLoading, setKgLoading] = useState(false);
+  const [kgSavingPlan, setKgSavingPlan] = useState(false);
+  const [kgPatchingStudents, setKgPatchingStudents] = useState<Set<number>>(() => new Set());
+  const [kgSendingEodId, setKgSendingEodId] = useState<number | null>(null);
+  const [kgSelectedStudentId, setKgSelectedStudentId] = useState<string>('');
+  const [kgBulkTarget, setKgBulkTarget] = useState<'all_enrolled' | 'present_only'>('all_enrolled');
+  const [kgBulkMealLabel, setKgBulkMealLabel] = useState('');
+  const [kgBulkNapLabel, setKgBulkNapLabel] = useState('');
+  const [kgBulkMealOk, setKgBulkMealOk] = useState(true);
+  const [kgBulkNapOk, setKgBulkNapOk] = useState(true);
+  const [kgBulkNote, setKgBulkNote] = useState('');
+  const [kgBulkBusy, setKgBulkBusy] = useState(false);
+
   const editNameId = useId();
   const editClassGradeId = useId();
   const editClassSectionId = useId();
@@ -175,6 +271,7 @@ function KidsTeacherClassPageContent() {
   const editLanguageId = useId();
   const editDescId = useId();
   const editSchoolSelectId = useId();
+  const kgStudentSelectId = useId();
   const inviteEmailsId = useId();
   const classLinkInputId = useId();
   const asgTitleId = useId();
@@ -216,10 +313,172 @@ function KidsTeacherClassPageContent() {
     ],
     [t],
   );
+  const editClassGradeOptions = useMemo<KidsSelectOption[]>(
+    () => [
+      { value: KIDS_CLASS_SPECIAL_GRADE.PRE_PRIMARY, label: t('teacher.panel.programPrePrimary') },
+      ...KIDS_CLASS_NUMERIC_GRADE_OPTIONS,
+    ],
+    [t],
+  );
+
+  const teacherTabs = useMemo(() => {
+    if (!isKidsPreschoolClass(cls)) return BASE_TEACHER_TABS;
+    const ix = BASE_TEACHER_TABS.findIndex((x) => x.id === 'assignments');
+    return [...BASE_TEACHER_TABS.slice(0, ix), PRESCHOOL_DAILY_TAB, ...BASE_TEACHER_TABS.slice(ix)];
+  }, [cls]);
+
+  const kgStudentSelectOptions = useMemo<KidsSelectOption[]>(() => {
+    if (!kgBoard?.rows.length) return [];
+    return kgBoard.rows.map((row) => ({
+      value: String(row.student.id),
+      label: kgStudentDisplayName(row.student),
+    }));
+  }, [kgBoard]);
+
+  const kgActiveRow = useMemo(() => {
+    if (!kgBoard?.rows.length || !kgSelectedStudentId) return null;
+    return kgBoard.rows.find((r) => String(r.student.id) === kgSelectedStudentId) ?? null;
+  }, [kgBoard, kgSelectedStudentId]);
+
+  const mergeKgRecord = useCallback((studentId: number, rec: KidsKindergartenDailyRecordRow) => {
+    setKgBoard((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        rows: prev.rows.map((r) => (r.student.id === studentId ? { ...r, record: rec } : r)),
+      };
+    });
+  }, []);
+
+  const loadKgBoard = useCallback(async () => {
+    if (!Number.isFinite(classId) || !isKidsPreschoolClass(cls)) return;
+    setKgLoading(true);
+    try {
+      const data = await kidsGetKindergartenDailyBoard(classId, kgDate);
+      setKgBoard(data);
+      setKgPlanDraft(data.plan.plan_text || '');
+      setKgSelectedStudentId((prev) => {
+        if (data.rows.length === 0) return '';
+        if (prev && data.rows.some((r) => String(r.student.id) === prev)) return prev;
+        return String(data.rows[0].student.id);
+      });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('teacherClass.kindergarten.loadError'));
+      setKgBoard(null);
+      setKgSelectedStudentId('');
+    } finally {
+      setKgLoading(false);
+    }
+  }, [classId, cls, kgDate, t]);
+
+  const kgPatchField = useCallback(
+    async (
+      studentId: number,
+      body: Partial<{
+        present: boolean | null;
+        meal_ok: boolean | null;
+        nap_ok: boolean | null;
+        meal_slots: KidsKindergartenSlotItem[];
+        nap_slots: KidsKindergartenSlotItem[];
+        teacher_day_note: string;
+      }>,
+    ) => {
+      if (!Number.isFinite(classId)) return;
+      setKgPatchingStudents((s) => new Set(s).add(studentId));
+      try {
+        const rec = await kidsPatchKindergartenDailyRecord(classId, studentId, body, kgDate);
+        mergeKgRecord(studentId, rec);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : t('teacherClass.kindergarten.patchError'));
+      } finally {
+        setKgPatchingStudents((s) => {
+          const n = new Set(s);
+          n.delete(studentId);
+          return n;
+        });
+      }
+    },
+    [classId, kgDate, mergeKgRecord, t],
+  );
+
+  const kgSavePlan = useCallback(async () => {
+    if (!Number.isFinite(classId) || !isKidsPreschoolClass(cls)) return;
+    setKgSavingPlan(true);
+    try {
+      const plan = await kidsPutKindergartenDayPlan(classId, { plan_text: kgPlanDraft }, kgDate);
+      setKgBoard((prev) => (prev ? { ...prev, plan } : prev));
+      toast.success(t('teacherClass.kindergarten.planSaved'));
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('teacherClass.kindergarten.planSaveError'));
+    } finally {
+      setKgSavingPlan(false);
+    }
+  }, [classId, cls, kgDate, kgPlanDraft, t]);
+
+  const kgSendEndOfDay = useCallback(
+    async (studentId: number) => {
+      if (!Number.isFinite(classId)) return;
+      setKgSendingEodId(studentId);
+      try {
+        await kidsSendKindergartenEndOfDay(classId, studentId, kgDate);
+        toast.success(t('teacherClass.kindergarten.eodSentToast'));
+        await loadKgBoard();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : t('teacherClass.kindergarten.eodError'));
+      } finally {
+        setKgSendingEodId(null);
+      }
+    },
+    [classId, kgDate, loadKgBoard, t],
+  );
+
+  const kgBulkDefaultMealLabel = useMemo(() => t('teacherClass.kindergarten.bulkPresetLunch'), [t]);
+  const kgBulkDefaultNapLabel = useMemo(() => t('teacherClass.kindergarten.bulkPresetNap'), [t]);
+
+  const kgRunBulk = useCallback(
+    async (body: Parameters<typeof kidsPostKindergartenBulk>[1]) => {
+      if (!Number.isFinite(classId)) return;
+      setKgBulkBusy(true);
+      try {
+        const res = await kidsPostKindergartenBulk(classId, { target: kgBulkTarget, ...body }, kgDate);
+        if (res.action === 'send_digest') {
+          const failed = res.failed_student_ids.length;
+          toast.success(
+            t('teacherClass.kindergarten.bulkDigestToast')
+              .replace('{sent}', String(res.digest_sent))
+              .replace('{skip}', String(res.skipped_no_record)),
+          );
+          if (failed > 0) {
+            toast.error(t('teacherClass.kindergarten.bulkDigestPartialFail').replace('{n}', String(failed)));
+          }
+        } else {
+          toast.success(t('teacherClass.kindergarten.bulkUpdatedToast').replace('{n}', String(res.updated)));
+        }
+        await loadKgBoard();
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : t('teacherClass.kindergarten.bulkError'));
+      } finally {
+        setKgBulkBusy(false);
+      }
+    },
+    [classId, kgBulkTarget, kgDate, loadKgBoard, t],
+  );
 
   useEffect(() => {
     setAsgCloseAt((v) => v || kidsDatetimeLocalDefaultClose(7));
   }, []);
+
+  useEffect(() => {
+    if (!cls) return;
+    if (tab === 'kindergarten' && !isKidsPreschoolClass(cls)) {
+      setTab('general');
+    }
+  }, [cls, tab]);
+
+  useEffect(() => {
+    if (tab !== 'kindergarten' || !cls || !isKidsPreschoolClass(cls)) return;
+    void loadKgBoard();
+  }, [tab, cls, loadKgBoard]);
 
   useEffect(() => {
     const t = tabFromSearchParam(searchParams.get('tab'));
@@ -468,7 +727,12 @@ function KidsTeacherClassPageContent() {
         toast.error(t('teacherClass.general.gradeSectionRequired'));
         return;
       }
-      nameToSave = kidsBuildStandardClassName(editClassGrade, editClassSection);
+      nameToSave = kidsBuildTeacherPanelClassName(editClassGrade, editClassSection);
+    }
+    let classKind: KidsClassKind | undefined;
+    if (canEditClassIdentity && !editClassNonStandard) {
+      if (editClassGrade === KIDS_CLASS_SPECIAL_GRADE.PRE_PRIMARY) classKind = 'anasinifi';
+      else classKind = 'standard';
     }
     setSavingClass(true);
     try {
@@ -478,6 +742,7 @@ function KidsTeacherClassPageContent() {
         language: editLanguage,
         description: editDesc.trim(),
         school_id: sid,
+        ...(classKind !== undefined ? { class_kind: classKind } : {}),
       });
       setCls(updated);
       toast.success(t('teacherClass.general.updated'));
@@ -767,7 +1032,9 @@ function KidsTeacherClassPageContent() {
   const canEditClassIdentity = user.role === 'admin';
 
   return (
-    <KidsPanelMax className={tab === 'assignments' || tab === 'peer' ? 'max-w-6xl!' : ''}>
+    <KidsPanelMax
+      className={tab === 'assignments' || tab === 'peer' || tab === 'kindergarten' ? 'max-w-6xl!' : ''}
+    >
       <div className="mb-6">
         <Link
           href={`${pathPrefix}/ogretmen/panel`}
@@ -812,7 +1079,7 @@ function KidsTeacherClassPageContent() {
       </div>
 
       <KidsTabs
-        tabs={TABS.map((row) => ({ id: row.id, label: t(row.labelKey), icon: row.icon }))}
+        tabs={teacherTabs.map((row) => ({ id: row.id, label: t(row.labelKey), icon: row.icon }))}
         active={tab}
         onChange={(id) => setTab(id as TabId)}
         ariaLabel={t('teacherClass.tabs.aria')}
@@ -866,7 +1133,7 @@ function KidsTeacherClassPageContent() {
                       id={editClassGradeId}
                       value={editClassGrade}
                       onChange={setEditClassGrade}
-                      options={KIDS_CLASS_GRADE_OPTIONS}
+                      options={editClassGradeOptions}
                       searchable={false}
                       disabled={!canEditClassIdentity}
                     />
@@ -885,7 +1152,7 @@ function KidsTeacherClassPageContent() {
                 <p className="text-sm text-slate-600 dark:text-gray-400">
                   {t('teacherClass.general.preview')}:{' '}
                   <strong className="font-logo text-slate-900 dark:text-white">
-                    {kidsBuildStandardClassName(editClassGrade, editClassSection)}
+                    {kidsBuildTeacherPanelClassName(editClassGrade, editClassSection)}
                   </strong>
                 </p>
               </>
@@ -1096,6 +1363,391 @@ function KidsTeacherClassPageContent() {
               ))}
             </ul>
           )}
+        </KidsCard>
+      )}
+
+      {tab === 'kindergarten' && isKidsPreschoolClass(cls) && (
+        <KidsCard tone="emerald">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="font-logo text-lg font-bold text-emerald-950 dark:text-emerald-50">
+                {t('teacherClass.kindergarten.title')}
+              </h2>
+              <p className="mt-2 text-sm text-emerald-900/85 dark:text-emerald-100/85">
+                {t('teacherClass.kindergarten.subtitle')}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-end gap-2">
+              <KidsFormField id="kg-date" label={t('teacherClass.kindergarten.date')} hint={t('teacherClass.kindergarten.dateHint')}>
+                <input
+                  id="kg-date"
+                  type="date"
+                  value={kgDate}
+                  onChange={(e) => setKgDate(e.target.value)}
+                  className={kidsInputClass}
+                />
+              </KidsFormField>
+              <KidsSecondaryButton type="button" disabled={kgLoading} onClick={() => void loadKgBoard()}>
+                {kgLoading ? t('common.loading') : t('teacherClass.kindergarten.refresh')}
+              </KidsSecondaryButton>
+            </div>
+          </div>
+
+          <div className="mt-6 space-y-3 rounded-2xl border-2 border-emerald-200/80 bg-white/70 p-4 dark:border-emerald-900/50 dark:bg-emerald-950/20">
+            <KidsFormField
+              id="kg-plan"
+              label={t('teacherClass.kindergarten.planTitle')}
+              hint={t('teacherClass.kindergarten.planHint')}
+            >
+              <textarea
+                id="kg-plan"
+                value={kgPlanDraft}
+                onChange={(e) => setKgPlanDraft(e.target.value)}
+                rows={4}
+                className={kidsTextareaClass}
+                placeholder={t('teacherClass.kindergarten.planPlaceholder')}
+              />
+            </KidsFormField>
+            <KidsPrimaryButton type="button" disabled={kgSavingPlan} onClick={() => void kgSavePlan()}>
+              {kgSavingPlan ? t('profile.saving') : t('teacherClass.kindergarten.savePlan')}
+            </KidsPrimaryButton>
+          </div>
+
+          {kgBoard && kgBoard.rows.length > 0 ? (
+            <div className="mt-6 space-y-4 rounded-2xl border-2 border-violet-200/90 bg-violet-50/50 p-4 dark:border-violet-900/50 dark:bg-violet-950/25">
+              <div>
+                <h3 className="font-logo text-base font-bold text-violet-950 dark:text-violet-50">
+                  {t('teacherClass.kindergarten.bulkEventsTitle')}
+                </h3>
+                <p className="mt-1 text-xs font-semibold text-violet-900/80 dark:text-violet-100/80">
+                  {t('teacherClass.kindergarten.bulkEventsHint')}
+                </p>
+              </div>
+              <fieldset className="flex flex-wrap gap-3 text-sm">
+                <legend className={`${kidsLabelClass} mb-2 w-full`}>{t('teacherClass.kindergarten.bulkTargetLabel')}</legend>
+                <label className="flex cursor-pointer items-center gap-2 font-semibold text-slate-800 dark:text-slate-200">
+                  <input
+                    type="radio"
+                    name="kg-bulk-target"
+                    checked={kgBulkTarget === 'all_enrolled'}
+                    onChange={() => setKgBulkTarget('all_enrolled')}
+                    className="h-4 w-4 accent-violet-600"
+                  />
+                  {t('teacherClass.kindergarten.bulkTargetAll')}
+                </label>
+                <label className="flex cursor-pointer items-center gap-2 font-semibold text-slate-800 dark:text-slate-200">
+                  <input
+                    type="radio"
+                    name="kg-bulk-target"
+                    checked={kgBulkTarget === 'present_only'}
+                    onChange={() => setKgBulkTarget('present_only')}
+                    className="h-4 w-4 accent-violet-600"
+                  />
+                  {t('teacherClass.kindergarten.bulkTargetPresentOnly')}
+                </label>
+              </fieldset>
+              <div className="flex flex-wrap gap-2">
+                <KidsPrimaryButton
+                  type="button"
+                  disabled={kgBulkBusy || kgLoading}
+                  className="bg-violet-600 hover:bg-violet-700 dark:bg-violet-700 dark:hover:bg-violet-600"
+                  onClick={() => void kgRunBulk({ action: 'mark_present', present: true })}
+                >
+                  {kgBulkBusy ? t('teacherClass.kindergarten.bulkWorking') : t('teacherClass.kindergarten.bulkMarkAllPresent')}
+                </KidsPrimaryButton>
+                <p className="w-full text-xs text-violet-900/75 dark:text-violet-200/75">
+                  {t('teacherClass.kindergarten.bulkMarkPresentNote')}
+                </p>
+              </div>
+              <div className="grid gap-4 border-t border-violet-200/70 pt-4 dark:border-violet-800/50 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <label className={kidsLabelClass} htmlFor="kg-bulk-meal">
+                    {t('teacherClass.kindergarten.bulkMealTitle')}
+                  </label>
+                  <input
+                    id="kg-bulk-meal"
+                    type="text"
+                    value={kgBulkMealLabel}
+                    onChange={(e) => setKgBulkMealLabel(e.target.value)}
+                    placeholder={kgBulkDefaultMealLabel}
+                    className={kidsInputClass}
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    <KidsSecondaryButton
+                      type="button"
+                      className={`min-h-9 px-3 py-1.5 text-xs ${kgBulkMealOk ? 'border-emerald-400 bg-emerald-100/80 dark:bg-emerald-950/50' : ''}`}
+                      disabled={kgBulkBusy || kgLoading}
+                      onClick={() => setKgBulkMealOk(true)}
+                    >
+                      {t('teacherClass.kindergarten.bulkSlotOkYes')}
+                    </KidsSecondaryButton>
+                    <KidsSecondaryButton
+                      type="button"
+                      className={`min-h-9 px-3 py-1.5 text-xs ${!kgBulkMealOk ? 'border-rose-400 bg-rose-100/80 dark:bg-rose-950/40' : ''}`}
+                      disabled={kgBulkBusy || kgLoading}
+                      onClick={() => setKgBulkMealOk(false)}
+                    >
+                      {t('teacherClass.kindergarten.bulkSlotOkNo')}
+                    </KidsSecondaryButton>
+                    <KidsPrimaryButton
+                      type="button"
+                      disabled={kgBulkBusy || kgLoading}
+                      className="bg-emerald-600 hover:bg-emerald-700"
+                      onClick={() => {
+                        const label = kgBulkMealLabel.trim() || kgBulkDefaultMealLabel;
+                        void kgRunBulk({ action: 'meal_slot', slot_label: label, ok: kgBulkMealOk });
+                      }}
+                    >
+                      {t('teacherClass.kindergarten.bulkApplyMeal')}
+                    </KidsPrimaryButton>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className={kidsLabelClass} htmlFor="kg-bulk-nap">
+                    {t('teacherClass.kindergarten.bulkNapTitle')}
+                  </label>
+                  <input
+                    id="kg-bulk-nap"
+                    type="text"
+                    value={kgBulkNapLabel}
+                    onChange={(e) => setKgBulkNapLabel(e.target.value)}
+                    placeholder={kgBulkDefaultNapLabel}
+                    className={kidsInputClass}
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    <KidsSecondaryButton
+                      type="button"
+                      className={`min-h-9 px-3 py-1.5 text-xs ${kgBulkNapOk ? 'border-emerald-400 bg-emerald-100/80 dark:bg-emerald-950/50' : ''}`}
+                      disabled={kgBulkBusy || kgLoading}
+                      onClick={() => setKgBulkNapOk(true)}
+                    >
+                      {t('teacherClass.kindergarten.bulkSlotOkYes')}
+                    </KidsSecondaryButton>
+                    <KidsSecondaryButton
+                      type="button"
+                      className={`min-h-9 px-3 py-1.5 text-xs ${!kgBulkNapOk ? 'border-rose-400 bg-rose-100/80 dark:bg-rose-950/40' : ''}`}
+                      disabled={kgBulkBusy || kgLoading}
+                      onClick={() => setKgBulkNapOk(false)}
+                    >
+                      {t('teacherClass.kindergarten.bulkSlotOkNo')}
+                    </KidsSecondaryButton>
+                    <KidsPrimaryButton
+                      type="button"
+                      disabled={kgBulkBusy || kgLoading}
+                      className="bg-sky-600 hover:bg-sky-700 dark:bg-sky-700 dark:hover:bg-sky-600"
+                      onClick={() => {
+                        const label = kgBulkNapLabel.trim() || kgBulkDefaultNapLabel;
+                        void kgRunBulk({ action: 'nap_slot', slot_label: label, ok: kgBulkNapOk });
+                      }}
+                    >
+                      {t('teacherClass.kindergarten.bulkApplyNap')}
+                    </KidsPrimaryButton>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2 border-t border-violet-200/70 pt-4 dark:border-violet-800/50">
+                <label className={kidsLabelClass} htmlFor="kg-bulk-note">
+                  {t('teacherClass.kindergarten.bulkSharedNote')}
+                </label>
+                <textarea
+                  id="kg-bulk-note"
+                  value={kgBulkNote}
+                  onChange={(e) => setKgBulkNote(e.target.value)}
+                  rows={3}
+                  className={kidsTextareaClass}
+                  placeholder={t('teacherClass.kindergarten.notePlaceholder')}
+                />
+                <KidsPrimaryButton
+                  type="button"
+                  disabled={kgBulkBusy || kgLoading}
+                  onClick={() => void kgRunBulk({ action: 'set_note', note: kgBulkNote.trim() })}
+                >
+                  {t('teacherClass.kindergarten.bulkApplyNote')}
+                </KidsPrimaryButton>
+              </div>
+              <div className="border-t border-violet-200/70 pt-4 dark:border-violet-800/50">
+                <KidsSecondaryButton
+                  type="button"
+                  disabled={kgBulkBusy || kgLoading}
+                  className="border-amber-400 text-amber-900 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-100 dark:hover:bg-amber-950/50"
+                  onClick={() => {
+                    if (typeof window !== 'undefined' && !window.confirm(t('teacherClass.kindergarten.bulkDigestConfirm'))) {
+                      return;
+                    }
+                    void kgRunBulk({ action: 'send_digest' });
+                  }}
+                >
+                  {kgBulkBusy ? t('teacherClass.kindergarten.bulkWorking') : t('teacherClass.kindergarten.bulkSendDigest')}
+                </KidsSecondaryButton>
+                <p className="mt-2 text-xs font-semibold text-violet-900/80 dark:text-violet-200/75">
+                  {t('teacherClass.kindergarten.bulkDigestHint')}
+                </p>
+              </div>
+            </div>
+          ) : null}
+
+          <p className="mt-4 rounded-xl border border-emerald-300/60 bg-emerald-50/90 px-3 py-2.5 text-xs font-semibold leading-relaxed text-emerald-950 dark:border-emerald-800/50 dark:bg-emerald-950/35 dark:text-emerald-100">
+            {t('teacherClass.kindergarten.boardHint')}
+          </p>
+
+          {kgLoading && !kgBoard ? (
+            <p className="mt-6 text-sm font-semibold text-slate-600 dark:text-gray-400">{t('common.loading')}</p>
+          ) : null}
+
+          {kgBoard && kgBoard.rows.length === 0 ? (
+            <div className="mt-6">
+              <KidsEmptyState
+                emoji="🧒"
+                title={t('teacherClass.kindergarten.emptyStudentsTitle')}
+                description={t('teacherClass.kindergarten.emptyStudentsDesc')}
+              />
+            </div>
+          ) : null}
+
+          {kgBoard && kgBoard.rows.length > 0 ? (
+            <div className="mt-6 space-y-5">
+              <KidsFormField
+                id={kgStudentSelectId}
+                label={t('teacherClass.kindergarten.pickStudent')}
+                hint={t('teacherClass.kindergarten.pickStudentHint')}
+                required
+              >
+                <KidsSelect
+                  id={kgStudentSelectId}
+                  value={kgSelectedStudentId}
+                  onChange={setKgSelectedStudentId}
+                  options={kgStudentSelectOptions}
+                  searchable={kgStudentSelectOptions.length > 8}
+                />
+              </KidsFormField>
+
+              {kgActiveRow ? (
+                (() => {
+                  const st = kgActiveRow.student;
+                  const rec = kgActiveRow.record;
+                  const busy = kgPatchingStudents.has(st.id);
+                  const displayName = kgStudentDisplayName(st);
+                  const triLabels = {
+                    unset: t('teacherClass.kindergarten.triUnset'),
+                    yes: t('teacherClass.kindergarten.triYes'),
+                    no: t('teacherClass.kindergarten.triNo'),
+                  };
+                  const sendLabel = t('teacherClass.kindergarten.sendEodForNamed').replace('{name}', displayName);
+                  const sentLabel = t('teacherClass.kindergarten.eodSentForNamed').replace('{name}', displayName);
+                  return (
+                    <div
+                      key={st.id}
+                      className="rounded-2xl border-2 border-emerald-200/85 bg-white/95 p-4 shadow-sm sm:p-6 dark:border-emerald-800/55 dark:bg-emerald-950/25"
+                    >
+                      <h3 className="font-logo text-xl font-bold text-slate-900 dark:text-white">{displayName}</h3>
+                      <p className="mt-1 text-xs font-semibold text-emerald-800 dark:text-emerald-200/90">
+                        {t('teacherClass.kindergarten.cardRowHint')}
+                      </p>
+                      <div className="mt-5 space-y-5">
+                        <div>
+                          <p className={`${kidsLabelClass} mb-1.5`}>{t('teacherClass.kindergarten.fieldPresent')}</p>
+                          <KidsKgTriToggle
+                            value={rec?.present ?? null}
+                            disabled={busy}
+                            labels={triLabels}
+                            onChange={(v) => void kgPatchField(st.id, { present: v })}
+                          />
+                        </div>
+                        <div>
+                          <p className={`${kidsLabelClass} mb-1.5`}>{t('teacherClass.kindergarten.colMealsMulti')}</p>
+                          <KidsKgSlotsEditor
+                            kind="meal"
+                            initialSlots={rec?.meal_slots != null ? rec.meal_slots : null}
+                            syncKey={`m-${st.id}-${kgDate}-${rec?.id ?? 0}-${rec?.updated_at ?? ''}`}
+                            disabled={busy}
+                            t={t}
+                            onCommit={(slots) => void kgPatchField(st.id, { meal_slots: slots })}
+                          />
+                        </div>
+                        <div>
+                          <p className={`${kidsLabelClass} mb-1.5`}>{t('teacherClass.kindergarten.colNapsMulti')}</p>
+                          <KidsKgSlotsEditor
+                            kind="nap"
+                            initialSlots={rec?.nap_slots != null ? rec.nap_slots : null}
+                            syncKey={`n-${st.id}-${kgDate}-${rec?.id ?? 0}-${rec?.updated_at ?? ''}`}
+                            disabled={busy}
+                            t={t}
+                            onCommit={(slots) => void kgPatchField(st.id, { nap_slots: slots })}
+                          />
+                        </div>
+                        <div>
+                          <label className={`${kidsLabelClass} mb-1.5 block`} htmlFor={`kg-note-${st.id}`}>
+                            {t('teacherClass.kindergarten.colNote')}
+                          </label>
+                          <textarea
+                            id={`kg-note-${st.id}`}
+                            defaultValue={rec?.teacher_day_note ?? ''}
+                            key={`note-${st.id}-${kgDate}-${rec?.updated_at ?? 'new'}`}
+                            disabled={busy}
+                            rows={4}
+                            className={`${kidsTextareaClass} min-h-[88px] text-sm`}
+                            placeholder={t('teacherClass.kindergarten.notePlaceholder')}
+                            onBlur={(e) => {
+                              const next = e.target.value.trim();
+                              const prev = (rec?.teacher_day_note ?? '').trim();
+                              if (next === prev) return;
+                              void kgPatchField(st.id, { teacher_day_note: next });
+                            }}
+                          />
+                        </div>
+                        <div className="border-t border-emerald-200/70 pt-5 dark:border-emerald-800/50">
+                          {rec?.digest_sent_at ? (
+                            <p className="text-sm font-bold text-emerald-700 dark:text-emerald-300">{sentLabel}</p>
+                          ) : (
+                            <KidsPrimaryButton
+                              type="button"
+                              className="w-full max-w-md text-sm leading-snug sm:w-auto"
+                              disabled={busy || kgSendingEodId === st.id}
+                              title={sendLabel}
+                              onClick={() => void kgSendEndOfDay(st.id)}
+                            >
+                              {kgSendingEodId === st.id ? t('common.loading') : sendLabel}
+                            </KidsPrimaryButton>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()
+              ) : null}
+
+              <div className="max-h-48 overflow-y-auto rounded-xl border border-emerald-200/70 bg-emerald-50/40 p-3 dark:border-emerald-900/45 dark:bg-emerald-950/20">
+                <p className="mb-2 text-xs font-bold text-emerald-900 dark:text-emerald-100">
+                  {t('teacherClass.kindergarten.quickRosterTitle')}
+                </p>
+                <ul className="space-y-1.5 text-sm">
+                  {kgBoard.rows.map((row) => {
+                    const name = kgStudentDisplayName(row.student);
+                    const sent = Boolean(row.record?.digest_sent_at);
+                    const active = String(row.student.id) === kgSelectedStudentId;
+                    return (
+                      <li key={row.student.id}>
+                        <button
+                          type="button"
+                          onClick={() => setKgSelectedStudentId(String(row.student.id))}
+                          className={`flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left transition ${
+                            active
+                              ? 'bg-violet-200/90 font-bold text-violet-950 dark:bg-violet-900/50 dark:text-violet-50'
+                              : 'hover:bg-white/80 dark:hover:bg-emerald-950/40'
+                          }`}
+                        >
+                          <span className="text-slate-900 dark:text-white">{name}</span>
+                          <span className="shrink-0 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                            {sent ? t('teacherClass.kindergarten.rosterEodSent') : t('teacherClass.kindergarten.rosterEodPending')}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </div>
+          ) : null}
         </KidsCard>
       )}
 

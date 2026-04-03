@@ -14,7 +14,18 @@ import { ExpertFlatDropdown } from '@/src/components/expert-flat-dropdown';
 
 type CategoryItem = { id: number; name: string; slug: string; subcategories?: CategoryItem[] };
 
-type ChatMsg = { id: string; role: 'user' | 'assistant'; text: string };
+const EXPERT_ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024;
+const EXPERT_ATTACHMENT_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'] as const;
+
+function validateExpertAttachment(f: File): string | null {
+  if (f.size > EXPERT_ATTACHMENT_MAX_BYTES) return 'Görsel en fazla 5 MB olabilir.';
+  if (!EXPERT_ATTACHMENT_TYPES.includes(f.type as (typeof EXPERT_ATTACHMENT_TYPES)[number])) {
+    return 'Sadece JPEG, PNG, WebP veya GIF yükleyebilirsiniz.';
+  }
+  return null;
+}
+
+type ChatMsg = { id: string; role: 'user' | 'assistant'; text: string; imagePreview?: string };
 
 /**
  * Sağda sabit chatbot paneli + kapalıyken “Uzmana sor” FAB.
@@ -40,6 +51,8 @@ export function CategoryExpertChatPanel() {
   const [mainId, setMainId] = useState<number | ''>('');
   const [subId, setSubId] = useState<number | ''>('');
   const [input, setInput] = useState('');
+  const [pendingAttachment, setPendingAttachment] = useState<File | null>(null);
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [fabHidden, setFabHidden] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
@@ -129,23 +142,31 @@ export function CategoryExpertChatPanel() {
   const maxQ = cfg?.max_questions_for_user ?? cfg?.max_questions_per_user ?? 3;
 
   const askMutation = useMutation({
-    mutationFn: (q: string) =>
+    mutationFn: (vars: { question: string; attachment: File | null }) =>
       api.askCategoryExpert({
         main_category_id: Number(mainId),
         subcategory_id: subId === '' ? null : Number(subId),
-        question: q.trim(),
+        question: vars.question.trim(),
+        attachment: vars.attachment ?? undefined,
       }),
-    onSuccess: (data, q) => {
+    onSuccess: (data) => {
       setMessages((m) => [
         ...m,
         { id: `a-${Date.now()}`, role: 'assistant', text: data.answer },
       ]);
       setInput('');
+      setPendingAttachment(null);
+      if (attachmentInputRef.current) attachmentInputRef.current.value = '';
       queryClient.invalidateQueries({ queryKey: ['category-experts-config'] });
       queryClient.invalidateQueries({ queryKey: ['category-expert-history'] });
     },
     onError: (err: unknown) => {
-      setMessages((m) => (m.length && m[m.length - 1]?.role === 'user' ? m.slice(0, -1) : m));
+      setMessages((m) => {
+        if (!m.length || m[m.length - 1]?.role !== 'user') return m;
+        const last = m[m.length - 1];
+        if (last.imagePreview) URL.revokeObjectURL(last.imagePreview);
+        return m.slice(0, -1);
+      });
       const ax = err as { response?: { status?: number; data?: { detail?: string } } };
       const d = ax.response?.data;
       if (ax.response?.status === 429) toast.error(d?.detail || 'Soru hakkınız doldu.');
@@ -168,21 +189,53 @@ export function CategoryExpertChatPanel() {
       return;
     }
     const q = input.trim();
-    if (q.length < 3) {
-      toast.error('Sorunuzu yazın.');
+    const file = pendingAttachment;
+    if (!file && q.length < 3) {
+      toast.error('Sorunuzu yazın (veya görsel ekleyin).');
+      return;
+    }
+    if (file && q.length < 1) {
+      toast.error('Görselle birlikte kısa bir soru yazın.');
       return;
     }
     if (maxQ > 0 && (remaining ?? 0) <= 0) {
       toast.error('Soru hakkınız doldu.');
       return;
     }
-    setMessages((m) => [...m, { id: `u-${Date.now()}`, role: 'user', text: q }]);
-    askMutation.mutate(q);
-  }, [isAuthenticated, user?.is_verified, mainId, input, maxQ, remaining, openAuth, askMutation]);
+    const previewUrl = file ? URL.createObjectURL(file) : undefined;
+    const displayText = q || (file ? '📎 Görsel' : '');
+    setMessages((m) => [
+      ...m,
+      {
+        id: `u-${Date.now()}`,
+        role: 'user',
+        text: displayText,
+        imagePreview: previewUrl,
+      },
+    ]);
+    askMutation.mutate({ question: q || 'Bu görsel hakkında yardımcı olur musun?', attachment: file });
+  }, [
+    isAuthenticated,
+    user?.is_verified,
+    mainId,
+    input,
+    pendingAttachment,
+    maxQ,
+    remaining,
+    openAuth,
+    askMutation,
+  ]);
 
   const newChat = () => {
-    setMessages([]);
+    setMessages((m) => {
+      for (const x of m) {
+        if (x.imagePreview) URL.revokeObjectURL(x.imagePreview);
+      }
+      return [];
+    });
     setInput('');
+    setPendingAttachment(null);
+    if (attachmentInputRef.current) attachmentInputRef.current.value = '';
   };
 
   if (cfgLoading || !cfg?.enabled || !cfg?.backend_ready) {
@@ -329,7 +382,7 @@ export function CategoryExpertChatPanel() {
             <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-8 px-2">
               {!isAuthenticated && 'Giriş yapın ve kategori seçerek sorunuzu yazın.'}
               {isAuthenticated && !user?.is_verified && 'E-posta doğrulaması gerekir.'}
-              {isAuthenticated && user?.is_verified && 'Merhaba! Aşağıdan sorunuzu yazabilirsiniz.'}
+              {isAuthenticated && user?.is_verified && 'Merhaba! İsterseniz görsel ekleyip sorunuzu yazın.'}
             </p>
           )}
           {messages.map((msg) => (
@@ -344,6 +397,13 @@ export function CategoryExpertChatPanel() {
                     : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-bl-md'
                 }`}
               >
+                {msg.imagePreview ? (
+                  <img
+                    src={msg.imagePreview}
+                    alt=""
+                    className="mb-2 max-h-40 w-auto max-w-full rounded-lg object-contain"
+                  />
+                ) : null}
                 {msg.text}
               </div>
             </div>
@@ -357,7 +417,36 @@ export function CategoryExpertChatPanel() {
           )}
         </div>
 
-        <div className="shrink-0 p-3 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+        <div className="shrink-0 p-3 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              ref={attachmentInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="max-w-[min(100%,14rem)] text-[11px] text-gray-600 dark:text-gray-400 file:mr-2 file:rounded-lg file:border-0 file:bg-gray-200 file:px-2 file:py-1 file:text-[11px] dark:file:bg-gray-700"
+              disabled={askMutation.isPending}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (!f) {
+                  setPendingAttachment(null);
+                  return;
+                }
+                const err = validateExpertAttachment(f);
+                if (err) {
+                  toast.error(err);
+                  e.target.value = '';
+                  setPendingAttachment(null);
+                  return;
+                }
+                setPendingAttachment(f);
+              }}
+            />
+            {pendingAttachment ? (
+              <span className="text-[11px] text-gray-500 dark:text-gray-400 truncate max-w-40">
+                {pendingAttachment.name}
+              </span>
+            ) : null}
+          </div>
           <div className="flex gap-2">
             <textarea
               value={input}
@@ -370,7 +459,7 @@ export function CategoryExpertChatPanel() {
               }}
               rows={2}
               maxLength={4000}
-              placeholder="Sorunuzu yazın…"
+              placeholder="Sorunuzu yazın… (görselde soru varsa kısa yazmanız yeterli)"
               className="flex-1 min-w-0 text-sm px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 resize-none"
               disabled={askMutation.isPending}
             />

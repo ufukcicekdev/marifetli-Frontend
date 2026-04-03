@@ -122,6 +122,15 @@ export default function KidsStudentTestSolvePage() {
       <div className="space-y-3">
         {detail.questions.map((q) => (
           <div key={q.id} className="rounded-xl border border-violet-200 bg-white p-3 dark:border-violet-800 dark:bg-gray-900/70">
+            {q.source_image_url ? (
+              <div className="mb-3 overflow-hidden rounded-lg border border-violet-100 bg-violet-50/40 dark:border-violet-800 dark:bg-violet-950/20">
+                <img
+                  src={q.source_image_url}
+                  alt=""
+                  className="max-h-72 w-full object-contain"
+                />
+              </div>
+            ) : null}
             <p className="mb-2 text-sm font-semibold">
               {q.order}. {q.stem}
             </p>

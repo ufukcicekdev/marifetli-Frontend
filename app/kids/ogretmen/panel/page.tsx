@@ -6,9 +6,10 @@ import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import {
-  KIDS_CLASS_GRADE_OPTIONS,
+  KIDS_CLASS_NUMERIC_GRADE_OPTIONS,
   KIDS_CLASS_SECTION_OPTIONS,
-  kidsBuildStandardClassName,
+  KIDS_CLASS_SPECIAL_GRADE,
+  kidsBuildTeacherPanelClassName,
   kidsClassLocationLine,
   kidsCreateClass,
   kidsListClasses,
@@ -17,6 +18,7 @@ import {
   kidsSchoolLocationLine,
   kidsSelfJoinClass,
   type KidsClass,
+  type KidsClassKind,
   type KidsSchoolDirectoryClassRow,
   type KidsSchool,
 } from '@/src/lib/kids-api';
@@ -57,6 +59,14 @@ export default function KidsTeacherPanelPage() {
   const academicYearId = useId();
   const schoolSelectId = useId();
   const createSectionId = useId();
+
+  const classGradeOptions = useMemo(
+    () => [
+      { value: KIDS_CLASS_SPECIAL_GRADE.PRE_PRIMARY, label: t('teacher.panel.programPrePrimary') },
+      ...KIDS_CLASS_NUMERIC_GRADE_OPTIONS,
+    ],
+    [t],
+  );
 
   const load = useCallback(async () => {
     try {
@@ -124,7 +134,9 @@ export default function KidsTeacherPanelPage() {
       toast.error(t('teacher.panel.academicYearRequired'));
       return;
     }
-    const composedName = kidsBuildStandardClassName(classGrade, classSection);
+    const composedName = kidsBuildTeacherPanelClassName(classGrade, classSection);
+    let classKind: KidsClassKind = 'standard';
+    if (classGrade === KIDS_CLASS_SPECIAL_GRADE.PRE_PRIMARY) classKind = 'anasinifi';
     setCreating(true);
     try {
       const c = await kidsCreateClass({
@@ -132,6 +144,7 @@ export default function KidsTeacherPanelPage() {
         description: description.trim(),
         school_id: sid,
         academic_year_label: academicYearLabel,
+        class_kind: classKind,
       });
       setClasses((prev) => [c, ...prev]);
       setClassGrade('4');
@@ -375,7 +388,7 @@ export default function KidsTeacherPanelPage() {
                             id={classGradeId}
                             value={classGrade}
                             onChange={setClassGrade}
-                            options={KIDS_CLASS_GRADE_OPTIONS}
+                            options={classGradeOptions}
                             searchable={false}
                           />
                         </KidsFormField>
@@ -397,7 +410,7 @@ export default function KidsTeacherPanelPage() {
                       <p className="-mt-1 text-sm text-emerald-900/75 dark:text-emerald-100/75" id={`${classGradeId}-preview`}>
                         {t('teacher.panel.generatedName')}{' '}
                         <strong className="font-logo text-emerald-950 dark:text-emerald-50">
-                          {kidsBuildStandardClassName(classGrade, classSection)}
+                          {kidsBuildTeacherPanelClassName(classGrade, classSection)}
                         </strong>
                       </p>
 

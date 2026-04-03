@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
@@ -14,6 +14,17 @@ import { ExpertFlatDropdown } from '@/src/components/expert-flat-dropdown';
 
 type CategoryItem = { id: number; name: string; slug: string; subcategories?: CategoryItem[] };
 
+const EXPERT_ATTACHMENT_MAX_BYTES = 5 * 1024 * 1024;
+const EXPERT_ATTACHMENT_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'] as const;
+
+function validateExpertAttachment(f: File): string | null {
+  if (f.size > EXPERT_ATTACHMENT_MAX_BYTES) return 'Görsel en fazla 5 MB olabilir.';
+  if (!EXPERT_ATTACHMENT_TYPES.includes(f.type as (typeof EXPERT_ATTACHMENT_TYPES)[number])) {
+    return 'Sadece JPEG, PNG, WebP veya GIF yükleyebilirsiniz.';
+  }
+  return null;
+}
+
 export default function UzmanPage() {
   const queryClient = useQueryClient();
   const pathname = usePathname();
@@ -23,6 +34,8 @@ export default function UzmanPage() {
   const [mainId, setMainId] = useState<number | ''>('');
   const [subId, setSubId] = useState<number | ''>('');
   const [question, setQuestion] = useState('');
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const [lastAnswer, setLastAnswer] = useState<string | null>(null);
   const [historyDetail, setHistoryDetail] = useState<CategoryExpertHistoryItem | null>(null);
 
@@ -79,9 +92,12 @@ export default function UzmanPage() {
         main_category_id: Number(mainId),
         subcategory_id: subId === '' ? null : Number(subId),
         question: question.trim(),
+        attachment: attachmentFile ?? undefined,
       }),
     onSuccess: (data) => {
       setLastAnswer(data.answer);
+      setAttachmentFile(null);
+      if (attachmentInputRef.current) attachmentInputRef.current.value = '';
       queryClient.invalidateQueries({ queryKey: ['category-experts-config'] });
       queryClient.invalidateQueries({ queryKey: ['category-expert-history'] });
       toast.success('Yanıt hazır.');
@@ -173,8 +189,13 @@ export default function UzmanPage() {
       toast.error('Kategori seçin.');
       return;
     }
-    if (question.trim().length < 3) {
+    const q = question.trim();
+    if (!attachmentFile && q.length < 3) {
       toast.error('Sorunuzu yazın (en az birkaç karakter).');
+      return;
+    }
+    if (attachmentFile && q.length < 1) {
+      toast.error('Görsel eklediyseniz kısa bir soru da yazın.');
       return;
     }
     askMutation.mutate();
@@ -270,6 +291,51 @@ export default function UzmanPage() {
             placeholder="Örn: İlk defa tığ örgüye başlıyorum, hangi malzemeleri almalıyım?"
             className="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 resize-y min-h-[120px]"
           />
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+            Görsel eklerseniz kısa bir soru yeterli; uzman yanıtı görsele göre üretilir.
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            Görsel eki <span className="text-gray-400 font-normal">(isteğe bağlı)</span>
+          </label>
+          <input
+            ref={attachmentInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            className="block w-full text-sm text-gray-600 dark:text-gray-300 file:mr-3 file:rounded-lg file:border-0 file:bg-violet-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-violet-800 hover:file:bg-violet-200 dark:file:bg-violet-900/50 dark:file:text-violet-200"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (!f) {
+                setAttachmentFile(null);
+                return;
+              }
+              const err = validateExpertAttachment(f);
+              if (err) {
+                toast.error(err);
+                e.target.value = '';
+                setAttachmentFile(null);
+                return;
+              }
+              setAttachmentFile(f);
+            }}
+          />
+          {attachmentFile ? (
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+              <span className="truncate font-medium">{attachmentFile.name}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setAttachmentFile(null);
+                  if (attachmentInputRef.current) attachmentInputRef.current.value = '';
+                }}
+                className="text-brand hover:underline font-medium"
+              >
+                Kaldır
+              </button>
+            </div>
+          ) : null}
         </div>
 
         <button

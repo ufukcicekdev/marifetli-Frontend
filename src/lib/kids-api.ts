@@ -200,6 +200,9 @@ export type KidsSchool = {
   updated_at: string;
 };
 
+/** Okul öncesi (`anasinifi`) ve eski kayıtlar (`kindergarten`): günlük devam / yemek / uyku (aynı API). */
+export type KidsClassKind = 'standard' | 'kindergarten' | 'anasinifi';
+
 export type KidsClass = {
   id: number;
   name: string;
@@ -207,6 +210,7 @@ export type KidsClass = {
   /** Örn. `2024-2025`; yeni eğitim yılında sınıfları ayırt etmek için (isteğe bağlı). */
   academic_year_label?: string;
   language?: KidsLanguageCode;
+  class_kind?: KidsClassKind;
   /** Her sınıf mutlaka bir okula bağlıdır; adres bilgisi okul kaydındadır. */
   school: KidsSchool;
   teacher: number;
@@ -268,10 +272,19 @@ export function kidsAcademicYearSelectOptions(
   return out;
 }
 
-export const KIDS_CLASS_GRADE_OPTIONS = Array.from({ length: 12 }, (_, i) => {
+/** Öğretmen paneli: anasınıfı satır değeri (1–12 dışı). Eski `Anaokulu-X` adları da buna eşlenir. */
+export const KIDS_CLASS_SPECIAL_GRADE = {
+  PRE_PRIMARY: '__as__',
+} as const;
+
+/** Yalnızca 1–12; anaokulu/anasınıfı seçenekleri arayüzde bu dizinin üstüne eklenir. */
+export const KIDS_CLASS_NUMERIC_GRADE_OPTIONS = Array.from({ length: 12 }, (_, i) => {
   const n = i + 1;
   return { value: String(n), label: `${n}. sınıf` };
 });
+
+/** @deprecated Yalnızca sayısal sınıflar; tam liste için `KIDS_CLASS_NUMERIC_GRADE_OPTIONS` + özel satırlar kullanın. */
+export const KIDS_CLASS_GRADE_OPTIONS = KIDS_CLASS_NUMERIC_GRADE_OPTIONS;
 
 export const KIDS_CLASS_SECTION_OPTIONS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map((L) => ({
   value: L,
@@ -283,6 +296,33 @@ export function kidsParseStandardClassName(
   name: string,
 ): { grade: string; section: string; suffix?: string } | null {
   const t = name.trim();
+  const mKg = /^Anaokulu-([A-Za-z])(?:\s+(.*))?$/.exec(t);
+  if (mKg) {
+    const suffix = (mKg[2] || '').trim();
+    return {
+      grade: KIDS_CLASS_SPECIAL_GRADE.PRE_PRIMARY,
+      section: mKg[1].toUpperCase(),
+      ...(suffix ? { suffix } : {}),
+    };
+  }
+  const mAsTr = /^Anasınıfı-([A-Za-z])(?:\s+(.*))?$/u.exec(t);
+  if (mAsTr) {
+    const suffix = (mAsTr[2] || '').trim();
+    return {
+      grade: KIDS_CLASS_SPECIAL_GRADE.PRE_PRIMARY,
+      section: mAsTr[1].toUpperCase(),
+      ...(suffix ? { suffix } : {}),
+    };
+  }
+  const mAsAscii = /^Anasinifi-([A-Za-z])(?:\s+(.*))?$/i.exec(t);
+  if (mAsAscii) {
+    const suffix = (mAsAscii[2] || '').trim();
+    return {
+      grade: KIDS_CLASS_SPECIAL_GRADE.PRE_PRIMARY,
+      section: mAsAscii[1].toUpperCase(),
+      ...(suffix ? { suffix } : {}),
+    };
+  }
   const m = /^(\d{1,2})-([A-Za-z])(?:\s+(.*))?$/.exec(t);
   if (!m) return null;
   const g = parseInt(m[1], 10);
@@ -299,6 +339,18 @@ export function kidsBuildStandardClassName(grade: string, section: string, suffi
   const core = `${g}-${s}`;
   const rest = (suffix || '').trim();
   return rest ? `${core} ${rest}` : core;
+}
+
+/** Öğretmen paneli: `Anasınıfı-A` veya `4-A` biçiminde sınıf adı. */
+export function kidsBuildTeacherPanelClassName(grade: string, section: string, suffix?: string): string {
+  const g = (grade || '').trim();
+  if (g === KIDS_CLASS_SPECIAL_GRADE.PRE_PRIMARY) {
+    const s = (section || '').trim().toUpperCase();
+    const core = `Anasınıfı-${s}`;
+    const rest = (suffix || '').trim();
+    return rest ? `${core} ${rest}` : core;
+  }
+  return kidsBuildStandardClassName(grade, section, suffix);
 }
 
 /** Görsel teslimde teknik üst sınır (öğretmen seçmez; backend ile aynı). */
@@ -1612,6 +1664,7 @@ export async function kidsCreateClass(body: {
   description?: string;
   school_id: number;
   academic_year_label?: string;
+  class_kind?: KidsClassKind;
 }) {
   const res = await kidsAuthorizedFetch('/classes/', {
     method: 'POST',
@@ -1620,6 +1673,7 @@ export async function kidsCreateClass(body: {
       description: body.description ?? '',
       school_id: body.school_id,
       academic_year_label: body.academic_year_label?.trim() ?? '',
+      ...(body.class_kind && body.class_kind !== 'standard' ? { class_kind: body.class_kind } : {}),
     }),
   });
   const text = await res.text();
@@ -1642,7 +1696,9 @@ export async function kidsCreateClass(body: {
 
 export async function kidsPatchClass(
   id: number,
-  body: Partial<Pick<KidsClass, 'name' | 'description' | 'academic_year_label' | 'language'>> & { school_id?: number },
+  body: Partial<Pick<KidsClass, 'name' | 'description' | 'academic_year_label' | 'language' | 'class_kind'>> & {
+    school_id?: number;
+  },
 ) {
   const res = await kidsAuthorizedFetch(`/classes/${id}/`, {
     method: 'PATCH',
@@ -1707,6 +1763,182 @@ export async function kidsRemoveClassTeacher(classId: number, teacherUserId: num
   const text = await res.text();
   const data = readJson<ApiErrorBody>(text);
   throw new Error(data?.detail || 'Sınıf öğretmeni kaldırılamadı');
+}
+
+export type KidsKindergartenDayPlan = {
+  plan_date: string;
+  plan_text: string;
+  updated_at: string | null;
+};
+
+export type KidsKindergartenSlotItem = { label: string; ok: boolean | null };
+
+export type KidsKindergartenDailyRecordRow = {
+  id: number;
+  kids_class_id: number;
+  student_id: number;
+  record_date: string;
+  present: boolean | null;
+  present_marked_at: string | null;
+  meal_ok: boolean | null;
+  meal_marked_at: string | null;
+  meal_slots?: KidsKindergartenSlotItem[];
+  nap_ok: boolean | null;
+  nap_marked_at: string | null;
+  nap_slots?: KidsKindergartenSlotItem[];
+  teacher_day_note: string;
+  digest_sent_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type KidsKindergartenDailyBoardResponse = {
+  record_date: string;
+  plan: KidsKindergartenDayPlan;
+  rows: {
+    student: { id: number; first_name: string; last_name: string; email: string };
+    record: KidsKindergartenDailyRecordRow | null;
+  }[];
+};
+
+function _kgDateQuery(date?: string): string {
+  return date && date.trim() ? `?date=${encodeURIComponent(date.trim())}` : '';
+}
+
+export async function kidsGetKindergartenDayPlan(classId: number, date?: string): Promise<KidsKindergartenDayPlan> {
+  const res = await kidsAuthorizedFetch(
+    `/classes/${classId}/kindergarten/day-plan/${_kgDateQuery(date)}`,
+    { method: 'GET' },
+  );
+  const text = await res.text();
+  const data = readJson<KidsKindergartenDayPlan & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Gün planı alınamadı'));
+  return data as KidsKindergartenDayPlan;
+}
+
+export async function kidsPutKindergartenDayPlan(
+  classId: number,
+  body: { plan_text: string },
+  date?: string,
+): Promise<KidsKindergartenDayPlan> {
+  const res = await kidsAuthorizedFetch(`/classes/${classId}/kindergarten/day-plan/${_kgDateQuery(date)}`, {
+    method: 'PUT',
+    body: JSON.stringify(body),
+  });
+  const text = await res.text();
+  const data = readJson<KidsKindergartenDayPlan & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Gün planı kaydedilemedi'));
+  return data as KidsKindergartenDayPlan;
+}
+
+export async function kidsGetKindergartenDailyBoard(
+  classId: number,
+  date?: string,
+): Promise<KidsKindergartenDailyBoardResponse> {
+  const res = await kidsAuthorizedFetch(
+    `/classes/${classId}/kindergarten/daily-board/${_kgDateQuery(date)}`,
+    { method: 'GET' },
+  );
+  const text = await res.text();
+  const data = readJson<KidsKindergartenDailyBoardResponse & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Günlük tablo alınamadı'));
+  return data as KidsKindergartenDailyBoardResponse;
+}
+
+export async function kidsPatchKindergartenDailyRecord(
+  classId: number,
+  studentId: number,
+  body: Partial<{
+    present: boolean | null;
+    meal_ok: boolean | null;
+    nap_ok: boolean | null;
+    meal_slots: KidsKindergartenSlotItem[];
+    nap_slots: KidsKindergartenSlotItem[];
+    teacher_day_note: string;
+  }>,
+  date?: string,
+): Promise<KidsKindergartenDailyRecordRow> {
+  const res = await kidsAuthorizedFetch(
+    `/classes/${classId}/kindergarten/daily/${studentId}/${_kgDateQuery(date)}`,
+    { method: 'PATCH', body: JSON.stringify(body) },
+  );
+  const text = await res.text();
+  const data = readJson<KidsKindergartenDailyRecordRow & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Kayıt güncellenemedi'));
+  return data as KidsKindergartenDailyRecordRow;
+}
+
+export type KidsKindergartenBulkAction =
+  | 'mark_present'
+  | 'meal_slot'
+  | 'nap_slot'
+  | 'set_note'
+  | 'send_digest';
+
+export type KidsKindergartenBulkBody = {
+  action: KidsKindergartenBulkAction;
+  target?: 'all_enrolled' | 'present_only';
+  student_ids?: number[];
+  present?: boolean | null;
+  slot_label?: string;
+  ok?: boolean | null;
+  note?: string;
+};
+
+export type KidsKindergartenBulkResult =
+  | { action: Exclude<KidsKindergartenBulkAction, 'send_digest'>; updated: number }
+  | {
+      action: 'send_digest';
+      digest_sent: number;
+      skipped_no_record: number;
+      failed_student_ids: number[];
+    };
+
+export async function kidsPostKindergartenBulk(
+  classId: number,
+  body: KidsKindergartenBulkBody,
+  date?: string,
+): Promise<KidsKindergartenBulkResult> {
+  const res = await kidsAuthorizedFetch(
+    `/classes/${classId}/kindergarten/bulk/${_kgDateQuery(date)}`,
+    { method: 'POST', body: JSON.stringify(body) },
+  );
+  const text = await res.text();
+  const data = readJson<KidsKindergartenBulkResult & ApiErrorBody & { detail?: string }>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Toplu işlem yapılamadı'));
+  return data as KidsKindergartenBulkResult;
+}
+
+export async function kidsSendKindergartenEndOfDay(
+  classId: number,
+  studentId: number,
+  date?: string,
+): Promise<void> {
+  const res = await kidsAuthorizedFetch(
+    `/classes/${classId}/kindergarten/daily/${studentId}/send-end-of-day/${_kgDateQuery(date)}`,
+    { method: 'POST' },
+  );
+  const text = await res.text();
+  const data = readJson<ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Gün sonu bildirimi gönderilemedi'));
+}
+
+export async function kidsParentKindergartenRecords(
+  studentId: number,
+  yearMonth?: string,
+): Promise<{ year_month: string; records: KidsKindergartenDailyRecordRow[] }> {
+  const q =
+    `?student_id=${encodeURIComponent(String(studentId))}` +
+    (yearMonth && yearMonth.trim() ? `&year_month=${encodeURIComponent(yearMonth.trim())}` : '');
+  const res = await kidsAuthorizedFetch(`/parent/kindergarten/records/${q}`, { method: 'GET' });
+  const text = await res.text();
+  const data = readJson<{ year_month?: string; records?: KidsKindergartenDailyRecordRow[] } & ApiErrorBody>(text);
+  if (!res.ok) throw new Error(kidsFirstApiErrorMessage(data, 'Kayıtlar alınamadı'));
+  const payload = data ?? {};
+  return {
+    year_month: String(payload.year_month || ''),
+    records: Array.isArray(payload.records) ? payload.records : [],
+  };
 }
 
 export async function kidsListSchoolClassDirectory(schoolId: number): Promise<KidsSchoolDirectoryClassRow[]> {
@@ -2775,6 +3007,10 @@ export type KidsTestQuestion = {
   choices: { key: string; text: string }[];
   correct_choice_key: string;
   points: number;
+  /** Kaynak görsel sayfa sırası (1-based), yoksa tek sayfa veya eşleşme yok. */
+  source_page_order?: number | null;
+  source_image_url?: string | null;
+  source_meta?: Record<string, unknown>;
 };
 
 export type KidsTest = {
@@ -2891,6 +3127,7 @@ export async function kidsExtractTestQuestions(images: File[]): Promise<{
     choices: { key: string; text: string }[];
     correct_choice_key: string;
     points: number;
+    source_page_order?: number;
   }[];
 }> {
   const fd = new FormData();
@@ -2912,6 +3149,7 @@ export async function kidsExtractTestQuestions(images: File[]): Promise<{
       choices: { key: string; text: string }[];
       correct_choice_key: string;
       points: number;
+      source_page_order?: number;
     }[];
   };
 }
@@ -2931,6 +3169,7 @@ export async function kidsCreateClassTest(
       choices: { key: string; text: string }[];
       correct_choice_key: string;
       points?: number;
+      source_page_order?: number | null;
     }[];
     source_images?: File[];
   },
@@ -3000,6 +3239,7 @@ export async function kidsPatchTest(
       choices: { key: string; text: string }[];
       correct_choice_key: string;
       points?: number;
+      source_page_order?: number | null;
     }[];
   }>,
 ): Promise<KidsTest> {
@@ -3033,6 +3273,8 @@ export async function kidsStudentGetTest(testId: number): Promise<{
     subtopic?: string;
     choices: { key: string; text: string }[];
     points: number;
+    source_image_url?: string | null;
+    source_page_order?: number | null;
   }[];
   attempt: KidsTestAttempt | null;
 }> {
@@ -3053,6 +3295,8 @@ export async function kidsStudentGetTest(testId: number): Promise<{
       subtopic?: string;
       choices: { key: string; text: string }[];
       points: number;
+      source_image_url?: string | null;
+      source_page_order?: number | null;
     }[];
     attempt: KidsTestAttempt | null;
   };

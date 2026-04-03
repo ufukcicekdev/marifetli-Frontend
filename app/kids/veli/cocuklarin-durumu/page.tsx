@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useId, useState } from 'react';
+import { useCallback, useEffect, useId, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
@@ -8,7 +8,9 @@ import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 import {
   kidsDeleteParentHomeworkSubmissionAttachment,
   kidsParentChildrenOverview,
+  kidsParentKindergartenRecords,
   kidsParentReviewHomeworkSubmission,
+  type KidsKindergartenDailyRecordRow,
   type KidsParentChildOverview,
 } from '@/src/lib/kids-api';
 import { KidsCard, KidsCenteredModal, KidsPanelMax, KidsPrimaryButton, KidsSecondaryButton, KidsSelect } from '@/src/components/kids/kids-ui';
@@ -20,6 +22,35 @@ function isImageAttachment(contentType: string, fileName: string): boolean {
   const ct = (contentType || '').toLowerCase();
   if (ct.startsWith('image/')) return true;
   return /\.(png|jpe?g|gif|webp|svg)$/i.test(fileName || '');
+}
+
+function kgBoolTriLabel(v: boolean | null | undefined, t: (key: string) => string): string {
+  if (v === true) return t('teacherClass.kindergarten.triYes');
+  if (v === false) return t('teacherClass.kindergarten.triNo');
+  return t('teacherClass.kindergarten.triUnset');
+}
+
+function kgFormatSlotsOrLegacy(
+  slots: unknown,
+  legacyOk: boolean | null | undefined,
+  t: (key: string) => string,
+): ReactNode {
+  if (Array.isArray(slots) && slots.length > 0) {
+    return (
+      <ul className="list-none space-y-0.5 text-xs leading-snug">
+        {(slots as { label?: string; ok?: boolean | null }[]).map((s, i) => {
+          const lab = String(s?.label ?? '').trim() || '—';
+          return (
+            <li key={i}>
+              <span className="font-semibold text-slate-800 dark:text-slate-100">{lab}:</span>{' '}
+              {kgBoolTriLabel(s?.ok ?? null, t)}
+            </li>
+          );
+        })}
+      </ul>
+    );
+  }
+  return kgBoolTriLabel(legacyOk ?? null, t);
 }
 
 /** (doğru/soru)×100, en fazla bir ondalık; soru başı puan = 100/n. */
@@ -53,8 +84,15 @@ export default function KidsParentChildrenStatusPage() {
   } | null>(null);
   const [selectedChildId, setSelectedChildId] = useState<string>('');
   const [openPendingDetailId, setOpenPendingDetailId] = useState<number | null>(null);
-  const [activityTab, setActivityTab] = useState<'challenges' | 'homework' | 'tests'>('challenges');
+  const [activityTab, setActivityTab] = useState<'challenges' | 'homework' | 'tests' | 'preschool'>('challenges');
   const activityTabsId = useId();
+  const [kgYearMonth, setKgYearMonth] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [kgRecords, setKgRecords] = useState<KidsKindergartenDailyRecordRow[]>([]);
+  const [kgRecordsLoading, setKgRecordsLoading] = useState(false);
+  const [kgRecordsError, setKgRecordsError] = useState<string | null>(null);
   const homeworkAccordionBaseId = useId();
   const [expandedHomeworkSubmissionId, setExpandedHomeworkSubmissionId] = useState<number | null>(null);
   const homeworkStatusLabel: Record<string, string> = {
@@ -92,6 +130,27 @@ export default function KidsParentChildrenStatusPage() {
       setOverviewLoading(false);
     }
   }, [t]);
+
+  const loadPreschoolRecords = useCallback(async () => {
+    const sid = Number(selectedChildId);
+    if (!Number.isFinite(sid) || sid <= 0) return;
+    setKgRecordsLoading(true);
+    setKgRecordsError(null);
+    try {
+      const { records } = await kidsParentKindergartenRecords(sid, kgYearMonth);
+      setKgRecords(records);
+    } catch (e) {
+      setKgRecordsError(e instanceof Error ? e.message : t('childrenStatus.preschoolLoadError'));
+      setKgRecords([]);
+    } finally {
+      setKgRecordsLoading(false);
+    }
+  }, [selectedChildId, kgYearMonth, t]);
+
+  useEffect(() => {
+    if (activityTab !== 'preschool') return;
+    void loadPreschoolRecords();
+  }, [activityTab, loadPreschoolRecords]);
 
   useEffect(() => {
     if (loading) return;
@@ -334,9 +393,9 @@ export default function KidsParentChildrenStatusPage() {
 
             <div className="mt-5">
               <div
-                className="grid grid-cols-1 gap-1 rounded-xl border border-amber-200/80 bg-amber-50/50 p-1 sm:grid-cols-3 dark:border-amber-800/50 dark:bg-amber-950/30"
+                className="grid grid-cols-2 gap-1 rounded-xl border border-amber-200/80 bg-amber-50/50 p-1 lg:grid-cols-4 dark:border-amber-800/50 dark:bg-amber-950/30"
                 role="tablist"
-                aria-label={`${t('childrenStatus.challengeHistory')}, ${t('childrenStatus.homeworkHistory')}, ${t('childrenStatus.testResultsTab')}`}
+                aria-label={`${t('childrenStatus.challengeHistory')}, ${t('childrenStatus.homeworkHistory')}, ${t('childrenStatus.testResultsTab')}, ${t('childrenStatus.preschoolTab')}`}
               >
                 <button
                   type="button"
@@ -382,6 +441,21 @@ export default function KidsParentChildrenStatusPage() {
                   }`}
                 >
                   {t('childrenStatus.testResultsTab')}
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  id={`${activityTabsId}-preschool`}
+                  aria-selected={activityTab === 'preschool'}
+                  aria-controls={`${activityTabsId}-panel-preschool`}
+                  onClick={() => setActivityTab('preschool')}
+                  className={`min-h-10 rounded-lg px-2 py-2 text-xs font-bold transition-colors sm:text-sm ${
+                    activityTab === 'preschool'
+                      ? 'bg-white text-amber-950 shadow-sm dark:bg-amber-900/80 dark:text-amber-50'
+                      : 'text-amber-800/90 hover:bg-white/60 dark:text-amber-200/90 dark:hover:bg-amber-900/40'
+                  }`}
+                >
+                  {t('childrenStatus.preschoolTab')}
                 </button>
               </div>
 
@@ -612,6 +686,111 @@ export default function KidsParentChildrenStatusPage() {
                       ))}
                     </ul>
                   )}
+                </div>
+              ) : null}
+
+              {activityTab === 'preschool' ? (
+                <div
+                  id={`${activityTabsId}-panel-preschool`}
+                  role="tabpanel"
+                  aria-labelledby={`${activityTabsId}-preschool`}
+                  className="mt-3 space-y-4"
+                >
+                  <div className="flex flex-wrap items-end gap-3">
+                    <label className="flex flex-col gap-1 text-xs font-semibold text-amber-900 dark:text-amber-100">
+                      {t('childrenStatus.preschoolMonth')}
+                      <input
+                        type="month"
+                        value={kgYearMonth}
+                        onChange={(e) => setKgYearMonth(e.target.value)}
+                        className="rounded-xl border-2 border-amber-200/80 bg-white px-3 py-2 text-sm text-slate-900 dark:border-amber-800/60 dark:bg-gray-800 dark:text-white"
+                      />
+                      <span className="font-normal text-amber-800/85 dark:text-amber-200/75">
+                        {t('childrenStatus.preschoolMonthHint')}
+                      </span>
+                    </label>
+                    <KidsSecondaryButton type="button" disabled={kgRecordsLoading} onClick={() => void loadPreschoolRecords()}>
+                      {kgRecordsLoading ? t('common.loading') : t('common.refresh')}
+                    </KidsSecondaryButton>
+                  </div>
+                  {kgRecordsError ? (
+                    <p className="rounded-lg border border-rose-200/80 bg-rose-50/90 px-3 py-2 text-sm text-rose-900 dark:border-rose-900/50 dark:bg-rose-950/40 dark:text-rose-100">
+                      {kgRecordsError}
+                    </p>
+                  ) : null}
+                  {kgRecordsLoading && kgRecords.length === 0 && !kgRecordsError ? (
+                    <p className="text-sm text-amber-900/75 dark:text-amber-100/70">{t('common.loading')}</p>
+                  ) : null}
+                  {!kgRecordsLoading && kgRecords.length === 0 && !kgRecordsError ? (
+                    <p className="text-sm text-amber-900/75 dark:text-amber-100/70">{t('childrenStatus.preschoolEmpty')}</p>
+                  ) : null}
+                  {kgRecords.length > 0 ? (
+                    <div className="overflow-x-auto rounded-xl border border-emerald-200/70 dark:border-emerald-900/40">
+                      <table className="min-w-[640px] w-full border-collapse text-left text-sm">
+                        <thead>
+                          <tr className="border-b border-emerald-200/80 bg-emerald-50/80 dark:border-emerald-900/50 dark:bg-emerald-950/40">
+                            <th className="px-2 py-2 font-bold text-emerald-950 dark:text-emerald-50">
+                              {t('childrenStatus.preschoolColDate')}
+                            </th>
+                            <th className="px-2 py-2 font-bold text-emerald-950 dark:text-emerald-50">
+                              {t('childrenStatus.preschoolColClass')}
+                            </th>
+                            <th className="px-2 py-2 font-bold text-emerald-950 dark:text-emerald-50">
+                              {t('childrenStatus.preschoolColPresent')}
+                            </th>
+                            <th className="px-2 py-2 font-bold text-emerald-950 dark:text-emerald-50">
+                              {t('childrenStatus.preschoolColMeal')}
+                            </th>
+                            <th className="px-2 py-2 font-bold text-emerald-950 dark:text-emerald-50">
+                              {t('childrenStatus.preschoolColNap')}
+                            </th>
+                            <th className="min-w-[140px] px-2 py-2 font-bold text-emerald-950 dark:text-emerald-50">
+                              {t('childrenStatus.preschoolColNote')}
+                            </th>
+                            <th className="px-2 py-2 font-bold text-emerald-950 dark:text-emerald-50">
+                              {t('childrenStatus.preschoolColEod')}
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {kgRecords.map((rec) => {
+                            const className =
+                              (c.classes ?? []).find((cl) => cl.id === rec.kids_class_id)?.name ??
+                              `Sınıf #${rec.kids_class_id}`;
+                            const d = rec.record_date ? new Date(`${rec.record_date}T12:00:00`) : null;
+                            return (
+                              <tr
+                                key={rec.id}
+                                className="border-b border-emerald-100/90 odd:bg-white/80 even:bg-emerald-50/25 dark:border-emerald-900/30 dark:odd:bg-gray-900/20 dark:even:bg-emerald-950/15"
+                              >
+                                <td className="px-2 py-2 whitespace-nowrap font-medium text-slate-900 dark:text-white">
+                                  {d && !Number.isNaN(d.getTime())
+                                    ? d.toLocaleDateString(language, { dateStyle: 'medium' })
+                                    : rec.record_date}
+                                </td>
+                                <td className="px-2 py-2 text-slate-800 dark:text-slate-100">{className}</td>
+                                <td className="px-2 py-2">{kgBoolTriLabel(rec.present, t)}</td>
+                                <td className="px-2 py-2 align-top">{kgFormatSlotsOrLegacy(rec.meal_slots, rec.meal_ok, t)}</td>
+                                <td className="px-2 py-2 align-top">{kgFormatSlotsOrLegacy(rec.nap_slots, rec.nap_ok, t)}</td>
+                                <td className="px-2 py-2 text-xs text-slate-700 dark:text-slate-200">
+                                  {(rec.teacher_day_note || '').trim() || '—'}
+                                </td>
+                                <td className="px-2 py-2 text-xs font-semibold">
+                                  {rec.digest_sent_at ? (
+                                    <span className="text-emerald-700 dark:text-emerald-300">
+                                      {t('teacherClass.kindergarten.eodSentBadge')}
+                                    </span>
+                                  ) : (
+                                    <span className="text-slate-500 dark:text-slate-400">{t('teacherClass.kindergarten.triUnset')}</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </div>

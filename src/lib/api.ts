@@ -626,8 +626,27 @@ class ApiService {
     main_category_id: number;
     subcategory_id?: number | null;
     question: string;
-  }) =>
-    this.axiosInstance.post<CategoryExpertAskResponse>('/category-experts/ask/', data).then((r) => r.data);
+    /** İsteğe bağlı görsel; gönderilirse multipart isteği kullanılır (Gemini görsel + moderator_chat için base64 alanları). */
+    attachment?: File | null;
+  }) => {
+    const { attachment, ...rest } = data;
+    const timeout = 120000;
+    if (attachment) {
+      const fd = new FormData();
+      fd.append('main_category_id', String(rest.main_category_id));
+      if (rest.subcategory_id != null && rest.subcategory_id !== undefined) {
+        fd.append('subcategory_id', String(rest.subcategory_id));
+      }
+      fd.append('question', rest.question);
+      fd.append('attachment', attachment);
+      return this.axiosInstance
+        .post<CategoryExpertAskResponse>('/category-experts/ask/', fd, { timeout })
+        .then((r) => r.data);
+    }
+    return this.axiosInstance
+      .post<CategoryExpertAskResponse>('/category-experts/ask/', rest, { timeout })
+      .then((r) => r.data);
+  };
 
   getCategoryExpertHistory = () =>
     this.axiosInstance
