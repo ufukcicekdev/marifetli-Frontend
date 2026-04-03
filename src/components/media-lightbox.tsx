@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import type { MediaItem } from '@/src/lib/extract-media';
 
 interface MediaLightboxProps {
@@ -11,6 +12,7 @@ interface MediaLightboxProps {
 
 export function MediaLightbox({ items, currentIndex = 0, onClose }: MediaLightboxProps) {
   const [index, setIndex] = useState(currentIndex);
+  const [mounted, setMounted] = useState(false);
   const item = items[index];
   const hasMultiple = items.length > 1;
 
@@ -29,6 +31,11 @@ export function MediaLightbox({ items, currentIndex = 0, onClose }: MediaLightbo
   };
 
   useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
+  useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
@@ -40,11 +47,12 @@ export function MediaLightbox({ items, currentIndex = 0, onClose }: MediaLightbo
     };
   }, [onClose]);
 
-  if (!item) return null;
+  if (!item || !mounted) return null;
 
-  return (
+  const content = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-sm"
+      className="fixed inset-0 flex items-center justify-center bg-black/95 backdrop-blur-sm"
+      style={{ zIndex: 2147483000 }}
       onClick={onClose}
       role="button"
       tabIndex={0}
@@ -83,23 +91,22 @@ export function MediaLightbox({ items, currentIndex = 0, onClose }: MediaLightbo
           </span>
         </>
       )}
-      <div
-        className="max-w-[95vw] max-h-[95vh] flex items-center justify-center p-4"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="h-screen w-screen flex items-center justify-center p-0" onClick={(e) => e.stopPropagation()}>
         {item.type === 'image' ? (
-          <img src={item.url} alt="Gönderi görseli" className="max-w-full max-h-[95vh] object-contain rounded" />
+          <img src={item.url} alt="Gonderi gorseli" className="h-screen w-screen object-contain" />
         ) : (
           <video
             src={item.url}
             controls
             autoPlay
             playsInline
-            className="max-w-full max-h-[95vh] object-contain rounded"
+            className="h-screen w-screen object-contain"
             onClick={(e) => e.stopPropagation()}
           />
         )}
       </div>
     </div>
   );
+
+  return createPortal(content, document.body);
 }

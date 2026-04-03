@@ -123,11 +123,11 @@ export default function KidsParentPanelPage() {
     }
   }
 
-  async function markSubmittedReviewed(submissionId: number) {
+  async function markSubmittedReviewed(submissionId: number, approved: boolean) {
     setReviewingSubmissionId(submissionId);
     try {
-      await kidsParentReviewHomeworkSubmission(submissionId, { approved: true });
-      toast.success(t('parent.panel.reviewSent'));
+      await kidsParentReviewHomeworkSubmission(submissionId, { approved });
+      toast.success(approved ? t('parent.panel.reviewSent') : t('teacherHomework.revisionRequested'));
       await loadOverview();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('parent.panel.reviewSaveFailed'));
@@ -294,15 +294,30 @@ export default function KidsParentPanelPage() {
                           <p className="text-xs text-violet-800/90 dark:text-violet-200/80">
                             {it.class_name} · {t('parent.panel.round')} {it.round_number}
                           </p>
+                          {Array.isArray(it.submission_attachments) && it.submission_attachments.length > 0 ? (
+                            <p className="text-xs text-violet-700/80 dark:text-violet-200/70">
+                              {it.submission_attachments.length} gorsel
+                            </p>
+                          ) : null}
                         </div>
-                        <KidsPrimaryButton
-                          type="button"
-                          className="!min-h-9 !px-3 !text-xs"
-                          disabled={reviewingSubmissionId === it.submission_id}
-                          onClick={() => void markSubmittedReviewed(it.submission_id)}
-                        >
-                          {reviewingSubmissionId === it.submission_id ? t('profile.saving') : t('childrenStatus.submitted')}
-                        </KidsPrimaryButton>
+                        <div className="flex items-center gap-2">
+                          <KidsSecondaryButton
+                            type="button"
+                            className="!min-h-9 !px-3 !text-xs"
+                            disabled={reviewingSubmissionId === it.submission_id}
+                            onClick={() => void markSubmittedReviewed(it.submission_id, false)}
+                          >
+                            Revizyon iste
+                          </KidsSecondaryButton>
+                          <KidsPrimaryButton
+                            type="button"
+                            className="!min-h-9 !px-3 !text-xs"
+                            disabled={reviewingSubmissionId === it.submission_id}
+                            onClick={() => void markSubmittedReviewed(it.submission_id, true)}
+                          >
+                            {reviewingSubmissionId === it.submission_id ? t('profile.saving') : t('childrenStatus.submitted')}
+                          </KidsPrimaryButton>
+                        </div>
                       </li>
                     ))}
                   </ul>

@@ -213,6 +213,24 @@ export default function KidsTeacherHomeworkDetailPage() {
                     <p className="text-slate-600 dark:text-slate-300">{statusLabel(sub.status)}</p>
                   </div>
                 </div>
+                {Array.isArray(sub.attachments) && sub.attachments.length > 0 ? (
+                  <div className="mt-2 rounded-lg border border-sky-200/80 bg-sky-50/60 p-2 dark:border-sky-800/50 dark:bg-sky-950/30">
+                    <p className="mb-1 text-[11px] font-bold text-sky-900 dark:text-sky-100">Ogrenci gorselleri</p>
+                    <div className="flex flex-wrap gap-2">
+                      {sub.attachments.map((att) => (
+                        <a
+                          key={att.id}
+                          href={att.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="rounded-full border border-sky-300 px-2 py-1 text-[11px] font-semibold text-sky-700 hover:bg-sky-100 dark:border-sky-700 dark:text-sky-200 dark:hover:bg-sky-900/40"
+                        >
+                          {att.original_name || `Gorsel #${att.id}`}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
                 {sub.status === 'parent_approved' ? (
                   <div className="mt-2 flex gap-2">
                     <KidsPrimaryButton

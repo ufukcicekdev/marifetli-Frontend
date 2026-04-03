@@ -89,6 +89,13 @@ export type KidsParentHomeworkHistoryRow = {
     content_type: string;
     size_bytes: number;
   }[];
+  submission_attachments: {
+    id: number;
+    url: string;
+    original_name: string;
+    content_type: string;
+    size_bytes: number;
+  }[];
 };
 
 export type KidsParentChildOverview = {
@@ -123,6 +130,13 @@ export type KidsParentChildOverview = {
     class_name: string;
     round_number: number;
     student_marked_done_at: string | null;
+    submission_attachments: {
+      id: number;
+      url: string;
+      original_name: string;
+      content_type: string;
+      size_bytes: number;
+    }[];
   }[];
 };
 
@@ -398,6 +412,14 @@ export type KidsHomeworkSubmission = {
   parent_note: string;
   teacher_reviewed_at: string | null;
   teacher_note: string;
+  attachments: {
+    id: number;
+    url: string;
+    original_name: string;
+    content_type: string;
+    size_bytes: number;
+    created_at: string | null;
+  }[];
   created_at: string;
   updated_at: string;
 };
@@ -2492,6 +2514,42 @@ export async function kidsMarkHomeworkDone(
   return data as KidsHomeworkSubmission;
 }
 
+export async function kidsUploadStudentHomeworkSubmissionAttachment(
+  submissionId: number,
+  file: File,
+): Promise<KidsHomeworkSubmission> {
+  const fd = new FormData();
+  fd.append('file', file);
+  const res = await kidsAuthorizedFetch(`/student/homework-submissions/${submissionId}/attachments/`, {
+    method: 'POST',
+    body: fd,
+  });
+  const text = await res.text();
+  const data = readJson<{ submission?: KidsHomeworkSubmission } & ApiErrorBody>(text);
+  if (!res.ok) {
+    throw new Error(kidsFirstApiErrorMessage(data, 'Ödev görseli yüklenemedi'));
+  }
+  if (!data?.submission) throw new Error('Yanıt eksik');
+  return data.submission;
+}
+
+export async function kidsDeleteStudentHomeworkSubmissionAttachment(
+  submissionId: number,
+  attachmentId: number,
+): Promise<KidsHomeworkSubmission> {
+  const res = await kidsAuthorizedFetch(
+    `/student/homework-submissions/${submissionId}/attachments/${attachmentId}/`,
+    { method: 'DELETE' },
+  );
+  const text = await res.text();
+  const data = readJson<{ submission?: KidsHomeworkSubmission } & ApiErrorBody>(text);
+  if (!res.ok) {
+    throw new Error(kidsFirstApiErrorMessage(data, 'Ödev görseli silinemedi'));
+  }
+  if (!data?.submission) throw new Error('Yanıt eksik');
+  return data.submission;
+}
+
 export async function kidsListParentHomeworkPending(): Promise<KidsHomeworkSubmission[]> {
   const res = await kidsAuthorizedFetch('/parent/homeworks/pending/', { method: 'GET' });
   if (!res.ok) throw new Error('Veli ödev listesi yüklenemedi');
@@ -2512,6 +2570,23 @@ export async function kidsParentReviewHomeworkSubmission(
     throw new Error(kidsFirstApiErrorMessage(data, 'Veli onayı kaydedilemedi'));
   }
   return data as KidsHomeworkSubmission;
+}
+
+export async function kidsDeleteParentHomeworkSubmissionAttachment(
+  submissionId: number,
+  attachmentId: number,
+): Promise<KidsHomeworkSubmission> {
+  const res = await kidsAuthorizedFetch(
+    `/parent/homework-submissions/${submissionId}/attachments/${attachmentId}/`,
+    { method: 'DELETE' },
+  );
+  const text = await res.text();
+  const data = readJson<{ submission?: KidsHomeworkSubmission } & ApiErrorBody>(text);
+  if (!res.ok) {
+    throw new Error(kidsFirstApiErrorMessage(data, 'Öğrenci görseli silinemedi'));
+  }
+  if (!data?.submission) throw new Error('Yanıt eksik');
+  return data.submission;
 }
 
 export async function kidsTeacherHomeworkInbox(): Promise<KidsHomeworkSubmission[]> {

@@ -1,14 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 import {
+  kidsDeleteStudentHomeworkSubmissionAttachment,
   kidsListStudentHomeworks,
   kidsMarkHomeworkDone,
+  kidsUploadStudentHomeworkSubmissionAttachment,
   type KidsHomeworkSubmission,
 } from '@/src/lib/kids-api';
 import { KidsCard, KidsPanelMax, KidsPrimaryButton, KidsSecondaryButton } from '@/src/components/kids/kids-ui';
@@ -36,6 +38,19 @@ function formatFileSize(sizeBytes: number): string {
   return `${(s / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+type HomeworkTab = 'incoming' | 'done';
+type PendingUploadItem = {
+  id: string;
+  file: File;
+  previewUrl: string;
+};
+
+function byNewestHomework(a: KidsHomeworkSubmission, b: KidsHomeworkSubmission): number {
+  const ad = new Date(a.homework.created_at || a.updated_at || '').getTime();
+  const bd = new Date(b.homework.created_at || b.updated_at || '').getTime();
+  return bd - ad;
+}
+
 export default function KidsStudentHomeworksPage() {
   const router = useRouter();
   const { user, loading: authLoading, pathPrefix } = useKidsAuth();
@@ -43,6 +58,10 @@ export default function KidsStudentHomeworksPage() {
   const [items, setItems] = useState<KidsHomeworkSubmission[]>([]);
   const [loading, setLoading] = useState(true);
   const [markingId, setMarkingId] = useState<number | null>(null);
+  const [deletingAttachmentId, setDeletingAttachmentId] = useState<number | null>(null);
+  const [pendingUploads, setPendingUploads] = useState<Record<number, PendingUploadItem[]>>({});
+  const [tab, setTab] = useState<HomeworkTab>('incoming');
+  const [openDetailId, setOpenDetailId] = useState<number | null>(null);
   const statusLabel: Record<KidsHomeworkSubmission['status'], string> = {
     published: t('homework.status.published'),
     student_done: t('homework.status.studentDone'),
@@ -80,7 +99,18 @@ export default function KidsStudentHomeworksPage() {
   async function markDone(submissionId: number) {
     setMarkingId(submissionId);
     try {
+      const pending = pendingUploads[submissionId] ?? [];
+      for (const row of pending) {
+        await kidsUploadStudentHomeworkSubmissionAttachment(submissionId, row.file);
+      }
       await kidsMarkHomeworkDone(submissionId);
+      setPendingUploads((prev) => {
+        const next = { ...prev };
+        const old = next[submissionId] ?? [];
+        for (const row of old) URL.revokeObjectURL(row.previewUrl);
+        delete next[submissionId];
+        return next;
+      });
       toast.success(t('homework.markDoneSuccess'));
       await load();
     } catch (err) {
@@ -89,6 +119,86 @@ export default function KidsStudentHomeworksPage() {
       setMarkingId(null);
     }
   }
+
+  async function deleteSubmissionImage(submissionId: number, attachmentId: number) {
+    setDeletingAttachmentId(attachmentId);
+    try {
+      await kidsDeleteStudentHomeworkSubmissionAttachment(submissionId, attachmentId);
+      toast.success(t('homework.studentImageDeleted'));
+      await load();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('homework.studentImageDeleteFailed'));
+    } finally {
+      setDeletingAttachmentId(null);
+    }
+  }
+
+  function addPendingFiles(submissionId: number, files: FileList | null) {
+    if (!files || files.length === 0) return;
+    const additions: PendingUploadItem[] = [];
+    for (const file of Array.from(files)) {
+      additions.push({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        file,
+        previewUrl: URL.createObjectURL(file),
+      });
+    }
+    setPendingUploads((prev) => {
+      const next = { ...prev };
+      const curr = next[submissionId] ?? [];
+      next[submissionId] = [...curr, ...additions];
+      return next;
+    });
+  }
+
+  function removePendingFile(submissionId: number, pendingId: string) {
+    setPendingUploads((prev) => {
+      const next = { ...prev };
+      const curr = next[submissionId] ?? [];
+      const target = curr.find((x) => x.id === pendingId);
+      if (target) URL.revokeObjectURL(target.previewUrl);
+      const filtered = curr.filter((x) => x.id !== pendingId);
+      if (filtered.length === 0) delete next[submissionId];
+      else next[submissionId] = filtered;
+      return next;
+    });
+  }
+
+  useEffect(() => {
+    return () => {
+      for (const rows of Object.values(pendingUploads)) {
+        for (const row of rows) URL.revokeObjectURL(row.previewUrl);
+      }
+    };
+  }, [pendingUploads]);
+
+  const incomingItems = useMemo(
+    () =>
+      items
+        .filter(
+          (s) =>
+            s.status === 'published' || s.status === 'parent_rejected' || s.status === 'teacher_revision',
+        )
+        .sort(byNewestHomework),
+    [items],
+  );
+
+  const doneItems = useMemo(
+    () =>
+      items
+        .filter(
+          (s) =>
+            s.status === 'student_done' || s.status === 'parent_approved' || s.status === 'teacher_approved',
+        )
+        .sort((a, b) => {
+          const ad = new Date(a.updated_at || a.student_done_at || '').getTime();
+          const bd = new Date(b.updated_at || b.student_done_at || '').getTime();
+          return bd - ad;
+        }),
+    [items],
+  );
+
+  const visibleItems = tab === 'incoming' ? incomingItems : doneItems;
 
   if (authLoading || !user) {
     return <p className="text-center text-gray-600 dark:text-gray-400">{t('common.loading')}</p>;
@@ -108,6 +218,33 @@ export default function KidsStudentHomeworksPage() {
         </div>
       </div>
 
+      <div className="mb-4 grid gap-3 sm:grid-cols-2">
+        <button
+          type="button"
+          onClick={() => setTab('incoming')}
+          className={`rounded-2xl border px-4 py-3 text-left transition ${
+            tab === 'incoming'
+              ? 'border-violet-400 bg-violet-50 text-violet-900 dark:border-violet-500 dark:bg-violet-950/40 dark:text-violet-100'
+              : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200'
+          }`}
+        >
+          <p className="text-xs font-bold uppercase tracking-wide">{t('homework.tabIncoming')}</p>
+          <p className="mt-1 text-2xl font-black">{incomingItems.length}</p>
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab('done')}
+          className={`rounded-2xl border px-4 py-3 text-left transition ${
+            tab === 'done'
+              ? 'border-emerald-400 bg-emerald-50 text-emerald-900 dark:border-emerald-500 dark:bg-emerald-950/40 dark:text-emerald-100'
+              : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200'
+          }`}
+        >
+          <p className="text-xs font-bold uppercase tracking-wide">{t('homework.tabDone')}</p>
+          <p className="mt-1 text-2xl font-black">{doneItems.length}</p>
+        </button>
+      </div>
+
       {items.length === 0 && !loading ? (
         <KidsCard tone="emerald">
           <p className="text-sm text-emerald-900 dark:text-emerald-100">{t('homework.empty')}</p>
@@ -115,11 +252,20 @@ export default function KidsStudentHomeworksPage() {
       ) : null}
 
       <div className="space-y-3">
-        {items.map((sub) => {
+        {visibleItems.map((sub) => {
           const canMarkDone =
             sub.status === 'published' ||
             sub.status === 'parent_rejected' ||
             sub.status === 'teacher_revision';
+          const pendingRows = pendingUploads[sub.id] ?? [];
+          const hasStudentImage = (Array.isArray(sub.attachments) && sub.attachments.length > 0) || pendingRows.length > 0;
+          const isOpen = openDetailId === sub.id;
+          const studentMediaItems: MediaItem[] = [
+            ...(Array.isArray(sub.attachments)
+              ? sub.attachments.map((att) => ({ url: att.url, type: 'image' as const }))
+              : []),
+            ...pendingRows.map((row) => ({ url: row.previewUrl, type: 'image' as const })),
+          ];
           return (
             <KidsCard key={sub.id} tone="sky">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -138,44 +284,155 @@ export default function KidsStudentHomeworksPage() {
                   ) : null}
                   <p className="mt-1 text-xs text-indigo-900/80 dark:text-indigo-100/80">{statusLabel[sub.status]}</p>
                 </div>
-                <KidsPrimaryButton
-                  type="button"
-                  disabled={!canMarkDone || markingId !== null}
-                  onClick={() => void markDone(sub.id)}
-                >
-                  {markingId === sub.id ? t('homework.sending') : t('homework.done')}
-                </KidsPrimaryButton>
+                <div className="flex items-center gap-2">
+                  <KidsSecondaryButton
+                    type="button"
+                    onClick={() => setOpenDetailId((prev) => (prev === sub.id ? null : sub.id))}
+                  >
+                    {isOpen ? t('homework.detailClose') : t('homework.detailOpen')}
+                  </KidsSecondaryButton>
+                </div>
               </div>
-              {Array.isArray(sub.homework.attachments) && sub.homework.attachments.length > 0 ? (
-                <div className="mt-3 space-y-2">
-                  <MediaSlider
-                    items={sub.homework.attachments.map<MediaItem>((att) => ({
-                      url: isImageAttachment(att.content_type, att.original_name)
-                        ? att.url
-                        : filePlaceholderUrl(att.original_name || 'dosya', t('homework.attachmentLabel')),
-                      type: 'image',
-                    }))}
-                    className="h-52"
-                    alt={sub.homework.title}
-                    fit="contain"
-                  />
-                  <ul className="space-y-1 text-xs text-slate-600 dark:text-slate-300">
-                    {sub.homework.attachments.map((att) => (
-                      <li key={att.id} className="flex flex-wrap items-center gap-2">
-                        <span className="font-medium">{att.original_name || t('messageDetail.file')}</span>
-                        {att.size_bytes ? <span>{formatFileSize(att.size_bytes)}</span> : null}
-                        <a
-                          href={att.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          download={att.original_name || true}
-                          className="rounded-full border border-sky-300 px-2 py-0.5 font-semibold text-sky-700 hover:bg-sky-100 dark:border-sky-700 dark:text-sky-200 dark:hover:bg-sky-900/40"
+              {isOpen ? (
+                <div className="mt-3 space-y-3 rounded-xl border border-slate-200/90 bg-white/80 p-3 dark:border-slate-800 dark:bg-slate-950/30">
+                  {sub.homework.description ? (
+                    <p className="whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-200">
+                      {sub.homework.description}
+                    </p>
+                  ) : null}
+                  {Array.isArray(sub.homework.attachments) && sub.homework.attachments.length > 0 ? (
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold text-slate-800 dark:text-slate-200">{t('homework.teacherFiles')}</p>
+                      <MediaSlider
+                        items={sub.homework.attachments.map<MediaItem>((att) => ({
+                          url: isImageAttachment(att.content_type, att.original_name)
+                            ? att.url
+                            : filePlaceholderUrl(att.original_name || 'dosya', t('homework.attachmentLabel')),
+                          type: 'image',
+                        }))}
+                        className="h-52"
+                        alt={sub.homework.title}
+                        fit="contain"
+                      />
+                      <ul className="space-y-1 text-xs text-slate-600 dark:text-slate-300">
+                        {sub.homework.attachments.map((att) => (
+                          <li key={att.id} className="flex flex-wrap items-center gap-2">
+                            <span className="font-medium">{att.original_name || t('messageDetail.file')}</span>
+                            {att.size_bytes ? <span>{formatFileSize(att.size_bytes)}</span> : null}
+                            <a
+                              href={att.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              download={att.original_name || true}
+                              className="rounded-full border border-sky-300 px-2 py-0.5 font-semibold text-sky-700 hover:bg-sky-100 dark:border-sky-700 dark:text-sky-200 dark:hover:bg-sky-900/40"
+                            >
+                              {t('announcements.viewDownload')}
+                            </a>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+                  <div className="rounded-xl border border-sky-200/80 bg-white/70 p-3 dark:border-sky-800/50 dark:bg-sky-950/20">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-xs font-semibold text-sky-900 dark:text-sky-100">{t('homework.studentImages')}</p>
+                      {canMarkDone ? (
+                        <label className="inline-flex cursor-pointer items-center rounded-full border border-sky-300 px-3 py-1 text-xs font-semibold text-sky-700 hover:bg-sky-100 dark:border-sky-700 dark:text-sky-200 dark:hover:bg-sky-900/40">
+                          {t('homework.addImage')}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="hidden"
+                            disabled={markingId !== null}
+                            onChange={(e) => {
+                              addPendingFiles(sub.id, e.currentTarget.files);
+                              e.currentTarget.value = '';
+                            }}
+                          />
+                        </label>
+                      ) : null}
+                    </div>
+                    {pendingRows.length > 0 ? (
+                      <div className="mt-2 space-y-2">
+                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                          <span className="text-amber-700 dark:text-amber-300">{t('homework.imageWillUploadOnDone')}</span>
+                        </div>
+                        <ul className="space-y-1 text-xs text-slate-600 dark:text-slate-300">
+                          {pendingRows.map((row) => (
+                            <li key={row.id} className="flex flex-wrap items-center gap-2">
+                              <span className="rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-200">
+                                {row.file.name}
+                              </span>
+                              <button
+                                type="button"
+                                disabled={markingId !== null}
+                                onClick={() => removePendingFile(sub.id, row.id)}
+                                className="rounded-full border border-rose-300 px-2 py-0.5 font-semibold text-rose-700 hover:bg-rose-100 disabled:opacity-60 dark:border-rose-700 dark:text-rose-200 dark:hover:bg-rose-900/40"
+                              >
+                                {t('common.delete')}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
+                    {studentMediaItems.length > 0 ? (
+                      <div className="mt-2 space-y-2">
+                        <MediaSlider
+                          items={studentMediaItems}
+                          className="h-52"
+                          alt={`${sub.homework.title} ogrenci gorselleri`}
+                          fit="contain"
+                        />
+                        <ul className="space-y-1 text-xs text-slate-600 dark:text-slate-300">
+                          {sub.attachments.map((att) => (
+                            <li key={att.id} className="flex flex-wrap items-center gap-2">
+                              <span className="font-medium">{att.original_name || t('messageDetail.file')}</span>
+                              {att.size_bytes ? <span>{formatFileSize(att.size_bytes)}</span> : null}
+                              <a
+                                href={att.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                download={att.original_name || true}
+                                className="rounded-full border border-sky-300 px-2 py-0.5 font-semibold text-sky-700 hover:bg-sky-100 dark:border-sky-700 dark:text-sky-200 dark:hover:bg-sky-900/40"
+                              >
+                                {t('announcements.viewDownload')}
+                              </a>
+                              {canMarkDone ? (
+                                <button
+                                  type="button"
+                                  disabled={deletingAttachmentId !== null}
+                                  onClick={() => void deleteSubmissionImage(sub.id, att.id)}
+                                  className="rounded-full border border-rose-300 px-2 py-0.5 font-semibold text-rose-700 hover:bg-rose-100 disabled:opacity-60 dark:border-rose-700 dark:text-rose-200 dark:hover:bg-rose-900/40"
+                                >
+                                  {deletingAttachmentId === att.id ? '...' : t('common.delete')}
+                                </button>
+                              ) : null}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : (
+                      <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">{t('homework.noStudentImageYet')}</p>
+                    )}
+                    {canMarkDone ? (
+                      <div className="mt-3 flex items-center justify-end gap-2">
+                        {!hasStudentImage ? (
+                          <p className="text-xs text-amber-700 dark:text-amber-300">
+                            {t('homework.doneRequiresImage')}
+                          </p>
+                        ) : null}
+                        <KidsPrimaryButton
+                          type="button"
+                          disabled={!hasStudentImage || markingId !== null}
+                          onClick={() => void markDone(sub.id)}
                         >
-                          {t('announcements.viewDownload')}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
+                          {markingId === sub.id ? t('homework.sending') : t('homework.done')}
+                        </KidsPrimaryButton>
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
               ) : null}
             </KidsCard>

@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 import {
+  kidsDeleteParentHomeworkSubmissionAttachment,
   kidsParentChildrenOverview,
   kidsParentReviewHomeworkSubmission,
   type KidsParentChildOverview,
@@ -43,6 +44,7 @@ export default function KidsParentChildrenStatusPage() {
   const [overviewLoading, setOverviewLoading] = useState(false);
   const [overviewError, setOverviewError] = useState<string | null>(null);
   const [reviewingSubmissionId, setReviewingSubmissionId] = useState<number | null>(null);
+  const [deletingAttachmentId, setDeletingAttachmentId] = useState<number | null>(null);
   const [selectedChildId, setSelectedChildId] = useState<string>('');
   const homeworkStatusLabel: Record<string, string> = {
     published: t('homework.status.published'),
@@ -93,16 +95,29 @@ export default function KidsParentChildrenStatusPage() {
     void loadOverview();
   }, [user, loading, pathPrefix, router, loadOverview]);
 
-  async function markSubmittedReviewed(submissionId: number) {
+  async function markSubmittedReviewed(submissionId: number, approved: boolean) {
     setReviewingSubmissionId(submissionId);
     try {
-      await kidsParentReviewHomeworkSubmission(submissionId, { approved: true });
-      toast.success(t('parent.panel.reviewSent'));
+      await kidsParentReviewHomeworkSubmission(submissionId, { approved });
+      toast.success(approved ? t('parent.panel.reviewSent') : t('teacherHomework.revisionRequested'));
       await loadOverview();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('parent.panel.reviewSaveFailed'));
     } finally {
       setReviewingSubmissionId(null);
+    }
+  }
+
+  async function deleteSubmissionAttachment(submissionId: number, attachmentId: number) {
+    setDeletingAttachmentId(attachmentId);
+    try {
+      await kidsDeleteParentHomeworkSubmissionAttachment(submissionId, attachmentId);
+      toast.success('Gorsel silindi');
+      await loadOverview();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Gorsel silinemedi');
+    } finally {
+      setDeletingAttachmentId(null);
     }
   }
 
@@ -173,14 +188,28 @@ export default function KidsParentChildrenStatusPage() {
                       <div className="min-w-0">
                         <p className="font-semibold text-violet-950 dark:text-violet-100">{it.assignment_title}</p>
                         <p className="text-xs text-violet-800/90 dark:text-violet-200/80">{it.class_name}</p>
+                        {Array.isArray(it.submission_attachments) && it.submission_attachments.length > 0 ? (
+                          <p className="text-xs text-violet-700/80 dark:text-violet-200/70">
+                            {it.submission_attachments.length} gorsel eklendi
+                          </p>
+                        ) : null}
                       </div>
-                      <KidsPrimaryButton
-                        type="button"
-                        disabled={reviewingSubmissionId === it.submission_id}
-                        onClick={() => void markSubmittedReviewed(it.submission_id)}
-                      >
-                        {reviewingSubmissionId === it.submission_id ? t('profile.saving') : t('childrenStatus.submitted')}
-                      </KidsPrimaryButton>
+                      <div className="flex items-center gap-2">
+                        <KidsSecondaryButton
+                          type="button"
+                          disabled={reviewingSubmissionId === it.submission_id}
+                          onClick={() => void markSubmittedReviewed(it.submission_id, false)}
+                        >
+                          Revizyon iste
+                        </KidsSecondaryButton>
+                        <KidsPrimaryButton
+                          type="button"
+                          disabled={reviewingSubmissionId === it.submission_id}
+                          onClick={() => void markSubmittedReviewed(it.submission_id, true)}
+                        >
+                          {reviewingSubmissionId === it.submission_id ? t('profile.saving') : t('childrenStatus.submitted')}
+                        </KidsPrimaryButton>
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -258,6 +287,47 @@ export default function KidsParentChildrenStatusPage() {
                       ) : null}
                       {hw.teacher_note ? (
                         <p className="mt-1 text-xs italic text-amber-900 dark:text-amber-100">{t('childrenStatus.teacherNote')}: "{hw.teacher_note}"</p>
+                      ) : null}
+                      {Array.isArray(hw.submission_attachments) && hw.submission_attachments.length > 0 ? (
+                        <div className="mt-2 space-y-2 rounded-lg border border-sky-200/80 bg-sky-50/70 p-2 dark:border-sky-800/50 dark:bg-sky-950/30">
+                          <p className="text-xs font-semibold text-sky-900 dark:text-sky-100">Ogrenci gorselleri</p>
+                          <MediaSlider
+                            items={hw.submission_attachments.map<MediaItem>((att) => ({
+                              url: isImageAttachment(att.content_type, att.original_name)
+                                ? att.url
+                                : filePlaceholderUrl(att.original_name || 'dosya', t('homework.attachmentLabel')),
+                              type: 'image',
+                            }))}
+                            className="h-44"
+                            alt={`${hw.title} ogrenci gorselleri`}
+                            fit="contain"
+                          />
+                          <ul className="space-y-1 text-xs text-slate-700 dark:text-slate-300">
+                            {hw.submission_attachments.map((att) => (
+                              <li key={att.id} className="flex flex-wrap items-center gap-2">
+                                <span className="font-medium">{att.original_name || t('messageDetail.file')}</span>
+                                {att.size_bytes ? <span>{formatFileSize(att.size_bytes)}</span> : null}
+                                <a
+                                  href={att.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  download={att.original_name || true}
+                                  className="rounded-full border border-sky-300 px-2 py-0.5 font-semibold text-sky-700 hover:bg-sky-100 dark:border-sky-700 dark:text-sky-200 dark:hover:bg-sky-900/40"
+                                >
+                                  {t('announcements.viewDownload')}
+                                </a>
+                                <button
+                                  type="button"
+                                  disabled={deletingAttachmentId !== null}
+                                  onClick={() => void deleteSubmissionAttachment(hw.submission_id, att.id)}
+                                  className="rounded-full border border-rose-300 px-2 py-0.5 font-semibold text-rose-700 hover:bg-rose-100 disabled:opacity-60 dark:border-rose-700 dark:text-rose-200 dark:hover:bg-rose-900/40"
+                                >
+                                  {deletingAttachmentId === att.id ? '...' : 'Sil'}
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
                       ) : null}
                       {Array.isArray(hw.attachments) && hw.attachments.length > 0 ? (
                         <div className="mt-2 space-y-2">
