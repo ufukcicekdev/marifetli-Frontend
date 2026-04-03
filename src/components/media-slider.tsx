@@ -1,7 +1,7 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { MediaItem } from '@/src/lib/extract-media';
 
 const MediaLightbox = dynamic(() => import('@/src/components/media-lightbox').then((m) => ({ default: m.MediaLightbox })), { ssr: false });
@@ -12,15 +12,45 @@ interface MediaSliderProps {
   /** SEO/erişilebilirlik: görsel açıklaması (örn. gönderi başlığı) */
   alt?: string;
   fit?: 'contain' | 'cover';
+  onDeleteAtIndex?: (index: number) => void;
+  deleteDisabled?: boolean;
 }
 
-export function MediaSlider({ items, className = '', alt, fit = 'contain' }: MediaSliderProps) {
+function sliderFileName(url: string, type: MediaItem['type'], index: number): string {
+  try {
+    const parsed = new URL(url, typeof window !== 'undefined' ? window.location.origin : 'http://localhost');
+    const raw = parsed.pathname.split('/').pop() || '';
+    if (raw) return decodeURIComponent(raw);
+  } catch {
+    // fallback below
+  }
+  const ext = type === 'video' ? 'mp4' : 'jpg';
+  return `media-${index + 1}.${ext}`;
+}
+
+export function MediaSlider({
+  items,
+  className = '',
+  alt,
+  fit = 'contain',
+  onDeleteAtIndex,
+  deleteDisabled = false,
+}: MediaSliderProps) {
   const [index, setIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
+  useEffect(() => {
+    if (items.length === 0) return;
+    setIndex((i) => Math.max(0, Math.min(i, items.length - 1)));
+  }, [items.length]);
+
   if (items.length === 0) return null;
 
-  const current = items[index];
+  const safeIndex = Math.max(0, Math.min(index, items.length - 1));
+  const current = items[safeIndex];
+  if (!current) return null;
+
+  const currentDownloadName = sliderFileName(current.url, current.type, safeIndex);
   const prev = (e?: React.MouseEvent) => {
     e?.stopPropagation();
     setIndex((i) => (i <= 0 ? items.length - 1 : i - 1));
@@ -73,6 +103,30 @@ export function MediaSlider({ items, className = '', alt, fit = 'contain' }: Med
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
             </svg>
           </div>
+          <a
+            href={current.url}
+            download={currentDownloadName}
+            onClick={(e) => e.stopPropagation()}
+            className="absolute top-2 left-2 z-20 rounded-lg bg-black/50 px-2.5 py-1 text-[11px] font-semibold text-white opacity-70 transition-opacity hover:bg-black/70 group-hover:opacity-100"
+            title="Indir"
+          >
+            Indir
+          </a>
+          {onDeleteAtIndex ? (
+            <button
+              type="button"
+              disabled={deleteDisabled}
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                onDeleteAtIndex(safeIndex);
+              }}
+              className="absolute top-2 left-16 z-20 rounded-lg border border-rose-300 bg-rose-500/80 px-2.5 py-1 text-[11px] font-semibold text-white opacity-80 transition-opacity hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-50 group-hover:opacity-100"
+              title="Sil"
+            >
+              Sil
+            </button>
+          ) : null}
       </div>
       {items.length > 1 && (
         <div className="flex items-center justify-center gap-1 px-3 py-2 border-t border-gray-200 dark:border-gray-700" onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}>
@@ -81,19 +135,21 @@ export function MediaSlider({ items, className = '', alt, fit = 'contain' }: Med
               key={i}
               type="button"
               onClick={(e) => { e.stopPropagation(); e.preventDefault(); setIndex(i); }}
-              className={`w-2 h-2 rounded-full transition-colors ${i === index ? 'bg-brand' : 'bg-gray-400 dark:bg-gray-600 hover:bg-gray-500'}`}
+              className={`w-2 h-2 rounded-full transition-colors ${i === safeIndex ? 'bg-brand' : 'bg-gray-400 dark:bg-gray-600 hover:bg-gray-500'}`}
               aria-label={`Medya ${i + 1}`}
             />
           ))}
-          <span className="ml-2 text-xs text-gray-500">{index + 1} / {items.length}</span>
+          <span className="ml-2 text-xs text-gray-500">{safeIndex + 1} / {items.length}</span>
         </div>
       )}
     </div>
     {lightboxOpen && (
       <MediaLightbox
         items={items}
-        currentIndex={index}
+        currentIndex={safeIndex}
         onClose={() => setLightboxOpen(false)}
+        onDeleteAtIndex={onDeleteAtIndex}
+        deleteDisabled={deleteDisabled}
       />
     )}
     </>

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
@@ -30,14 +30,6 @@ function filePlaceholderUrl(fileName: string, label: string): string {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
-function formatFileSize(sizeBytes: number): string {
-  const s = Number(sizeBytes || 0);
-  if (s <= 0) return '';
-  if (s < 1024) return `${s} B`;
-  if (s < 1024 * 1024) return `${(s / 1024).toFixed(1)} KB`;
-  return `${(s / (1024 * 1024)).toFixed(1)} MB`;
-}
-
 type HomeworkTab = 'incoming' | 'done';
 type PendingUploadItem = {
   id: string;
@@ -60,6 +52,8 @@ export default function KidsStudentHomeworksPage() {
   const [markingId, setMarkingId] = useState<number | null>(null);
   const [deletingAttachmentId, setDeletingAttachmentId] = useState<number | null>(null);
   const [pendingUploads, setPendingUploads] = useState<Record<number, PendingUploadItem[]>>({});
+  const pendingUploadsRef = useRef(pendingUploads);
+  pendingUploadsRef.current = pendingUploads;
   const [tab, setTab] = useState<HomeworkTab>('incoming');
   const [openDetailId, setOpenDetailId] = useState<number | null>(null);
   const statusLabel: Record<KidsHomeworkSubmission['status'], string> = {
@@ -164,13 +158,15 @@ export default function KidsStudentHomeworksPage() {
     });
   }
 
+  // pendingUploads her değişiminde cleanup çalıştırmayın: önceki listedeki TÜM blob'ları
+  // revoke eder ve silinmemiş önizlemeleri de kırar (net::ERR_FILE_NOT_FOUND).
   useEffect(() => {
     return () => {
-      for (const rows of Object.values(pendingUploads)) {
+      for (const rows of Object.values(pendingUploadsRef.current)) {
         for (const row of rows) URL.revokeObjectURL(row.previewUrl);
       }
     };
-  }, [pendingUploads]);
+  }, []);
 
   const incomingItems = useMemo(
     () =>
@@ -260,12 +256,21 @@ export default function KidsStudentHomeworksPage() {
           const pendingRows = pendingUploads[sub.id] ?? [];
           const hasStudentImage = (Array.isArray(sub.attachments) && sub.attachments.length > 0) || pendingRows.length > 0;
           const isOpen = openDetailId === sub.id;
-          const studentMediaItems: MediaItem[] = [
+          const studentMediaEntries = [
             ...(Array.isArray(sub.attachments)
-              ? sub.attachments.map((att) => ({ url: att.url, type: 'image' as const }))
+              ? sub.attachments.map((att) => ({
+                  kind: 'remote' as const,
+                  id: att.id,
+                  url: att.url,
+                }))
               : []),
-            ...pendingRows.map((row) => ({ url: row.previewUrl, type: 'image' as const })),
+            ...pendingRows.map((row) => ({
+              kind: 'pending' as const,
+              pendingId: row.id,
+              url: row.previewUrl,
+            })),
           ];
+          const studentMediaItems: MediaItem[] = studentMediaEntries.map((row) => ({ url: row.url, type: 'image' as const }));
           return (
             <KidsCard key={sub.id} tone="sky">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -314,23 +319,6 @@ export default function KidsStudentHomeworksPage() {
                         alt={sub.homework.title}
                         fit="contain"
                       />
-                      <ul className="space-y-1 text-xs text-slate-600 dark:text-slate-300">
-                        {sub.homework.attachments.map((att) => (
-                          <li key={att.id} className="flex flex-wrap items-center gap-2">
-                            <span className="font-medium">{att.original_name || t('messageDetail.file')}</span>
-                            {att.size_bytes ? <span>{formatFileSize(att.size_bytes)}</span> : null}
-                            <a
-                              href={att.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              download={att.original_name || true}
-                              className="rounded-full border border-sky-300 px-2 py-0.5 font-semibold text-sky-700 hover:bg-sky-100 dark:border-sky-700 dark:text-sky-200 dark:hover:bg-sky-900/40"
-                            >
-                              {t('announcements.viewDownload')}
-                            </a>
-                          </li>
-                        ))}
-                      </ul>
                     </div>
                   ) : null}
                   <div className="rounded-xl border border-sky-200/80 bg-white/70 p-3 dark:border-sky-800/50 dark:bg-sky-950/20">
@@ -354,64 +342,31 @@ export default function KidsStudentHomeworksPage() {
                       ) : null}
                     </div>
                     {pendingRows.length > 0 ? (
-                      <div className="mt-2 space-y-2">
-                        <div className="flex flex-wrap items-center gap-2 text-xs">
-                          <span className="text-amber-700 dark:text-amber-300">{t('homework.imageWillUploadOnDone')}</span>
-                        </div>
-                        <ul className="space-y-1 text-xs text-slate-600 dark:text-slate-300">
-                          {pendingRows.map((row) => (
-                            <li key={row.id} className="flex flex-wrap items-center gap-2">
-                              <span className="rounded-full border border-emerald-300 bg-emerald-50 px-2 py-0.5 text-emerald-700 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-200">
-                                {row.file.name}
-                              </span>
-                              <button
-                                type="button"
-                                disabled={markingId !== null}
-                                onClick={() => removePendingFile(sub.id, row.id)}
-                                className="rounded-full border border-rose-300 px-2 py-0.5 font-semibold text-rose-700 hover:bg-rose-100 disabled:opacity-60 dark:border-rose-700 dark:text-rose-200 dark:hover:bg-rose-900/40"
-                              >
-                                {t('common.delete')}
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
+                      <div className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                        {t('homework.imageWillUploadOnDone')}
                       </div>
                     ) : null}
                     {studentMediaItems.length > 0 ? (
                       <div className="mt-2 space-y-2">
                         <MediaSlider
+                          key={studentMediaEntries.map((e) => (e.kind === 'remote' ? `r:${e.id}` : `p:${e.pendingId}`)).join('|')}
                           items={studentMediaItems}
                           className="h-52"
                           alt={`${sub.homework.title} ogrenci gorselleri`}
                           fit="contain"
+                          deleteDisabled={markingId !== null || deletingAttachmentId !== null}
+                          onDeleteAtIndex={(itemIndex) => {
+                            const target = studentMediaEntries[itemIndex];
+                            if (!target) return;
+                            if (target.kind === 'pending') {
+                              removePendingFile(sub.id, target.pendingId);
+                              return;
+                            }
+                            if (canMarkDone) {
+                              void deleteSubmissionImage(sub.id, target.id);
+                            }
+                          }}
                         />
-                        <ul className="space-y-1 text-xs text-slate-600 dark:text-slate-300">
-                          {sub.attachments.map((att) => (
-                            <li key={att.id} className="flex flex-wrap items-center gap-2">
-                              <span className="font-medium">{att.original_name || t('messageDetail.file')}</span>
-                              {att.size_bytes ? <span>{formatFileSize(att.size_bytes)}</span> : null}
-                              <a
-                                href={att.url}
-                                target="_blank"
-                                rel="noreferrer"
-                                download={att.original_name || true}
-                                className="rounded-full border border-sky-300 px-2 py-0.5 font-semibold text-sky-700 hover:bg-sky-100 dark:border-sky-700 dark:text-sky-200 dark:hover:bg-sky-900/40"
-                              >
-                                {t('announcements.viewDownload')}
-                              </a>
-                              {canMarkDone ? (
-                                <button
-                                  type="button"
-                                  disabled={deletingAttachmentId !== null}
-                                  onClick={() => void deleteSubmissionImage(sub.id, att.id)}
-                                  className="rounded-full border border-rose-300 px-2 py-0.5 font-semibold text-rose-700 hover:bg-rose-100 disabled:opacity-60 dark:border-rose-700 dark:text-rose-200 dark:hover:bg-rose-900/40"
-                                >
-                                  {deletingAttachmentId === att.id ? '...' : t('common.delete')}
-                                </button>
-                              ) : null}
-                            </li>
-                          ))}
-                        </ul>
                       </div>
                     ) : (
                       <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">{t('homework.noStudentImageYet')}</p>

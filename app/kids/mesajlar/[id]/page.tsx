@@ -30,6 +30,8 @@ import {
 } from '@/src/components/kids/kids-ui';
 import { useKidsI18n } from '@/src/providers/kids-language-provider';
 import { Download, Image as ImageIcon, MessageCircle, Paperclip, Send, Smile, Sparkles, UserCircle2, Users, Wifi, WifiOff, X } from 'lucide-react';
+import { MediaLightbox } from '@/src/components/media-lightbox';
+import type { MediaItem } from '@/src/lib/extract-media';
 
 const QUICK_EMOJIS = ['😀', '😂', '😍', '👏', '👍', '🙏', '🎉', '🔥', '❤️', '🌟'] as const;
 const MAX_IMAGE_ATTACHMENT_BYTES = 10 * 1024 * 1024;
@@ -54,6 +56,8 @@ export default function KidsConversationDetailPage() {
   const [passwordBusy, setPasswordBusy] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
   const wsRef = useRef<WebSocket | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const reconnectTimerRef = useRef<number | null>(null);
@@ -123,6 +127,14 @@ export default function KidsConversationDetailPage() {
       conversation?.topic?.trim() ||
       t('messages.conversationFallback').replace('{id}', String(conversation?.id ?? '')),
     [conversation, t],
+  );
+
+  const imageItems = useMemo<MediaItem[]>(
+    () =>
+      messages
+        .filter((m) => m.attachment && isImageAttachment(m.attachment.content_type, m.attachment.original_name))
+        .map((m) => ({ url: m.attachment!.url, type: 'image' as const })),
+    [messages],
   );
 
   function realtimeToken(): string {
@@ -441,13 +453,21 @@ export default function KidsConversationDetailPage() {
                       {m.attachment ? (
                         <div className={`mt-2 rounded-xl border p-2 ${mine ? 'border-violet-300/50 bg-violet-500/20' : 'border-violet-200 bg-violet-50/60 dark:border-violet-800 dark:bg-violet-950/40'}`}>
                           {isImageAttachment(m.attachment.content_type, m.attachment.original_name) ? (
-                            <a href={m.attachment.url} target="_blank" rel="noreferrer" className="block">
+                            <button
+                              type="button"
+                              className="block w-full"
+                              onClick={() => {
+                                const idx = imageItems.findIndex((x) => x.url === m.attachment!.url);
+                                setLightboxIndex(idx >= 0 ? idx : 0);
+                                setLightboxOpen(true);
+                              }}
+                            >
                               <img
                                 src={m.attachment.url}
                                 alt={m.attachment.original_name || t('messageDetail.imageAttachment')}
                                 className="max-h-56 w-full rounded-lg object-cover"
                               />
-                            </a>
+                            </button>
                           ) : (
                             <div className="flex items-center gap-2 text-xs">
                               <Paperclip className="h-3.5 w-3.5 shrink-0" />
@@ -608,6 +628,13 @@ export default function KidsConversationDetailPage() {
             </KidsPrimaryButton>
           </div>
         </KidsCenteredModal>
+      ) : null}
+      {lightboxOpen && imageItems.length > 0 ? (
+        <MediaLightbox
+          items={imageItems}
+          currentIndex={lightboxIndex}
+          onClose={() => setLightboxOpen(false)}
+        />
       ) : null}
     </div>
   );

@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import {
   kidsCreateConversation,
+  kidsDeleteParentHomeworkSubmissionAttachment,
   kidsParentChildrenOverview,
   kidsParentReviewHomeworkSubmission,
   kidsParentSwitchToStudent,
@@ -22,6 +23,20 @@ import {
 } from '@/src/components/kids/kids-ui';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 import { useKidsI18n } from '@/src/providers/kids-language-provider';
+import { MediaSlider } from '@/src/components/media-slider';
+import type { MediaItem } from '@/src/lib/extract-media';
+
+function isImageAttachment(contentType: string, fileName: string): boolean {
+  const ct = (contentType || '').toLowerCase();
+  if (ct.startsWith('image/')) return true;
+  return /\.(png|jpe?g|gif|webp|svg)$/i.test(fileName || '');
+}
+
+function filePlaceholderUrl(fileName: string, label: string): string {
+  const ext = (fileName.split('.').pop() || 'DOSYA').toUpperCase().slice(0, 6);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540"><rect width="960" height="540" fill="#FEF3C7"/><rect x="360" y="120" width="240" height="300" rx="24" fill="#FDE68A"/><path d="M520 120v76c0 13 11 24 24 24h56" fill="#FCD34D"/><path d="M520 120l80 100" stroke="#F59E0B" stroke-width="10"/><text x="480" y="300" text-anchor="middle" font-family="Arial, sans-serif" font-size="40" font-weight="700" fill="#92400E">${ext}</text><text x="480" y="345" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#B45309">${label}</text></svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
 
 export default function KidsParentPanelPage() {
   const router = useRouter();
@@ -43,6 +58,14 @@ export default function KidsParentPanelPage() {
   const [chatStarting, setChatStarting] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
   const [reviewingSubmissionId, setReviewingSubmissionId] = useState<number | null>(null);
+  const [deletingAttachmentId, setDeletingAttachmentId] = useState<number | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<{
+    submissionId: number;
+    attachmentId: number;
+    fileName?: string;
+    currentAttachmentCount?: number;
+  } | null>(null);
+  const [openPendingDetailId, setOpenPendingDetailId] = useState<number | null>(null);
 
   const loadOverview = useCallback(async () => {
     setOverviewLoading(true);
@@ -133,6 +156,36 @@ export default function KidsParentPanelPage() {
       toast.error(e instanceof Error ? e.message : t('parent.panel.reviewSaveFailed'));
     } finally {
       setReviewingSubmissionId(null);
+    }
+  }
+
+  async function deleteSubmissionAttachment(
+    submissionId: number,
+    attachmentId: number,
+    fileName?: string,
+    currentAttachmentCount?: number,
+  ) {
+    setPendingDelete({ submissionId, attachmentId, fileName, currentAttachmentCount });
+  }
+
+  async function confirmDeleteSubmissionAttachment() {
+    if (!pendingDelete) return;
+    const { submissionId, attachmentId, currentAttachmentCount } = pendingDelete;
+    setPendingDelete(null);
+    setDeletingAttachmentId(attachmentId);
+    try {
+      await kidsDeleteParentHomeworkSubmissionAttachment(submissionId, attachmentId);
+      if ((currentAttachmentCount ?? 0) <= 1) {
+        await kidsParentReviewHomeworkSubmission(submissionId, { approved: false });
+        toast.success('Son gorsel silindi, teslim ogrenciye revizyona geri gonderildi');
+      } else {
+        toast.success('Gorsel silindi');
+      }
+      await loadOverview();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Gorsel silinemedi');
+    } finally {
+      setDeletingAttachmentId(null);
     }
   }
 
@@ -252,7 +305,7 @@ export default function KidsParentPanelPage() {
                   </h2>
                   <p className="mt-1 text-sm text-amber-900/90 dark:text-amber-100/85">
                     {t('parent.panel.growthPoints')}:{' '}
-                    <strong className="text-amber-950 dark:text-amber-50">{c.growth_points}</strong>
+                    <strong className="text-amber-950 dark:text-amber-50">{Number(c.growth_points ?? 0)}</strong>
                     {c.growth_stage ? (
                       <>
                         {' '}
@@ -287,37 +340,111 @@ export default function KidsParentPanelPage() {
                     {pendingActions.map((it, idx) => (
                       <li
                         key={`${it.submission_id}-${idx}`}
-                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-violet-200/80 bg-white/80 px-2.5 py-2 text-sm dark:border-violet-700 dark:bg-violet-950/40"
+                        className="rounded-lg border border-violet-200/80 bg-white/80 px-2.5 py-2 text-sm dark:border-violet-700 dark:bg-violet-950/40"
                       >
-                        <div className="min-w-0">
-                          <p className="font-semibold text-violet-950 dark:text-violet-100">{it.assignment_title}</p>
-                          <p className="text-xs text-violet-800/90 dark:text-violet-200/80">
-                            {it.class_name} · {t('parent.panel.round')} {it.round_number}
-                          </p>
-                          {Array.isArray(it.submission_attachments) && it.submission_attachments.length > 0 ? (
-                            <p className="text-xs text-violet-700/80 dark:text-violet-200/70">
-                              {it.submission_attachments.length} gorsel
-                            </p>
-                          ) : null}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <KidsSecondaryButton
-                            type="button"
-                            className="!min-h-9 !px-3 !text-xs"
-                            disabled={reviewingSubmissionId === it.submission_id}
-                            onClick={() => void markSubmittedReviewed(it.submission_id, false)}
-                          >
-                            Revizyon iste
-                          </KidsSecondaryButton>
-                          <KidsPrimaryButton
-                            type="button"
-                            className="!min-h-9 !px-3 !text-xs"
-                            disabled={reviewingSubmissionId === it.submission_id}
-                            onClick={() => void markSubmittedReviewed(it.submission_id, true)}
-                          >
-                            {reviewingSubmissionId === it.submission_id ? t('profile.saving') : t('childrenStatus.submitted')}
-                          </KidsPrimaryButton>
-                        </div>
+                        {(() => {
+                          const history = (c.homework_history ?? []).find((hw) => hw.submission_id === it.submission_id) ?? null;
+                          const isDetailOpen = openPendingDetailId === it.submission_id;
+                          return (
+                            <>
+                              <div className="flex flex-wrap items-center justify-between gap-2">
+                                <div className="min-w-0">
+                                  <p className="font-semibold text-violet-950 dark:text-violet-100">{it.assignment_title}</p>
+                                  <p className="text-xs text-violet-800/90 dark:text-violet-200/80">
+                                    {it.class_name} · {t('parent.panel.round')} {it.round_number}
+                                  </p>
+                                  {Array.isArray(it.submission_attachments) && it.submission_attachments.length > 0 ? (
+                                    <p className="text-xs text-violet-700/80 dark:text-violet-200/70">
+                                      {it.submission_attachments.length} gorsel
+                                    </p>
+                                  ) : null}
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <KidsSecondaryButton
+                                    type="button"
+                                    className="min-h-9! px-3! text-xs!"
+                                    onClick={() => {
+                                      setOpenPendingDetailId((prev) => (prev === it.submission_id ? null : it.submission_id));
+                                    }}
+                                  >
+                                    {isDetailOpen ? t('homework.detailClose') : t('homework.detailOpen')}
+                                  </KidsSecondaryButton>
+                                  <KidsSecondaryButton
+                                    type="button"
+                                    className="min-h-9! px-3! text-xs!"
+                                    disabled={reviewingSubmissionId === it.submission_id}
+                                    onClick={() => void markSubmittedReviewed(it.submission_id, false)}
+                                  >
+                                    Revizyon iste
+                                  </KidsSecondaryButton>
+                                  <KidsPrimaryButton
+                                    type="button"
+                                    className="min-h-9! px-3! text-xs!"
+                                    disabled={
+                                      reviewingSubmissionId === it.submission_id ||
+                                      !Array.isArray(it.submission_attachments) ||
+                                      it.submission_attachments.length === 0
+                                    }
+                                    onClick={() => void markSubmittedReviewed(it.submission_id, true)}
+                                  >
+                                    {reviewingSubmissionId === it.submission_id ? t('profile.saving') : t('childrenStatus.submitted')}
+                                  </KidsPrimaryButton>
+                                </div>
+                              </div>
+                              {isDetailOpen ? (
+                                <div className="mt-2 space-y-2 rounded-lg border border-slate-200/80 bg-slate-50/70 p-2 dark:border-slate-700/70 dark:bg-slate-900/40">
+                                  {history?.description ? (
+                                    <p className="whitespace-pre-wrap text-xs text-slate-700 dark:text-slate-200">{history.description}</p>
+                                  ) : null}
+                                  {Array.isArray(history?.attachments) && history.attachments.length > 0 ? (
+                                    <div className="space-y-2">
+                                      <p className="text-xs font-semibold text-amber-900 dark:text-amber-100">Ogretmen dosyalari</p>
+                                      <MediaSlider
+                                        items={history.attachments.map<MediaItem>((att) => ({
+                                          url: isImageAttachment(att.content_type, att.original_name)
+                                            ? att.url
+                                            : filePlaceholderUrl(att.original_name || 'dosya', t('homework.attachmentLabel')),
+                                          type: 'image',
+                                        }))}
+                                        className="h-44"
+                                        alt={history.title}
+                                        fit="contain"
+                                      />
+                                    </div>
+                                  ) : null}
+                                  {Array.isArray(it.submission_attachments) && it.submission_attachments.length > 0 ? (
+                                    <div className="space-y-2">
+                                      <p className="text-xs font-semibold text-sky-900 dark:text-sky-100">Ogrenci gorselleri</p>
+                                      <MediaSlider
+                                        key={it.submission_attachments.map((a) => a.id).join('|')}
+                                        items={it.submission_attachments.map<MediaItem>((att) => ({
+                                          url: isImageAttachment(att.content_type, att.original_name)
+                                            ? att.url
+                                            : filePlaceholderUrl(att.original_name || 'dosya', t('homework.attachmentLabel')),
+                                          type: 'image',
+                                        }))}
+                                        className="h-44"
+                                        alt={`${it.assignment_title} ogrenci gorselleri`}
+                                        fit="contain"
+                                        deleteDisabled={deletingAttachmentId !== null}
+                                        onDeleteAtIndex={(itemIndex) => {
+                                          const att = it.submission_attachments[itemIndex];
+                                          if (!att) return;
+                                          void deleteSubmissionAttachment(
+                                            it.submission_id,
+                                            att.id,
+                                            att.original_name,
+                                            it.submission_attachments.length,
+                                          );
+                                        }}
+                                      />
+                                    </div>
+                                  ) : null}
+                                </div>
+                              ) : null}
+                            </>
+                          );
+                        })()}
                       </li>
                     ))}
                   </ul>
@@ -515,6 +642,43 @@ export default function KidsParentPanelPage() {
               {chatError}
             </p>
           ) : null}
+        </KidsCenteredModal>
+      ) : null}
+      {pendingDelete ? (
+        <KidsCenteredModal
+          title="Gorsel silme onayi"
+          onClose={() => {
+            if (deletingAttachmentId !== null) return;
+            setPendingDelete(null);
+          }}
+          footer={
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              <KidsSecondaryButton
+                type="button"
+                disabled={deletingAttachmentId !== null}
+                onClick={() => setPendingDelete(null)}
+              >
+                {t('common.cancel')}
+              </KidsSecondaryButton>
+              <KidsPrimaryButton
+                type="button"
+                disabled={deletingAttachmentId !== null}
+                onClick={() => void confirmDeleteSubmissionAttachment()}
+              >
+                {deletingAttachmentId !== null ? t('common.loading') : t('common.delete')}
+              </KidsPrimaryButton>
+            </div>
+          }
+        >
+          <p className="text-sm text-slate-700 dark:text-gray-300">
+            Silinecek dosya:{' '}
+            <span className="font-semibold text-slate-900 dark:text-white">
+              {pendingDelete.fileName || 'Gorsel'}
+            </span>
+          </p>
+          <p className="mt-2 text-xs text-amber-800 dark:text-amber-200">
+            Bu islem geri alinamaz.
+          </p>
         </KidsCenteredModal>
       ) : null}
     </KidsPanelMax>

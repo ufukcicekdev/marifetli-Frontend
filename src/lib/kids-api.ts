@@ -98,6 +98,19 @@ export type KidsParentHomeworkHistoryRow = {
   }[];
 };
 
+export type KidsParentTestAttemptSummary = {
+  attempt_id: number;
+  test_id: number;
+  title: string;
+  class_name: string;
+  submitted_at: string | null;
+  score: number;
+  total_questions: number;
+  total_correct: number;
+  total_wrong: number;
+  auto_submitted: boolean;
+};
+
 export type KidsParentChildOverview = {
   id: number;
   first_name: string;
@@ -122,6 +135,8 @@ export type KidsParentChildOverview = {
   assignments_recent: KidsParentAssignmentRow[];
   challenges: KidsParentChallengeRow[];
   homework_history: KidsParentHomeworkHistoryRow[];
+  /** Tamamlanmış test denemeleri (veli özeti); backend yoksa boş dizi. */
+  test_attempts_history?: KidsParentTestAttemptSummary[];
   pending_parent_actions: {
     type: 'homework_parent_review';
     submission_id: number;
