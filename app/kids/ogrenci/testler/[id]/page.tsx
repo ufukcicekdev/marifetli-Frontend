@@ -6,6 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import { kidsStudentGetTest, kidsStudentStartTest, kidsStudentSubmitTest, type KidsTestAttempt } from '@/src/lib/kids-api';
+import { kidsStripTrailingParenTopicSuffix } from '@/src/lib/kids-test-stem';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 import { useKidsI18n } from '@/src/providers/kids-language-provider';
 
@@ -137,7 +138,7 @@ export default function KidsStudentTestSolvePage() {
           return (
             <div key={q.id} className="rounded-xl border border-violet-200 bg-white p-3 dark:border-violet-800 dark:bg-gray-900/70">
               <p className="mb-2 text-sm font-semibold">
-                {q.order}. {q.stem}
+                {q.order}. {kidsStripTrailingParenTopicSuffix(q.stem)}
               </p>
               {submitted && !chosen ? (
                 <p className="mb-2 text-xs font-medium text-amber-800 dark:text-amber-200">
