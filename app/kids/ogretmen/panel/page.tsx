@@ -509,6 +509,12 @@ export default function KidsTeacherPanelPage() {
                             {locLine}
                           </p>
                         ) : null}
+                        <p className="mt-1 text-xs font-semibold text-violet-700/90 dark:text-violet-200/90">
+                          {t('teacher.panel.classStudentCount').replace(
+                            '{n}',
+                            String(typeof c.student_count === 'number' ? c.student_count : 0),
+                          )}
+                        </p>
                         {c.description ? (
                           <p className="mt-1 wrap-break-word text-sm text-slate-600 dark:text-gray-400 sm:line-clamp-2">
                             {c.description}

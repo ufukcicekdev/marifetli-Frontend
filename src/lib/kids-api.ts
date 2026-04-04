@@ -222,6 +222,8 @@ export type KidsClass = {
     subject: string;
     is_primary: boolean;
   }[];
+  /** Kayıtlı öğrenci sayısı (enrollment). */
+  student_count?: number;
   created_at: string;
   updated_at: string;
 };
@@ -3036,6 +3038,8 @@ export type KidsTest = {
   updated_at: string;
 };
 
+export type KidsStudentTestListAttemptStatus = 'pending' | 'in_progress' | 'submitted';
+
 export type KidsStudentTestListItem = {
   id: number;
   kids_class: number;
@@ -3044,6 +3048,8 @@ export type KidsStudentTestListItem = {
   duration_minutes: number | null;
   published_at: string | null;
   question_count: number;
+  /** Öğrenci henüz başlatmadı | çözüyor | teslim etti */
+  attempt_status?: KidsStudentTestListAttemptStatus;
 };
 
 export type KidsTestAttempt = {
@@ -3282,6 +3288,10 @@ export async function kidsStudentGetTest(testId: number): Promise<{
     points: number;
     source_image_url?: string | null;
     source_page_order?: number | null;
+    /** Teslim sonrası: öğrencinin işaretlediği şık (A–E). */
+    selected_choice_key?: string;
+    is_correct?: boolean;
+    correct_choice_key?: string | null;
   }[];
   attempt: KidsTestAttempt | null;
 }> {
@@ -3304,6 +3314,9 @@ export async function kidsStudentGetTest(testId: number): Promise<{
       points: number;
       source_image_url?: string | null;
       source_page_order?: number | null;
+      selected_choice_key?: string;
+      is_correct?: boolean;
+      correct_choice_key?: string | null;
     }[];
     attempt: KidsTestAttempt | null;
   };

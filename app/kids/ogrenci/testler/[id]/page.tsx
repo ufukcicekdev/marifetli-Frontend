@@ -81,6 +81,9 @@ export default function KidsStudentTestSolvePage() {
     try {
       const row = await kidsStudentSubmitTest(detail.id, answers, auto);
       setAttempt(row);
+      const refreshed = await kidsStudentGetTest(detail.id);
+      setDetail(refreshed);
+      if (refreshed.attempt) setAttempt(refreshed.attempt);
       toast.success(auto ? t('tests.studentSolve.autoSubmitted') : t('tests.studentSolve.submitted'));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('tests.studentSolve.submitError'));
@@ -120,39 +123,86 @@ export default function KidsStudentTestSolvePage() {
       </div>
 
       <div className="space-y-3">
-        {detail.questions.map((q) => (
-          <div key={q.id} className="rounded-xl border border-violet-200 bg-white p-3 dark:border-violet-800 dark:bg-gray-900/70">
-            {q.source_image_url ? (
-              <div className="mb-3 overflow-hidden rounded-lg border border-violet-100 bg-violet-50/40 dark:border-violet-800 dark:bg-violet-950/20">
-                <img
-                  src={q.source_image_url}
-                  alt=""
-                  className="max-h-72 w-full object-contain"
-                />
+        {detail.questions.map((q) => {
+          const chosen =
+            submitted && q.selected_choice_key !== undefined
+              ? (q.selected_choice_key || '').trim().toUpperCase()
+              : (answers[String(q.id)] || '').trim().toUpperCase();
+          const correctKey = (q.correct_choice_key || '').trim().toUpperCase();
+          const reviewMode = submitted && correctKey !== '';
+          const correctChoiceRow = correctKey
+            ? q.choices.find((c) => (c.key || '').trim().toUpperCase() === correctKey)
+            : undefined;
+          const correctText = (correctChoiceRow?.text || '').trim();
+          return (
+            <div key={q.id} className="rounded-xl border border-violet-200 bg-white p-3 dark:border-violet-800 dark:bg-gray-900/70">
+              <p className="mb-2 text-sm font-semibold">
+                {q.order}. {q.stem}
+              </p>
+              {submitted && !chosen ? (
+                <p className="mb-2 text-xs font-medium text-amber-800 dark:text-amber-200">
+                  {t('tests.studentSolve.noAnswer')}
+                </p>
+              ) : null}
+              <div className="space-y-1">
+                {q.choices.map((c) => {
+                  const keyU = (c.key || '').trim().toUpperCase();
+                  const isPicked = chosen === keyU;
+                  const isCorrectOption = Boolean(correctKey && keyU === correctKey);
+                  let rowClass =
+                    'flex items-start gap-2 rounded-lg border border-transparent px-2 py-1.5 text-sm';
+                  if (reviewMode) {
+                    if (isCorrectOption) {
+                      rowClass +=
+                        ' border-emerald-300 bg-emerald-50/90 dark:border-emerald-700 dark:bg-emerald-950/40';
+                    }
+                    if (isPicked && !q.is_correct && !isCorrectOption) {
+                      rowClass =
+                        'flex items-start gap-2 rounded-lg border border-rose-300 bg-rose-50/90 px-2 py-1.5 text-sm dark:border-rose-700 dark:bg-rose-950/35';
+                    }
+                    if (isPicked && q.is_correct) {
+                      rowClass +=
+                        ' ring-1 ring-emerald-400 dark:ring-emerald-600';
+                    }
+                  }
+                  return (
+                    <label key={`${q.id}-${c.key}`} className={rowClass}>
+                      <input
+                        type="radio"
+                        name={`q-${q.id}`}
+                        value={c.key}
+                        disabled={submitted}
+                        checked={isPicked}
+                        onChange={(e) => setAnswers((prev) => ({ ...prev, [String(q.id)]: e.target.value }))}
+                        className="mt-0.5"
+                      />
+                      <span>
+                        {c.key}) {c.text}
+                        {submitted && isPicked ? (
+                          <span className="ml-2 text-xs font-bold text-violet-700 dark:text-violet-300">
+                            ({t('tests.studentSolve.yourChoice')})
+                          </span>
+                        ) : null}
+                        {reviewMode && isCorrectOption ? (
+                          <span className="ml-2 text-xs font-bold text-emerald-800 dark:text-emerald-200">
+                            ({t('tests.studentSolve.correctChoice')})
+                          </span>
+                        ) : null}
+                      </span>
+                    </label>
+                  );
+                })}
               </div>
-            ) : null}
-            <p className="mb-2 text-sm font-semibold">
-              {q.order}. {q.stem}
-            </p>
-            <div className="space-y-1">
-              {q.choices.map((c) => (
-                <label key={`${q.id}-${c.key}`} className="flex items-center gap-2 text-sm">
-                  <input
-                    type="radio"
-                    name={`q-${q.id}`}
-                    value={c.key}
-                    disabled={submitted}
-                    checked={(answers[String(q.id)] || '') === c.key}
-                    onChange={(e) => setAnswers((prev) => ({ ...prev, [String(q.id)]: e.target.value }))}
-                  />
-                  <span>
-                    {c.key}) {c.text}
-                  </span>
-                </label>
-              ))}
+              {submitted && correctKey ? (
+                <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/90 px-3 py-2 text-sm font-semibold leading-snug text-emerald-950 dark:border-emerald-800 dark:bg-emerald-950/45 dark:text-emerald-50">
+                  {correctText
+                    ? t('tests.studentSolve.correctAnswerLine').replace('{key}', correctKey).replace('{text}', correctText)
+                    : t('tests.studentSolve.correctAnswerKeyOnly').replace('{key}', correctKey)}
+                </p>
+              ) : null}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {!submitted ? (
