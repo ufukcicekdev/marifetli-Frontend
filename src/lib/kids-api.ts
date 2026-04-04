@@ -1796,7 +1796,13 @@ export type KidsKindergartenDailyBoardResponse = {
   record_date: string;
   plan: KidsKindergartenDayPlan;
   rows: {
-    student: { id: number; first_name: string; last_name: string; email: string };
+    student: {
+      id: number;
+      first_name: string;
+      last_name: string;
+      email: string;
+      profile_picture?: string | null;
+    };
     record: KidsKindergartenDailyRecordRow | null;
   }[];
 };
