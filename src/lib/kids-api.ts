@@ -3007,6 +3007,15 @@ export type KidsAnnouncement = {
   }[];
 };
 
+export type KidsTestReadingPassage = {
+  id: number;
+  order: number;
+  title: string;
+  body: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
 export type KidsTestQuestion = {
   id: number;
   order: number;
@@ -3016,6 +3025,8 @@ export type KidsTestQuestion = {
   choices: { key: string; text: string }[];
   correct_choice_key: string;
   points: number;
+  /** Okuma metni sırası (passages[].order ile eşleşir). */
+  reading_passage_order?: number | null;
   /** Kaynak görsel sayfa sırası (1-based), yoksa tek sayfa veya eşleşme yok. */
   source_page_order?: number | null;
   source_image_url?: string | null;
@@ -3032,6 +3043,8 @@ export type KidsTest = {
   duration_minutes: number | null;
   status: 'draft' | 'published' | 'archived';
   published_at: string | null;
+  /** Okuma metinleri; eski API yanıtlarında boş olabilir. */
+  passages?: KidsTestReadingPassage[];
   questions: KidsTestQuestion[];
   source_images: { id: number; page_order: number; url: string }[];
   created_at: string;
@@ -3132,6 +3145,7 @@ export async function kidsListAnnouncements(): Promise<KidsAnnouncement[]> {
 export async function kidsExtractTestQuestions(images: File[]): Promise<{
   title: string;
   instructions: string;
+  passages: { order: number; title: string; body: string }[];
   questions: {
     order: number;
     stem: string;
@@ -3141,6 +3155,7 @@ export async function kidsExtractTestQuestions(images: File[]): Promise<{
     correct_choice_key: string;
     points: number;
     source_page_order?: number;
+    reading_passage_order?: number | null;
   }[];
 }> {
   const fd = new FormData();
@@ -3154,6 +3169,7 @@ export async function kidsExtractTestQuestions(images: File[]): Promise<{
   return data as {
     title: string;
     instructions: string;
+    passages: { order: number; title: string; body: string }[];
     questions: {
       order: number;
       stem: string;
@@ -3163,6 +3179,7 @@ export async function kidsExtractTestQuestions(images: File[]): Promise<{
       correct_choice_key: string;
       points: number;
       source_page_order?: number;
+      reading_passage_order?: number | null;
     }[];
   };
 }
@@ -3174,6 +3191,7 @@ export async function kidsCreateClassTest(
     instructions?: string;
     duration_minutes?: number | null;
     status?: 'draft' | 'published' | 'archived';
+    passages?: { order: number; title: string; body: string }[];
     questions: {
       order: number;
       stem: string;
@@ -3183,6 +3201,7 @@ export async function kidsCreateClassTest(
       correct_choice_key: string;
       points?: number;
       source_page_order?: number | null;
+      reading_passage_order?: number | null;
     }[];
     source_images?: File[];
   },
@@ -3192,6 +3211,7 @@ export async function kidsCreateClassTest(
   fd.append('instructions', body.instructions ?? '');
   if (body.duration_minutes != null) fd.append('duration_minutes', String(body.duration_minutes));
   if (body.status) fd.append('status', body.status);
+  fd.append('passages', JSON.stringify(body.passages ?? []));
   fd.append('questions', JSON.stringify(body.questions));
   for (const image of body.source_images ?? []) fd.append('source_images', image);
   const res = await kidsAuthorizedFetch(`/classes/${classId}/tests/`, {
@@ -3244,6 +3264,7 @@ export async function kidsPatchTest(
     instructions: string;
     duration_minutes: number | null;
     status: 'draft' | 'published' | 'archived';
+    passages: { order: number; title: string; body: string }[];
     questions: {
       order: number;
       stem: string;
@@ -3253,6 +3274,7 @@ export async function kidsPatchTest(
       correct_choice_key: string;
       points?: number;
       source_page_order?: number | null;
+      reading_passage_order?: number | null;
     }[];
   }>,
 ): Promise<KidsTest> {
@@ -3278,6 +3300,7 @@ export async function kidsStudentGetTest(testId: number): Promise<{
   instructions: string;
   duration_minutes: number | null;
   published_at: string | null;
+  passages: { id: number; order: number; title: string; body: string }[];
   questions: {
     id: number;
     order: number;
@@ -3286,6 +3309,7 @@ export async function kidsStudentGetTest(testId: number): Promise<{
     subtopic?: string;
     choices: { key: string; text: string }[];
     points: number;
+    reading_passage_order?: number | null;
     source_image_url?: string | null;
     source_page_order?: number | null;
     /** Teslim sonrası: öğrencinin işaretlediği şık (A–E). */
@@ -3304,6 +3328,7 @@ export async function kidsStudentGetTest(testId: number): Promise<{
     instructions: string;
     duration_minutes: number | null;
     published_at: string | null;
+    passages: { id: number; order: number; title: string; body: string }[];
     questions: {
       id: number;
       order: number;
@@ -3312,6 +3337,7 @@ export async function kidsStudentGetTest(testId: number): Promise<{
       subtopic?: string;
       choices: { key: string; text: string }[];
       points: number;
+      reading_passage_order?: number | null;
       source_image_url?: string | null;
       source_page_order?: number | null;
       selected_choice_key?: string;

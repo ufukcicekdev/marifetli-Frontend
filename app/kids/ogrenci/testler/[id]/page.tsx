@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
@@ -11,6 +11,7 @@ import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 import { useKidsI18n } from '@/src/providers/kids-language-provider';
 
 type StudentTestDetail = Awaited<ReturnType<typeof kidsStudentGetTest>>;
+type StudentTestQuestion = StudentTestDetail['questions'][number];
 
 export default function KidsStudentTestSolvePage() {
   const params = useParams();
@@ -76,6 +77,111 @@ export default function KidsStudentTestSolvePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [remainingSec, submitted, detail]);
 
+  const sortedPassages = useMemo(() => {
+    if (!detail) return [];
+    return [...(detail.passages ?? [])].sort((a, b) => a.order - b.order);
+  }, [detail]);
+
+  const questionsByPassageOrder = useMemo(() => {
+    const m = new Map<number, StudentTestQuestion[]>();
+    if (!detail) return m;
+    for (const q of detail.questions) {
+      const po = q.reading_passage_order;
+      if (po == null) continue;
+      if (!m.has(po)) m.set(po, []);
+      m.get(po)!.push(q);
+    }
+    for (const arr of m.values()) arr.sort((a, b) => a.order - b.order);
+    return m;
+  }, [detail]);
+
+  const ungroupedQuestions = useMemo(() => {
+    if (!detail) return [];
+    return detail.questions
+      .filter((q) => q.reading_passage_order == null)
+      .slice()
+      .sort((a, b) => a.order - b.order);
+  }, [detail]);
+
+  const renderQuestionCard = useCallback(
+    (q: StudentTestQuestion) => {
+      const chosen =
+        submitted && q.selected_choice_key !== undefined
+          ? (q.selected_choice_key || '').trim().toUpperCase()
+          : (answers[String(q.id)] || '').trim().toUpperCase();
+      const correctKey = (q.correct_choice_key || '').trim().toUpperCase();
+      const reviewMode = submitted && correctKey !== '';
+      const correctChoiceRow = correctKey
+        ? q.choices.find((c) => (c.key || '').trim().toUpperCase() === correctKey)
+        : undefined;
+      const correctText = (correctChoiceRow?.text || '').trim();
+      return (
+        <div key={q.id} className="rounded-xl border border-violet-200 bg-white p-3 dark:border-violet-800 dark:bg-gray-900/70">
+          <p className="mb-2 text-sm font-semibold">
+            {q.order}. {kidsStripTrailingParenTopicSuffix(q.stem)}
+          </p>
+          {submitted && !chosen ? (
+            <p className="mb-2 text-xs font-medium text-amber-800 dark:text-amber-200">{t('tests.studentSolve.noAnswer')}</p>
+          ) : null}
+          <div className="space-y-1">
+            {q.choices.map((c) => {
+              const keyU = (c.key || '').trim().toUpperCase();
+              const isPicked = chosen === keyU;
+              const isCorrectOption = Boolean(correctKey && keyU === correctKey);
+              let rowClass = 'flex items-start gap-2 rounded-lg border border-transparent px-2 py-1.5 text-sm';
+              if (reviewMode) {
+                if (isCorrectOption) {
+                  rowClass += ' border-emerald-300 bg-emerald-50/90 dark:border-emerald-700 dark:bg-emerald-950/40';
+                }
+                if (isPicked && !q.is_correct && !isCorrectOption) {
+                  rowClass =
+                    'flex items-start gap-2 rounded-lg border border-rose-300 bg-rose-50/90 px-2 py-1.5 text-sm dark:border-rose-700 dark:bg-rose-950/35';
+                }
+                if (isPicked && q.is_correct) {
+                  rowClass += ' ring-1 ring-emerald-400 dark:ring-emerald-600';
+                }
+              }
+              return (
+                <label key={`${q.id}-${c.key}`} className={rowClass}>
+                  <input
+                    type="radio"
+                    name={`q-${q.id}`}
+                    value={c.key}
+                    disabled={submitted}
+                    checked={isPicked}
+                    onChange={(e) => setAnswers((prev) => ({ ...prev, [String(q.id)]: e.target.value }))}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    {c.key}) {c.text}
+                    {submitted && isPicked ? (
+                      <span className="ml-2 text-xs font-bold text-violet-700 dark:text-violet-300">
+                        ({t('tests.studentSolve.yourChoice')})
+                      </span>
+                    ) : null}
+                    {reviewMode && isCorrectOption ? (
+                      <span className="ml-2 text-xs font-bold text-emerald-800 dark:text-emerald-200">
+                        ({t('tests.studentSolve.correctChoice')})
+                      </span>
+                    ) : null}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+          {submitted && correctKey ? (
+            <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/90 px-3 py-2 text-sm font-semibold leading-snug text-emerald-950 dark:border-emerald-800 dark:bg-emerald-950/45 dark:text-emerald-50">
+              {correctText
+                ? t('tests.studentSolve.correctAnswerLine').replace('{key}', correctKey).replace('{text}', correctText)
+                : t('tests.studentSolve.correctAnswerKeyOnly').replace('{key}', correctKey)}
+            </p>
+          ) : null}
+        </div>
+      );
+    },
+    [submitted, answers, t],
+  );
+
   async function onSubmit(auto = false) {
     if (!detail || submitting || submitted) return;
     setSubmitting(true);
@@ -123,87 +229,36 @@ export default function KidsStudentTestSolvePage() {
         ) : null}
       </div>
 
-      <div className="space-y-3">
-        {detail.questions.map((q) => {
-          const chosen =
-            submitted && q.selected_choice_key !== undefined
-              ? (q.selected_choice_key || '').trim().toUpperCase()
-              : (answers[String(q.id)] || '').trim().toUpperCase();
-          const correctKey = (q.correct_choice_key || '').trim().toUpperCase();
-          const reviewMode = submitted && correctKey !== '';
-          const correctChoiceRow = correctKey
-            ? q.choices.find((c) => (c.key || '').trim().toUpperCase() === correctKey)
-            : undefined;
-          const correctText = (correctChoiceRow?.text || '').trim();
+      <div className="space-y-6">
+        {sortedPassages.map((p) => {
+          const group = questionsByPassageOrder.get(p.order) ?? [];
+          if (group.length === 0 && !p.title?.trim() && !p.body?.trim()) return null;
           return (
-            <div key={q.id} className="rounded-xl border border-violet-200 bg-white p-3 dark:border-violet-800 dark:bg-gray-900/70">
-              <p className="mb-2 text-sm font-semibold">
-                {q.order}. {kidsStripTrailingParenTopicSuffix(q.stem)}
-              </p>
-              {submitted && !chosen ? (
-                <p className="mb-2 text-xs font-medium text-amber-800 dark:text-amber-200">
-                  {t('tests.studentSolve.noAnswer')}
-                </p>
+            <section key={`passage-${p.id}`} className="space-y-3">
+              {p.title?.trim() || p.body?.trim() ? (
+                <div className="rounded-xl border border-amber-200/90 bg-amber-50/50 p-4 dark:border-amber-800/70 dark:bg-amber-950/25">
+                  {p.title?.trim() ? (
+                    <h2 className="text-base font-bold text-amber-950 dark:text-amber-100">{p.title.trim()}</h2>
+                  ) : null}
+                  {p.body?.trim() ? (
+                    <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-slate-800 dark:text-slate-200">
+                      {p.body.trim()}
+                    </p>
+                  ) : null}
+                </div>
               ) : null}
-              <div className="space-y-1">
-                {q.choices.map((c) => {
-                  const keyU = (c.key || '').trim().toUpperCase();
-                  const isPicked = chosen === keyU;
-                  const isCorrectOption = Boolean(correctKey && keyU === correctKey);
-                  let rowClass =
-                    'flex items-start gap-2 rounded-lg border border-transparent px-2 py-1.5 text-sm';
-                  if (reviewMode) {
-                    if (isCorrectOption) {
-                      rowClass +=
-                        ' border-emerald-300 bg-emerald-50/90 dark:border-emerald-700 dark:bg-emerald-950/40';
-                    }
-                    if (isPicked && !q.is_correct && !isCorrectOption) {
-                      rowClass =
-                        'flex items-start gap-2 rounded-lg border border-rose-300 bg-rose-50/90 px-2 py-1.5 text-sm dark:border-rose-700 dark:bg-rose-950/35';
-                    }
-                    if (isPicked && q.is_correct) {
-                      rowClass +=
-                        ' ring-1 ring-emerald-400 dark:ring-emerald-600';
-                    }
-                  }
-                  return (
-                    <label key={`${q.id}-${c.key}`} className={rowClass}>
-                      <input
-                        type="radio"
-                        name={`q-${q.id}`}
-                        value={c.key}
-                        disabled={submitted}
-                        checked={isPicked}
-                        onChange={(e) => setAnswers((prev) => ({ ...prev, [String(q.id)]: e.target.value }))}
-                        className="mt-0.5"
-                      />
-                      <span>
-                        {c.key}) {c.text}
-                        {submitted && isPicked ? (
-                          <span className="ml-2 text-xs font-bold text-violet-700 dark:text-violet-300">
-                            ({t('tests.studentSolve.yourChoice')})
-                          </span>
-                        ) : null}
-                        {reviewMode && isCorrectOption ? (
-                          <span className="ml-2 text-xs font-bold text-emerald-800 dark:text-emerald-200">
-                            ({t('tests.studentSolve.correctChoice')})
-                          </span>
-                        ) : null}
-                      </span>
-                    </label>
-                  );
-                })}
-              </div>
-              {submitted && correctKey ? (
-                <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/90 px-3 py-2 text-sm font-semibold leading-snug text-emerald-950 dark:border-emerald-800 dark:bg-emerald-950/45 dark:text-emerald-50">
-                  {correctText
-                    ? t('tests.studentSolve.correctAnswerLine').replace('{key}', correctKey).replace('{text}', correctText)
-                    : t('tests.studentSolve.correctAnswerKeyOnly').replace('{key}', correctKey)}
-                </p>
-              ) : null}
-            </div>
+              <div className="space-y-3">{group.map((q) => renderQuestionCard(q))}</div>
+            </section>
           );
         })}
+        {ungroupedQuestions.length > 0 ? (
+          <section className="space-y-3">
+            {sortedPassages.length > 0 && questionsByPassageOrder.size > 0 ? (
+              <h2 className="text-sm font-bold text-violet-900 dark:text-violet-100">{t('tests.studentSolve.otherQuestions')}</h2>
+            ) : null}
+            <div className="space-y-3">{ungroupedQuestions.map((q) => renderQuestionCard(q))}</div>
+          </section>
+        ) : null}
       </div>
 
       {!submitted ? (

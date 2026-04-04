@@ -505,6 +505,7 @@ export function KidsCenteredModal({
   onClose,
   panelClassName = '',
   maxWidthClass = 'max-w-lg',
+  variant = 'default',
 }: {
   title: ReactNode;
   children: ReactNode;
@@ -514,6 +515,8 @@ export function KidsCenteredModal({
   panelClassName?: string;
   /** Kart genişliği: max-w-md | max-w-lg | max-w-2xl */
   maxWidthClass?: string;
+  /** danger: silme/onay modalları — başlık sarımsız, footer hafif rose vurgusu */
+  variant?: 'default' | 'danger';
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
@@ -525,6 +528,15 @@ export function KidsCenteredModal({
       el.close();
     };
   }, []);
+
+  const headerClass =
+    variant === 'danger'
+      ? 'border-b-2 border-rose-200/70 bg-gradient-to-r from-rose-50 via-violet-50 to-violet-100 dark:border-rose-900/40 dark:from-rose-950/50 dark:via-violet-950 dark:to-violet-950'
+      : 'border-b-2 border-violet-100 bg-gradient-to-r from-violet-100 via-fuchsia-50 to-violet-50 dark:border-violet-900 dark:from-violet-950 dark:via-fuchsia-950 dark:to-violet-950';
+  const footerClass =
+    variant === 'danger'
+      ? 'border-t-2 border-rose-100 bg-rose-50/60 p-4 dark:border-rose-900/40 dark:bg-rose-950/25'
+      : 'border-t-2 border-violet-100 bg-violet-50/50 p-4 dark:border-violet-900 dark:bg-violet-950/40';
 
   return createPortal(
     <dialog
@@ -545,8 +557,14 @@ export function KidsCenteredModal({
             className={`flex max-h-[85dvh] w-full min-w-0 shrink-0 flex-col overflow-hidden rounded-2xl border-2 border-violet-300 bg-white shadow-2xl shadow-fuchsia-500/20 dark:border-violet-700 dark:bg-gray-900 sm:max-h-[90dvh] sm:rounded-3xl ${maxWidthClass} ${panelClassName}`}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex shrink-0 items-center justify-between gap-2 border-b-2 border-violet-100 bg-gradient-to-r from-violet-100 via-fuchsia-100 to-amber-100 px-4 py-3 dark:border-violet-900 dark:from-violet-950 dark:via-fuchsia-950 dark:to-amber-950/80">
-              <h2 className="min-w-0 font-logo text-lg font-bold tracking-tight text-violet-950 dark:text-violet-100">
+            <div className={`flex shrink-0 items-center justify-between gap-2 px-4 py-3 ${headerClass}`}>
+              <h2
+                className={`min-w-0 font-logo text-lg font-bold tracking-tight ${
+                  variant === 'danger'
+                    ? 'text-rose-950 dark:text-rose-100'
+                    : 'text-violet-950 dark:text-violet-100'
+                }`}
+              >
                 {title}
               </h2>
               <button
@@ -561,7 +579,7 @@ export function KidsCenteredModal({
               {children}
             </div>
             {footer ? (
-              <div className="shrink-0 border-t-2 border-violet-100 bg-violet-50/50 p-4 dark:border-violet-900 dark:bg-violet-950/40">
+              <div className={`shrink-0 ${footerClass}`}>
                 {footer}
               </div>
             ) : null}

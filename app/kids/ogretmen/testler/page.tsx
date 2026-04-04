@@ -16,8 +16,21 @@ import {
   type KidsTest,
 } from '@/src/lib/kids-api';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
-import { KidsSelect } from '@/src/components/kids/kids-ui';
+import { KidsCenteredModal, KidsSecondaryButton, KidsSelect } from '@/src/components/kids/kids-ui';
 import { useKidsI18n } from '@/src/providers/kids-language-provider';
+
+function newPassageLocalId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `p-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+type DraftPassage = {
+  id: string;
+  title: string;
+  body: string;
+};
 
 type DraftQuestion = {
   order: number;
@@ -29,6 +42,8 @@ type DraftQuestion = {
   points: number;
   /** Kaynak görsel sayfası (1-based); çoklu sayfada zorunlu. */
   source_page_order: number;
+  /** Yerel metin kartı kimliği; kayıtta sıraya çevrilir. */
+  reading_passage_id: string | null;
 };
 
 const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
@@ -47,6 +62,7 @@ export default function KidsTeacherTestsPage() {
   const [title, setTitle] = useState('Yeni Test');
   const [instructions, setInstructions] = useState('');
   const [durationMinutes, setDurationMinutes] = useState<string>('40');
+  const [passages, setPassages] = useState<DraftPassage[]>([]);
   const [questions, setQuestions] = useState<DraftQuestion[]>([]);
   const [workFromTestId, setWorkFromTestId] = useState<string>('');
   const [distributeTestId, setDistributeTestId] = useState<string>('');
@@ -54,6 +70,7 @@ export default function KidsTeacherTestsPage() {
   const [distributeScope, setDistributeScope] = useState<'all' | 'custom'>('all');
   const [distributeClassPickerId, setDistributeClassPickerId] = useState<string>('');
   const [distributing, setDistributing] = useState(false);
+  const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -118,11 +135,65 @@ export default function KidsTeacherTestsPage() {
     });
   }
 
+  function setPassageField(index: number, patch: Partial<DraftPassage>) {
+    setPassages((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], ...patch };
+      return next;
+    });
+  }
+
+  function removePassageAt(index: number) {
+    const removed = passages[index];
+    setPassages((prev) => prev.filter((_, i) => i !== index));
+    if (removed) {
+      setQuestions((prev) =>
+        prev.map((q) => (q.reading_passage_id === removed.id ? { ...q, reading_passage_id: null } : q)),
+      );
+    }
+  }
+
+  function confirmRemoveQuestion() {
+    if (pendingDeleteIndex === null) return;
+    const idx = pendingDeleteIndex;
+    setQuestions((prev) => {
+      const next = prev.filter((_, i) => i !== idx);
+      return next.map((q, i) => ({ ...q, order: i + 1 }));
+    });
+    setPendingDeleteIndex(null);
+  }
+
+  function addQuestion() {
+    setQuestions((prev) => {
+      const nextOrder = prev.length + 1;
+      const onlyPassageId = passages.length === 1 ? passages[0]!.id : null;
+      return [
+        ...prev,
+        {
+          order: nextOrder,
+          stem: '',
+          topic: '',
+          subtopic: '',
+          choices: [
+            { key: 'A', text: '' },
+            { key: 'B', text: '' },
+            { key: 'C', text: '' },
+          ],
+          correct_choice_key: '',
+          points: 1,
+          source_page_order: 1,
+          reading_passage_id: onlyPassageId,
+        },
+      ];
+    });
+  }
+
   function resetDraftForm() {
     setWorkFromTestId('');
     setTitle(t('tests.teacherMain.newTestTitle'));
     setInstructions('');
     setDurationMinutes('40');
+    setPassages([]);
     setQuestions([]);
     setImages([]);
   }
@@ -139,6 +210,15 @@ export default function KidsTeacherTestsPage() {
     setInstructions(row.instructions || '');
     setDurationMinutes(row.duration_minutes != null ? String(row.duration_minutes) : '');
     setClassId(row.kids_class || classId);
+    const plist = [...(row.passages ?? [])].sort((a, b) => a.order - b.order);
+    setPassages(
+      plist.map((p) => ({
+        id: `db-${p.id}`,
+        title: p.title || '',
+        body: p.body || '',
+      })),
+    );
+    const idByOrder = new Map(plist.map((p) => [p.order, `db-${p.id}`]));
     setQuestions(
       (row.questions || []).map((q, idx) => ({
         order: q.order || idx + 1,
@@ -152,6 +232,11 @@ export default function KidsTeacherTestsPage() {
         correct_choice_key: q.correct_choice_key || '',
         points: q.points || 1,
         source_page_order: q.source_page_order ?? 1,
+        reading_passage_id: (() => {
+          const po = q.reading_passage_order;
+          if (po == null) return null;
+          return idByOrder.get(po) ?? null;
+        })(),
       })),
     );
   }
@@ -214,17 +299,39 @@ export default function KidsTeacherTestsPage() {
       const out = await kidsExtractTestQuestions(images);
       setTitle((out.title || t('tests.teacherMain.newTestTitle')).trim());
       setInstructions((out.instructions || '').trim());
+      const rawPassages = [...(out.passages || [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      const builtPassages: DraftPassage[] = rawPassages.map((p) => ({
+        id: newPassageLocalId(),
+        title: (p.title || '').trim(),
+        body: (p.body || '').trim(),
+      }));
+      const orderToId = new Map<number, string>();
+      rawPassages.forEach((p, idx) => {
+        const card = builtPassages[idx];
+        if (card) orderToId.set(typeof p.order === 'number' ? p.order : idx + 1, card.id);
+      });
+      setPassages(builtPassages);
       setQuestions(
-        out.questions.map((q, idx) => ({
-          order: q.order || idx + 1,
-          stem: q.stem || '',
-          topic: q.topic || '',
-          subtopic: q.subtopic || '',
-          choices: (q.choices || []).map((c, cIdx) => ({ key: c.key || String.fromCharCode(65 + cIdx), text: c.text || '' })),
-          correct_choice_key: q.correct_choice_key || '',
-          points: q.points || 1,
-          source_page_order: typeof q.source_page_order === 'number' && q.source_page_order >= 1 ? q.source_page_order : 1,
-        })),
+        out.questions.map((q, idx) => {
+          const ro = q.reading_passage_order;
+          let link: string | null = null;
+          if (ro != null) link = orderToId.get(ro) ?? null;
+          if (link == null && builtPassages.length === 1) link = builtPassages[0]!.id;
+          return {
+            order: q.order || idx + 1,
+            stem: q.stem || '',
+            topic: q.topic || '',
+            subtopic: q.subtopic || '',
+            choices: (q.choices || []).map((c, cIdx) => ({
+              key: c.key || String.fromCharCode(65 + cIdx),
+              text: c.text || '',
+            })),
+            correct_choice_key: q.correct_choice_key || '',
+            points: q.points || 1,
+            source_page_order: typeof q.source_page_order === 'number' && q.source_page_order >= 1 ? q.source_page_order : 1,
+            reading_passage_id: link,
+          };
+        }),
       );
       toast.success(`AI ${out.questions.length} ${t('tests.teacherMain.aiExtractedQuestionsSuffix')}`);
     } catch (e) {
@@ -258,29 +365,50 @@ export default function KidsTeacherTestsPage() {
         durationMinutes.trim() === ''
           ? null
           : Math.min(300, Math.max(1, Number(durationMinutes.replace(/\D+/g, '') || '0')));
+      const packedPassages = passages
+        .map((p) => ({ id: p.id, title: p.title.trim(), body: p.body.trim() }))
+        .filter((p) => p.title || p.body)
+        .map((p, idx) => ({ ...p, order: idx + 1 }));
+      const passageIdToOrder = new Map(packedPassages.map((p) => [p.id, p.order]));
+      const passagesPayload = packedPassages.map(({ order, title, body }) => ({ order, title, body }));
+      const questionsPayload = questions.map((q, idx) => {
+        const piece: {
+          order: number;
+          stem: string;
+          topic: string;
+          subtopic: string;
+          choices: { key: string; text: string }[];
+          correct_choice_key: string;
+          points: number;
+          reading_passage_order?: number;
+          source_page_order?: number;
+        } = {
+          order: idx + 1,
+          stem: q.stem.trim(),
+          topic: q.topic.trim(),
+          subtopic: q.subtopic.trim(),
+          choices: q.choices.map((c, cIdx) => ({
+            key: c.key || String.fromCharCode(65 + cIdx),
+            text: c.text.trim(),
+          })),
+          correct_choice_key: q.correct_choice_key,
+          points: q.points || 1,
+        };
+        const rp = q.reading_passage_id ? passageIdToOrder.get(q.reading_passage_id) : undefined;
+        if (rp != null) piece.reading_passage_order = rp;
+        if (sourcePageCount > 1) {
+          piece.source_page_order = Math.min(sourcePageCount, Math.max(1, q.source_page_order || 1));
+        }
+        return piece;
+      });
       const payload = {
         title: title.trim(),
         instructions: instructions.trim(),
         duration_minutes: duration,
-        status: 'draft',
-        questions: questions.map((q, idx) => {
-          const base = {
-            order: idx + 1,
-            stem: q.stem.trim(),
-            topic: q.topic.trim(),
-            subtopic: q.subtopic.trim(),
-            choices: q.choices.map((c, cIdx) => ({ key: c.key || String.fromCharCode(65 + cIdx), text: c.text.trim() })),
-            correct_choice_key: q.correct_choice_key,
-            points: q.points || 1,
-          };
-          return sourcePageCount > 1
-            ? {
-                ...base,
-                source_page_order: Math.min(sourcePageCount, Math.max(1, q.source_page_order || 1)),
-              }
-            : base;
-        }),
-      } as const;
+        status: 'draft' as const,
+        passages: passagesPayload,
+        questions: questionsPayload,
+      };
       const editingTestId = Number(workFromTestId);
       const isEditing = Number.isFinite(editingTestId) && editingTestId > 0;
       if (isEditing) {
@@ -297,6 +425,7 @@ export default function KidsTeacherTestsPage() {
         setMyTests((prev) => [created, ...prev.filter((x) => x.id !== created.id)]);
         setWorkFromTestId(String(created.id));
       }
+      setPassages([]);
       setQuestions([]);
       setImages([]);
       setInstructions('');
@@ -314,6 +443,12 @@ export default function KidsTeacherTestsPage() {
   const canDistribute =
     Boolean(distributeTestId) &&
     (distributeScope === 'all' ? classes.length > 0 : distributeClassIds.length > 0);
+
+  const questionPendingDelete =
+    pendingDeleteIndex !== null ? questions[pendingDeleteIndex] ?? null : null;
+  const deleteStemPreview = (questionPendingDelete?.stem || '').trim().replace(/\s+/g, ' ');
+  const deletePreviewShort =
+    deleteStemPreview.length > 140 ? `${deleteStemPreview.slice(0, 140)}…` : deleteStemPreview;
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -573,10 +708,84 @@ export default function KidsTeacherTestsPage() {
           />
         </label>
 
+        <div className="mt-6 space-y-3 rounded-xl border border-amber-200/80 bg-amber-50/40 p-3 dark:border-amber-800/60 dark:bg-amber-950/20">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-bold text-amber-950 dark:text-amber-100">{t('tests.teacherMain.readingPassagesSection')}</h3>
+            <button
+              type="button"
+              onClick={() => setPassages((prev) => [...prev, { id: newPassageLocalId(), title: '', body: '' }])}
+              className="rounded-lg border border-amber-300 bg-white px-2 py-1 text-xs font-bold text-amber-900 dark:border-amber-700 dark:bg-gray-900 dark:text-amber-100"
+            >
+              {t('tests.teacherMain.addReadingPassage')}
+            </button>
+          </div>
+          {passages.length === 0 ? (
+            <p className="text-xs text-slate-600 dark:text-slate-400">{t('tests.teacherMain.readingPassagesEmptyHint')}</p>
+          ) : (
+            <ul className="space-y-3">
+              {passages.map((p, pIdx) => (
+                <li key={p.id} className="rounded-lg border border-amber-200 bg-white p-3 dark:border-amber-800 dark:bg-gray-900/60">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <span className="text-xs font-bold text-amber-900 dark:text-amber-200">
+                      {t('tests.teacherMain.readingPassagePickerLabel').replace('{n}', String(pIdx + 1))}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removePassageAt(pIdx)}
+                      className="rounded-full border border-rose-200 px-2 py-0.5 text-[11px] font-bold text-rose-800 dark:border-rose-800 dark:text-rose-200"
+                    >
+                      {t('tests.teacherMain.removeReadingPassage')}
+                    </button>
+                  </div>
+                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    {t('tests.teacherMain.readingPassageTitleLabel')}
+                    <input
+                      value={p.title}
+                      onChange={(e) => setPassageField(pIdx, { title: e.target.value })}
+                      className="mt-1 w-full rounded-lg border border-violet-200 bg-white px-3 py-2 text-sm dark:border-violet-700 dark:bg-gray-800"
+                    />
+                  </label>
+                  <label className="mt-2 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    {t('tests.teacherMain.readingPassageBodyLabel')}
+                    <textarea
+                      value={p.body}
+                      onChange={(e) => setPassageField(pIdx, { body: e.target.value })}
+                      rows={6}
+                      className="mt-1 w-full rounded-lg border border-violet-200 bg-white px-3 py-2 text-sm dark:border-violet-700 dark:bg-gray-800"
+                    />
+                  </label>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-b border-violet-100 pb-2 dark:border-violet-900/50">
+          <p className="text-sm font-bold text-violet-950 dark:text-violet-100">{t('tests.teacherMain.questionsBlockTitle')}</p>
+          <button
+            type="button"
+            onClick={addQuestion}
+            className="rounded-lg border border-violet-300 bg-violet-50 px-3 py-1.5 text-xs font-bold text-violet-900 shadow-sm transition hover:bg-violet-100 dark:border-violet-600 dark:bg-violet-950/40 dark:text-violet-100 dark:hover:bg-violet-900/50"
+          >
+            {t('tests.teacherMain.addQuestion')}
+          </button>
+        </div>
+
         <div className="mt-4 space-y-4">
           {questions.map((q, qIdx) => (
             <div key={`${q.order}-${qIdx}`} className="rounded-xl border border-violet-200 p-3 dark:border-violet-700">
-              <p className="mb-2 text-sm font-bold">{qIdx + 1}. {t('tests.teacherMain.questionLabel')}</p>
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-bold">
+                  {qIdx + 1}. {t('tests.teacherMain.questionLabel')}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setPendingDeleteIndex(qIdx)}
+                  className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-bold text-rose-800 hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-200 dark:hover:bg-rose-950/80"
+                >
+                  {t('tests.teacherMain.deleteQuestion')}
+                </button>
+              </div>
               <textarea
                 value={q.stem}
                 onChange={(e) => setQuestionField(qIdx, { stem: e.target.value })}
@@ -613,6 +822,27 @@ export default function KidsTeacherTestsPage() {
                   />
                 </div>
               </div>
+              {passages.length > 0 ? (
+                <div className="mt-2">
+                  <p className="text-xs text-slate-600 dark:text-slate-400">{t('tests.teacherMain.linkQuestionToPassage')}</p>
+                  <div className="mt-1 w-full max-w-md">
+                    <KidsSelect
+                      value={q.reading_passage_id || ''}
+                      onChange={(next) =>
+                        setQuestionField(qIdx, { reading_passage_id: next ? next : null })
+                      }
+                      options={[
+                        { value: '', label: t('tests.teacherMain.noPassageOption') },
+                        ...passages.map((p, pi) => ({
+                          value: p.id,
+                          label: t('tests.teacherMain.readingPassagePickerLabel').replace('{n}', String(pi + 1)),
+                        })),
+                      ]}
+                      searchable={false}
+                    />
+                  </div>
+                </div>
+              ) : null}
               {sourcePageCount > 1 ? (
                 <div className="mt-2">
                   <p className="text-xs text-slate-600 dark:text-slate-400">{t('tests.teacherMain.sourcePageHelp')}</p>
@@ -633,7 +863,28 @@ export default function KidsTeacherTestsPage() {
               ) : null}
             </div>
           ))}
-          {questions.length === 0 ? <p className="text-sm text-slate-500">{t('tests.teacherMain.extractFirst')}</p> : null}
+          {questions.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-violet-200 bg-violet-50/40 p-4 text-center dark:border-violet-800 dark:bg-violet-950/20">
+              <p className="text-sm text-slate-600 dark:text-slate-400">{t('tests.teacherMain.noQuestionsHint')}</p>
+              <button
+                type="button"
+                onClick={addQuestion}
+                className="mt-3 rounded-lg bg-violet-600 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-violet-500"
+              >
+                {t('tests.teacherMain.addQuestion')}
+              </button>
+            </div>
+          ) : (
+            <div className="flex justify-center pt-1">
+              <button
+                type="button"
+                onClick={addQuestion}
+                className="rounded-full border border-violet-300 bg-white px-4 py-2 text-xs font-bold text-violet-800 shadow-sm hover:bg-violet-50 dark:border-violet-600 dark:bg-gray-900 dark:text-violet-200 dark:hover:bg-violet-950/50"
+              >
+                {t('tests.teacherMain.addQuestion')}
+              </button>
+            </div>
+          )}
         </div>
 
         <button
@@ -646,6 +897,38 @@ export default function KidsTeacherTestsPage() {
         </button>
       </section>
 
+      {pendingDeleteIndex !== null ? (
+        <KidsCenteredModal
+          variant="danger"
+          title={t('tests.teacherMain.deleteQuestionModalTitle')}
+          onClose={() => setPendingDeleteIndex(null)}
+          footer={
+            <div className="flex flex-wrap justify-end gap-2">
+              <KidsSecondaryButton type="button" onClick={() => setPendingDeleteIndex(null)}>
+                {t('common.cancel')}
+              </KidsSecondaryButton>
+              <button
+                type="button"
+                onClick={() => confirmRemoveQuestion()}
+                className="inline-flex min-h-12 items-center justify-center rounded-full border-2 border-rose-800/30 bg-rose-600 px-8 text-sm font-bold text-white shadow-md shadow-rose-900/25 transition hover:bg-rose-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-600 dark:border-rose-400/20 dark:bg-rose-600 dark:text-white dark:hover:bg-rose-500"
+              >
+                {t('tests.teacherMain.deleteQuestionModalConfirm')}
+              </button>
+            </div>
+          }
+        >
+          <p className="text-sm text-slate-700 dark:text-slate-300">
+            {t('tests.teacherMain.deleteQuestionModalBody')
+              .replace('{n}', String(pendingDeleteIndex + 1))
+              .replace('{count}', String(questions.length))}
+          </p>
+          {deletePreviewShort ? (
+            <p className="mt-3 rounded-lg border border-violet-100 bg-violet-50/80 p-3 text-xs leading-relaxed text-violet-950 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-100">
+              {deletePreviewShort}
+            </p>
+          ) : null}
+        </KidsCenteredModal>
+      ) : null}
     </div>
   );
 }
