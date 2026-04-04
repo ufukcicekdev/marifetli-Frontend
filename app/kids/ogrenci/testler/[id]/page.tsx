@@ -6,7 +6,7 @@ import { useParams, useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import { kidsStudentGetTest, kidsStudentStartTest, kidsStudentSubmitTest, type KidsTestAttempt } from '@/src/lib/kids-api';
-import { kidsStripTrailingParenTopicSuffix } from '@/src/lib/kids-test-stem';
+import { kidsSplitReadingFromInstructions, kidsStripTrailingParenTopicSuffix } from '@/src/lib/kids-test-stem';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 import { useKidsI18n } from '@/src/providers/kids-language-provider';
 
@@ -82,6 +82,40 @@ export default function KidsStudentTestSolvePage() {
     return [...(detail.passages ?? [])].sort((a, b) => a.order - b.order);
   }, [detail]);
 
+  const hasApiReadingContent = useMemo(
+    () => sortedPassages.some((p) => Boolean((p.title || '').trim() || (p.body || '').trim())),
+    [sortedPassages],
+  );
+
+  const { instructionIntro, instructionStoryFallback } = useMemo(() => {
+    if (!detail?.instructions) return { instructionIntro: '', instructionStoryFallback: null as string | null };
+    const split = kidsSplitReadingFromInstructions(detail.instructions);
+    return { instructionIntro: split.intro, instructionStoryFallback: split.story };
+  }, [detail?.instructions]);
+
+  const showFallbackReading = Boolean(!hasApiReadingContent && instructionStoryFallback);
+
+  const looksLikeReadingComprehension = useMemo(() => {
+    if (!detail) return false;
+    const ins = (detail.instructions || '').toLowerCase();
+    const tit = (detail.title || '').toLowerCase();
+    const hay = `${ins} ${tit}`;
+    const needles = [
+      'metne göre',
+      'metne gore',
+      'okuduğunuz',
+      'okudugunuz',
+      'metni',
+      'metne',
+      'parçaya göre',
+      'parcaya gore',
+      'hikayeye',
+      'hikâye',
+      'metin',
+    ];
+    return needles.some((n) => hay.includes(n));
+  }, [detail]);
+
   const questionsByPassageOrder = useMemo(() => {
     const m = new Map<number, StudentTestQuestion[]>();
     if (!detail) return m;
@@ -102,6 +136,13 @@ export default function KidsStudentTestSolvePage() {
       .slice()
       .sort((a, b) => a.order - b.order);
   }, [detail]);
+
+  const showReadingMissingHint = Boolean(
+    detail &&
+      looksLikeReadingComprehension &&
+      !hasApiReadingContent &&
+      !showFallbackReading,
+  );
 
   const renderQuestionCard = useCallback(
     (q: StudentTestQuestion) => {
@@ -202,6 +243,8 @@ export default function KidsStudentTestSolvePage() {
   if (authLoading || loading) return <p className="text-center text-sm">{t('common.loading')}</p>;
   if (!detail) return <p className="text-center text-sm">{t('tests.studentSolve.notFound')}</p>;
 
+  const showReadingPanel = hasApiReadingContent || showFallbackReading;
+
   return (
     <div className="mx-auto max-w-4xl space-y-4">
       <div className="flex items-center justify-between">
@@ -210,7 +253,58 @@ export default function KidsStudentTestSolvePage() {
           {t('tests.report.backTests')}
         </Link>
       </div>
-      {detail.instructions ? <p className="text-sm text-slate-600 dark:text-slate-300">{detail.instructions}</p> : null}
+      {showFallbackReading ? (
+        instructionIntro.trim() ? (
+          <p className="text-sm text-slate-600 dark:text-slate-300">{instructionIntro}</p>
+        ) : null
+      ) : detail.instructions?.trim() ? (
+        <p className="text-sm text-slate-600 dark:text-slate-300">{detail.instructions}</p>
+      ) : null}
+
+      {showReadingPanel ? (
+        <div className="space-y-4">
+          {hasApiReadingContent
+            ? sortedPassages.map((p) => {
+                if (!(p.title?.trim() || p.body?.trim())) return null;
+                return (
+                  <div
+                    key={`read-${p.id}`}
+                    className="rounded-2xl border-2 border-amber-200/90 bg-gradient-to-b from-amber-50/90 to-white p-5 shadow-sm dark:border-amber-800/70 dark:from-amber-950/35 dark:to-gray-900/80"
+                  >
+                    <p className="text-[11px] font-black uppercase tracking-wider text-amber-800/90 dark:text-amber-300/90">
+                      {t('tests.studentSolve.readingPassageHeading')}
+                    </p>
+                    {p.title?.trim() ? (
+                      <h2 className="mt-2 text-lg font-bold text-amber-950 dark:text-amber-50">{p.title.trim()}</h2>
+                    ) : null}
+                    {p.body?.trim() ? (
+                      <div className="mt-3 max-h-[min(70vh,28rem)] overflow-y-auto rounded-xl border border-amber-100/80 bg-white/80 p-4 text-base leading-relaxed text-slate-900 dark:border-amber-900/40 dark:bg-gray-950/50 dark:text-slate-100">
+                        <p className="whitespace-pre-wrap">{p.body.trim()}</p>
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })
+            : null}
+          {showFallbackReading && instructionStoryFallback ? (
+            <div className="rounded-2xl border-2 border-amber-200/90 bg-gradient-to-b from-amber-50/90 to-white p-5 shadow-sm dark:border-amber-800/70 dark:from-amber-950/35 dark:to-gray-900/80">
+              <p className="text-[11px] font-black uppercase tracking-wider text-amber-800/90 dark:text-amber-300/90">
+                {t('tests.studentSolve.readingPassageHeading')}
+              </p>
+              <div className="mt-3 max-h-[min(70vh,28rem)] overflow-y-auto rounded-xl border border-amber-100/80 bg-white/80 p-4 text-base leading-relaxed text-slate-900 dark:border-amber-900/40 dark:bg-gray-950/50 dark:text-slate-100">
+                <p className="whitespace-pre-wrap">{instructionStoryFallback}</p>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {showReadingMissingHint ? (
+        <div className="rounded-xl border border-amber-300/80 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-100">
+          {t('tests.studentSolve.readingMissingHint')}
+        </div>
+      ) : null}
+
       <div className="rounded-xl border border-violet-200 bg-white p-3 text-sm dark:border-violet-800 dark:bg-gray-900/70">
         {detail.duration_minutes ? (
           <p className="font-semibold text-violet-800 dark:text-violet-200">
@@ -232,20 +326,14 @@ export default function KidsStudentTestSolvePage() {
       <div className="space-y-6">
         {sortedPassages.map((p) => {
           const group = questionsByPassageOrder.get(p.order) ?? [];
-          if (group.length === 0 && !p.title?.trim() && !p.body?.trim()) return null;
+          if (!group.length) return null;
+          const showedReadingAbove = Boolean(p.title?.trim() || p.body?.trim());
           return (
-            <section key={`passage-${p.id}`} className="space-y-3">
-              {p.title?.trim() || p.body?.trim() ? (
-                <div className="rounded-xl border border-amber-200/90 bg-amber-50/50 p-4 dark:border-amber-800/70 dark:bg-amber-950/25">
-                  {p.title?.trim() ? (
-                    <h2 className="text-base font-bold text-amber-950 dark:text-amber-100">{p.title.trim()}</h2>
-                  ) : null}
-                  {p.body?.trim() ? (
-                    <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-slate-800 dark:text-slate-200">
-                      {p.body.trim()}
-                    </p>
-                  ) : null}
-                </div>
+            <section key={`passage-q-${p.id}`} className="space-y-3">
+              {hasApiReadingContent && showedReadingAbove ? (
+                <h2 className="border-b border-violet-200 pb-2 text-sm font-bold text-violet-900 dark:border-violet-800 dark:text-violet-100">
+                  {p.title?.trim() || t('tests.studentSolve.followUpQuestions')}
+                </h2>
               ) : null}
               <div className="space-y-3">{group.map((q) => renderQuestionCard(q))}</div>
             </section>
@@ -253,7 +341,7 @@ export default function KidsStudentTestSolvePage() {
         })}
         {ungroupedQuestions.length > 0 ? (
           <section className="space-y-3">
-            {sortedPassages.length > 0 && questionsByPassageOrder.size > 0 ? (
+            {(hasApiReadingContent && questionsByPassageOrder.size > 0) || showFallbackReading ? (
               <h2 className="text-sm font-bold text-violet-900 dark:text-violet-100">{t('tests.studentSolve.otherQuestions')}</h2>
             ) : null}
             <div className="space-y-3">{ungroupedQuestions.map((q) => renderQuestionCard(q))}</div>

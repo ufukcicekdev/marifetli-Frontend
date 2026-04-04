@@ -13,3 +13,28 @@ export function kidsStripTrailingParenTopicSuffix(stem: string): string {
   }
   return s;
 }
+
+const SINGLE_BLOCK_AS_STORY_MIN_LEN = 360;
+
+/**
+ * Öğrenci ekranı: `passages` boşken talimat alanında hikâye olabilir.
+ * - İki veya daha fazla paragraf: ilk paragraf talimat, geri kalanı okuma metni.
+ * - Tek paragraf ama çok uzunsa: tamamı okuma metni (kısa tek cümle talimatlar için değil).
+ */
+export function kidsSplitReadingFromInstructions(raw: string): { intro: string; story: string | null } {
+  const t = (raw || '').trim();
+  if (!t) return { intro: '', story: null };
+  const parts = t
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  if (parts.length >= 2) {
+    const story = parts.slice(1).join('\n\n');
+    return { intro: parts[0] ?? '', story: story || null };
+  }
+  const one = parts[0] ?? t;
+  if (one.length >= SINGLE_BLOCK_AS_STORY_MIN_LEN) {
+    return { intro: '', story: one };
+  }
+  return { intro: t, story: null };
+}
