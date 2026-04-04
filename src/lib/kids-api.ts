@@ -12,7 +12,8 @@ import type { User as MainSiteUser } from '@/src/types';
 const MAIN_SITE_API_BASE =
   process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
 
-export type KidsUserRole = 'admin' | 'teacher' | 'parent' | 'student';
+/** `none`: ana sitede hesap var, kids_portal_role atanmamış — Kids öğretmen/veli API izni yok. */
+export type KidsUserRole = 'admin' | 'teacher' | 'parent' | 'student' | 'none';
 export type KidsLanguageCode = 'tr' | 'en' | 'ge';
 
 /** Öğrenci için /auth/me yanıtında; öğretmende çoğunlukla null. */

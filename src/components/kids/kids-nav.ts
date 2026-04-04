@@ -16,12 +16,16 @@ export function kidsNavLinks(
   const p = pathPrefix;
   const siteMainAdmin = Boolean(options?.siteAdmin);
 
-  /* Kids yöneticisi: çocuk dünyası menüsü + Yönetim (yalnızca Yönetim değil). */
+  /* Kids yöneticisi: yönetim + öğretmen araçları (staff sık sık sınıf/ödev de kullanır). */
   if (role === 'admin') {
     return [
       { href: kidsHomeHref(p), labelKey: 'nav.home', icon: 'home' },
       { href: KIDS_SITE_MANAGEMENT_HREF, labelKey: 'nav.admin', icon: 'admin' },
       { href: `${p}/ogretmen/panel`, labelKey: 'nav.teacherPanel', icon: 'teacher' },
+      { href: `${p}/ogretmen/odevler`, labelKey: 'nav.homeworks', icon: 'challenge' },
+      { href: `${p}/ogretmen/testler`, labelKey: 'nav.tests', icon: 'challenge' },
+      { href: `${p}/mesajlar`, labelKey: 'nav.messages', icon: 'chat' },
+      { href: `${p}/duyurular`, labelKey: 'nav.announcements', icon: 'announce' },
       { href: `${p}/uzman`, labelKey: 'nav.askExpert', icon: 'expert' },
       { href: `${p}/bildirimler`, labelKey: 'nav.notifications', icon: 'bell' },
       { href: `${p}/profil`, labelKey: 'nav.profile', icon: 'profile' },
