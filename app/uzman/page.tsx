@@ -4,12 +4,21 @@ import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  Brain,
+  GraduationCap,
+  Image as ImageIcon,
+  MoreHorizontal,
+  Palette,
+  Paperclip,
+  Send,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/src/lib/api';
 import { useAuthStore } from '@/src/stores/auth-store';
 import { useAuthModalStore } from '@/src/stores/auth-modal-store';
 import type { CategoryExpertHistoryItem } from '@/src/types';
-import { CategoryDropdown, buildCategoriesTree, type CategoryWithSubs } from '@/src/components/category-dropdown';
+import { buildCategoriesTree, type CategoryWithSubs } from '@/src/components/category-dropdown';
 import { ExpertFlatDropdown } from '@/src/components/expert-flat-dropdown';
 
 type CategoryItem = { id: number; name: string; slug: string; subcategories?: CategoryItem[] };
@@ -25,6 +34,42 @@ function validateExpertAttachment(f: File): string | null {
   return null;
 }
 
+const QUESTION_MAX_LEN = 4000;
+
+const CATEGORY_CARD_ICONS = [Brain, GraduationCap, Palette, MoreHorizontal] as const;
+
+function categoryDisplayLabel(fullName: string): string {
+  const i = fullName.indexOf(' — ');
+  if (i === -1) return fullName.trim();
+  return fullName.slice(0, i).trim();
+}
+
+function CategoryCardIcon({
+  displayName,
+  slug,
+  index,
+  selected,
+}: {
+  displayName: string;
+  slug: string;
+  index: number;
+  selected: boolean;
+}) {
+  const t = `${displayName} ${slug}`.toLowerCase();
+  let Icon = CATEGORY_CARD_ICONS[index % CATEGORY_CARD_ICONS.length]!;
+  if (/gelişim|gelisim|development|beyin/i.test(t)) Icon = Brain;
+  else if (/eğitim|egitim|education|okul|kids/i.test(t)) Icon = GraduationCap;
+  else if (/sanat|art|resim|müzik|muzik|hobi/i.test(t)) Icon = Palette;
+  else if (/diğer|diger|other|genel/i.test(t)) Icon = MoreHorizontal;
+  return (
+    <Icon
+      className={`mx-auto h-9 w-9 sm:h-10 sm:w-10 ${selected ? 'text-white' : 'text-violet-600 dark:text-violet-400'}`}
+      strokeWidth={1.75}
+      aria-hidden
+    />
+  );
+}
+
 export default function UzmanPage() {
   const queryClient = useQueryClient();
   const pathname = usePathname();
@@ -38,6 +83,7 @@ export default function UzmanPage() {
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const [lastAnswer, setLastAnswer] = useState<string | null>(null);
   const [historyDetail, setHistoryDetail] = useState<CategoryExpertHistoryItem | null>(null);
+  const [showAllHistory, setShowAllHistory] = useState(false);
 
   const { data: cfg, isLoading: cfgLoading } = useQuery({
     queryKey: ['category-experts-config', user?.id ?? 'anon'],
@@ -201,190 +247,285 @@ export default function UzmanPage() {
     askMutation.mutate();
   };
 
+  const historyResults = history?.results ?? [];
+  const historyPreviewLimit = 3;
+  const visibleHistory = showAllHistory ? historyResults : historyResults.slice(0, historyPreviewLimit);
+  const hasMoreHistory = historyResults.length > historyPreviewLimit;
+
+  function openAttachmentPicker() {
+    attachmentInputRef.current?.click();
+  }
+
   return (
-    <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8 max-w-3xl">
-      <div className="mb-6 flex flex-wrap items-baseline justify-between gap-2">
-        <div>
-          <h1 id="uzman-main-heading" className="text-2xl font-bold text-gray-900 dark:text-white">
-            Kategori uzmanı
-          </h1>
-          <p id="uzman-hero-lead" className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            Ana kategorilere özel yardımcı; yanıtlar yapay zeka ile üretilir. Marifetli uzmanı olarak samimi, uygulanabilir öneriler
-            sunması beklenir.
-          </p>
-        </div>
-        <Link href={kidsMode ? '/kids' : '/sorular'} className="text-sm font-medium text-brand hover:text-brand-hover shrink-0">
-          ← {kidsMode ? 'Kids Anasayfa' : 'Sorular'}
-        </Link>
-      </div>
-
-      {!isAuthenticated && (
-        <div className="mb-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-sm text-amber-900 dark:text-amber-100">
-          Soru sormak için{' '}
-          <button type="button" onClick={() => openAuth('login')} className="font-semibold underline">
-            giriş yapın
-          </button>
-          .
-        </div>
-      )}
-
-      {isAuthenticated && !user?.is_verified && (
-        <div className="mb-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-sm">
-          Bu özellik için e-posta doğrulaması gerekir.
-        </div>
-      )}
-
-      {cfg.authenticated && maxQ > 0 && (
-        <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-          Kalan soru hakkınız: <strong className="text-gray-900 dark:text-white">{remaining}</strong> / {maxQ}
-          {cfg.limit_period === 'day' && ' (bugün)'}
-          {cfg.limit_period === 'month' && ' (bu ay)'}
-          {cfg.limit_period === 'all_time' && ' (toplam)'}
-        </p>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-4 sm:p-6">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Ana kategori</label>
-          {categoriesLoading && expertMainTree.length === 0 ? (
-            <p className="text-sm text-gray-500 dark:text-gray-400 py-2">Kategoriler yükleniyor…</p>
-          ) : (
-            <CategoryDropdown
-              categoriesTree={expertMainTree}
-              value={mainId === '' ? null : mainId}
-              onChange={(id) => {
-                setMainId(id == null ? '' : id);
-                setSubId('');
-                setLastAnswer(null);
-              }}
-              placeholder="Seçin…"
-              allowClear
-              clearLabel="Seçin…"
-              disabled={categoriesLoading || expertMainTree.length === 0}
-            />
-          )}
+    <>
+      <div className="mx-auto min-h-[calc(100dvh-4rem)] max-w-6xl px-4 py-8 pb-12 sm:px-6">
+        <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0 max-w-2xl">
+            <h1
+              id="uzman-main-heading"
+              className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-3xl"
+            >
+              Uzmana sor
+            </h1>
+            <p id="uzman-hero-lead" className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+              Kategori seç, sorunu yaz ve uzmanımızdan yanıt bekleyin. Eğitmenlerimiz en kısa sürede seninle iletişime
+              geçecek. Yanıtlar yapay zeka ile üretilir; samimi ve uygulanabilir öneriler sunulur.
+            </p>
+          </div>
+          <Link
+            href={kidsMode ? '/kids' : '/sorular'}
+            className="shrink-0 text-sm font-semibold text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300"
+          >
+            ← {kidsMode ? 'Kids Anasayfa' : 'Sorular'}
+          </Link>
         </div>
 
-        {subsForMain.length > 0 && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Alt kategori <span className="text-gray-400 font-normal">(isteğe bağlı)</span>
-            </label>
-            <ExpertFlatDropdown
-              className="w-full"
-              value={subId === '' ? null : subId}
-              onChange={(id) => setSubId(id == null ? '' : id)}
-              options={subsForMain.map((s) => ({ id: s.id, name: s.name }))}
-              placeholder="— Tümü / genel —"
-              disabled={mainId === ''}
-            />
+        {!isAuthenticated && (
+          <div className="mb-6 rounded-2xl border border-amber-200/80 bg-amber-50/90 p-4 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
+            Soru sormak için{' '}
+            <button type="button" onClick={() => openAuth('login')} className="font-bold underline underline-offset-2">
+              giriş yapın
+            </button>
+            .
           </div>
         )}
 
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Sorunuz</label>
-          <textarea
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            rows={5}
-            maxLength={4000}
-            placeholder="Örn: İlk defa tığ örgüye başlıyorum, hangi malzemeleri almalıyım?"
-            className="w-full px-3 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 resize-y min-h-[120px]"
-          />
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            Görsel eklerseniz kısa bir soru yeterli; uzman yanıtı görsele göre üretilir.
-          </p>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-            Görsel eki <span className="text-gray-400 font-normal">(isteğe bağlı)</span>
-          </label>
-          <input
-            ref={attachmentInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif"
-            className="block w-full text-sm text-gray-600 dark:text-gray-300 file:mr-3 file:rounded-lg file:border-0 file:bg-violet-100 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-violet-800 hover:file:bg-violet-200 dark:file:bg-violet-900/50 dark:file:text-violet-200"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (!f) {
-                setAttachmentFile(null);
-                return;
-              }
-              const err = validateExpertAttachment(f);
-              if (err) {
-                toast.error(err);
-                e.target.value = '';
-                setAttachmentFile(null);
-                return;
-              }
-              setAttachmentFile(f);
-            }}
-          />
-          {attachmentFile ? (
-            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-              <span className="truncate font-medium">{attachmentFile.name}</span>
-              <button
-                type="button"
-                onClick={() => {
-                  setAttachmentFile(null);
-                  if (attachmentInputRef.current) attachmentInputRef.current.value = '';
-                }}
-                className="text-brand hover:underline font-medium"
-              >
-                Kaldır
-              </button>
-            </div>
-          ) : null}
-        </div>
-
-        <button
-          type="submit"
-          disabled={
-            askMutation.isPending || !isAuthenticated || !user?.is_verified || (maxQ > 0 && (remaining ?? 0) <= 0)
-          }
-          className="w-full sm:w-auto px-6 py-3 rounded-lg bg-brand hover:bg-brand-hover disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium"
-        >
-          {askMutation.isPending ? 'Yanıt bekleniyor…' : 'Uzmana sor'}
-        </button>
-      </form>
-
-      {lastAnswer && (
-        <div className="mt-6 p-4 sm:p-6 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-          <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Yanıt</h2>
-          <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap text-gray-900 dark:text-gray-100">
-            {lastAnswer}
+        {isAuthenticated && !user?.is_verified && (
+          <div className="mb-6 rounded-2xl border border-amber-200/80 bg-amber-50/90 p-4 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
+            Bu özellik için e-posta doğrulaması gerekir.
           </div>
-        </div>
-      )}
+        )}
 
-      {history?.results?.length ? (
-        <div className="mt-8">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Son sorularınız</h2>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Detayı görmek için bir kayda tıklayın.</p>
-          <ul className="space-y-3">
-            {history.results.map((row) => (
-              <li key={row.id}>
+        {cfg.authenticated && maxQ > 0 ? (
+          <p className="mb-6 text-sm text-slate-600 dark:text-slate-400">
+            Kalan soru hakkınız: <strong className="text-slate-900 dark:text-white">{remaining}</strong> / {maxQ}
+            {cfg.limit_period === 'day' && ' (bugün)'}
+            {cfg.limit_period === 'month' && ' (bu ay)'}
+            {cfg.limit_period === 'all_time' && ' (toplam)'}
+          </p>
+        ) : null}
+
+        <form onSubmit={handleSubmit} className="grid gap-8 lg:grid-cols-[minmax(0,340px)_minmax(0,1fr)] lg:items-start">
+          <div className="space-y-5">
+            <div>
+              <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-violet-600 dark:text-violet-400">
+                Kategori seçimi
+              </h2>
+              {categoriesLoading && expertMainTree.length === 0 ? (
+                <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">Kategoriler yükleniyor…</p>
+              ) : expertMainTree.length === 0 ? (
+                <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">Uygun kategori bulunamadı.</p>
+              ) : (
+                <div className="mt-3 grid grid-cols-2 gap-3 sm:gap-4">
+                  {expertMainTree.map((cat, index) => {
+                    const label = categoryDisplayLabel(cat.name);
+                    const selected = mainId === cat.id;
+                    return (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        disabled={categoriesLoading}
+                        onClick={() => {
+                          setMainId(cat.id);
+                          setSubId('');
+                          setLastAnswer(null);
+                        }}
+                        className={`flex min-h-[120px] flex-col items-center justify-center gap-2 rounded-2xl p-4 text-center transition focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-zinc-950 disabled:opacity-60 ${
+                          selected
+                            ? 'bg-gradient-to-br from-violet-600 to-purple-700 text-white shadow-lg shadow-violet-500/30'
+                            : 'border border-slate-200/90 bg-white shadow-sm hover:border-violet-200 hover:shadow-md dark:border-zinc-700 dark:bg-zinc-900/80 dark:hover:border-violet-700'
+                        }`}
+                      >
+                        <CategoryCardIcon
+                          displayName={label}
+                          slug={cat.slug}
+                          index={index}
+                          selected={selected}
+                        />
+                        <span
+                          className={`text-xs font-bold leading-tight sm:text-sm ${selected ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}
+                        >
+                          {label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {subsForMain.length > 0 ? (
+              <div className="rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/80">
+                <label className="block text-[11px] font-bold uppercase tracking-[0.12em] text-violet-600 dark:text-violet-400">
+                  Alt kategori <span className="font-semibold normal-case text-slate-400">(isteğe bağlı)</span>
+                </label>
+                <div className="mt-2">
+                  <ExpertFlatDropdown
+                    className="w-full"
+                    value={subId === '' ? null : subId}
+                    onChange={(id) => setSubId(id == null ? '' : id)}
+                    options={subsForMain.map((s) => ({ id: s.id, name: s.name }))}
+                    placeholder="— Tümü / genel —"
+                    disabled={mainId === ''}
+                  />
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="rounded-[1.25rem] border border-slate-200/90 bg-white p-5 shadow-[0_8px_30px_-12px_rgba(124,58,237,0.18)] dark:border-zinc-700 dark:bg-zinc-900/85 sm:p-6">
+            <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-violet-600 dark:text-violet-400">
+              Sorunuzu detaylandırın
+            </h2>
+            <div className="relative mt-4">
+              <textarea
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                rows={8}
+                maxLength={QUESTION_MAX_LEN}
+                placeholder="Sorunuzu buraya yazın..."
+                className="min-h-[200px] w-full resize-y rounded-2xl border-0 bg-slate-100/90 px-4 py-3 pb-9 text-sm text-slate-900 shadow-inner shadow-slate-200/60 outline-none transition placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-violet-400/35 dark:bg-zinc-800/90 dark:text-slate-100 dark:shadow-none dark:placeholder:text-zinc-500 dark:focus:bg-zinc-900 dark:focus:ring-violet-600/40"
+                aria-label="Sorunuz"
+              />
+              <span className="pointer-events-none absolute bottom-3 right-4 text-xs font-medium text-slate-400 dark:text-zinc-500">
+                {question.length} / {QUESTION_MAX_LEN}
+              </span>
+            </div>
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+              Görsel eklerseniz kısa bir soru yeterli; uzman yanıtı görsele göre üretilir.
+            </p>
+
+            <input
+              ref={attachmentInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              className="sr-only"
+              tabIndex={-1}
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (!f) {
+                  setAttachmentFile(null);
+                  return;
+                }
+                const err = validateExpertAttachment(f);
+                if (err) {
+                  toast.error(err);
+                  e.target.value = '';
+                  setAttachmentFile(null);
+                  return;
+                }
+                setAttachmentFile(f);
+              }}
+            />
+
+            <div className="mt-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => setHistoryDetail(row)}
-                  className="w-full text-left p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm transition hover:border-brand/50 hover:bg-gray-50 dark:hover:bg-gray-800/80 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+                  onClick={openAttachmentPicker}
+                  className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-purple-700 text-white shadow-md shadow-violet-500/25 transition hover:brightness-105"
+                  aria-label="Dosya ekle"
                 >
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-                    {row.main_category}
-                    {row.subcategory ? ` › ${row.subcategory}` : ''}
-                    {' · '}
-                    {new Date(row.created_at).toLocaleString('tr-TR')}
-                  </p>
-                  <p className="font-medium text-gray-900 dark:text-gray-100 line-clamp-2">{row.question}</p>
-                  <p className="mt-2 text-gray-600 dark:text-gray-300 whitespace-pre-wrap line-clamp-3">{row.answer}</p>
-                  <span className="mt-2 inline-block text-xs font-medium text-brand">Tam metin →</span>
+                  <Paperclip className="h-5 w-5" strokeWidth={2} aria-hidden />
                 </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
+                <button
+                  type="button"
+                  onClick={openAttachmentPicker}
+                  className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-lime-600 to-emerald-700 text-white shadow-md shadow-emerald-500/20 transition hover:brightness-105"
+                  aria-label="Görsel ekle"
+                >
+                  <ImageIcon className="h-5 w-5" strokeWidth={2} aria-hidden />
+                </button>
+                {attachmentFile ? (
+                  <div className="flex min-w-0 max-w-[200px] flex-col gap-1 sm:max-w-xs">
+                    <span className="truncate text-xs font-medium text-slate-600 dark:text-slate-300">
+                      {attachmentFile.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAttachmentFile(null);
+                        if (attachmentInputRef.current) attachmentInputRef.current.value = '';
+                      }}
+                      className="w-fit text-xs font-bold text-violet-600 underline dark:text-violet-400"
+                    >
+                      Kaldır
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+              <button
+                type="submit"
+                disabled={
+                  askMutation.isPending || !isAuthenticated || !user?.is_verified || (maxQ > 0 && (remaining ?? 0) <= 0)
+                }
+                className="inline-flex min-h-[3rem] w-full items-center justify-center gap-2 rounded-full bg-gradient-to-r from-violet-600 to-purple-600 px-8 text-sm font-bold text-white shadow-lg shadow-violet-500/30 transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:min-w-[200px]"
+              >
+                {askMutation.isPending ? 'Yanıt bekleniyor…' : 'Soruyu gönder'}
+                <Send className="h-5 w-5 shrink-0" strokeWidth={2.25} aria-hidden />
+              </button>
+            </div>
+          </div>
+        </form>
+
+        {lastAnswer ? (
+          <div className="mt-10 rounded-[1.25rem] border border-violet-200/80 bg-white p-5 shadow-md dark:border-violet-900/40 dark:bg-zinc-900/80 sm:p-6">
+            <h2 className="text-[11px] font-bold uppercase tracking-[0.12em] text-violet-600 dark:text-violet-400">
+              Yanıt
+            </h2>
+            <div className="prose prose-sm mt-3 max-w-none whitespace-pre-wrap text-slate-800 dark:prose-invert dark:text-slate-100">
+              {lastAnswer}
+            </div>
+          </div>
+        ) : null}
+
+        {historyResults.length > 0 ? (
+          <div className="mt-12">
+            <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-white">Son sorularınız</h2>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                  Geçmişte sorduğunuz sorular ve uzman yanıtları.
+                </p>
+              </div>
+              {hasMoreHistory ? (
+                <button
+                  type="button"
+                  onClick={() => setShowAllHistory((v) => !v)}
+                  className="text-sm font-bold text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300"
+                >
+                  {showAllHistory ? 'Daha az göster' : 'Hepsini gör →'}
+                </button>
+              ) : null}
+            </div>
+            <ul className="space-y-4">
+              {visibleHistory.map((row) => (
+                <li key={row.id}>
+                  <button
+                    type="button"
+                    onClick={() => setHistoryDetail(row)}
+                    className="w-full rounded-2xl border border-slate-200/90 border-t-4 border-t-violet-600 bg-white p-4 text-left shadow-sm transition hover:shadow-md dark:border-zinc-700 dark:bg-zinc-900/90 dark:border-t-violet-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500"
+                  >
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {row.main_category}
+                      {row.subcategory ? ` › ${row.subcategory}` : ''}
+                      {' · '}
+                      {new Date(row.created_at).toLocaleString('tr-TR')}
+                    </p>
+                    <p className="mt-2 font-semibold text-slate-900 line-clamp-2 dark:text-white">{row.question}</p>
+                    <p className="mt-2 text-sm text-slate-600 line-clamp-3 dark:text-slate-300 whitespace-pre-wrap">
+                      {row.answer}
+                    </p>
+                    <span className="mt-3 inline-block text-xs font-bold text-violet-600 dark:text-violet-400">
+                      Tam metin →
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </div>
 
       {historyDetail ? (
         <>
@@ -448,6 +589,6 @@ export default function UzmanPage() {
           </div>
         </>
       ) : null}
-    </div>
+    </>
   );
 }

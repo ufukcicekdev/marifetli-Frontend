@@ -22,9 +22,9 @@ export function kidsNavLinks(
       { href: kidsHomeHref(p), labelKey: 'nav.home', icon: 'home' },
       { href: KIDS_SITE_MANAGEMENT_HREF, labelKey: 'nav.admin', icon: 'admin' },
       { href: `${p}/ogretmen/panel`, labelKey: 'nav.teacherPanel', icon: 'teacher' },
-      { href: `${p}/ogretmen/odevler`, labelKey: 'nav.homeworks', icon: 'challenge' },
-      { href: `${p}/ogretmen/testler`, labelKey: 'nav.tests', icon: 'challenge' },
-      { href: `${p}/mesajlar`, labelKey: 'nav.messages', icon: 'chat' },
+      { href: `${p}/ogretmen/odevler`, labelKey: 'nav.homeworks', icon: 'homework' },
+      { href: `${p}/ogretmen/testler`, labelKey: 'nav.tests', icon: 'tests' },
+      { href: `${p}/mesajlar`, labelKey: 'nav.messages', icon: 'messages' },
       { href: `${p}/duyurular`, labelKey: 'nav.announcements', icon: 'announce' },
       { href: `${p}/uzman`, labelKey: 'nav.askExpert', icon: 'expert' },
       { href: `${p}/bildirimler`, labelKey: 'nav.notifications', icon: 'bell' },
@@ -40,14 +40,13 @@ export function kidsNavLinks(
 
   if (role === 'teacher') {
     items.push({ href: `${p}/ogretmen/panel`, labelKey: 'nav.teacherPanel', icon: 'teacher' });
-    items.push({ href: `${p}/ogretmen/odevler`, labelKey: 'nav.homeworks', icon: 'challenge' });
-    items.push({ href: `${p}/ogretmen/testler`, labelKey: 'nav.tests', icon: 'challenge' });
-    items.push({ href: `${p}/uzman`, labelKey: 'nav.askExpert', icon: 'expert' });
+    items.push({ href: `${p}/ogretmen/odevler`, labelKey: 'nav.homeworks', icon: 'homework' });
+    items.push({ href: `${p}/ogretmen/testler`, labelKey: 'nav.tests', icon: 'tests' });
   }
   if (role === 'student') {
     items.push({ href: `${p}/ogrenci/panel`, labelKey: 'nav.studentPanel', icon: 'student' });
-    items.push({ href: `${p}/ogrenci/odevler`, labelKey: 'nav.homeworks', icon: 'challenge' });
-    items.push({ href: `${p}/ogrenci/testler`, labelKey: 'nav.tests', icon: 'challenge' });
+    items.push({ href: `${p}/ogrenci/odevler`, labelKey: 'nav.homeworks', icon: 'homework' });
+    items.push({ href: `${p}/ogrenci/testler`, labelKey: 'nav.tests', icon: 'tests' });
     items.push({ href: `${p}/ogrenci/projeler`, labelKey: 'nav.challenges', icon: 'challenge' });
     items.push({ href: `${p}/ogrenci/yarismalar`, labelKey: 'nav.competitions', icon: 'trophy' });
     items.push({ href: `${p}/ogrenci/oyun-merkezi`, labelKey: 'nav.gameCenter', icon: 'gamepad' });
@@ -59,10 +58,15 @@ export function kidsNavLinks(
     items.push({ href: `${p}/uzman`, labelKey: 'nav.askExpert', icon: 'expert' });
   }
   if (role && role !== 'student') {
-    items.push({ href: `${p}/mesajlar`, labelKey: 'nav.messages', icon: 'chat' });
+    items.push({ href: `${p}/mesajlar`, labelKey: 'nav.messages', icon: 'messages' });
   }
   if (role) {
     items.push({ href: `${p}/duyurular`, labelKey: 'nav.announcements', icon: 'announce' });
+  }
+  if (role === 'teacher') {
+    items.push({ href: `${p}/uzman`, labelKey: 'nav.askExpert', icon: 'expert' });
+  }
+  if (role) {
     items.push({ href: `${p}/bildirimler`, labelKey: 'nav.notifications', icon: 'bell' });
     items.push({ href: `${p}/profil`, labelKey: 'nav.profile', icon: 'profile' });
   }
@@ -121,7 +125,7 @@ export function kidsMobileBottomItems(
       { kind: 'link', href: home, labelKey: 'nav.home', icon: 'home' },
       { kind: 'link', href: `${p}/menu`, labelKey: 'kids.bottomNav.menu', icon: 'all' },
       { kind: 'center', href: `${p}/ogretmen/panel`, labelKey: 'nav.teacherPanel', icon: 'teacher' },
-      { kind: 'link', href: `${p}/mesajlar`, labelKey: 'nav.messages', icon: 'chat' },
+      { kind: 'link', href: `${p}/mesajlar`, labelKey: 'nav.messages', icon: 'messages' },
       { kind: 'link', href: `${p}/profil`, labelKey: 'nav.profile', icon: 'profile' },
     ];
   }

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
+import { Globe } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useSidebarStore } from '@/src/stores/sidebar-store';
 import { ThemeToggle } from '@/src/components/theme-toggle';
@@ -18,7 +19,7 @@ import { kidsPatchMe, type KidsLanguageCode } from '@/src/lib/kids-api';
 
 const SIDEBAR_PLACEHOLDER = (
   <aside
-    className="fixed bottom-0 left-0 z-30 w-16 shrink-0 border-r border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"
+    className="fixed bottom-0 left-0 z-30 w-16 shrink-0 border-r border-zinc-200/90 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950"
     style={{ top: KIDS_HEADER_HEIGHT_PX }}
     aria-label="Navigasyon"
     aria-hidden="true"
@@ -88,8 +89,8 @@ export function KidsSidebar({ pathPrefix }: KidsSidebarProps) {
       />
       <aside
         className={`
-          fixed bottom-0 left-0 z-50 flex flex-col border-r border-violet-200/90 bg-white shadow-xl transition-all duration-200
-          dark:border-violet-800/70 dark:bg-gray-900 lg:z-30 lg:shadow-none
+          fixed bottom-0 left-0 z-50 flex flex-col border-r border-zinc-200/90 bg-zinc-50 shadow-xl transition-all duration-200
+          dark:border-zinc-800 dark:bg-zinc-950 lg:z-30 lg:shadow-none
           ${isOpen ? 'w-64 translate-x-0' : 'w-16 -translate-x-full lg:translate-x-0'}
         `}
         style={{ top: KIDS_HEADER_HEIGHT_PX }}
@@ -98,28 +99,49 @@ export function KidsSidebar({ pathPrefix }: KidsSidebarProps) {
         <button
           type="button"
           onClick={toggle}
-          className={`hidden w-full border-b border-gray-200 transition-colors hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/50 lg:flex ${
+          className={`hidden w-full border-b border-zinc-200/90 bg-zinc-50/80 transition-colors hover:bg-white dark:border-zinc-800 dark:bg-zinc-950 dark:hover:bg-zinc-900/80 lg:flex ${
             isOpen ? 'gap-3 p-4' : 'justify-center p-3'
           }`}
           title={isOpen ? t('sidebar.close') : t('sidebar.open')}
         >
-          <svg className="h-5 w-5 shrink-0 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="h-5 w-5 shrink-0 text-zinc-500 dark:text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
 
-        <nav className={`flex-1 overflow-y-auto ${isOpen ? 'p-3' : 'px-2 py-3'}`}>
+        <nav className={`flex min-h-0 flex-1 flex-col overflow-y-auto ${isOpen ? 'p-3' : 'px-2 py-3'}`}>
           {isOpen && (
             <div className="mb-4 space-y-3 border-b border-gray-200 pb-4 dark:border-gray-800 lg:hidden">
               <div className="flex items-center justify-between px-1">
                 <span className="text-sm text-gray-600 dark:text-gray-400">{t('sidebar.theme')}</span>
                 <ThemeToggle />
               </div>
+              {canChangeLanguage ? (
+                <div className="rounded-2xl border border-violet-200/80 bg-violet-50/70 p-3 dark:border-violet-800 dark:bg-violet-950/30">
+                  <label htmlFor="kids-sidebar-language-mobile" className="mb-1 block text-xs font-semibold text-violet-900 dark:text-violet-100">
+                    {t('sidebar.language')}
+                  </label>
+                  <select
+                    id="kids-sidebar-language-mobile"
+                    className="h-10 w-full rounded-xl border border-violet-300 bg-white px-3 text-sm text-violet-900 dark:border-violet-700 dark:bg-gray-900 dark:text-violet-100"
+                    value={language}
+                    disabled={savingLanguage}
+                    onChange={(e) => void onLanguageChange(e.target.value)}
+                  >
+                    <option value="tr">{t('profile.language.tr')}</option>
+                    <option value="en">{t('profile.language.en')}</option>
+                    <option value="ge">{t('profile.language.ge')}</option>
+                  </select>
+                  {savingLanguage ? (
+                    <p className="mt-1 text-[11px] text-violet-700 dark:text-violet-300">{t('sidebar.languageSaving')}</p>
+                  ) : null}
+                </div>
+              ) : null}
               {!user && (
                 <Link
                   href={kidsLoginPortalHref(pathPrefix)}
                   onClick={() => toggle()}
-                  className="flex min-h-[44px] items-center justify-center rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-3 text-sm font-bold text-white shadow-md hover:from-violet-500 hover:to-fuchsia-500"
+                  className="flex min-h-[44px] items-center justify-center rounded-2xl bg-linear-to-r from-violet-600 to-fuchsia-600 px-3 text-sm font-bold text-white shadow-md hover:from-violet-500 hover:to-fuchsia-500"
                 >
                   {t('header.login')}
                 </Link>
@@ -128,25 +150,41 @@ export function KidsSidebar({ pathPrefix }: KidsSidebarProps) {
           )}
 
           <div className="space-y-1">
-            {isOpen && canChangeLanguage ? (
-              <div className="mb-3 rounded-2xl border border-violet-200/80 bg-violet-50/70 p-3 dark:border-violet-800 dark:bg-violet-950/30">
-                <label htmlFor="kids-sidebar-language" className="mb-1 block text-xs font-semibold text-violet-900 dark:text-violet-100">
-                  {t('sidebar.language')}
-                </label>
-                <select
-                  id="kids-sidebar-language"
-                  className="h-10 w-full rounded-xl border border-violet-300 bg-white px-3 text-sm text-violet-900 dark:border-violet-700 dark:bg-gray-900 dark:text-violet-100"
-                  value={language}
-                  disabled={savingLanguage}
-                  onChange={(e) => void onLanguageChange(e.target.value)}
-                >
-                  <option value="tr">{t('profile.language.tr')}</option>
-                  <option value="en">{t('profile.language.en')}</option>
-                  <option value="ge">{t('profile.language.ge')}</option>
-                </select>
-                {savingLanguage ? (
-                  <p className="mt-1 text-[11px] text-violet-700 dark:text-violet-300">{t('sidebar.languageSaving')}</p>
-                ) : null}
+            {canChangeLanguage ? (
+              <div className="mb-3 hidden lg:block">
+                {isOpen ? (
+                  <div className="rounded-2xl border border-violet-200/80 bg-violet-50/70 p-3 dark:border-violet-800 dark:bg-violet-950/30">
+                    <label htmlFor="kids-sidebar-language-desktop" className="mb-1 block text-xs font-semibold text-violet-900 dark:text-violet-100">
+                      {t('sidebar.language')}
+                    </label>
+                    <select
+                      id="kids-sidebar-language-desktop"
+                      className="h-10 w-full rounded-xl border border-violet-300 bg-white px-3 text-sm text-violet-900 dark:border-violet-700 dark:bg-gray-900 dark:text-violet-100"
+                      value={language}
+                      disabled={savingLanguage}
+                      onChange={(e) => void onLanguageChange(e.target.value)}
+                    >
+                      <option value="tr">{t('profile.language.tr')}</option>
+                      <option value="en">{t('profile.language.en')}</option>
+                      <option value="ge">{t('profile.language.ge')}</option>
+                    </select>
+                    {savingLanguage ? (
+                      <p className="mt-1 text-[11px] text-violet-700 dark:text-violet-300">{t('sidebar.languageSaving')}</p>
+                    ) : null}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => toggle()}
+                    className="flex w-full flex-col items-center gap-1 rounded-xl border border-violet-200/80 bg-violet-50/70 py-2.5 text-violet-700 transition hover:bg-violet-100/80 dark:border-violet-800 dark:bg-violet-950/30 dark:text-violet-200 dark:hover:bg-violet-900/40"
+                    title={`${t('sidebar.language')} — ${t('sidebar.open')}`}
+                  >
+                    <Globe className="h-5 w-5 shrink-0" strokeWidth={2.25} aria-hidden />
+                    <span className="max-w-full truncate px-0.5 text-center text-[9px] font-bold leading-tight">
+                      {language === 'tr' ? 'TR' : language === 'en' ? 'EN' : 'GE'}
+                    </span>
+                  </button>
+                )}
               </div>
             ) : null}
             {items.map((item) => {
@@ -160,17 +198,23 @@ export function KidsSidebar({ pathPrefix }: KidsSidebarProps) {
                       toggle();
                     }
                   }}
-                  className={`flex items-center rounded-2xl text-sm font-semibold transition-all ${
+                  className={`flex items-center rounded-xl text-sm font-semibold transition-all ${
                     isOpen ? 'gap-3 px-3 py-2.5' : 'justify-center p-2'
                   } ${
                     active
-                      ? 'bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-md shadow-fuchsia-500/20'
-                      : 'text-violet-900 hover:bg-white/80 dark:text-violet-100 dark:hover:bg-gray-800/80'
+                      ? 'bg-violet-500 text-white shadow-sm shadow-violet-500/25 dark:bg-violet-600'
+                      : 'text-zinc-700 hover:bg-white hover:shadow-sm dark:text-zinc-200 dark:hover:bg-zinc-900/80'
                   }`}
                   title={!isOpen ? t(item.labelKey) : undefined}
                 >
-                  <span className="shrink-0 text-base">
-                    <NavIcon name={item.icon} />
+                  <span
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition ${
+                      active
+                        ? 'bg-white/25 shadow-inner dark:bg-white/20'
+                        : 'bg-linear-to-br from-white to-violet-50/90 shadow-sm ring-1 ring-violet-100/90 dark:from-zinc-800 dark:to-zinc-800/95 dark:ring-zinc-600/70'
+                    }`}
+                  >
+                    <NavIcon name={item.icon} className={`h-5 w-5 ${active ? 'text-white' : ''}`} />
                   </span>
                   {isOpen && <span>{t(item.labelKey)}</span>}
                 </Link>
@@ -179,7 +223,7 @@ export function KidsSidebar({ pathPrefix }: KidsSidebarProps) {
 
             <Link
               href="/"
-              className={`mt-2 flex w-full items-center rounded-lg border border-gray-200 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800 ${
+              className={`mt-2 flex w-full items-center rounded-xl border border-zinc-200/90 text-sm font-medium text-zinc-600 transition-colors hover:bg-white dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900/80 ${
                 isOpen ? 'gap-3 px-3 py-2.5' : 'justify-center p-2.5'
               }`}
             >
@@ -191,7 +235,7 @@ export function KidsSidebar({ pathPrefix }: KidsSidebarProps) {
           </div>
 
           {isOpen && (
-            <div className="mt-8 border-t border-gray-200 px-3 pt-3 text-center dark:border-gray-800">
+            <div className="mt-4 border-t border-zinc-200/90 px-3 pb-3 pt-3 text-center dark:border-zinc-800">
               <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-violet-600/90 dark:text-violet-400/90">
                 {t('sidebar.legal.title')}
               </p>

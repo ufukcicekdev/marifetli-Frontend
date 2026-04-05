@@ -3,10 +3,12 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { BarChart3, Clock, FileUp, Plus, Send } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import {
-  kidsCreateClassTest,
+  kidsCreateStandaloneTest,
+  kidsDeleteTest,
   kidsDistributeTestToClasses,
   kidsExtractTestQuestions,
   kidsListClasses,
@@ -16,7 +18,9 @@ import {
   type KidsTest,
 } from '@/src/lib/kids-api';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
-import { KidsCenteredModal, KidsSecondaryButton, KidsSelect } from '@/src/components/kids/kids-ui';
+import { MediaSlider } from '@/src/components/media-slider';
+import type { MediaItem } from '@/src/lib/extract-media';
+import { KidsCenteredModal, KidsPrimaryButton, KidsSecondaryButton, KidsSelect } from '@/src/components/kids/kids-ui';
 import { useKidsI18n } from '@/src/providers/kids-language-provider';
 
 function newPassageLocalId(): string {
@@ -53,7 +57,6 @@ export default function KidsTeacherTestsPage() {
   const { user, loading: authLoading, pathPrefix } = useKidsAuth();
   const { t } = useKidsI18n();
   const [classes, setClasses] = useState<KidsClass[]>([]);
-  const [classId, setClassId] = useState<number>(0);
   const [myTests, setMyTests] = useState<KidsTest[]>([]);
   const [loading, setLoading] = useState(true);
   const [extracting, setExtracting] = useState(false);
@@ -70,7 +73,11 @@ export default function KidsTeacherTestsPage() {
   const [distributeScope, setDistributeScope] = useState<'all' | 'custom'>('all');
   const [distributeClassPickerId, setDistributeClassPickerId] = useState<string>('');
   const [distributing, setDistributing] = useState(false);
+  const [distributeModalOpen, setDistributeModalOpen] = useState(false);
   const [pendingDeleteIndex, setPendingDeleteIndex] = useState<number | null>(null);
+  const [pendingDeleteTestId, setPendingDeleteTestId] = useState<number | null>(null);
+  const [deletingTest, setDeletingTest] = useState(false);
+  const [uploadDragActive, setUploadDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -88,7 +95,6 @@ export default function KidsTeacherTestsPage() {
         ]);
         setClasses(rows);
         setMyTests(mine);
-        if (rows.length > 0) setClassId(rows[0].id);
       } catch (e) {
         toast.error(e instanceof Error ? e.message : t('tests.teacherMain.classesLoadError'));
       } finally {
@@ -118,6 +124,38 @@ export default function KidsTeacherTestsPage() {
         .map((c) => ({ value: String(c.id), label: c.name })),
     [classes, distributeClassIds],
   );
+
+  const existingSourceMediaItems = useMemo<MediaItem[]>(() => {
+    const list = editingRow?.source_images;
+    if (!list?.length) return [];
+    return [...list]
+      .sort((a, b) => (a.page_order ?? 0) - (b.page_order ?? 0))
+      .map((img) => ({ url: img.url, type: 'image' as const }));
+  }, [editingRow?.source_images]);
+
+  const uploadPreviewItems = useMemo<MediaItem[]>(
+    () => images.map((f) => ({ url: URL.createObjectURL(f), type: 'image' as const })),
+    [images],
+  );
+
+  const distributeDurationValid = useMemo(() => {
+    const d = Number(durationMinutes.replace(/\D+/g, '') || '0');
+    return d >= 1 && d <= 300;
+  }, [durationMinutes]);
+
+  const distributeRow = useMemo(
+    () => (distributeTestId ? myTests.find((x) => String(x.id) === distributeTestId) ?? null : null),
+    [distributeTestId, myTests],
+  );
+
+  useEffect(() => {
+    return () => {
+      uploadPreviewItems.forEach((i) => {
+        if (i.url.startsWith('blob:')) URL.revokeObjectURL(i.url);
+      });
+    };
+  }, [uploadPreviewItems]);
+
   function appendImages(newFiles: File[]) {
     if (newFiles.length === 0) return;
     const valid = newFiles.filter((f) => f.size > 0 && f.size <= MAX_IMAGE_BYTES);
@@ -125,6 +163,13 @@ export default function KidsTeacherTestsPage() {
       toast.error(t('tests.teacherMain.imageSizeError'));
     }
     setImages((prev) => [...prev, ...valid].slice(0, 10));
+  }
+
+  function onUploadDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setUploadDragActive(false);
+    const picked = Array.from(e.dataTransfer.files || []).filter((f) => (f.type || '').startsWith('image/'));
+    appendImages(picked);
   }
 
   function setQuestionField(index: number, patch: Partial<DraftQuestion>) {
@@ -208,8 +253,7 @@ export default function KidsTeacherTestsPage() {
     if (!row) return;
     setTitle(row.title || t('tests.teacherMain.newTestTitle'));
     setInstructions(row.instructions || '');
-    setDurationMinutes(row.duration_minutes != null ? String(row.duration_minutes) : '');
-    setClassId(row.kids_class || classId);
+    setDurationMinutes(row.duration_minutes != null ? String(row.duration_minutes) : '40');
     const plist = [...(row.passages ?? [])].sort((a, b) => a.order - b.order);
     setPassages(
       plist.map((p) => ({
@@ -257,6 +301,34 @@ export default function KidsTeacherTestsPage() {
     setDistributeClassIds((prev) => prev.filter((x) => x !== id));
   }
 
+  function openDistributeModal() {
+    if (workFromTestId) {
+      setDistributeTestId(workFromTestId);
+      const row = myTests.find((x) => String(x.id) === workFromTestId);
+      if (row?.duration_minutes != null) setDurationMinutes(String(row.duration_minutes));
+    }
+    setDistributeModalOpen(true);
+  }
+
+  async function onConfirmDeleteTest() {
+    if (!pendingDeleteTestId) return;
+    setDeletingTest(true);
+    try {
+      await kidsDeleteTest(pendingDeleteTestId);
+      toast.success(t('tests.teacherMain.deleteTestSuccess'));
+      const mine = await kidsListMyCreatedTests().catch(() => []);
+      setMyTests(mine);
+      if (String(pendingDeleteTestId) === workFromTestId) {
+        resetDraftForm();
+      }
+      setPendingDeleteTestId(null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('tests.teacherMain.deleteTestFailed'));
+    } finally {
+      setDeletingTest(false);
+    }
+  }
+
   async function onDistribute() {
     if (!distributeTestId) {
       toast.error(t('tests.teacherMain.selectTestFirst'));
@@ -270,18 +342,28 @@ export default function KidsTeacherTestsPage() {
       toast.error(t('tests.teacherMain.selectAtLeastOneClass'));
       return;
     }
+    const dm = Math.min(300, Math.max(1, Number(durationMinutes.replace(/\D+/g, '') || 0)));
+    if (!Number.isFinite(dm) || dm < 1) {
+      toast.error(t('tests.teacherMain.durationRequiredForDistribute'));
+      return;
+    }
     setDistributing(true);
     try {
-      const out = await kidsDistributeTestToClasses(Number(distributeTestId), targetClassIds);
-      if (out.created_count > 0) {
+      const out = await kidsDistributeTestToClasses(Number(distributeTestId), targetClassIds, {
+        duration_minutes: dm,
+      });
+      if (out.home_class_assigned) {
+        toast.success(t('tests.teacherMain.distributeHomeAssigned'));
+      } else if (out.created_count > 0) {
         toast.success(`${out.created_count} ${t('tests.teacherMain.sentToClassesSuffix')}`);
       } else {
-        toast(t('tests.teacherMain.classesAlreadyAssigned'));
+        toast.success(t('tests.teacherMain.distributeUpdatedNoNewCopies'));
       }
       const mine = await kidsListMyCreatedTests().catch(() => []);
       setMyTests(mine);
       setDistributeClassIds([]);
       setDistributeClassPickerId('');
+      setDistributeModalOpen(false);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('tests.teacherMain.distributeFailed'));
     } finally {
@@ -342,10 +424,6 @@ export default function KidsTeacherTestsPage() {
   }
 
   async function onPublish() {
-    if (!classId) {
-      toast.error(t('tests.teacherMain.mustSelectClass'));
-      return;
-    }
     if (!title.trim()) {
       toast.error(t('tests.teacherMain.titleRequired'));
       return;
@@ -361,10 +439,6 @@ export default function KidsTeacherTestsPage() {
     }
     setSaving(true);
     try {
-      const duration =
-        durationMinutes.trim() === ''
-          ? null
-          : Math.min(300, Math.max(1, Number(durationMinutes.replace(/\D+/g, '') || '0')));
       const packedPassages = passages
         .map((p) => ({ id: p.id, title: p.title.trim(), body: p.body.trim() }))
         .filter((p) => p.title || p.body)
@@ -404,7 +478,6 @@ export default function KidsTeacherTestsPage() {
       const payload = {
         title: title.trim(),
         instructions: instructions.trim(),
-        duration_minutes: duration,
         status: 'draft' as const,
         passages: passagesPayload,
         questions: questionsPayload,
@@ -417,13 +490,15 @@ export default function KidsTeacherTestsPage() {
         setMyTests((prev) => [updated, ...prev.filter((x) => x.id !== updated.id)]);
         setWorkFromTestId(String(updated.id));
       } else {
-        const created = await kidsCreateClassTest(classId, {
+        const created = await kidsCreateStandaloneTest({
           ...payload,
           source_images: images,
         });
         toast.success(t('tests.teacherMain.savedAndCanDistribute'));
         setMyTests((prev) => [created, ...prev.filter((x) => x.id !== created.id)]);
         setWorkFromTestId(String(created.id));
+        setDistributeTestId(String(created.id));
+        setDistributeModalOpen(true);
       }
       setPassages([]);
       setQuestions([]);
@@ -443,6 +518,7 @@ export default function KidsTeacherTestsPage() {
   const canDistribute =
     Boolean(distributeTestId) &&
     (distributeScope === 'all' ? classes.length > 0 : distributeClassIds.length > 0);
+  const canSendDistribute = canDistribute && distributeDurationValid;
 
   const questionPendingDelete =
     pendingDeleteIndex !== null ? questions[pendingDeleteIndex] ?? null : null;
@@ -451,451 +527,598 @@ export default function KidsTeacherTestsPage() {
     deleteStemPreview.length > 140 ? `${deleteStemPreview.slice(0, 140)}…` : deleteStemPreview;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
-      <div>
-        <h1 className="font-logo text-2xl font-bold text-violet-950 dark:text-violet-50">{t('tests.teacherMain.title')}</h1>
-        <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-          {t('tests.teacherMain.subtitle')}
-        </p>
+    <div className="mx-auto max-w-7xl space-y-8 pb-12 px-2 sm:px-0">
+      <header>
+        <h1 className="font-logo text-2xl font-bold text-violet-950 dark:text-violet-50 md:text-3xl">{t('tests.teacherMain.title')}</h1>
+        <p className="mt-1 max-w-2xl text-sm text-slate-600 dark:text-slate-300">{t('tests.teacherMain.subtitle')}</p>
+      </header>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <button
+          type="button"
+          onClick={() => {
+            resetDraftForm();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }}
+          className="group flex flex-col rounded-3xl border border-violet-200 bg-white p-5 text-left shadow-sm transition hover:border-violet-400 hover:shadow-md dark:border-violet-800 dark:bg-gray-900/80 dark:hover:border-violet-600"
+        >
+          <span className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-md">
+            <Plus className="h-6 w-6" strokeWidth={2.5} />
+          </span>
+          <span className="text-sm font-bold text-violet-950 dark:text-violet-100">{t('tests.teacherMain.cardCreateTitle')}</span>
+          <span className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-400">{t('tests.teacherMain.cardCreateBody')}</span>
+        </button>
+        <button
+          type="button"
+          onClick={openDistributeModal}
+          className="group flex flex-col rounded-3xl border border-fuchsia-200 bg-white p-5 text-left shadow-sm transition hover:border-fuchsia-400 hover:shadow-md dark:border-fuchsia-900/50 dark:bg-gray-900/80 dark:hover:border-fuchsia-600"
+        >
+          <span className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-pink-500 to-rose-500 text-white shadow-md">
+            <Send className="h-6 w-6" strokeWidth={2.5} />
+          </span>
+          <span className="text-sm font-bold text-fuchsia-950 dark:text-fuchsia-100">{t('tests.teacherMain.cardDistributeTitle')}</span>
+          <span className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-400">{t('tests.teacherMain.cardDistributeBody')}</span>
+        </button>
+        <Link
+          href={`${pathPrefix}/ogretmen/testler/raporlar`}
+          className="group flex flex-col rounded-3xl border border-amber-200 bg-white p-5 text-left shadow-sm transition hover:border-amber-400 hover:shadow-md dark:border-amber-900/40 dark:bg-gray-900/80 dark:hover:border-amber-600"
+        >
+          <span className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 text-white shadow-md">
+            <BarChart3 className="h-6 w-6" strokeWidth={2.5} />
+          </span>
+          <span className="text-sm font-bold text-amber-950 dark:text-amber-100">{t('tests.teacherMain.cardReportsTitle')}</span>
+          <span className="mt-1 text-xs leading-relaxed text-slate-600 dark:text-slate-400">{t('tests.teacherMain.cardReportsBody')}</span>
+        </Link>
       </div>
 
-      <section className="rounded-2xl border border-violet-200 bg-white p-4 dark:border-violet-800 dark:bg-gray-900/70">
-        <div className="grid gap-3 md:grid-cols-2">
-          <label className="text-sm font-semibold text-violet-900 dark:text-violet-100">
-            {t('tests.teacherMain.selectFromUploadedOptional')}
-            <div className="mt-1">
+      <div className="space-y-6">
+        <div className="grid gap-6 md:grid-cols-2 md:items-start">
+          <section className="rounded-3xl border border-violet-200/90 bg-white p-6 shadow-sm dark:border-violet-800 dark:bg-gray-900/70">
+            <h2 className="text-lg font-bold text-violet-950 dark:text-violet-50">{t('tests.teacherMain.workflowStep1Title')}</h2>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t('tests.teacherMain.editViaSelectHint')}</p>
+            <div className="mt-3">
               <KidsSelect
                 value={workFromTestId}
                 onChange={applyTestToForm}
-                options={[{ value: '', label: t('tests.teacherMain.emptyForm') }, ...myTestOptions]}
+                options={[{ value: '', label: t('tests.teacherMain.emptyArchivePlaceholder') }, ...myTestOptions]}
                 searchable
               />
             </div>
-            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t('tests.teacherMain.editViaSelectHint')}</p>
-          </label>
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <Link
-            href={`${pathPrefix}/ogretmen/testler/raporlar`}
-            className="inline-flex min-h-10 items-center rounded-xl bg-fuchsia-600 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-fuchsia-500 focus:outline-none focus:ring-2 focus:ring-fuchsia-400/60"
-          >
-            {t('tests.teacherMain.goReports')}
-          </Link>
-          <button
-            type="button"
-            onClick={resetDraftForm}
-            className="inline-flex min-h-10 items-center rounded-xl border border-violet-300 bg-white px-4 py-2 text-sm font-semibold text-violet-700 shadow-sm transition hover:bg-violet-50 focus:outline-none focus:ring-2 focus:ring-violet-300/60 dark:border-violet-700 dark:bg-gray-900 dark:text-violet-200 dark:hover:bg-violet-950/40"
-          >
-            {t('tests.teacherMain.clearForm')}
-          </button>
-        </div>
-      </section>
-
-      <section className="rounded-2xl border border-violet-200 bg-white p-4 dark:border-violet-800 dark:bg-gray-900/70">
-        <h2 className="mb-3 text-lg font-bold text-violet-950 dark:text-violet-100">{t('tests.teacherMain.distributeSectionTitle')}</h2>
-        {myTests.length > 0 ? (
-          <div className="mb-4 rounded-xl border border-fuchsia-200 bg-fuchsia-50/60 p-3 dark:border-fuchsia-800 dark:bg-fuchsia-950/20">
-            <h3 className="text-sm font-bold text-fuchsia-900 dark:text-fuchsia-100">{t('tests.teacherMain.distributeTest')}</h3>
-            <p className="mt-1 text-xs text-fuchsia-800 dark:text-fuchsia-200">
-              {t('tests.teacherMain.distributeHint')}
-            </p>
-            <div className="mt-3 flex flex-wrap gap-2">
+            <div className="mt-3 flex flex-wrap items-center gap-2">
               <button
                 type="button"
-                onClick={() => setDistributeScope('all')}
-                className={`rounded-full px-3 py-1 text-xs font-bold ${
-                  distributeScope === 'all'
-                    ? 'bg-fuchsia-600 text-white'
-                    : 'border border-fuchsia-300 text-fuchsia-800 dark:border-fuchsia-700 dark:text-fuchsia-200'
-                }`}
+                onClick={resetDraftForm}
+                className="rounded-full border border-violet-200 px-3 py-1.5 text-xs font-semibold text-violet-800 transition hover:bg-violet-50 dark:border-violet-700 dark:text-violet-200 dark:hover:bg-violet-950/40"
               >
-                {t('tests.teacherMain.allMyClasses')} ({classes.length})
+                {t('tests.teacherMain.clearForm')}
               </button>
+              {workFromTestId && editingRow?.deletable ? (
+                <button
+                  type="button"
+                  onClick={() => setPendingDeleteTestId(Number(workFromTestId))}
+                  className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-800 transition hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-200 dark:hover:bg-rose-950/60"
+                >
+                  {t('tests.teacherMain.deleteTest')}
+                </button>
+              ) : null}
+            </div>
+          </section>
+
+          <section className="rounded-3xl border border-violet-200/90 bg-white p-6 shadow-sm dark:border-violet-800 dark:bg-gray-900/70">
+            <h2 className="text-lg font-bold text-violet-950 dark:text-violet-50">{t('tests.teacherMain.workflowStep2Title')}</h2>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                appendImages(Array.from(e.target.files || []));
+                e.currentTarget.value = '';
+              }}
+            />
+            <div
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  fileInputRef.current?.click();
+                }
+              }}
+              onDragEnter={(e) => {
+                e.preventDefault();
+                setUploadDragActive(true);
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setUploadDragActive(true);
+              }}
+              onDragLeave={(e) => {
+                e.preventDefault();
+                const rel = e.relatedTarget as Node | null;
+                if (rel && e.currentTarget.contains(rel)) return;
+                setUploadDragActive(false);
+              }}
+              onDrop={onUploadDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className={`mt-4 flex cursor-pointer flex-col items-center rounded-3xl border-2 border-dashed px-6 py-10 text-center transition dark:bg-violet-950/10 ${
+                uploadDragActive
+                  ? 'border-violet-500 bg-violet-100/80 dark:border-violet-400 dark:bg-violet-900/40'
+                  : 'border-violet-300 bg-violet-50/70 hover:border-fuchsia-400 hover:bg-violet-50 dark:border-violet-700'
+              }`}
+            >
+              <FileUp className="mb-3 h-12 w-12 text-violet-500 dark:text-violet-400" strokeWidth={1.25} />
+              <p className="text-sm font-bold text-violet-950 dark:text-violet-100">{t('tests.teacherMain.dropzoneHeadline')}</p>
+              <p className="mt-2 max-w-sm text-xs text-slate-600 dark:text-slate-400">{t('tests.teacherMain.dropzoneSub')}</p>
               <button
                 type="button"
-                onClick={() => setDistributeScope('custom')}
-                className={`rounded-full px-3 py-1 text-xs font-bold ${
-                  distributeScope === 'custom'
-                    ? 'bg-fuchsia-600 text-white'
-                    : 'border border-fuchsia-300 text-fuchsia-800 dark:border-fuchsia-700 dark:text-fuchsia-200'
-                }`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  fileInputRef.current?.click();
+                }}
+                className="mt-5 rounded-full border-2 border-violet-500 bg-white px-5 py-2 text-sm font-bold text-violet-700 shadow-sm transition hover:bg-violet-50 dark:border-violet-500 dark:bg-violet-950/50 dark:text-violet-200 dark:hover:bg-violet-900/40"
               >
-                {t('tests.teacherMain.customSelection')}
+                {t('tests.teacherMain.browseFiles')}
               </button>
             </div>
-            <div className="mt-3 grid gap-3 md:grid-cols-3">
-              <div>
-                <label className="text-xs font-semibold text-fuchsia-900 dark:text-fuchsia-100">{t('tests.reports.test')}</label>
-                <div className="mt-1">
-                  <KidsSelect
-                    value={distributeTestId}
-                    onChange={(next) => setDistributeTestId(next)}
-                    options={[{ value: '', label: t('tests.reports.selectTest') }, ...myTestOptions]}
-                    searchable
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{t('tests.teacherMain.uploadHint')}</p>
+
+            {existingSourceMediaItems.length > 0 ? (
+              <div className="mt-4 rounded-2xl border border-violet-200/80 bg-violet-50/40 p-3 dark:border-violet-800 dark:bg-violet-950/20">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-violet-700 dark:text-violet-300">
+                  {t('tests.teacherMain.savedSourcePages')}
+                </p>
+                <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">{t('tests.teacherMain.savedSourceSliderHint')}</p>
+                <div className="mt-2">
+                  <MediaSlider
+                    items={existingSourceMediaItems}
+                    className="h-52"
+                    alt={t('tests.teacherMain.savedSourcePages')}
+                    fit="contain"
                   />
                 </div>
               </div>
-              <div>
-                <label className="text-xs font-semibold text-fuchsia-900 dark:text-fuchsia-100">
-                  {t('tests.teacherMain.durationMin')}
-                  <input
-                    type="number"
-                    min={1}
-                    max={300}
-                    step={1}
-                    value={durationMinutes}
-                    onChange={(e) => onDurationMinutesChange(e.target.value)}
-                    className="mt-1 w-full rounded-lg border border-fuchsia-200 bg-white px-3 py-2 text-sm dark:border-fuchsia-700 dark:bg-gray-900/60"
-                    placeholder="40"
-                    inputMode="numeric"
-                  />
-                </label>
-                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{t('tests.teacherMain.durationHint')}</p>
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-fuchsia-900 dark:text-fuchsia-100">{t('tests.teacherMain.targetClasses')}</label>
-                {distributeScope === 'custom' ? (
-                  <>
-                    <div className="mt-1 flex items-center gap-2">
-                      <div className="min-w-0 flex-1">
-                        <KidsSelect
-                          value={distributeClassPickerId}
-                          onChange={(next) => setDistributeClassPickerId(next)}
-                          options={[{ value: '', label: t('tests.reports.selectClass') }, ...distributeCustomClassOptions]}
-                          searchable
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={addDistributeClass}
-                        className="rounded-lg border border-fuchsia-300 px-2 py-1 text-xs font-bold text-fuchsia-800 dark:border-fuchsia-700 dark:text-fuchsia-200"
-                      >
-                        {t('tests.teacherMain.add')}
-                      </button>
-                    </div>
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {distributeClassIds.map((id) => (
-                        <span
-                          key={`target-chip-${id}`}
-                          className="inline-flex items-center gap-1 rounded-full bg-fuchsia-100 px-2.5 py-1 text-[11px] font-bold text-fuchsia-800 dark:bg-fuchsia-900/40 dark:text-fuchsia-200"
-                        >
-                          {classNameById.get(id) || `${t('tests.teacherMain.classLabel')} #${id}`}
-                          <button
-                            type="button"
-                            onClick={() => removeDistributeClass(id)}
-                            className="rounded-full border border-fuchsia-300 px-1 text-[10px] dark:border-fuchsia-700"
-                            aria-label={t('tests.teacherMain.removeClass')}
-                          >
-                            x
-                          </button>
-                        </span>
-                      ))}
-                      {distributeClassIds.length === 0 ? (
-                        <span className="text-[11px] text-slate-500">{t('tests.teacherMain.noClassAdded')}</span>
-                      ) : null}
-                    </div>
-                  </>
-                ) : (
-                  <div className="mt-1 rounded-lg border border-fuchsia-200 bg-white p-2 text-xs dark:border-fuchsia-800 dark:bg-gray-900/60">
-                    {`${t('tests.teacherMain.targetAllClasses')}: (${classes.length})`}
-                  </div>
-                )}
-              </div>
-            </div>
-            <button
-              type="button"
-              disabled={distributing || !canDistribute}
-              onClick={() => void onDistribute()}
-              className="mt-3 rounded-lg bg-fuchsia-600 px-3 py-1.5 text-xs font-bold text-white disabled:opacity-60"
-            >
-              {distributing ? t('tests.teacherMain.sending') : t('tests.teacherMain.sendSelectedClasses')}
-            </button>
-          </div>
-        ) : null}
-        {myTests.length === 0 ? (
-          <p className="text-sm text-slate-500">{t('tests.teacherMain.noUploadedTests')}</p>
-        ) : null}
-      </section>
-
-      <section className="rounded-2xl border border-violet-200 bg-white p-4 dark:border-violet-800 dark:bg-gray-900/70">
-        <h2 className="mb-3 text-lg font-bold text-violet-950 dark:text-violet-100">{t('tests.teacherMain.step1')}</h2>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          className="hidden"
-          onChange={(e) => {
-            appendImages(Array.from(e.target.files || []));
-            e.currentTarget.value = '';
-          }}
-        />
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className="group block w-full rounded-2xl border-2 border-dashed border-violet-300 bg-violet-50/60 p-5 text-left transition hover:border-fuchsia-400 hover:bg-violet-50 dark:border-violet-700 dark:bg-violet-950/20 dark:hover:border-fuchsia-600"
-        >
-          <p className="text-sm font-bold text-violet-900 dark:text-violet-100">{t('tests.teacherMain.clickToSelectFiles')}</p>
-          <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-            {t('tests.teacherMain.uploadHelp')}
-          </p>
-        </button>
-        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-          {t('tests.teacherMain.uploadHint')}
-        </p>
-        {images.length > 0 ? (
-          <div className="mt-2 flex items-center gap-2 text-xs">
-            <span className="rounded-full bg-violet-100 px-2 py-0.5 font-bold text-violet-800 dark:bg-violet-900/40 dark:text-violet-200">
-              {images.length} {t('tests.teacherMain.imagesSelected')}
-            </span>
-            <button
-              type="button"
-              onClick={() => setImages([])}
-              className="rounded-full border border-slate-300 px-2 py-0.5 font-bold text-slate-700 dark:border-slate-700 dark:text-slate-200"
-            >
-              {t('tests.teacherMain.removeAll')}
-            </button>
-          </div>
-        ) : null}
-        {images.length > 0 ? (
-          <ul className="mt-3 space-y-2">
-            {images.map((img, idx) => (
-              <li
-                key={`${img.name}-${idx}`}
-                className="flex items-center justify-between rounded-xl border border-violet-200 bg-white px-3 py-2 text-sm dark:border-violet-700 dark:bg-gray-900/60"
-              >
-                <span className="truncate pr-2 font-medium text-violet-900 dark:text-violet-100">
-                  {idx + 1}. {img.name}
+            ) : null}
+            {images.length > 0 ? (
+              <div className="mt-2 flex items-center gap-2 text-xs">
+                <span className="rounded-full bg-violet-100 px-2 py-0.5 font-bold text-violet-800 dark:bg-violet-900/40 dark:text-violet-200">
+                  {images.length} {t('tests.teacherMain.imagesSelected')}
                 </span>
                 <button
                   type="button"
-                  onClick={() => setImages((prev) => prev.filter((_, i) => i !== idx))}
-                  className="rounded-full border border-violet-200 px-2 py-0.5 text-xs font-bold text-violet-700 hover:bg-violet-50 dark:border-violet-700 dark:text-violet-200"
+                  onClick={() => setImages([])}
+                  className="rounded-full border border-slate-300 px-2 py-0.5 font-bold text-slate-700 dark:border-slate-700 dark:text-slate-200"
                 >
-                  {t('tests.teacherMain.remove')}
+                  {t('tests.teacherMain.removeAll')}
                 </button>
-              </li>
-            ))}
-          </ul>
-        ) : null}
-        <button
-          type="button"
-          disabled={extracting || images.length === 0}
-          onClick={() => void onExtract()}
-          className="mt-3 rounded-lg bg-violet-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60"
-        >
-          {extracting ? t('tests.teacherMain.aiRunning') : t('tests.teacherMain.step2')}
-        </button>
-      </section>
-
-      <section className="rounded-2xl border border-violet-200 bg-white p-4 dark:border-violet-800 dark:bg-gray-900/70">
-        <h2 className="mb-3 text-lg font-bold text-violet-950 dark:text-violet-100">{t('tests.teacherMain.step3')}</h2>
-        <label className="block text-sm font-semibold">
-          {t('tests.teacherMain.testTitle')}
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-violet-200 bg-white px-3 py-2 text-sm dark:border-violet-700 dark:bg-gray-800"
-          />
-        </label>
-        <label className="mt-3 block text-sm font-semibold">
-          {t('tests.teacherMain.description')}
-          <textarea
-            value={instructions}
-            onChange={(e) => setInstructions(e.target.value)}
-            rows={3}
-            className="mt-1 w-full rounded-lg border border-violet-200 bg-white px-3 py-2 text-sm dark:border-violet-700 dark:bg-gray-800"
-          />
-        </label>
-
-        <div className="mt-6 space-y-3 rounded-xl border border-amber-200/80 bg-amber-50/40 p-3 dark:border-amber-800/60 dark:bg-amber-950/20">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-sm font-bold text-amber-950 dark:text-amber-100">{t('tests.teacherMain.readingPassagesSection')}</h3>
-            <button
-              type="button"
-              onClick={() => setPassages((prev) => [...prev, { id: newPassageLocalId(), title: '', body: '' }])}
-              className="rounded-lg border border-amber-300 bg-white px-2 py-1 text-xs font-bold text-amber-900 dark:border-amber-700 dark:bg-gray-900 dark:text-amber-100"
-            >
-              {t('tests.teacherMain.addReadingPassage')}
-            </button>
-          </div>
-          {passages.length === 0 ? (
-            <p className="text-xs text-slate-600 dark:text-slate-400">{t('tests.teacherMain.readingPassagesEmptyHint')}</p>
-          ) : (
-            <ul className="space-y-3">
-              {passages.map((p, pIdx) => (
-                <li key={p.id} className="rounded-lg border border-amber-200 bg-white p-3 dark:border-amber-800 dark:bg-gray-900/60">
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <span className="text-xs font-bold text-amber-900 dark:text-amber-200">
-                      {t('tests.teacherMain.readingPassagePickerLabel').replace('{n}', String(pIdx + 1))}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => removePassageAt(pIdx)}
-                      className="rounded-full border border-rose-200 px-2 py-0.5 text-[11px] font-bold text-rose-800 dark:border-rose-800 dark:text-rose-200"
-                    >
-                      {t('tests.teacherMain.removeReadingPassage')}
-                    </button>
-                  </div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                    {t('tests.teacherMain.readingPassageTitleLabel')}
-                    <input
-                      value={p.title}
-                      onChange={(e) => setPassageField(pIdx, { title: e.target.value })}
-                      className="mt-1 w-full rounded-lg border border-violet-200 bg-white px-3 py-2 text-sm dark:border-violet-700 dark:bg-gray-800"
-                    />
-                  </label>
-                  <label className="mt-2 block text-xs font-semibold text-slate-700 dark:text-slate-300">
-                    {t('tests.teacherMain.readingPassageBodyLabel')}
-                    <textarea
-                      value={p.body}
-                      onChange={(e) => setPassageField(pIdx, { body: e.target.value })}
-                      rows={6}
-                      className="mt-1 w-full rounded-lg border border-violet-200 bg-white px-3 py-2 text-sm dark:border-violet-700 dark:bg-gray-800"
-                    />
-                  </label>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-b border-violet-100 pb-2 dark:border-violet-900/50">
-          <p className="text-sm font-bold text-violet-950 dark:text-violet-100">{t('tests.teacherMain.questionsBlockTitle')}</p>
-          <button
-            type="button"
-            onClick={addQuestion}
-            className="rounded-lg border border-violet-300 bg-violet-50 px-3 py-1.5 text-xs font-bold text-violet-900 shadow-sm transition hover:bg-violet-100 dark:border-violet-600 dark:bg-violet-950/40 dark:text-violet-100 dark:hover:bg-violet-900/50"
-          >
-            {t('tests.teacherMain.addQuestion')}
-          </button>
-        </div>
-
-        <div className="mt-4 space-y-4">
-          {questions.map((q, qIdx) => (
-            <div key={`${q.order}-${qIdx}`} className="rounded-xl border border-violet-200 p-3 dark:border-violet-700">
-              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                <p className="text-sm font-bold">
-                  {qIdx + 1}. {t('tests.teacherMain.questionLabel')}
+              </div>
+            ) : null}
+            {uploadPreviewItems.length > 0 ? (
+              <div className="mt-3">
+                <p className="text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                  {t('tests.teacherMain.pendingUploadsForExtract')}
                 </p>
-                <button
-                  type="button"
-                  onClick={() => setPendingDeleteIndex(qIdx)}
-                  className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-bold text-rose-800 hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-200 dark:hover:bg-rose-950/80"
-                >
-                  {t('tests.teacherMain.deleteQuestion')}
-                </button>
-              </div>
-              <textarea
-                value={q.stem}
-                onChange={(e) => setQuestionField(qIdx, { stem: e.target.value })}
-                rows={2}
-                className="w-full rounded-lg border border-violet-200 bg-white px-3 py-2 text-sm dark:border-violet-700 dark:bg-gray-800"
-              />
-              <div className="mt-2 grid gap-2 md:grid-cols-2">
-                {q.choices.map((c, cIdx) => (
-                  <div key={`${qIdx}-${cIdx}`} className="flex items-center gap-2">
-                    <span className="w-6 text-xs font-bold">{c.key}</span>
-                    <input
-                      value={c.text}
-                      onChange={(e) => {
-                        const nextChoices = [...q.choices];
-                        nextChoices[cIdx] = { ...nextChoices[cIdx], text: e.target.value };
-                        setQuestionField(qIdx, { choices: nextChoices });
-                      }}
-                      className="w-full rounded-lg border border-violet-200 bg-white px-3 py-2 text-sm dark:border-violet-700 dark:bg-gray-800"
-                    />
-                  </div>
-                ))}
-              </div>
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-                <span>{t('tests.teacherMain.correctChoice')}:</span>
-                <div className="w-28">
-                  <KidsSelect
-                    value={q.correct_choice_key || ''}
-                    onChange={(next) => setQuestionField(qIdx, { correct_choice_key: next })}
-                    options={[
-                      { value: '', label: t('tests.teacherMain.select') },
-                      ...q.choices.map((c) => ({ value: c.key, label: c.key })),
-                    ]}
-                    searchable={false}
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t('teacherHomework.sliderHint')}</p>
+                <div className="mt-2">
+                  <MediaSlider
+                    items={uploadPreviewItems}
+                    className="h-52"
+                    alt={t('tests.teacherMain.pendingUploadsForExtract')}
+                    fit="contain"
+                    onDeleteAtIndex={(idx) => setImages((prev) => prev.filter((_, i) => i !== idx))}
                   />
                 </div>
               </div>
-              {passages.length > 0 ? (
-                <div className="mt-2">
-                  <p className="text-xs text-slate-600 dark:text-slate-400">{t('tests.teacherMain.linkQuestionToPassage')}</p>
-                  <div className="mt-1 w-full max-w-md">
-                    <KidsSelect
-                      value={q.reading_passage_id || ''}
-                      onChange={(next) =>
-                        setQuestionField(qIdx, { reading_passage_id: next ? next : null })
-                      }
-                      options={[
-                        { value: '', label: t('tests.teacherMain.noPassageOption') },
-                        ...passages.map((p, pi) => ({
-                          value: p.id,
-                          label: t('tests.teacherMain.readingPassagePickerLabel').replace('{n}', String(pi + 1)),
-                        })),
-                      ]}
-                      searchable={false}
-                    />
-                  </div>
-                </div>
-              ) : null}
-              {sourcePageCount > 1 ? (
-                <div className="mt-2">
-                  <p className="text-xs text-slate-600 dark:text-slate-400">{t('tests.teacherMain.sourcePageHelp')}</p>
-                  <div className="mt-1 w-full max-w-xs">
-                    <KidsSelect
-                      value={String(q.source_page_order || 1)}
-                      onChange={(next) =>
-                        setQuestionField(qIdx, { source_page_order: Math.max(1, Number(next) || 1) })
-                      }
-                      options={Array.from({ length: sourcePageCount }, (_, i) => ({
-                        value: String(i + 1),
-                        label: `${t('tests.teacherMain.sourcePage')} ${i + 1}`,
-                      }))}
-                      searchable={false}
-                    />
-                  </div>
-                </div>
-              ) : null}
-            </div>
-          ))}
-          {questions.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-violet-200 bg-violet-50/40 p-4 text-center dark:border-violet-800 dark:bg-violet-950/20">
-              <p className="text-sm text-slate-600 dark:text-slate-400">{t('tests.teacherMain.noQuestionsHint')}</p>
-              <button
-                type="button"
-                onClick={addQuestion}
-                className="mt-3 rounded-lg bg-violet-600 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-violet-500"
-              >
-                {t('tests.teacherMain.addQuestion')}
-              </button>
-            </div>
-          ) : (
-            <div className="flex justify-center pt-1">
-              <button
-                type="button"
-                onClick={addQuestion}
-                className="rounded-full border border-violet-300 bg-white px-4 py-2 text-xs font-bold text-violet-800 shadow-sm hover:bg-violet-50 dark:border-violet-600 dark:bg-gray-900 dark:text-violet-200 dark:hover:bg-violet-950/50"
-              >
-                {t('tests.teacherMain.addQuestion')}
-              </button>
-            </div>
-          )}
+            ) : null}
+            <button
+              type="button"
+              disabled={extracting || images.length === 0}
+              onClick={() => void onExtract()}
+              className="mt-4 w-full rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-4 py-3 text-sm font-bold text-white shadow-md shadow-violet-500/25 transition hover:from-violet-500 hover:to-fuchsia-500 disabled:opacity-50"
+            >
+              {extracting ? t('tests.teacherMain.aiRunning') : t('tests.teacherMain.step2')}
+            </button>
+          </section>
         </div>
 
-        <button
-          type="button"
-          disabled={saving || !classId}
-          onClick={() => void onPublish()}
-          className="mt-4 rounded-lg bg-fuchsia-600 px-4 py-2 text-sm font-bold text-white disabled:opacity-60"
+        <section className="rounded-3xl border border-violet-200/90 bg-white p-6 shadow-sm dark:border-violet-800 dark:bg-gray-900/70">
+            <div className="border-b border-violet-100 pb-4 dark:border-violet-900/50">
+              <h2 className="text-lg font-bold text-violet-950 dark:text-violet-50">{t('tests.teacherMain.workflowStep4Title')}</h2>
+              <p className="mt-1 text-sm font-semibold text-violet-600 dark:text-violet-300">
+                {t('tests.teacherMain.questionsFoundBadge').replace('{n}', String(questions.length))}
+              </p>
+              <div className="mt-3 rounded-2xl border border-violet-100 bg-violet-50/50 px-3 py-2.5 dark:border-violet-900/40 dark:bg-violet-950/20">
+                <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+                  {t('tests.teacherMain.editorSaveHint')}
+                </p>
+              </div>
+            </div>
+
+            <label className="mt-5 block text-sm font-semibold text-slate-800 dark:text-slate-200">
+              {t('tests.teacherMain.testTitle')}
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="mt-1 w-full rounded-xl border border-violet-200 bg-white px-3 py-2.5 text-sm dark:border-violet-700 dark:bg-gray-800"
+              />
+            </label>
+            <label className="mt-4 block text-sm font-semibold text-slate-800 dark:text-slate-200">
+              {t('tests.teacherMain.description')}
+              <textarea
+                value={instructions}
+                onChange={(e) => setInstructions(e.target.value)}
+                rows={3}
+                className="mt-1 w-full rounded-xl border border-violet-200 bg-white px-3 py-2.5 text-sm dark:border-violet-700 dark:bg-gray-800"
+              />
+            </label>
+
+            <div className="mt-6 space-y-3 rounded-2xl border border-amber-200/80 bg-amber-50/40 p-4 dark:border-amber-800/60 dark:bg-amber-950/20">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-bold text-amber-950 dark:text-amber-100">{t('tests.teacherMain.readingPassagesSection')}</h3>
+                <button
+                  type="button"
+                  onClick={() => setPassages((prev) => [...prev, { id: newPassageLocalId(), title: '', body: '' }])}
+                  className="rounded-lg border border-amber-300 bg-white px-2 py-1 text-xs font-bold text-amber-900 dark:border-amber-700 dark:bg-gray-900 dark:text-amber-100"
+                >
+                  {t('tests.teacherMain.addReadingPassage')}
+                </button>
+              </div>
+              {passages.length === 0 ? (
+                <p className="text-xs text-slate-600 dark:text-slate-400">{t('tests.teacherMain.readingPassagesEmptyHint')}</p>
+              ) : (
+                <ul className="space-y-3">
+                  {passages.map((p, pIdx) => (
+                    <li key={p.id} className="rounded-xl border border-amber-200 bg-white p-3 dark:border-amber-800 dark:bg-gray-900/60">
+                      <div className="mb-2 flex items-center justify-between gap-2">
+                        <span className="text-xs font-bold text-amber-900 dark:text-amber-200">
+                          {t('tests.teacherMain.readingPassagePickerLabel').replace('{n}', String(pIdx + 1))}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removePassageAt(pIdx)}
+                          className="rounded-full border border-rose-200 px-2 py-0.5 text-[11px] font-bold text-rose-800 dark:border-rose-800 dark:text-rose-200"
+                        >
+                          {t('tests.teacherMain.removeReadingPassage')}
+                        </button>
+                      </div>
+                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        {t('tests.teacherMain.readingPassageTitleLabel')}
+                        <input
+                          value={p.title}
+                          onChange={(e) => setPassageField(pIdx, { title: e.target.value })}
+                          className="mt-1 w-full rounded-lg border border-violet-200 bg-white px-3 py-2 text-sm dark:border-violet-700 dark:bg-gray-800"
+                        />
+                      </label>
+                      <label className="mt-2 block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        {t('tests.teacherMain.readingPassageBodyLabel')}
+                        <textarea
+                          value={p.body}
+                          onChange={(e) => setPassageField(pIdx, { body: e.target.value })}
+                          rows={6}
+                          className="mt-1 w-full rounded-lg border border-violet-200 bg-white px-3 py-2 text-sm dark:border-violet-700 dark:bg-gray-800"
+                        />
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-bold text-violet-950 dark:text-violet-100">{t('tests.teacherMain.questionsBlockTitle')}</p>
+              <button
+                type="button"
+                onClick={addQuestion}
+                className="rounded-full border border-violet-300 bg-violet-50 px-3 py-1.5 text-xs font-bold text-violet-900 shadow-sm transition hover:bg-violet-100 dark:border-violet-600 dark:bg-violet-950/40 dark:text-violet-100 dark:hover:bg-violet-900/50"
+              >
+                {t('tests.teacherMain.addQuestion')}
+              </button>
+            </div>
+
+            <div className="mt-4 space-y-5">
+              {questions.map((q, qIdx) => (
+                <div
+                  key={`${q.order}-${qIdx}`}
+                  className="relative overflow-hidden rounded-2xl border border-violet-200/90 bg-white pl-4 pr-4 pb-4 pt-5 shadow-sm dark:border-violet-800 dark:bg-gray-900/50"
+                >
+                  <div className="absolute left-4 top-4 flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-violet-600 to-fuchsia-600 text-xs font-bold text-white shadow-md">
+                    {qIdx + 1}
+                  </div>
+                  <div className="ml-12 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-bold text-violet-950 dark:text-violet-100">{t('tests.teacherMain.questionLabel')}</p>
+                    <button
+                      type="button"
+                      onClick={() => setPendingDeleteIndex(qIdx)}
+                      className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-bold text-rose-800 hover:bg-rose-100 dark:border-rose-800 dark:bg-rose-950/50 dark:text-rose-200 dark:hover:bg-rose-950/80"
+                    >
+                      {t('tests.teacherMain.deleteQuestion')}
+                    </button>
+                  </div>
+                  <textarea
+                    value={q.stem}
+                    onChange={(e) => setQuestionField(qIdx, { stem: e.target.value })}
+                    rows={2}
+                    className="ml-12 mt-2 w-[calc(100%-3rem)] rounded-xl border border-violet-200 bg-white px-3 py-2 text-sm dark:border-violet-700 dark:bg-gray-800"
+                  />
+                  <div className="ml-12 mt-3 grid gap-2 md:grid-cols-2">
+                    {q.choices.map((c, cIdx) => (
+                      <div
+                        key={`${qIdx}-${cIdx}`}
+                        className={`rounded-xl border-2 bg-white px-3 py-2 transition dark:bg-gray-900/80 ${
+                          q.correct_choice_key === c.key
+                            ? 'border-violet-500 shadow-[0_0_0_3px_rgba(139,92,246,0.2)] dark:border-violet-400'
+                            : 'border-zinc-200 dark:border-zinc-700'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-800 dark:bg-violet-900/60 dark:text-violet-200">
+                            {c.key}
+                          </span>
+                          <input
+                            value={c.text}
+                            onChange={(e) => {
+                              const nextChoices = [...q.choices];
+                              nextChoices[cIdx] = { ...nextChoices[cIdx], text: e.target.value };
+                              setQuestionField(qIdx, { choices: nextChoices });
+                            }}
+                            className="min-w-0 flex-1 border-0 bg-transparent py-1 text-sm text-slate-900 outline-none ring-0 focus:ring-0 dark:text-slate-100"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="ml-12 mt-3 flex flex-wrap items-center gap-2 text-sm">
+                    <span className="text-slate-600 dark:text-slate-400">{t('tests.teacherMain.correctChoice')}:</span>
+                    <div className="w-28">
+                      <KidsSelect
+                        value={q.correct_choice_key || ''}
+                        onChange={(next) => setQuestionField(qIdx, { correct_choice_key: next })}
+                        options={[
+                          { value: '', label: t('tests.teacherMain.select') },
+                          ...q.choices.map((c) => ({ value: c.key, label: c.key })),
+                        ]}
+                        searchable={false}
+                      />
+                    </div>
+                  </div>
+                  {passages.length > 0 ? (
+                    <div className="ml-12 mt-2">
+                      <p className="text-xs text-slate-600 dark:text-slate-400">{t('tests.teacherMain.linkQuestionToPassage')}</p>
+                      <div className="mt-1 w-full max-w-md">
+                        <KidsSelect
+                          value={q.reading_passage_id || ''}
+                          onChange={(next) =>
+                            setQuestionField(qIdx, { reading_passage_id: next ? next : null })
+                          }
+                          options={[
+                            { value: '', label: t('tests.teacherMain.noPassageOption') },
+                            ...passages.map((p, pi) => ({
+                              value: p.id,
+                              label: t('tests.teacherMain.readingPassagePickerLabel').replace('{n}', String(pi + 1)),
+                            })),
+                          ]}
+                          searchable={false}
+                        />
+                      </div>
+                    </div>
+                  ) : null}
+                  {sourcePageCount > 1 ? (
+                    <div className="ml-12 mt-2">
+                      <p className="text-xs text-slate-600 dark:text-slate-400">{t('tests.teacherMain.sourcePageHelp')}</p>
+                      <div className="mt-1 w-full max-w-xs">
+                        <KidsSelect
+                          value={String(q.source_page_order || 1)}
+                          onChange={(next) =>
+                            setQuestionField(qIdx, { source_page_order: Math.max(1, Number(next) || 1) })
+                          }
+                          options={Array.from({ length: sourcePageCount }, (_, i) => ({
+                            value: String(i + 1),
+                            label: `${t('tests.teacherMain.sourcePage')} ${i + 1}`,
+                          }))}
+                          searchable={false}
+                        />
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+              {questions.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-violet-200 bg-violet-50/40 p-6 text-center dark:border-violet-800 dark:bg-violet-950/20">
+                  <p className="text-sm text-slate-600 dark:text-slate-400">{t('tests.teacherMain.noQuestionsHint')}</p>
+                  <button
+                    type="button"
+                    onClick={addQuestion}
+                    className="mt-3 rounded-xl bg-violet-600 px-4 py-2 text-sm font-bold text-white shadow-sm hover:bg-violet-500"
+                  >
+                    {t('tests.teacherMain.addQuestion')}
+                  </button>
+                </div>
+              ) : (
+                <div className="flex justify-center pt-1">
+                  <button
+                    type="button"
+                    onClick={addQuestion}
+                    className="rounded-full border border-violet-300 bg-white px-4 py-2 text-xs font-bold text-violet-800 shadow-sm hover:bg-violet-50 dark:border-violet-600 dark:bg-gray-900 dark:text-violet-200 dark:hover:bg-violet-950/50"
+                  >
+                    {t('tests.teacherMain.addQuestion')}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-8 flex flex-wrap justify-end gap-3 border-t border-violet-100 pt-6 dark:border-violet-900/40">
+              <button
+                type="button"
+                onClick={() => resetDraftForm()}
+                className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-zinc-300 bg-white px-6 text-sm font-bold text-zinc-700 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-600 dark:bg-gray-900 dark:text-zinc-200 dark:hover:bg-zinc-800/80"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                type="button"
+                disabled={saving}
+                onClick={() => void onPublish()}
+                className="inline-flex min-h-11 items-center justify-center rounded-2xl bg-gradient-to-r from-violet-600 via-fuchsia-600 to-fuchsia-500 px-8 text-sm font-bold text-white shadow-lg shadow-fuchsia-500/30 transition hover:from-violet-500 hover:via-fuchsia-500 hover:to-fuchsia-400 disabled:opacity-50"
+              >
+                {saving
+                  ? isEditingDraft
+                    ? t('tests.teacherMain.updating')
+                    : t('tests.teacherMain.saving')
+                  : isEditingDraft
+                    ? t('tests.teacherMain.step4Update')
+                    : t('tests.teacherMain.step4Save')}
+              </button>
+            </div>
+          </section>
+      </div>
+
+      {distributeModalOpen ? (
+        <KidsCenteredModal
+          title={t('tests.teacherMain.distributeSectionTitle')}
+          maxWidthClass="max-w-2xl"
+          onClose={() => setDistributeModalOpen(false)}
+          footer={
+            <div className="flex flex-wrap justify-end gap-2">
+              <KidsSecondaryButton type="button" onClick={() => setDistributeModalOpen(false)}>
+                {t('common.cancel')}
+              </KidsSecondaryButton>
+              <KidsPrimaryButton
+                type="button"
+                disabled={distributing || !canSendDistribute}
+                onClick={() => void onDistribute()}
+              >
+                {distributing ? t('tests.teacherMain.sending') : t('tests.teacherMain.sendSelectedClasses')}
+              </KidsPrimaryButton>
+            </div>
+          }
         >
-          {saving ? (isEditingDraft ? t('tests.teacherMain.updating') : t('tests.teacherMain.saving')) : isEditingDraft ? t('tests.teacherMain.step4Update') : t('tests.teacherMain.step4Save')}
-        </button>
-      </section>
+          <div className="rounded-2xl border border-violet-200/90 bg-violet-50/50 p-4 dark:border-violet-800 dark:bg-violet-950/30">
+            <div>
+              <label className="flex items-center gap-2 text-xs font-semibold text-violet-900 dark:text-violet-100">
+                <Clock className="h-4 w-4 shrink-0 text-violet-500" />
+                {t('tests.teacherMain.durationMin')}
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={300}
+                step={1}
+                value={durationMinutes}
+                onChange={(e) => onDurationMinutesChange(e.target.value)}
+                className="mt-1 w-full max-w-xs rounded-xl border border-violet-200 bg-white px-3 py-2 text-sm dark:border-violet-700 dark:bg-gray-800"
+                placeholder="40"
+                inputMode="numeric"
+              />
+              <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{t('tests.teacherMain.durationHintDistribute')}</p>
+            </div>
+            <p className="mt-3 text-[11px] text-slate-500 dark:text-slate-400">{t('tests.teacherMain.publicationModalHint')}</p>
+
+            {myTests.length > 0 ? (
+              <div className="mt-5 border-t border-violet-200/80 pt-5 dark:border-violet-800/80">
+                <h3 className="text-sm font-bold text-violet-900 dark:text-violet-100">{t('tests.teacherMain.distributeTest')}</h3>
+                <p className="mt-1 text-xs text-violet-800/90 dark:text-violet-200/90">{t('tests.teacherMain.distributeHint')}</p>
+                {distributeRow?.kids_class == null ? (
+                  <p className="mt-2 text-[11px] font-medium text-violet-800/90 dark:text-violet-200/85">
+                    {t('tests.teacherMain.distributeUnassignedFirstClassHint')}
+                  </p>
+                ) : null}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setDistributeScope('all')}
+                    className={`rounded-full px-3 py-1 text-xs font-bold ${
+                      distributeScope === 'all'
+                        ? 'bg-violet-600 text-white'
+                        : 'border border-violet-300 text-violet-800 dark:border-violet-600 dark:text-violet-200'
+                    }`}
+                  >
+                    {t('tests.teacherMain.allMyClasses')} ({classes.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDistributeScope('custom')}
+                    className={`rounded-full px-3 py-1 text-xs font-bold ${
+                      distributeScope === 'custom'
+                        ? 'bg-violet-600 text-white'
+                        : 'border border-violet-300 text-violet-800 dark:border-violet-600 dark:text-violet-200'
+                    }`}
+                  >
+                    {t('tests.teacherMain.customSelection')}
+                  </button>
+                </div>
+                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                  <div>
+                    <label className="text-xs font-semibold text-violet-900 dark:text-violet-100">{t('tests.reports.test')}</label>
+                    <div className="mt-1">
+                      <KidsSelect
+                        value={distributeTestId}
+                        onChange={(next) => setDistributeTestId(next)}
+                        options={[{ value: '', label: t('tests.reports.selectTest') }, ...myTestOptions]}
+                        searchable
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-violet-900 dark:text-violet-100">{t('tests.teacherMain.targetClasses')}</label>
+                    {distributeScope === 'custom' ? (
+                      <>
+                        <div className="mt-1 flex items-center gap-2">
+                          <div className="min-w-0 flex-1">
+                            <KidsSelect
+                              value={distributeClassPickerId}
+                              onChange={(next) => setDistributeClassPickerId(next)}
+                              options={[{ value: '', label: t('tests.reports.selectClass') }, ...distributeCustomClassOptions]}
+                              searchable
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={addDistributeClass}
+                            className="rounded-lg border border-violet-300 px-2 py-1 text-xs font-bold text-violet-800 dark:border-violet-600 dark:text-violet-200"
+                          >
+                            {t('tests.teacherMain.add')}
+                          </button>
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {distributeClassIds.map((id) => (
+                            <span
+                              key={`target-chip-${id}`}
+                              className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2.5 py-1 text-[11px] font-bold text-violet-900 dark:bg-violet-900/50 dark:text-violet-100"
+                            >
+                              {classNameById.get(id) || `${t('tests.teacherMain.classLabel')} #${id}`}
+                              <button
+                                type="button"
+                                onClick={() => removeDistributeClass(id)}
+                                className="rounded-full border border-violet-300 px-1 text-[10px] dark:border-violet-600"
+                                aria-label={t('tests.teacherMain.removeClass')}
+                              >
+                                x
+                              </button>
+                            </span>
+                          ))}
+                          {distributeClassIds.length === 0 ? (
+                            <span className="text-[11px] text-slate-500">{t('tests.teacherMain.noClassAdded')}</span>
+                          ) : null}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="mt-1 rounded-lg border border-violet-200 bg-white p-2 text-xs dark:border-violet-700 dark:bg-gray-900/60">
+                        {`${t('tests.teacherMain.targetAllClasses')}: (${classes.length})`}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <p className="mt-3 text-[11px] text-slate-500 dark:text-slate-400">{t('tests.teacherMain.distributeDurationNote')}</p>
+              </div>
+            ) : (
+              <p className="mt-5 border-t border-violet-200/80 pt-4 text-sm text-slate-600 dark:border-violet-800/80 dark:text-slate-400">
+                {t('tests.teacherMain.noUploadedTestsDistributeHint')}
+              </p>
+            )}
+          </div>
+        </KidsCenteredModal>
+      ) : null}
 
       {pendingDeleteIndex !== null ? (
         <KidsCenteredModal
@@ -927,6 +1150,33 @@ export default function KidsTeacherTestsPage() {
               {deletePreviewShort}
             </p>
           ) : null}
+        </KidsCenteredModal>
+      ) : null}
+
+      {pendingDeleteTestId !== null ? (
+        <KidsCenteredModal
+          variant="danger"
+          title={t('tests.teacherMain.deleteTestModalTitle')}
+          onClose={() => {
+            if (!deletingTest) setPendingDeleteTestId(null);
+          }}
+          footer={
+            <div className="flex flex-wrap justify-end gap-2">
+              <KidsSecondaryButton type="button" disabled={deletingTest} onClick={() => setPendingDeleteTestId(null)}>
+                {t('common.cancel')}
+              </KidsSecondaryButton>
+              <button
+                type="button"
+                disabled={deletingTest}
+                onClick={() => void onConfirmDeleteTest()}
+                className="inline-flex min-h-12 items-center justify-center rounded-full border-2 border-rose-800/30 bg-rose-600 px-8 text-sm font-bold text-white shadow-md shadow-rose-900/25 transition hover:bg-rose-700 disabled:opacity-60 dark:border-rose-400/20 dark:bg-rose-600 dark:text-white dark:hover:bg-rose-500"
+              >
+                {deletingTest ? t('common.loading') : t('tests.teacherMain.deleteTestConfirm')}
+              </button>
+            </div>
+          }
+        >
+          <p className="text-sm text-slate-700 dark:text-slate-300">{t('tests.teacherMain.deleteTestModalBody')}</p>
         </KidsCenteredModal>
       ) : null}
     </div>

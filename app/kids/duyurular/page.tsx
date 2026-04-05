@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { MoreVertical, Paperclip, Pin, Plus, Send, Upload } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
@@ -17,12 +18,63 @@ import {
 } from '@/src/lib/kids-api';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 import { KidsPrimaryButton, KidsSelect, kidsInputClass, kidsTextareaClass } from '@/src/components/kids/kids-ui';
+import { MediaLightbox } from '@/src/components/media-lightbox';
 import { MediaSlider } from '@/src/components/media-slider';
 import type { MediaItem } from '@/src/lib/extract-media';
 import { useKidsI18n } from '@/src/providers/kids-language-provider';
 
 const ANNOUNCEMENT_IMAGE_MAX_BYTES = 10 * 1024 * 1024;
 const ANNOUNCEMENT_DOCUMENT_MAX_BYTES = 20 * 1024 * 1024;
+const ALL_CLASSES_VALUE = '__all_school__';
+
+function announcementCategoryStyle(
+  id: number,
+  title: string,
+  translate: (k: string) => string,
+): { label: string; pillClass: string } {
+  const t = title || '';
+  if (/etkinlik|gösteri|gosteri|konser|yarışma|yarisma|gezi|şenlik|senlik|festival/i.test(t)) {
+    return {
+      label: translate('announcements.catEvent'),
+      pillClass: 'bg-pink-100 text-pink-800 ring-pink-200/80 dark:bg-pink-950/50 dark:text-pink-100 dark:ring-pink-800/60',
+    };
+  }
+  if (/bilgi|hatırlatma|hatirlatma|toplantı|toplanti|açıklama|aciklama|bildiri/i.test(t)) {
+    return {
+      label: translate('announcements.catInfo'),
+      pillClass: 'bg-amber-100 text-amber-900 ring-amber-200/80 dark:bg-amber-950/40 dark:text-amber-100 dark:ring-amber-800/50',
+    };
+  }
+  const m = Math.abs(id) % 3;
+  if (m === 0) {
+    return {
+      label: translate('announcements.catEvent'),
+      pillClass: 'bg-pink-100 text-pink-800 ring-pink-200/80 dark:bg-pink-950/50 dark:text-pink-100 dark:ring-pink-800/60',
+    };
+  }
+  if (m === 1) {
+    return {
+      label: translate('announcements.catInfo'),
+      pillClass: 'bg-amber-100 text-amber-900 ring-amber-200/80 dark:bg-amber-950/40 dark:text-amber-100 dark:ring-amber-800/50',
+    };
+  }
+  return {
+    label: translate('announcements.catGeneral'),
+    pillClass: 'bg-violet-100 text-violet-800 ring-violet-200/80 dark:bg-violet-950/50 dark:text-violet-100 dark:ring-violet-800/60',
+  };
+}
+
+function titleInitials(title: string): string[] {
+  const parts = (title || '').trim().split(/\s+/).filter(Boolean).slice(0, 2);
+  if (parts.length === 0) return ['?'];
+  if (parts.length === 1) {
+    const w = parts[0];
+    const a = (w[0] || '?').toUpperCase();
+    const b = (w[1] || w[0] || '?').toUpperCase();
+    return w.length >= 2 ? [a, b] : [a];
+  }
+  return parts.map((w) => (w[0] || '?').toUpperCase());
+}
 
 function isImageAttachment(contentType: string, fileName: string): boolean {
   const ct = (contentType || '').toLowerCase();
@@ -68,9 +120,36 @@ export default function KidsAnnouncementsPage() {
   const [deletingAttachmentId, setDeletingAttachmentId] = useState<number | null>(null);
   const [openAnnouncementId, setOpenAnnouncementId] = useState<number | null>(null);
   const [deletingAnnouncementId, setDeletingAnnouncementId] = useState<number | null>(null);
+  const [announcementMenuId, setAnnouncementMenuId] = useState<number | null>(null);
+  const [announcementEditLightbox, setAnnouncementEditLightbox] = useState<{
+    announcementId: number;
+    startIndex: number;
+  } | null>(null);
+
+  const editLightboxAnn = useMemo(() => {
+    if (!announcementEditLightbox) return null;
+    return rows.find((r) => r.id === announcementEditLightbox.announcementId) ?? null;
+  }, [rows, announcementEditLightbox]);
+
+  const editLightboxImageAttachments = useMemo(() => {
+    const list = editLightboxAnn?.attachments ?? [];
+    return list.filter((att) => isImageAttachment(att.content_type, att.original_name));
+  }, [editLightboxAnn]);
+
+  const editLightboxItems = useMemo<MediaItem[]>(
+    () => editLightboxImageAttachments.map((att) => ({ url: att.url, type: 'image' as const })),
+    [editLightboxImageAttachments],
+  );
+
+  const editLightboxStartIndex =
+    announcementEditLightbox && editLightboxItems.length > 0
+      ? Math.min(Math.max(0, announcementEditLightbox.startIndex), editLightboxItems.length - 1)
+      : 0;
 
   const canCreate = user?.role === 'teacher' || user?.role === 'admin';
   const selectedClassId = useMemo(() => Number(classId || 0), [classId]);
+  const isAllSchoolScope = classId === ALL_CLASSES_VALUE;
+  const schoolIdForScope = classes[0]?.school?.id;
 
   async function load() {
     setLoading(true);
@@ -103,6 +182,18 @@ export default function KidsAnnouncementsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading, user, router, pathPrefix]);
 
+  useEffect(() => {
+    if (announcementMenuId == null) return;
+    function onPointerDown(e: PointerEvent) {
+      const el = e.target;
+      if (!(el instanceof HTMLElement)) return;
+      if (el.closest('[data-announcement-card-menu]')) return;
+      setAnnouncementMenuId(null);
+    }
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, [announcementMenuId]);
+
   const sorted = useMemo(
     () =>
       [...rows].sort((a, b) => {
@@ -112,6 +203,12 @@ export default function KidsAnnouncementsPage() {
       }),
     [rows],
   );
+
+  const classNameById = useMemo(() => {
+    const m = new Map<number, string>();
+    classes.forEach((c) => m.set(c.id, c.name));
+    return m;
+  }, [classes]);
 
   const uploadPreviewItems = useMemo<MediaItem[]>(
     () =>
@@ -168,20 +265,6 @@ export default function KidsAnnouncementsPage() {
     }
   }
 
-  function removeFile(target: File) {
-    setFiles((prev) =>
-      prev.filter(
-        (f) =>
-          !(
-            f.name === target.name &&
-            f.size === target.size &&
-            f.lastModified === target.lastModified &&
-            f.type === target.type
-          ),
-      ),
-    );
-  }
-
   function removeEditFile(target: File) {
     setEditFiles((prev) =>
       prev.filter(
@@ -214,6 +297,7 @@ export default function KidsAnnouncementsPage() {
   }, [editPreviewItems]);
 
   function startEdit(a: KidsAnnouncement) {
+    setAnnouncementEditLightbox(null);
     setEditingId(a.id);
     setOpenAnnouncementId(a.id);
     setEditTitle(a.title || '');
@@ -226,6 +310,7 @@ export default function KidsAnnouncementsPage() {
     setEditTitle('');
     setEditBody('');
     setEditFiles([]);
+    setAnnouncementEditLightbox(null);
   }
 
   async function onSaveEdit() {
@@ -287,20 +372,37 @@ export default function KidsAnnouncementsPage() {
     const titleText = title.trim();
     const bodyText = body.trim();
     if (!titleText || !bodyText) return;
-    if (!selectedClassId) {
+    if (isAllSchoolScope) {
+      if (!schoolIdForScope) {
+        toast.error(t('announcements.assignClassFirst'));
+        return;
+      }
+    } else if (!selectedClassId) {
       toast.error(t('announcements.classRequired'));
       return;
     }
     setSaving(true);
     try {
-      const created = await kidsCreateAnnouncement({
-        scope: 'class',
-        kids_class: selectedClassId,
-        title: titleText,
-        body: bodyText,
-        is_published: true,
-        target_role: 'all',
-      });
+      const created = await kidsCreateAnnouncement(
+        isAllSchoolScope
+          ? {
+              scope: 'school',
+              school: schoolIdForScope,
+              kids_class: null,
+              title: titleText,
+              body: bodyText,
+              is_published: true,
+              target_role: 'all',
+            }
+          : {
+              scope: 'class',
+              kids_class: selectedClassId,
+              title: titleText,
+              body: bodyText,
+              is_published: true,
+              target_role: 'all',
+            },
+      );
       if (files.length > 0) {
         let latest = created;
         for (const f of files) {
@@ -325,168 +427,243 @@ export default function KidsAnnouncementsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-4">
-      <h1 className="font-logo text-2xl font-bold text-violet-950 dark:text-violet-50">{t('announcements.title')}</h1>
-      <div className={`grid gap-4 ${canCreate ? 'lg:grid-cols-2' : 'grid-cols-1'}`}>
-      {canCreate ? (
-        <div className="space-y-2 rounded-2xl border-2 border-violet-200 bg-white/90 p-4 lg:sticky lg:top-24 lg:h-fit dark:border-violet-800 dark:bg-gray-900/70">
-          <p className="text-sm font-semibold text-violet-900 dark:text-violet-100">{t('announcements.new')}</p>
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder={t('announcements.titleField')}
-            className={kidsInputClass}
-          />
-          <textarea
-            rows={3}
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            placeholder={t('announcements.bodyField')}
-            className={kidsTextareaClass}
-          />
-          <div className="space-y-1">
-            <label className="text-sm font-semibold text-violet-900 dark:text-violet-100">{t('announcements.class')}</label>
-            <KidsSelect
-              value={classId}
-              onChange={setClassId}
-              options={classes.map((c) => ({ value: String(c.id), label: c.name }))}
-            />
-            {classes.length === 0 ? (
-              <p className="text-xs text-amber-700 dark:text-amber-300">{t('announcements.assignClassFirst')}</p>
-            ) : null}
-          </div>
-          <div className="space-y-2">
-            <label className="text-sm font-semibold text-violet-900 dark:text-violet-100">{t('announcements.attachments')}</label>
-            {files.length === 0 ? (
-              <div className="rounded-xl border-2 border-dashed border-violet-300/80 bg-violet-50/30 p-5 text-center dark:border-violet-700 dark:bg-violet-950/20">
-                <input
-                  id="announcement-files"
-                  type="file"
-                  multiple
-                  onChange={(e) => appendFiles(Array.from(e.target.files || []))}
-                  className="hidden"
-                />
-                <label htmlFor="announcement-files" className="cursor-pointer text-sm font-medium text-violet-800 dark:text-violet-100">
-                  {t('announcements.clickToAdd')}
-                </label>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  {t('announcements.attachmentHint')}
-                </p>
+    <div className="mx-auto max-w-7xl space-y-8 px-2 pb-10 sm:px-4">
+      <header>
+        <h1 className="font-logo text-3xl font-bold text-slate-900 dark:text-white">{t('announcements.title')}</h1>
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600 dark:text-slate-400">{t('announcements.pageSubtitle')}</p>
+      </header>
+
+      <div className={`grid gap-8 ${canCreate ? 'lg:grid-cols-3' : 'grid-cols-1'}`}>
+        {canCreate ? (
+          <div className="lg:col-span-1">
+            <div className="rounded-3xl border border-zinc-200/80 bg-white p-6 shadow-lg dark:border-zinc-800 dark:bg-zinc-900 lg:sticky lg:top-24">
+              <div className="flex items-center gap-3">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-violet-600 text-white shadow-md shadow-violet-500/30">
+                  <Plus className="h-6 w-6" strokeWidth={2.5} />
+                </span>
+                <h2 className="font-logo text-lg font-bold text-slate-900 dark:text-white">{t('announcements.new')}</h2>
               </div>
-            ) : (
-              <div className="space-y-2 rounded-xl border border-violet-200/80 bg-violet-50/30 p-3 dark:border-violet-800/60 dark:bg-violet-950/20">
-                {uploadPreviewItems.length > 0 ? (
-                  <div className="space-y-2">
-                    <MediaSlider items={uploadPreviewItems} className="h-52" alt="Announcement file preview" fit="contain" />
-                    <div className="flex justify-end">
-                      <input
-                        id="announcement-files-more"
-                        type="file"
-                        multiple
-                        onChange={(e) => appendFiles(Array.from(e.target.files || []))}
-                        className="hidden"
+
+              <div className="mt-6 space-y-4">
+                <div>
+                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t('announcements.titleField')}</label>
+                  <input
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder={t('announcements.titlePlaceholder')}
+                    className="mt-1.5 w-full rounded-2xl border-0 bg-zinc-100 px-4 py-3 text-sm text-slate-900 shadow-inner outline-none ring-1 ring-zinc-200/80 transition focus:ring-2 focus:ring-violet-400/40 dark:bg-zinc-800 dark:text-white dark:ring-zinc-700"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t('announcements.bodyField')}</label>
+                  <textarea
+                    rows={4}
+                    value={body}
+                    onChange={(e) => setBody(e.target.value)}
+                    placeholder={t('announcements.bodyPlaceholder')}
+                    className="mt-1.5 w-full resize-y rounded-2xl border-0 bg-zinc-100 px-4 py-3 text-sm text-slate-900 shadow-inner outline-none ring-1 ring-zinc-200/80 transition focus:ring-2 focus:ring-violet-400/40 dark:bg-zinc-800 dark:text-white dark:ring-zinc-700"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
+                  <div className="min-w-0 flex-1">
+                    <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t('announcements.class')}</label>
+                    <div className="mt-1.5 rounded-2xl bg-zinc-100 px-2 py-2 ring-1 ring-zinc-200/80 dark:bg-zinc-800 dark:ring-zinc-700">
+                      <KidsSelect
+                        value={classId}
+                        onChange={setClassId}
+                        options={[
+                          ...(classes.length > 0
+                            ? [{ value: ALL_CLASSES_VALUE, label: t('announcements.allClasses') }]
+                            : []),
+                          ...classes.map((c) => ({ value: String(c.id), label: c.name })),
+                        ]}
                       />
-                      <label htmlFor="announcement-files-more" className="cursor-pointer text-xs font-semibold text-violet-700 hover:text-violet-500 dark:text-violet-200">
-                        {t('announcements.addFile')}
-                      </label>
                     </div>
+                    {classes.length === 0 ? (
+                      <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">{t('announcements.assignClassFirst')}</p>
+                    ) : null}
+                    {isAllSchoolScope ? (
+                      <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">{t('announcements.allClassesHint')}</p>
+                    ) : null}
                   </div>
-                ) : (
-                  <div className="space-y-2">
-                    <div className="rounded-lg border border-violet-200/80 bg-white p-3 text-xs text-slate-500 dark:border-violet-800/60 dark:bg-slate-900 dark:text-slate-300">
-                      {t('announcements.noImageOnlyDocs')}
-                    </div>
-                    <div className="flex justify-end">
-                      <input
-                        id="announcement-files-more"
-                        type="file"
-                        multiple
-                        onChange={(e) => appendFiles(Array.from(e.target.files || []))}
-                        className="hidden"
-                      />
-                      <label htmlFor="announcement-files-more" className="cursor-pointer text-xs font-semibold text-violet-700 hover:text-violet-500 dark:text-violet-200">
-                        {t('announcements.addFile')}
-                      </label>
-                    </div>
+                  <div className="shrink-0">
+                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t('announcements.fileAddLabel')}</p>
+                    <input
+                      id="announcement-files"
+                      type="file"
+                      multiple
+                      onChange={(e) => appendFiles(Array.from(e.target.files || []))}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="announcement-files"
+                      className="mt-1.5 flex cursor-pointer items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-violet-300/70 bg-violet-50/50 px-4 py-3 text-sm font-bold text-violet-700 transition hover:bg-violet-100/80 dark:border-violet-700 dark:bg-violet-950/30 dark:text-violet-200"
+                    >
+                      <Upload className="h-4 w-4" />
+                      {t('announcements.browseFiles')}
+                    </label>
                   </div>
-                )}
-                <ul className="space-y-1 text-xs text-slate-600 dark:text-slate-300">
-                  {files.map((f) => (
-                    <li key={`${f.name}-${f.size}-${f.lastModified}`} className="flex items-center justify-between gap-2">
-                      <span className="truncate">
-                        {f.name} ({formatFileSize(f.size)})
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => removeFile(f)}
-                        className="rounded-full border border-rose-300 px-2 py-0.5 text-rose-700 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950/40"
-                      >
-                        {t('messageDetail.remove')}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                </div>
+
+                {files.length > 0 ? (
+                  <div className="rounded-2xl border border-zinc-200/80 bg-zinc-50/80 p-3 dark:border-zinc-700 dark:bg-zinc-800/50">
+                    <MediaSlider
+                      items={uploadPreviewItems}
+                      className="h-44"
+                      alt=""
+                      fit="contain"
+                      onDeleteAtIndex={(idx) => setFiles((prev) => prev.filter((_, i) => i !== idx))}
+                    />
+                    <p className="mt-2 text-[11px] text-zinc-500 dark:text-zinc-400">{t('teacherHomework.sliderHint')}</p>
+                  </div>
+                ) : null}
+
+                <p className="text-[11px] text-zinc-500 dark:text-zinc-400">{t('announcements.attachmentHintShort')}</p>
+
+                <button
+                  type="button"
+                  onClick={() => void onCreate()}
+                  disabled={
+                    saving ||
+                    !title.trim() ||
+                    !body.trim() ||
+                    (isAllSchoolScope ? !schoolIdForScope : !selectedClassId)
+                  }
+                  className="flex w-full min-h-[52px] items-center justify-center gap-2 rounded-2xl bg-linear-to-r from-violet-600 via-fuchsia-600 to-fuchsia-500 px-6 text-sm font-black text-white shadow-lg shadow-fuchsia-500/25 transition hover:from-violet-500 hover:via-fuchsia-500 disabled:opacity-50"
+                >
+                  {saving ? (
+                    t('announcements.publishing')
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4" strokeWidth={2.5} />
+                      {t('announcements.publish')}
+                    </>
+                  )}
+                </button>
               </div>
-            )}
+            </div>
           </div>
-          <div className="flex justify-end">
-            <KidsPrimaryButton
-              type="button"
-              onClick={() => void onCreate()}
-              disabled={saving || !title.trim() || !body.trim() || !selectedClassId}
+        ) : null}
+
+        <section
+          id="onceki-duyurular"
+          className={`scroll-mt-24 space-y-4 ${canCreate ? 'lg:col-span-2' : ''}`}
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="font-logo text-xl font-bold text-slate-900 dark:text-white">{t('announcements.previousTitle')}</h2>
+            <a
+              href="#onceki-duyurular"
+              className="text-sm font-bold text-violet-600 transition hover:text-violet-500 dark:text-violet-400"
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById('onceki-duyurular')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                if (typeof window !== 'undefined') {
+                  window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#onceki-duyurular`);
+                }
+              }}
             >
-              {saving ? t('announcements.publishing') : t('announcements.publish')}
-            </KidsPrimaryButton>
+              {t('announcements.seeAll')}
+            </a>
           </div>
-        </div>
-      ) : null}
-      <section className="space-y-3">
-        <h2 className="font-logo text-lg font-bold text-violet-950 dark:text-violet-50">{t('announcements.previousTitle')}</h2>
         {loading ? <p className="text-sm text-slate-500">{t('common.loading')}</p> : null}
         {!loading && sorted.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-violet-300 bg-violet-50/50 p-6 text-sm text-violet-900 dark:border-violet-800 dark:bg-violet-950/20 dark:text-violet-100">
             {t('announcements.empty')}
           </div>
         ) : null}
-      <ul className="space-y-2">
-        {sorted.map((a) => (
-          <li key={a.id} className="rounded-2xl border-2 border-violet-200 bg-white/90 px-4 py-3 dark:border-violet-800 dark:bg-gray-900/70">
-            <button
-              type="button"
-              onClick={() => setOpenAnnouncementId((prev) => (prev === a.id ? null : a.id))}
-              className="flex w-full items-center justify-between gap-3 text-left"
+      <ul className="space-y-4">
+        {sorted.map((a) => {
+          const cat = announcementCategoryStyle(a.id, a.title, t);
+          const locale = language === 'tr' ? 'tr-TR' : language === 'ge' ? 'de-DE' : 'en-US';
+          const dateLine = a.published_at
+            ? new Date(a.published_at).toLocaleString(locale, { dateStyle: 'long', timeStyle: 'short' })
+            : t('announcements.draft');
+          const scopeLabel =
+            a.scope === 'school'
+              ? t('announcements.allClasses')
+              : a.kids_class
+                ? classNameById.get(a.kids_class) ?? `${t('announcements.class')} #${a.kids_class}`
+                : '';
+          return (
+            <li
+              key={a.id}
+              className="relative rounded-3xl border border-zinc-200/90 bg-white p-5 shadow-md dark:border-zinc-800 dark:bg-zinc-900/80"
             >
-              <p className="font-semibold text-violet-950 dark:text-violet-100">
-                {editingId === a.id ? t('announcements.editing') : a.title}
-              </p>
-              <span className="text-xs text-slate-500 dark:text-slate-400">
-                {a.published_at
-                  ? new Date(a.published_at).toLocaleString(language === 'tr' ? 'tr-TR' : language === 'ge' ? 'de-DE' : 'en-US', { dateStyle: 'short', timeStyle: 'short' })
-                  : t('announcements.draft')}
-              </span>
-            </button>
-            {openAnnouncementId === a.id && canCreate && editingId !== a.id ? (
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => startEdit(a)}
-                  className="rounded-full border border-violet-300 px-2.5 py-0.5 text-xs font-semibold text-violet-700 hover:bg-violet-100 dark:border-violet-700 dark:text-violet-200 dark:hover:bg-violet-900/40"
-                >
-                  {t('announcements.edit')}
-                </button>
-                {(user?.role === 'admin' || a.created_by === user?.id) ? (
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  {a.is_pinned ? (
+                    <span
+                      className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-amber-900 ring-1 ring-amber-200/80 dark:bg-amber-950/50 dark:text-amber-100 dark:ring-amber-800/60"
+                      title={t('announcements.pinnedHint')}
+                    >
+                      <Pin className="h-3 w-3" strokeWidth={2.5} aria-hidden />
+                      {t('announcements.pinned')}
+                    </span>
+                  ) : null}
+                  <span
+                    className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide ring-1 ${cat.pillClass}`}
+                  >
+                    {cat.label}
+                  </span>
+                  <span className="text-xs text-zinc-500 dark:text-zinc-400">{dateLine}</span>
+                  {scopeLabel ? (
+                    <span className="text-xs text-zinc-400 dark:text-zinc-500">· {scopeLabel}</span>
+                  ) : null}
+                </div>
+                {editingId === a.id ? (
                   <button
                     type="button"
-                    onClick={() => void onDeleteAnnouncement(a.id)}
-                    disabled={deletingAnnouncementId === a.id}
-                    className="rounded-full border border-rose-300 px-2.5 py-0.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 disabled:opacity-60 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950/40"
+                    onClick={cancelEdit}
+                    disabled={editSaving}
+                    className="shrink-0 rounded-full border border-zinc-300 px-3 py-1.5 text-xs font-bold text-zinc-700 transition hover:bg-zinc-100 disabled:opacity-60 dark:border-zinc-600 dark:text-zinc-200 dark:hover:bg-zinc-800"
                   >
-                    {deletingAnnouncementId === a.id ? t('announcements.deleting') : t('announcements.delete')}
+                    {t('common.cancel')}
                   </button>
+                ) : canCreate ? (
+                  <div className="relative shrink-0" data-announcement-card-menu>
+                    <button
+                      type="button"
+                      aria-expanded={announcementMenuId === a.id}
+                      aria-label={t('announcements.cardMenu')}
+                      className="rounded-full p-1.5 text-zinc-500 transition hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                      onClick={() => setAnnouncementMenuId((prev) => (prev === a.id ? null : a.id))}
+                    >
+                      <MoreVertical className="h-5 w-5" />
+                    </button>
+                    {announcementMenuId === a.id ? (
+                      <div className="absolute right-0 top-full z-20 mt-1 min-w-40 rounded-xl border border-zinc-200 bg-white py-1 shadow-xl dark:border-zinc-700 dark:bg-zinc-900">
+                        <button
+                          type="button"
+                          className="block w-full px-4 py-2 text-left text-sm font-semibold text-zinc-700 hover:bg-zinc-50 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                          onClick={() => {
+                            setAnnouncementMenuId(null);
+                            setOpenAnnouncementId(a.id);
+                            startEdit(a);
+                          }}
+                        >
+                          {t('announcements.edit')}
+                        </button>
+                        {user?.role === 'admin' || a.created_by === user?.id ? (
+                          <button
+                            type="button"
+                            className="block w-full px-4 py-2 text-left text-sm font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-60 dark:text-rose-400 dark:hover:bg-rose-950/40"
+                            disabled={deletingAnnouncementId === a.id}
+                            onClick={() => {
+                              setAnnouncementMenuId(null);
+                              void onDeleteAnnouncement(a.id);
+                            }}
+                          >
+                            {deletingAnnouncementId === a.id ? t('announcements.deleting') : t('announcements.delete')}
+                          </button>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
                 ) : null}
               </div>
-            ) : null}
-            {openAnnouncementId === a.id && editingId === a.id ? (
+
+              {openAnnouncementId === a.id && editingId === a.id ? (
               <div className="mt-3 space-y-2 rounded-xl border border-violet-200/80 bg-violet-50/40 p-3 dark:border-violet-800/60 dark:bg-violet-950/25">
                 <input
                   value={editTitle}
@@ -504,29 +681,102 @@ export default function KidsAnnouncementsPage() {
                 <div className="space-y-2">
                   <p className="text-xs font-semibold text-violet-900/90 dark:text-violet-100/90">{t('announcements.newAttachments')}</p>
                   {Array.isArray(a.attachments) && a.attachments.length > 0 ? (
-                    <ul className="space-y-2 rounded-lg border border-violet-200/70 bg-white/70 p-2 dark:border-violet-800/50 dark:bg-slate-900/60">
-                      {a.attachments.map((att) => (
-                        <li key={`edit-att-${att.id}`} className="flex items-center justify-between gap-2 text-xs">
-                          <span className="truncate text-slate-700 dark:text-slate-200">
-                            {att.original_name || t('messageDetail.file')}
-                            {att.size_bytes ? ` (${formatFileSize(att.size_bytes)})` : ''}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => void onDeleteAttachment(a.id, att.id)}
-                            disabled={deletingAttachmentId === att.id || editSaving}
-                            className="rounded-full border border-rose-300 px-2 py-0.5 text-rose-700 hover:bg-rose-50 disabled:opacity-60 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950/40"
-                          >
-                            {deletingAttachmentId === att.id ? t('announcements.deleting') : t('announcements.deleteCurrentAttachment')}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
+                    (() => {
+                      const imageAtts = a.attachments.filter((att) =>
+                        isImageAttachment(att.content_type, att.original_name),
+                      );
+                      const docAtts = a.attachments.filter(
+                        (att) => !isImageAttachment(att.content_type, att.original_name),
+                      );
+                      return (
+                        <div className="space-y-3 rounded-lg border border-violet-200/70 bg-white/70 p-2 dark:border-violet-800/50 dark:bg-slate-900/60">
+                          {imageAtts.length > 0 ? (
+                            <ul className="space-y-2">
+                              {imageAtts.map((att, imgIdx) => (
+                                <li
+                                  key={`edit-att-img-${att.id}`}
+                                  className="flex items-stretch gap-3 rounded-xl border border-violet-200/60 bg-white/90 p-2 dark:border-violet-800/40 dark:bg-slate-900/50"
+                                >
+                                  <button
+                                    type="button"
+                                    title={t('announcements.openLightbox')}
+                                    className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg ring-2 ring-violet-200/80 ring-offset-2 ring-offset-white transition hover:opacity-95 focus:outline-none focus-visible:ring-violet-500 dark:ring-violet-700 dark:ring-offset-slate-900"
+                                    onClick={() =>
+                                      setAnnouncementEditLightbox({ announcementId: a.id, startIndex: imgIdx })
+                                    }
+                                  >
+                                    <img
+                                      src={att.url}
+                                      alt=""
+                                      className="h-full w-full object-cover"
+                                    />
+                                  </button>
+                                  <div className="flex min-w-0 flex-1 flex-col justify-center gap-2 text-xs">
+                                    <span className="truncate font-medium text-slate-700 dark:text-slate-200">
+                                      {att.original_name || t('messageDetail.file')}
+                                      {att.size_bytes ? ` (${formatFileSize(att.size_bytes)})` : ''}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => void onDeleteAttachment(a.id, att.id)}
+                                      disabled={deletingAttachmentId === att.id || editSaving}
+                                      className="w-fit rounded-full border border-rose-300 px-2 py-0.5 text-rose-700 hover:bg-rose-50 disabled:opacity-60 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950/40"
+                                    >
+                                      {deletingAttachmentId === att.id
+                                        ? t('announcements.deleting')
+                                        : t('announcements.deleteCurrentAttachment')}
+                                    </button>
+                                  </div>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : null}
+                          {docAtts.length > 0 ? (
+                            <ul className="space-y-2">
+                              {docAtts.map((att) => (
+                                <li
+                                  key={`edit-att-doc-${att.id}`}
+                                  className="flex items-center justify-between gap-2 text-xs"
+                                >
+                                  <span className="truncate text-slate-700 dark:text-slate-200">
+                                    {att.original_name || t('messageDetail.file')}
+                                    {att.size_bytes ? ` (${formatFileSize(att.size_bytes)})` : ''}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => void onDeleteAttachment(a.id, att.id)}
+                                    disabled={deletingAttachmentId === att.id || editSaving}
+                                    className="shrink-0 rounded-full border border-rose-300 px-2 py-0.5 text-rose-700 hover:bg-rose-50 disabled:opacity-60 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950/40"
+                                  >
+                                    {deletingAttachmentId === att.id
+                                      ? t('announcements.deleting')
+                                      : t('announcements.deleteCurrentAttachment')}
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : null}
+                        </div>
+                      );
+                    })()
+                  ) : editFiles.length === 0 ? (
                     <p className="text-xs text-slate-500 dark:text-slate-400">{t('announcements.noExistingAttachment')}</p>
-                  )}
+                  ) : null}
                   {editPreviewItems.length > 0 ? (
-                    <MediaSlider items={editPreviewItems} className="h-48" alt="Announcement edit preview" fit="contain" />
+                    <div className="rounded-2xl border border-zinc-200/80 bg-zinc-50/80 p-3 dark:border-zinc-700 dark:bg-zinc-800/50">
+                      <MediaSlider
+                        items={editPreviewItems}
+                        className="h-52"
+                        alt=""
+                        fit="contain"
+                        onDeleteAtIndex={(idx) => {
+                          const f = editFiles[idx];
+                          if (f) removeEditFile(f);
+                        }}
+                        deleteDisabled={editSaving}
+                      />
+                      <p className="mt-2 text-[11px] text-zinc-500 dark:text-zinc-400">{t('teacherHomework.sliderHint')}</p>
+                    </div>
                   ) : null}
                   <div className="flex items-center justify-between">
                     <input
@@ -541,24 +791,6 @@ export default function KidsAnnouncementsPage() {
                     </label>
                     <span className="text-[11px] text-slate-500 dark:text-slate-400">{t('announcements.attachmentHintShort')}</span>
                   </div>
-                  {editFiles.length > 0 ? (
-                    <ul className="space-y-1 text-xs text-slate-600 dark:text-slate-300">
-                      {editFiles.map((f) => (
-                        <li key={`${a.id}-${f.name}-${f.size}-${f.lastModified}`} className="flex items-center justify-between gap-2">
-                          <span className="truncate">
-                            {f.name} ({formatFileSize(f.size)})
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => removeEditFile(f)}
-                            className="rounded-full border border-rose-300 px-2 py-0.5 text-rose-700 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950/40"
-                          >
-                            {t('messageDetail.remove')}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
                 </div>
                 <div className="flex justify-end gap-2">
                   <button
@@ -578,10 +810,43 @@ export default function KidsAnnouncementsPage() {
                   </KidsPrimaryButton>
                 </div>
               </div>
-            ) : openAnnouncementId === a.id ? (
-              <p className="mt-1 whitespace-pre-wrap text-sm text-slate-700 dark:text-slate-200">{a.body}</p>
-            ) : null}
-            {openAnnouncementId === a.id && Array.isArray(a.attachments) && a.attachments.length > 0 ? (
+            ) : (
+              <>
+                <button
+                  type="button"
+                  className="mt-3 w-full text-left"
+                  onClick={() => setOpenAnnouncementId((prev) => (prev === a.id ? null : a.id))}
+                >
+                  <p className="font-bold text-lg text-slate-900 dark:text-white">{a.title}</p>
+                  <p
+                    className={`mt-1 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400 ${
+                      openAnnouncementId === a.id ? 'whitespace-pre-wrap' : 'line-clamp-2'
+                    }`}
+                  >
+                    {a.body}
+                  </p>
+                </button>
+                <div className="mt-4 flex items-center justify-between border-t border-zinc-100 pt-4 dark:border-zinc-800">
+                  <div className="flex -space-x-2">
+                    {titleInitials(a.title).map((ch, i) => (
+                      <span
+                        key={`${a.id}-ini-${i}`}
+                        className={`flex h-8 w-8 items-center justify-center rounded-full border-2 border-white text-[10px] font-bold text-white shadow-sm dark:border-zinc-900 ${
+                          i === 0 ? 'bg-violet-500' : 'bg-fuchsia-500'
+                        }`}
+                      >
+                        {ch}
+                      </span>
+                    ))}
+                  </div>
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                    <Paperclip className="h-3.5 w-3.5" />
+                    {a.attachments?.length ?? 0}
+                  </span>
+                </div>
+              </>
+            )}
+            {openAnnouncementId === a.id && editingId !== a.id && Array.isArray(a.attachments) && a.attachments.length > 0 ? (
               <div className="mt-3 space-y-2">
                 <p className="text-xs font-semibold text-violet-900/90 dark:text-violet-100/90">{t('announcements.attachments')}</p>
                 {(() => {
@@ -628,10 +893,23 @@ export default function KidsAnnouncementsPage() {
               </div>
             ) : null}
           </li>
-        ))}
+          );
+        })}
       </ul>
       </section>
       </div>
+      {announcementEditLightbox && editLightboxItems.length > 0 ? (
+        <MediaLightbox
+          items={editLightboxItems}
+          currentIndex={editLightboxStartIndex}
+          onClose={() => setAnnouncementEditLightbox(null)}
+          onDeleteAtIndex={(idx) => {
+            const att = editLightboxImageAttachments[idx];
+            if (att) void onDeleteAttachment(announcementEditLightbox.announcementId, att.id);
+          }}
+          deleteDisabled={deletingAttachmentId !== null || editSaving}
+        />
+      ) : null}
     </div>
   );
 }

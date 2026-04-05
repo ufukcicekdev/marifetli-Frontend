@@ -35,6 +35,11 @@ export default function KidsTeacherTestStudentDetailPage() {
       setLoading(true);
       try {
         const test = await kidsGetTest(testId);
+        if (test.kids_class == null) {
+          toast.error(t('tests.studentReport.testUnassigned'));
+          router.replace(`${pathPrefix}/ogretmen/testler`);
+          return;
+        }
         const detail = await kidsClassTestStudentReport(test.kids_class, test.id, studentId);
         setReport(detail);
       } catch (e) {
@@ -43,7 +48,7 @@ export default function KidsTeacherTestStudentDetailPage() {
         setLoading(false);
       }
     })();
-  }, [authLoading, user, testId, studentId, router, pathPrefix]);
+  }, [authLoading, user, testId, studentId, router, pathPrefix, t]);
 
   const wrongCount = useMemo(() => {
     if (!report?.attempt) return 0;
@@ -183,7 +188,7 @@ table{width:100%;border-collapse:collapse;margin-top:8px} th,td{border:1px solid
             {t('tests.report.downloadHtml')}
           </button>
           <Link
-            href={`${pathPrefix}/ogretmen/testler/${testId}`}
+            href={`${pathPrefix}/ogretmen/testler/raporlar?test=${testId}`}
             className={actionBtnClass}
           >
             {t('tests.studentReport.backReport')}

@@ -1,6 +1,42 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useId, useMemo, useState } from 'react';
+import { Suspense, useCallback, useEffect, useId, useMemo, useState, type ReactNode } from 'react';
+import type { LucideIcon } from 'lucide-react';
+import {
+  AlignLeft,
+  Building2,
+  Calendar,
+  Check,
+  Clock,
+  Copy,
+  FlaskConical,
+  FolderOpen,
+  Globe,
+  GraduationCap,
+  Heart,
+  Layers,
+  LayoutGrid,
+  Link2,
+  List as LucideList,
+  ListFilter,
+  LogOut,
+  Medal,
+  MessageCircle,
+  MoreVertical,
+  Music2,
+  Paintbrush,
+  Plus,
+  QrCode,
+  Rocket,
+  Search,
+  Star,
+  TrendingUp,
+  Trophy,
+  Upload,
+  UserPlus,
+  Users,
+  X,
+} from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
@@ -31,7 +67,6 @@ import {
   kidsTeacherAppConfig,
   kidsDatetimeLocalDefaultClose,
   kidsDatetimeLocalToIso,
-  kidsFormatAssignmentWindowTr,
   kidsIsoToDatetimeLocal,
   kidsWeeklyChampion,
   kidsTeacherClassPeerChallenges,
@@ -55,9 +90,7 @@ import {
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 import { useKidsI18n } from '@/src/providers/kids-language-provider';
 import {
-  KidsCard,
   KidsCenteredModal,
-  KidsEmptyState,
   KidsFormField,
   KidsPanelMax,
   KidsPrimaryButton,
@@ -93,20 +126,170 @@ function tabFromSearchParam(raw: string | null): TabId | null {
   return TEACHER_CLASS_TAB_IDS.includes(raw as TabId) ? (raw as TabId) : null;
 }
 
-const BASE_TEACHER_TABS: { id: TabId; labelKey: string; icon: string }[] = [
-  { id: 'general', labelKey: 'teacherClass.tabs.class', icon: '⚙️' },
-  { id: 'invite', labelKey: 'teacherClass.tabs.invite', icon: '✉️' },
-  { id: 'students', labelKey: 'teacherClass.tabs.students', icon: '🧒' },
-  { id: 'assignments', labelKey: 'teacherClass.tabs.challenges', icon: '📝' },
-  { id: 'peer', labelKey: 'teacherClass.tabs.competitions', icon: '🏆' },
-  { id: 'stars', labelKey: 'teacherClass.tabs.star', icon: '⭐' },
+const BASE_TEACHER_TABS: { id: TabId; labelKey: string; icon: LucideIcon }[] = [
+  { id: 'general', labelKey: 'teacherClass.tabs.class', icon: Layers },
+  { id: 'invite', labelKey: 'teacherClass.tabs.invite', icon: UserPlus },
+  { id: 'students', labelKey: 'teacherClass.tabs.students', icon: Users },
+  { id: 'assignments', labelKey: 'teacherClass.tabs.challenges', icon: Rocket },
+  { id: 'peer', labelKey: 'teacherClass.tabs.competitions', icon: Trophy },
+  { id: 'stars', labelKey: 'teacherClass.tabs.star', icon: Star },
 ];
 
 const PRESCHOOL_DAILY_TAB = {
   id: 'kindergarten' as const,
   labelKey: 'teacherClass.tabs.preschoolDaily',
-  icon: '📋',
+  icon: Calendar,
 };
+
+/** Pasif sekmede ikonlar renkli; aktif sekmede mor zemin üzerinde beyaz */
+const TEACHER_TAB_ICON_CLASS: Record<TabId, string> = {
+  general: 'text-violet-600 dark:text-violet-400',
+  invite: 'text-sky-600 dark:text-sky-400',
+  students: 'text-emerald-600 dark:text-emerald-400',
+  kindergarten: 'text-amber-600 dark:text-amber-400',
+  assignments: 'text-fuchsia-600 dark:text-fuchsia-400',
+  peer: 'text-orange-600 dark:text-orange-400',
+  stars: 'text-yellow-500 dark:text-yellow-400',
+};
+
+type ChallengeFormThemeId = 'art' | 'science' | 'motion' | 'music';
+
+const CHALLENGE_FORM_THEMES: { id: ChallengeFormThemeId; icon: LucideIcon }[] = [
+  { id: 'art', icon: Paintbrush },
+  { id: 'science', icon: FlaskConical },
+  { id: 'motion', icon: Rocket },
+  { id: 'music', icon: Music2 },
+];
+
+function challengeCardVisualTheme(assignmentId: number): ChallengeFormThemeId {
+  const order: ChallengeFormThemeId[] = ['art', 'science', 'motion', 'music'];
+  return order[Math.abs(assignmentId) % 4]!;
+}
+
+function isChallengeCardThemeId(v: string | null | undefined): v is ChallengeFormThemeId {
+  return v === 'art' || v === 'science' || v === 'motion' || v === 'music';
+}
+
+/** Sunucuda tema yoksa (eski kayıtlar) id’ye göre renk döner. */
+function assignmentCardTheme(a: KidsAssignment): ChallengeFormThemeId {
+  const raw = a.challenge_card_theme;
+  if (isChallengeCardThemeId(raw)) return raw;
+  return challengeCardVisualTheme(a.id);
+}
+
+type AssignmentBadgeKind = 'draft' | 'planned' | 'endsSoon' | 'active' | 'ended';
+
+function assignmentBadgeKind(a: KidsAssignment, nowMs: number): AssignmentBadgeKind {
+  if (!a.is_published) return 'draft';
+  const opens = a.submission_opens_at ? new Date(a.submission_opens_at).getTime() : 0;
+  const closes = a.submission_closes_at ? new Date(a.submission_closes_at).getTime() : NaN;
+  if (opens > nowMs) return 'planned';
+  if (Number.isFinite(closes) && closes <= nowMs) return 'ended';
+  if (Number.isFinite(closes) && closes - nowMs <= 86400000) return 'endsSoon';
+  return 'active';
+}
+
+/** Öğrenci panelinde şu an “açık” sayılabilecek challenge (yayında, süresi dolmamış, başlangıcı gelmiş). */
+function assignmentStudentFacingActive(a: KidsAssignment, nowMs: number): boolean {
+  if (!a.is_published) return false;
+  if (a.submission_opens_at) {
+    const opens = new Date(a.submission_opens_at).getTime();
+    if (!Number.isNaN(opens) && opens > nowMs) return false;
+  }
+  const closes = a.submission_closes_at ? new Date(a.submission_closes_at).getTime() : NaN;
+  if (Number.isFinite(closes) && closes <= nowMs) return false;
+  return true;
+}
+
+/** KPI: süresi dolmamış yayınlanmış challenge’lar (planlı dahil). */
+function assignmentIncludedInKpis(a: KidsAssignment, nowMs: number): boolean {
+  if (!a.is_published) return false;
+  const closes = a.submission_closes_at ? new Date(a.submission_closes_at).getTime() : NaN;
+  if (Number.isFinite(closes) && closes <= nowMs) return false;
+  return true;
+}
+
+function challengeCardHeaderGradient(themeId: ChallengeFormThemeId): string {
+  switch (themeId) {
+    case 'art':
+      return 'from-pink-500 via-rose-400 to-fuchsia-600';
+    case 'science':
+      return 'from-sky-500 via-blue-600 to-violet-700';
+    case 'motion':
+      return 'from-amber-400 via-orange-500 to-red-500';
+    case 'music':
+      return 'from-violet-500 via-purple-600 to-indigo-700';
+    default:
+      return 'from-violet-600 to-fuchsia-600';
+  }
+}
+
+function assignmentDeadlinePillText(a: KidsAssignment, nowMs: number, translate: (key: string) => string): string {
+  const raw = a.submission_closes_at;
+  if (!raw) return translate('teacherClass.assignments.deadlineOpen');
+  const end = new Date(raw).getTime();
+  if (!Number.isFinite(end) || end <= nowMs) return translate('teacherClass.assignments.deadlineEnded');
+  const dayMs = 86400000;
+  const days = Math.ceil((end - nowMs) / dayMs);
+  if (days <= 1) return translate('teacherClass.assignments.deadlineTomorrow');
+  if (days === 2) return translate('teacherClass.assignments.deadlineTwoDays');
+  return translate('teacherClass.assignments.deadlineNDays').replace('{n}', String(days));
+}
+
+function truncateInviteUrlDisplay(url: string, head = 22, tail = 6): string {
+  if (url.length <= head + tail + 3) return url;
+  return `${url.slice(0, head)}…${url.slice(-tail)}`;
+}
+
+function studentDisplayName(en: KidsEnrollment): string {
+  return [en.student.first_name, en.student.last_name].filter(Boolean).join(' ').trim() || en.student.email;
+}
+
+function studentInitials(en: KidsEnrollment): string {
+  const f = (en.student.first_name || '').trim();
+  const l = (en.student.last_name || '').trim();
+  const a = f.charAt(0) || en.student.email.charAt(0) || '?';
+  const b = l.charAt(0) || '';
+  return (a + b).toUpperCase();
+}
+
+function studentsParticipationPercent(list: KidsEnrollment[]): number | null {
+  if (list.length === 0) return null;
+  const parts: number[] = [];
+  for (const e of list) {
+    const pub = e.class_published_assignment_count;
+    if (typeof pub !== 'number' || pub <= 0) continue;
+    const sub = e.assignments_submitted_count ?? 0;
+    parts.push(Math.min(100, Math.round((sub / pub) * 100)));
+  }
+  if (parts.length === 0) return null;
+  return Math.round(parts.reduce((a, b) => a + b, 0) / parts.length);
+}
+
+function ClassSettingsFieldRow({
+  label,
+  icon: Icon,
+  children,
+}: {
+  label: string;
+  icon: LucideIcon;
+  children: ReactNode;
+}) {
+  return (
+    <div>
+      <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-300">{label}</p>
+      <div className="mt-1.5 flex min-h-[52px] items-center gap-3 rounded-xl bg-zinc-100 px-3 py-2.5 sm:gap-3.5 sm:px-4 dark:bg-zinc-800/90">
+        <span
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-700 shadow-sm ring-1 ring-violet-200/80 dark:bg-violet-950/70 dark:text-violet-300 dark:ring-violet-700/50"
+          aria-hidden
+        >
+          <Icon className="h-[22px] w-[22px]" strokeWidth={2.35} />
+        </span>
+        <div className="min-w-0 flex-1">{children}</div>
+      </div>
+    </div>
+  );
+}
 
 function localDateInputValue(d = new Date()): string {
   const y = d.getFullYear();
@@ -124,6 +307,8 @@ function peerRowStatusTr(s: KidsPeerChallengeStatus, t: (key: string) => string)
   switch (s) {
     case 'pending_teacher':
       return t('teacherClass.peer.status.pending');
+    case 'pending_parent':
+      return t('teacherClass.peer.status.pendingParent');
     case 'rejected':
       return t('teacherClass.peer.status.rejected');
     case 'active':
@@ -133,6 +318,50 @@ function peerRowStatusTr(s: KidsPeerChallengeStatus, t: (key: string) => string)
     default:
       return s;
   }
+}
+
+function peerStatusBadgeClass(s: KidsPeerChallengeStatus): string {
+  switch (s) {
+    case 'pending_teacher':
+      return 'bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200';
+    case 'pending_parent':
+      return 'bg-violet-100 text-violet-900 dark:bg-violet-950/40 dark:text-violet-200';
+    case 'rejected':
+      return 'bg-rose-100 text-rose-900 dark:bg-rose-950/40 dark:text-rose-200';
+    case 'active':
+      return 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200';
+    case 'ended':
+      return 'bg-zinc-200 text-zinc-800 dark:bg-zinc-700 dark:text-zinc-100';
+    default:
+      return 'bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200';
+  }
+}
+
+function formatStarWeekRangeLabel(weekStartIso: string, lang: string): string {
+  const raw = (weekStartIso || '').trim();
+  if (!raw) return '';
+  const start = new Date(raw.includes('T') ? raw : `${raw}T12:00:00`);
+  if (Number.isNaN(start.getTime())) return '';
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  const loc = lang === 'tr' ? 'tr-TR' : lang === 'ge' ? 'de-DE' : 'en-US';
+  return `${start.toLocaleDateString(loc, { day: 'numeric', month: 'short' })} – ${end.toLocaleDateString(loc, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })}`;
+}
+
+function starStudentDisplayName(u: KidsUser): string {
+  return [u.first_name, u.last_name].filter(Boolean).join(' ').trim() || u.email;
+}
+
+function starStudentInitials(u: KidsUser): string {
+  const f = (u.first_name || '').trim();
+  const l = (u.last_name || '').trim();
+  const a = f.charAt(0) || u.email.charAt(0) || '?';
+  const b = l.charAt(0) || '';
+  return (a + b).toUpperCase();
 }
 
 function KidsTeacherClassPageContent() {
@@ -152,6 +381,7 @@ function KidsTeacherClassPageContent() {
     week_start: string;
     top: { student: KidsUser; submission_count: number }[];
   } | null>(null);
+  const [starsLoading, setStarsLoading] = useState(false);
   const [peerChallenges, setPeerChallenges] = useState<KidsPeerChallenge[]>([]);
   const [peerLoading, setPeerLoading] = useState(false);
   const [rejectNoteById, setRejectNoteById] = useState<Record<number, string>>({});
@@ -170,7 +400,10 @@ function KidsTeacherClassPageContent() {
   const [inviteDays, setInviteDays] = useState(7);
   const [inviting, setInviting] = useState(false);
   const [classInviteUrl, setClassInviteUrl] = useState('');
+  const [inviteQrOpen, setInviteQrOpen] = useState(false);
   const [creatingClassLink, setCreatingClassLink] = useState(false);
+  const [studentsSearchQuery, setStudentsSearchQuery] = useState('');
+  const [studentsNameSortDesc, setStudentsNameSortDesc] = useState(false);
   /** Sunucu `KIDS_INVITE_EMAIL_ENABLED` — kapaliyken e-posta davet formu gosterilmez. */
   const [inviteEmailEnabled, setInviteEmailEnabled] = useState(true);
   /** Sunucu `KIDS_ASSIGNMENT_VIDEO_ENABLED` — kapaliyken challenge’da video teslim secenegi yok. */
@@ -179,6 +412,12 @@ function KidsTeacherClassPageContent() {
   const [asgTitle, setAsgTitle] = useState('');
   const [asgPurpose, setAsgPurpose] = useState('');
   const [asgMaterials, setAsgMaterials] = useState('');
+  const [asgMaterialTags, setAsgMaterialTags] = useState<string[]>([]);
+  const [asgMaterialDraft, setAsgMaterialDraft] = useState('');
+  const [asgChallengeTheme, setAsgChallengeTheme] = useState<ChallengeFormThemeId>('art');
+  const [assignmentsViewMode, setAssignmentsViewMode] = useState<'grid' | 'list'>('grid');
+  /** Challenge listesi: tüm kayıtlar veya yalnızca öğrenciye açık / süresi dolmamış olanlar. */
+  const [assignmentsListFilter, setAssignmentsListFilter] = useState<'all' | 'active'>('active');
   const [asgVideoSec, setAsgVideoSec] = useState<60 | 120 | 180>(120);
   /** Ayni konu altinda ogrencinin teslim edecegi ayri challenge sayisi (1–5). */
   const [asgSubmissionRounds, setAsgSubmissionRounds] = useState<1 | 2 | 3 | 4 | 5>(1);
@@ -199,10 +438,12 @@ function KidsTeacherClassPageContent() {
   const [editMediaType, setEditMediaType] = useState<'image' | 'video'>('image');
   const [editOpenAt, setEditOpenAt] = useState('');
   const [editCloseAt, setEditCloseAt] = useState('');
+  const [editChallengeTheme, setEditChallengeTheme] = useState<ChallengeFormThemeId>('art');
   const [editSaving, setEditSaving] = useState(false);
   /** Modal `<dialog>` ust katmanda oldugu icin toast gorunmez; hata bu metinle gosterilir. */
   const [editAssignmentError, setEditAssignmentError] = useState<string | null>(null);
   const [deletingClass, setDeletingClass] = useState(false);
+  const [deleteClassModalOpen, setDeleteClassModalOpen] = useState(false);
   const [removingEnrollmentId, setRemovingEnrollmentId] = useState<number | null>(null);
 
   const [kgDate, setKgDate] = useState(() => localDateInputValue());
@@ -224,6 +465,7 @@ function KidsTeacherClassPageContent() {
   const editSchoolSelectId = useId();
   const inviteEmailsId = useId();
   const classLinkInputId = useId();
+  const studentsSearchInputId = useId();
   const asgTitleId = useId();
   const asgOpenAtId = useId();
   const asgCloseAtId = useId();
@@ -276,6 +518,27 @@ function KidsTeacherClassPageContent() {
     const ix = BASE_TEACHER_TABS.findIndex((x) => x.id === 'assignments');
     return [...BASE_TEACHER_TABS.slice(0, ix), PRESCHOOL_DAILY_TAB, ...BASE_TEACHER_TABS.slice(ix)];
   }, [cls]);
+
+  const studentsParticipation = useMemo(() => studentsParticipationPercent(students), [students]);
+
+  const filteredStudents = useMemo(() => {
+    const q = studentsSearchQuery.trim().toLowerCase();
+    let list = students;
+    if (q) {
+      list = students.filter((e) => {
+        const name = studentDisplayName(e).toLowerCase();
+        const email = e.student.email.toLowerCase();
+        const idStr = String(e.student.id);
+        return name.includes(q) || email.includes(q) || idStr.includes(q);
+      });
+    }
+    const loc = language === 'tr' ? 'tr' : language === 'ge' ? 'de' : 'en';
+    return [...list].sort((a, b) => {
+      const an = studentDisplayName(a).toLowerCase();
+      const bn = studentDisplayName(b).toLowerCase();
+      return studentsNameSortDesc ? bn.localeCompare(an, loc) : an.localeCompare(bn, loc);
+    });
+  }, [students, studentsSearchQuery, studentsNameSortDesc, language]);
 
   const mergeKgRecord = useCallback((studentId: number, rec: KidsKindergartenDailyRecordRow) => {
     setKgBoard((prev) => {
@@ -492,10 +755,65 @@ function KidsTeacherClassPageContent() {
     }
   }, [classId, t]);
 
+  const loadChampion = useCallback(async () => {
+    if (!Number.isFinite(classId)) return;
+    setStarsLoading(true);
+    try {
+      const data = await kidsWeeklyChampion(classId);
+      setChampion(data);
+    } catch {
+      toast.error(t('teacherClass.stars.loadFailed'));
+    } finally {
+      setStarsLoading(false);
+    }
+  }, [classId, t]);
+
   useEffect(() => {
     if (tab !== 'peer' || !cls) return;
     void loadPeerChallenges();
   }, [tab, cls, loadPeerChallenges]);
+
+  useEffect(() => {
+    if (tab !== 'stars' || !cls) return;
+    void loadChampion();
+  }, [tab, cls, loadChampion]);
+
+  const starNominees = useMemo((): { student: KidsUser; submission_count: number }[] => {
+    if (!champion?.top.length) return [];
+    const top = champion.top;
+    let rest = top.slice(1, 5);
+    if (rest.length === 0 && top.length === 1) {
+      const wid = top[0]!.student.id;
+      rest = students
+        .filter((e) => e.student.id !== wid)
+        .sort((a, b) => (b.assignments_submitted_count ?? 0) - (a.assignments_submitted_count ?? 0))
+        .slice(0, 4)
+        .map((e) => ({
+          student: e.student as KidsUser,
+          submission_count: e.assignments_submitted_count ?? 0,
+        }));
+    }
+    return rest;
+  }, [champion, students]);
+
+  const classStarActiveCount = useMemo(
+    () => students.filter((e) => (e.assignments_submitted_count ?? 0) > 0).length,
+    [students],
+  );
+
+  const starsMaxSubmission = useMemo(() => {
+    if (!champion?.top.length) return 1;
+    return Math.max(...champion.top.map((r) => r.submission_count), 1);
+  }, [champion]);
+
+  const starsMaxGrowthPoints = useMemo(() => {
+    const pts: number[] = [];
+    if (champion?.top.length) {
+      for (const r of champion.top) pts.push(r.student.growth_points ?? 0);
+    }
+    for (const e of students) pts.push((e.student as KidsUser).growth_points ?? 0);
+    return Math.max(...pts, 1);
+  }, [champion, students]);
 
   /** Planlanmis / yayindan kalkmis: tum alanlar. Yayindaki: baslangic + challenge tur sayisi kilitli (backend ile ayni mantik). */
   function isAssignmentEditFullyFree(a: KidsAssignment): boolean {
@@ -520,6 +838,7 @@ function KidsTeacherClassPageContent() {
     setEditOpenAt(kidsIsoToDatetimeLocal(a.submission_opens_at));
     const closeLocal = kidsIsoToDatetimeLocal(a.submission_closes_at);
     setEditCloseAt(closeLocal || kidsDatetimeLocalDefaultClose(7));
+    setEditChallengeTheme(assignmentCardTheme(a));
   }, []);
 
   const { liveAssignments, plannedAssignments } = useMemo(() => {
@@ -544,67 +863,33 @@ function KidsTeacherClassPageContent() {
     return { liveAssignments: live, plannedAssignments: planned };
   }, [assignments]);
 
-  function assignmentCardBody(a: KidsAssignment) {
-    const subN = a.submission_count ?? 0;
-    const enr = a.enrolled_student_count ?? students.length;
-    const winLabel = kidsFormatAssignmentWindowTr(a);
-    const opensSoon =
-      a.submission_opens_at &&
-      !Number.isNaN(new Date(a.submission_opens_at).getTime()) &&
-      new Date(a.submission_opens_at).getTime() > Date.now();
-    return (
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="font-bold text-slate-900 dark:text-white">{a.title}</p>
-          {opensSoon ? (
-            <p className="mt-1 text-[11px] font-bold uppercase tracking-wide text-amber-800 dark:text-amber-200">
-              {t('teacherClass.assignments.card.plannedHidden')}
-            </p>
-          ) : null}
-          <p className="mt-1 text-xs text-slate-500 dark:text-gray-400">
-            {a.require_video && a.require_image
-              ? t('teacherClass.assignments.card.imageOrVideo').replace('{sec}', String(a.video_max_seconds)).replace('{rounds}', String(a.submission_rounds ?? 1))
-              : a.require_video
-                ? t('teacherClass.assignments.card.videoOnly').replace('{sec}', String(a.video_max_seconds)).replace('{rounds}', String(a.submission_rounds ?? 1))
-                : a.require_image
-                  ? t('teacherClass.assignments.card.imageOnly').replace('{rounds}', String(a.submission_rounds ?? 1))
-                  : t('teacherClass.assignments.card.flexible')}
-          </p>
-          {winLabel ? (
-            <p className="mt-1 text-xs font-semibold text-violet-800 dark:text-violet-200">{winLabel}</p>
-          ) : null}
-          {opensSoon ? (
-            <p className="mt-1 text-[11px] text-slate-600 dark:text-gray-400">
-              {a.students_notified_at
-                ? t('teacherClass.assignments.card.studentsNotified')
-                : t('teacherClass.assignments.card.studentsWillBeNotified')}
-            </p>
-          ) : null}
-        </div>
-        <div className="flex shrink-0 flex-col items-end gap-2">
-          <span className="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-bold tabular-nums text-violet-900 dark:bg-violet-950/60 dark:text-violet-100">
-            {subN}/{enr}
-          </span>
-          <span className="max-w-18 text-center text-[10px] font-medium leading-tight text-slate-400 dark:text-gray-500">
-            {t('teacherClass.assignments.card.submissionRatio')}
-          </span>
-          <KidsSecondaryButton
-            type="button"
-            className="min-h-9 w-full px-3 py-1.5 text-xs sm:w-auto"
-            onClick={() => openAssignmentEdit(a)}
-          >
-            {t('teacherClass.assignments.card.edit')}
-          </KidsSecondaryButton>
-          <Link
-            href={`${pathPrefix}/ogretmen/sinif/${classId}/proje/${a.id}`}
-            className="text-xs font-bold text-violet-700 underline underline-offset-2 hover:text-fuchsia-600 dark:text-violet-300 dark:hover:text-fuchsia-400"
-          >
-            {t('teacherClass.assignments.card.submissions')}
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  const adventureAssignments = useMemo(
+    () => [...plannedAssignments, ...liveAssignments],
+    [plannedAssignments, liveAssignments],
+  );
+
+  const displayedAdventureAssignments = useMemo(() => {
+    const now = Date.now();
+    if (assignmentsListFilter === 'all') return adventureAssignments;
+    return adventureAssignments.filter((a) => assignmentStudentFacingActive(a, now));
+  }, [adventureAssignments, assignmentsListFilter]);
+
+  const classChallengeKpis = useMemo(() => {
+    const now = Date.now();
+    let num = 0;
+    let den = 0;
+    let pending = 0;
+    for (const a of assignments) {
+      if (!assignmentIncludedInKpis(a, now)) continue;
+      const enr = Math.max(1, a.enrolled_student_count ?? students.length);
+      const sub = a.submission_count ?? 0;
+      num += sub;
+      den += enr;
+      pending += Math.max(0, enr - sub);
+    }
+    const submissionRatePct = den > 0 ? Math.round((num / den) * 100) : 0;
+    return { submissionRatePct, pendingSubmissions: pending };
+  }, [assignments, students.length]);
 
   const editAcademicYearOptions = useMemo(() => {
     const base = kidsAcademicYearSelectOptions();
@@ -752,11 +1037,12 @@ function KidsTeacherClassPageContent() {
       const a = await kidsCreateAssignment(classId, {
         title: asgTitle.trim(),
         purpose: asgPurpose.trim(),
-        materials: asgMaterials.trim(),
+        materials: (asgMaterialTags.length ? asgMaterialTags.join(', ') : asgMaterials).trim(),
         video_max_seconds: asgVideoSec,
         require_image: asgMediaType === 'image',
         require_video: asgMediaType === 'video',
         submission_rounds: asgSubmissionRounds,
+        challenge_card_theme: asgChallengeTheme,
         is_published: true,
         submission_opens_at: openIso,
         submission_closes_at: closeIso,
@@ -765,6 +1051,9 @@ function KidsTeacherClassPageContent() {
       setAsgTitle('');
       setAsgPurpose('');
       setAsgMaterials('');
+      setAsgMaterialTags([]);
+      setAsgMaterialDraft('');
+      setAsgChallengeTheme('art');
       setAsgOpenAt('');
       setAsgCloseAt(kidsDatetimeLocalDefaultClose(7));
       setAsgMediaType('image');
@@ -815,6 +1104,7 @@ function KidsTeacherClassPageContent() {
         video_max_seconds: editVideoSec,
         require_image: editMediaType === 'image',
         require_video: editMediaType === 'video',
+        challenge_card_theme: editChallengeTheme,
         submission_closes_at: closeIso,
       };
       if (free) {
@@ -830,15 +1120,6 @@ function KidsTeacherClassPageContent() {
       setEditAssignmentError(err instanceof Error ? err.message : t('teacherClass.assignments.updateFailed'));
     } finally {
       setEditSaving(false);
-    }
-  }
-
-  async function loadChampion() {
-    try {
-      const data = await kidsWeeklyChampion(classId);
-      setChampion(data);
-    } catch {
-      toast.error(t('teacherClass.stars.loadFailed'));
     }
   }
 
@@ -905,15 +1186,12 @@ function KidsTeacherClassPageContent() {
     }
   }
 
-  async function deleteEntireClass() {
+  async function executeDeleteClass() {
     if (!cls) return;
-    const ok = window.confirm(
-      t('teacherClass.general.deleteConfirm').replace('{name}', cls.name),
-    );
-    if (!ok) return;
     setDeletingClass(true);
     try {
       await kidsDeleteClass(cls.id);
+      setDeleteClassModalOpen(false);
       toast.success(t('teacherClass.classDeleted'));
       router.replace(`${pathPrefix}/ogretmen/panel`);
     } catch (err) {
@@ -942,104 +1220,150 @@ function KidsTeacherClassPageContent() {
   const classLocationLine = kidsClassLocationLine(cls);
   const canEditClassIdentity = user.role === 'admin';
 
+  const selectInFieldClass =
+    'min-h-[44px] w-full justify-between gap-2 rounded-none border-0 bg-transparent px-0 py-0 text-left text-base font-medium text-slate-900 shadow-none ring-0 focus:border-0 focus:ring-0 focus-visible:ring-0 dark:text-white';
+
   return (
-    <KidsPanelMax
-      className={tab === 'assignments' || tab === 'peer' || tab === 'kindergarten' ? 'max-w-6xl!' : ''}
-    >
-      <div className="mb-6">
+    <KidsPanelMax className="max-w-6xl! px-4 py-6 pb-12 sm:px-6">
+      <nav
+        className="mb-5 text-sm text-zinc-500 dark:text-zinc-400"
+        aria-label={t('teacherClass.headerBreadcrumbAria')}
+      >
         <Link
           href={`${pathPrefix}/ogretmen/panel`}
-          className="inline-flex items-center gap-2 text-sm font-bold text-violet-700 hover:text-fuchsia-600 dark:text-violet-300 dark:hover:text-fuchsia-400"
+          className="font-semibold text-violet-700 hover:underline dark:text-violet-300"
         >
-          <span aria-hidden>←</span> {t('teacherClass.backAllClasses')}
+          {t('teacherClass.headerBreadcrumbParent')}
         </Link>
-      </div>
+        <span className="mx-1.5 text-zinc-400" aria-hidden>
+          ›
+        </span>
+        <span className="font-medium text-zinc-800 dark:text-zinc-200">{cls.name}</span>
+      </nav>
 
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="text-sm font-bold uppercase tracking-wide text-fuchsia-600 dark:text-fuchsia-400">
+      <div className="mb-8 flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0 flex-1">
+          <div className="inline-flex items-center gap-2 rounded-full bg-violet-100/90 py-1 pr-3 pl-2 text-xs font-bold uppercase tracking-wider text-violet-800 ring-1 ring-violet-200/90 dark:bg-violet-950/60 dark:text-violet-200 dark:ring-violet-700/60">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-violet-700 shadow-sm dark:bg-violet-900 dark:text-violet-300">
+              <GraduationCap className="h-4 w-4 shrink-0" strokeWidth={2.5} aria-hidden />
+            </span>
             {t('teacherClass.panel')}
-          </p>
-          <div className="mt-1 flex flex-wrap items-center gap-3">
-            <h1 className="font-logo text-3xl font-bold text-slate-900 dark:text-white sm:text-4xl">
-              {cls.name}
-            </h1>
+          </div>
+          <h1 className="mt-2 font-logo text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
+            {cls.name}
             {(cls.academic_year_label || '').trim() ? (
-              <span className="rounded-full bg-violet-100 px-3 py-1 text-sm font-bold text-violet-800 dark:bg-violet-900/60 dark:text-violet-200">
+              <span className="ml-3 align-middle text-xl font-bold text-zinc-500 dark:text-zinc-400 sm:text-2xl">
                 {(cls.academic_year_label || '').trim()}
               </span>
             ) : null}
-          </div>
-          {classLocationLine ? (
-            <p className="mt-2 max-w-2xl text-sm font-semibold text-emerald-800 dark:text-emerald-200">
-              {classLocationLine}
+          </h1>
+          {tab === 'students' ? (
+            <p className="mt-3 max-w-2xl text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+              {t('teacherClass.students.pageSubtitle')}
             </p>
           ) : null}
-          {cls.description ? (
-            <p className="mt-2 max-w-2xl text-slate-600 dark:text-gray-300">{cls.description}</p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-800 shadow-sm dark:border-zinc-600 dark:bg-zinc-900 dark:text-gray-100">
+              <Users className="h-4 w-4 text-violet-700 dark:text-violet-300" strokeWidth={2.5} aria-hidden />
+              {t('teacherClass.headerStatStudent').replace('{count}', String(students.length))}
+            </span>
+            <span className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-800 shadow-sm dark:border-zinc-600 dark:bg-zinc-900 dark:text-gray-100">
+              <Rocket className="h-4 w-4 text-fuchsia-700 dark:text-fuchsia-300" strokeWidth={2.5} aria-hidden />
+              {t('teacherClass.headerStatChallenges').replace('{count}', String(assignments.length))}
+            </span>
+          </div>
+          {classLocationLine ? (
+            <p className="mt-3 max-w-2xl text-sm font-medium text-zinc-600 dark:text-zinc-400">{classLocationLine}</p>
           ) : null}
         </div>
-        <div className="flex gap-2 text-sm">
-          <span className="rounded-2xl bg-sky-100 px-3 py-2 font-bold text-sky-900 dark:bg-sky-950/60 dark:text-sky-100">
-            🧒 {students.length} {t('teacherClass.students')}
-          </span>
-          <span className="rounded-2xl bg-amber-100 px-3 py-2 font-bold text-amber-900 dark:bg-amber-950/60 dark:text-amber-100">
-            📝 {assignments.length} {t('teacherClass.challenges')}
-          </span>
+        <div className="flex w-full shrink-0 flex-col gap-3 sm:flex-row lg:w-auto lg:max-w-md lg:flex-col xl:max-w-none xl:flex-row">
+          <div className="flex min-h-[88px] min-w-0 flex-1 items-center gap-3 rounded-2xl border border-zinc-200 bg-white px-4 py-3 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-700 ring-2 ring-violet-200/80 dark:bg-violet-950/60 dark:text-violet-300 dark:ring-violet-800/60">
+              <Users className="h-6 w-6" strokeWidth={2.35} aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                {t('teacherClass.students.statTotalLabel')}
+              </p>
+              <p className="font-logo text-3xl font-black text-slate-900 dark:text-white">{students.length}</p>
+            </div>
+          </div>
+          <div className="flex min-h-[88px] min-w-0 flex-1 items-center gap-3 rounded-2xl border border-zinc-200 bg-white px-4 py-3 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-rose-100 text-rose-600 ring-2 ring-rose-200/80 dark:bg-rose-950/50 dark:text-rose-300 dark:ring-rose-900/50">
+              <TrendingUp className="h-6 w-6" strokeWidth={2.35} aria-hidden />
+            </span>
+            <div className="min-w-0">
+              <p className="text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                {t('teacherClass.students.statParticipationLabel')}
+              </p>
+              <p className="font-logo text-3xl font-black text-slate-900 dark:text-white" title={t('teacherClass.students.statParticipationHint')}>
+                {studentsParticipation === null ? '—' : `%${studentsParticipation}`}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
       <KidsTabs
-        tabs={teacherTabs.map((row) => ({ id: row.id, label: t(row.labelKey), icon: row.icon }))}
+        tabs={teacherTabs.map((row) => {
+          const Icon = row.icon;
+          const activeTab = tab === row.id;
+          return {
+            id: row.id,
+            label: t(row.labelKey),
+            icon: (
+              <Icon
+                className={`h-4 w-4 shrink-0 ${activeTab ? 'text-white' : TEACHER_TAB_ICON_CLASS[row.id]}`}
+                strokeWidth={2.25}
+                aria-hidden
+              />
+            ),
+          };
+        })}
         active={tab}
         onChange={(id) => setTab(id as TabId)}
         ariaLabel={t('teacherClass.tabs.aria')}
+        variant="outline"
       />
 
       {tab === 'general' && (
-        <KidsCard>
-          <h2 className="font-logo text-lg font-bold text-slate-900 dark:text-white">{t('teacherClass.general.title')}</h2>
-          <p className="mt-1 text-sm text-slate-600 dark:text-gray-400">
-            {t('teacherClass.general.subtitle')}
-          </p>
-          <form className="mt-6 space-y-5" onSubmit={saveClass}>
-            <KidsFormField
-              id={editSchoolSelectId}
-              label={t('schools.title')}
-              required
-              hint={t('teacherClass.general.schoolHint')}
-            >
+        <section className="rounded-3xl border border-zinc-100 bg-white p-6 shadow-xl dark:border-zinc-800 dark:bg-zinc-900 sm:p-8">
+          <h2 className="border-l-[5px] border-violet-700 pl-4 font-logo text-xl font-bold text-slate-900 dark:border-violet-500 dark:text-white">
+            {t('teacherClass.general.title')}
+          </h2>
+          <p className="mt-2 pl-4 text-sm text-zinc-600 dark:text-zinc-400">{t('teacherClass.general.subtitle')}</p>
+          <p className="mt-1 pl-4 text-xs text-zinc-500 dark:text-zinc-500">{t('teacherClass.general.schoolHint')}</p>
+
+          <form className="mt-8 space-y-5" onSubmit={saveClass}>
+            <ClassSettingsFieldRow label={t('schools.title')} icon={Building2}>
               <KidsSelect
                 id={editSchoolSelectId}
                 value={editSchoolId}
                 onChange={setEditSchoolId}
                 disabled={schools.length === 0}
+                buttonClassName={selectInFieldClass}
                 options={schools.map((s) => ({
                   value: String(s.id),
                   label: kidsSchoolLocationLine(s) || s.name,
                 }))}
               />
-            </KidsFormField>
+            </ClassSettingsFieldRow>
+
             {editClassNonStandard ? (
-              <KidsFormField
-                id={editNameId}
-                label={t('teacherClass.general.customClassName')}
-                required
-                hint={t('teacherClass.general.customClassNameHint')}
-              >
+              <ClassSettingsFieldRow label={t('teacherClass.general.customClassName')} icon={FolderOpen}>
                 <input
                   id={editNameId}
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
-                  className={kidsInputClass}
+                  className="w-full border-0 bg-transparent p-0 text-base font-medium text-slate-900 outline-none placeholder:text-zinc-400 disabled:opacity-60 dark:text-white"
                   maxLength={200}
                   disabled={!canEditClassIdentity}
                 />
-              </KidsFormField>
+              </ClassSettingsFieldRow>
             ) : (
               <>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <KidsFormField id={editClassGradeId} label={t('teacher.panel.classLevel')} required hint={t('teacherClass.general.gradeHint')}>
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <ClassSettingsFieldRow label={t('teacher.panel.classLevel')} icon={Layers}>
                     <KidsSelect
                       id={editClassGradeId}
                       value={editClassGrade}
@@ -1047,9 +1371,10 @@ function KidsTeacherClassPageContent() {
                       options={editClassGradeOptions}
                       searchable={false}
                       disabled={!canEditClassIdentity}
+                      buttonClassName={selectInFieldClass}
                     />
-                  </KidsFormField>
-                  <KidsFormField id={editClassSectionId} label={t('teacher.panel.section')} required hint={t('teacherClass.general.sectionHint')}>
+                  </ClassSettingsFieldRow>
+                  <ClassSettingsFieldRow label={t('teacher.panel.section')} icon={FolderOpen}>
                     <KidsSelect
                       id={editClassSectionId}
                       value={editClassSection}
@@ -1057,22 +1382,21 @@ function KidsTeacherClassPageContent() {
                       options={KIDS_CLASS_SECTION_OPTIONS}
                       searchable
                       disabled={!canEditClassIdentity}
+                      buttonClassName={selectInFieldClass}
                     />
-                  </KidsFormField>
+                  </ClassSettingsFieldRow>
                 </div>
-                <p className="text-sm text-slate-600 dark:text-gray-400">
+                <p className="text-sm text-zinc-600 dark:text-zinc-400">
                   {t('teacherClass.general.preview')}:{' '}
                   <strong className="font-logo text-slate-900 dark:text-white">
                     {kidsBuildTeacherPanelClassName(editClassGrade, editClassSection)}
                   </strong>
                 </p>
+                <p className="text-xs text-zinc-500 dark:text-zinc-500">{t('teacherClass.general.gradeHint')}</p>
               </>
             )}
-            <KidsFormField
-              id={editAcademicYearId}
-              label={t('teacher.panel.academicYear')}
-              hint={t('teacherClass.general.academicYearHint')}
-            >
+
+            <ClassSettingsFieldRow label={t('teacher.panel.academicYear')} icon={Calendar}>
               <KidsSelect
                 id={editAcademicYearId}
                 value={editAcademicYear}
@@ -1080,26 +1404,34 @@ function KidsTeacherClassPageContent() {
                 options={editAcademicYearOptions}
                 searchable={false}
                 disabled
+                buttonClassName={selectInFieldClass}
               />
-            </KidsFormField>
-            <KidsFormField id={editLanguageId} label={t('teacherClass.general.language')} hint={t('teacherClass.general.languageHint')}>
+            </ClassSettingsFieldRow>
+            <p className="-mt-3 text-xs text-zinc-500 dark:text-zinc-500">{t('teacherClass.general.academicYearHint')}</p>
+
+            <ClassSettingsFieldRow label={t('teacherClass.general.language')} icon={Globe}>
               <KidsSelect
                 id={editLanguageId}
                 value={editLanguage}
                 onChange={(next) => setEditLanguage(next as 'tr' | 'en' | 'ge')}
                 options={classLanguageOptions}
                 searchable={false}
+                buttonClassName={selectInFieldClass}
               />
-            </KidsFormField>
-            <KidsFormField id={editDescId} label={t('teacherHomework.description')} hint={t('teacherClass.general.descriptionHint')}>
+            </ClassSettingsFieldRow>
+            <p className="-mt-3 text-xs text-zinc-500 dark:text-zinc-500">{t('teacherClass.general.languageHint')}</p>
+
+            <ClassSettingsFieldRow label={t('teacherHomework.description')} icon={AlignLeft}>
               <textarea
                 id={editDescId}
                 value={editDesc}
                 onChange={(e) => setEditDesc(e.target.value)}
                 rows={3}
-                className={kidsTextareaClass}
+                className="w-full resize-y border-0 bg-transparent p-0 text-base text-slate-900 outline-none placeholder:text-zinc-400 dark:text-white"
               />
-            </KidsFormField>
+            </ClassSettingsFieldRow>
+            <p className="-mt-3 text-xs text-zinc-500 dark:text-zinc-500">{t('teacherClass.general.descriptionHint')}</p>
+
             <KidsPrimaryButton type="submit" disabled={savingClass}>
               {savingClass ? t('profile.saving') : t('profile.save')}
             </KidsPrimaryButton>
@@ -1107,79 +1439,174 @@ function KidsTeacherClassPageContent() {
 
           <div className="mt-10 border-t border-rose-200/80 pt-6 dark:border-rose-900/50">
             <h3 className="font-logo text-base font-bold text-rose-900 dark:text-rose-100">{t('teacherClass.general.dangerTitle')}</h3>
-            <p className="mt-2 text-sm text-slate-600 dark:text-gray-400">
-              {t('teacherClass.general.dangerHint')}
-            </p>
+            <p className="mt-2 text-sm text-zinc-600 dark:text-gray-400">{t('teacherClass.general.dangerHint')}</p>
             <KidsSecondaryButton
               type="button"
               className="mt-4 border-rose-300 text-rose-700 hover:bg-rose-50 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950/40"
               disabled={deletingClass}
-              onClick={() => void deleteEntireClass()}
+              onClick={() => setDeleteClassModalOpen(true)}
             >
-              {deletingClass ? t('teacherClass.general.deleting') : t('teacherClass.general.deleteClass')}
+              {t('teacherClass.general.deleteClass')}
             </KidsSecondaryButton>
           </div>
-        </KidsCard>
+        </section>
       )}
 
       {tab === 'invite' && (
-        <KidsCard tone="sky">
-          <h2 className="font-logo text-lg font-bold text-sky-950 dark:text-sky-50">{t('teacherClass.invite.title')}</h2>
-          <p className="mt-2 text-sm leading-relaxed text-sky-900/85 dark:text-sky-100/85">
-            {t('teacherClass.invite.subtitle')}
-          </p>
-
-          <div className="mt-6 space-y-4 rounded-2xl border-2 border-sky-200/80 bg-white/70 p-5 dark:border-sky-800/50 dark:bg-sky-950/20">
-            <KidsFormField id="invite-days" label={t('teacherClass.invite.linkValidity')} hint={t('teacherClass.invite.linkValidityHint')}>
-              <KidsSelect
-                id="invite-days"
-                value={String(inviteDays)}
-                onChange={(v) => setInviteDays(Number(v))}
-                options={inviteDaysOptions}
-              />
-            </KidsFormField>
-            <KidsPrimaryButton type="button" disabled={creatingClassLink} onClick={() => void createClassShareLink()}>
-              {creatingClassLink ? t('teacherClass.invite.creatingLink') : t('teacherClass.invite.createLink')}
-            </KidsPrimaryButton>
-            {classInviteUrl ? (
-              <div className="space-y-2">
-                <KidsFormField
-                  id={classLinkInputId}
-                  label={t('teacherClass.invite.shareableLink')}
-                  hint={t('teacherClass.invite.shareableLinkHint')}
-                >
-                  <input
-                    id={classLinkInputId}
-                    readOnly
-                    value={classInviteUrl}
-                    className={kidsInputClass}
-                    onFocus={(e) => e.target.select()}
-                  />
-                </KidsFormField>
-                <KidsSecondaryButton
-                  type="button"
-                  onClick={() => {
-                    void navigator.clipboard?.writeText(classInviteUrl).then(
-                      () => toast.success(t('teacherClass.invite.copied')),
-                      () => toast.error(t('teacherClass.invite.copyFailed')),
-                    );
-                  }}
-                >
-                  {t('teacherClass.invite.copyLink')}
-                </KidsSecondaryButton>
+        <>
+          {inviteQrOpen && classInviteUrl ? (
+            <KidsCenteredModal title={t('teacherClass.invite.qrModalTitle')} onClose={() => setInviteQrOpen(false)}>
+              <div className="flex flex-col items-center gap-4 py-2">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(classInviteUrl)}`}
+                  alt=""
+                  width={220}
+                  height={220}
+                  className="rounded-2xl border border-zinc-200 bg-white p-2 dark:border-zinc-600"
+                />
+                <p className="text-center text-sm text-zinc-600 dark:text-zinc-400">{t('teacherClass.invite.qrScanHint')}</p>
               </div>
-            ) : null}
+            </KidsCenteredModal>
+          ) : null}
+
+          <div className="grid gap-6 lg:grid-cols-5 lg:gap-8">
+            <div className="rounded-3xl border border-zinc-100 bg-white p-6 shadow-xl dark:border-zinc-800 dark:bg-zinc-900 sm:p-8 lg:col-span-3">
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <h2 className="font-logo text-xl font-bold text-slate-900 dark:text-white sm:text-2xl">
+                  {t('teacherClass.invite.heroTitle')}
+                </h2>
+                <div
+                  className="rounded-2xl bg-violet-100 p-3 text-violet-600 dark:bg-violet-950/60 dark:text-violet-300"
+                  aria-hidden
+                >
+                  <UserPlus className="h-8 w-8" strokeWidth={1.75} />
+                </div>
+              </div>
+              <p className="mt-4 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{t('teacherClass.invite.heroLead')}</p>
+              <ul className="mt-6 space-y-3">
+                {(['heroFeature1', 'heroFeature2', 'heroFeature3'] as const).map((key) => (
+                  <li key={key} className="flex gap-3">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-600 dark:bg-violet-950/50 dark:text-violet-300">
+                      <Check className="h-4 w-4" strokeWidth={2.5} aria-hidden />
+                    </span>
+                    <span className="text-sm leading-snug text-zinc-700 dark:text-zinc-300">
+                      {t(`teacherClass.invite.${key}`)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-6 text-xs text-zinc-500 dark:text-zinc-500">{t('teacherClass.invite.subtitle')}</p>
+            </div>
+
+            <div className="space-y-4 lg:col-span-2">
+              <div className="rounded-3xl bg-zinc-100/90 p-5 dark:bg-zinc-800/50">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                  {t('teacherClass.invite.linkValidity')}
+                </p>
+                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-500">{t('teacherClass.invite.linkValidityHint')}</p>
+                <div className="mt-4">
+                  <KidsSelect
+                    id="invite-days"
+                    value={String(inviteDays)}
+                    onChange={(v) => setInviteDays(Number(v))}
+                    options={inviteDaysOptions}
+                  />
+                </div>
+                <button
+                  type="button"
+                  disabled={creatingClassLink}
+                  onClick={() => void createClassShareLink()}
+                  className="mt-4 flex w-full min-h-[52px] items-center justify-center gap-2 rounded-2xl bg-violet-600 px-6 text-sm font-bold text-white shadow-lg shadow-violet-500/30 transition hover:bg-violet-500 disabled:pointer-events-none disabled:opacity-50 dark:bg-violet-600 dark:hover:bg-violet-500"
+                >
+                  <Link2 className="h-5 w-5 shrink-0" aria-hidden />
+                  {creatingClassLink ? t('teacherClass.invite.creatingLink') : t('teacherClass.invite.createLink')}
+                </button>
+                {classInviteUrl ? (
+                  <div className="mt-4 space-y-2">
+                    <label htmlFor={classLinkInputId} className="text-xs font-bold text-zinc-600 dark:text-zinc-400">
+                      {t('teacherClass.invite.shareableLink')}
+                    </label>
+                    <input
+                      id={classLinkInputId}
+                      readOnly
+                      value={classInviteUrl}
+                      className={kidsInputClass}
+                      onFocus={(e) => e.target.select()}
+                    />
+                    <p className="text-xs text-zinc-500 dark:text-zinc-500">{t('teacherClass.invite.shareableLinkHint')}</p>
+                  </div>
+                ) : null}
+              </div>
+
+              <div className="rounded-3xl border border-zinc-100 bg-white p-5 shadow-md dark:border-zinc-800 dark:bg-zinc-900">
+                <div className="flex gap-3">
+                  <div
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-rose-600 dark:bg-rose-950/50 dark:text-rose-300"
+                    aria-hidden
+                  >
+                    <QrCode className="h-6 w-6" strokeWidth={1.75} />
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="font-logo text-base font-bold text-slate-900 dark:text-white">
+                      {t('teacherClass.invite.qrTitle')}
+                    </h3>
+                    <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">{t('teacherClass.invite.qrSubtitle')}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={!classInviteUrl}
+                  onClick={() => classInviteUrl && setInviteQrOpen(true)}
+                  className="mt-4 text-sm font-bold text-violet-600 underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:opacity-40 dark:text-violet-400"
+                >
+                  {t('teacherClass.invite.qrCta')}
+                </button>
+              </div>
+
+              <div className="rounded-3xl border border-zinc-100 bg-white p-5 shadow-md dark:border-zinc-800 dark:bg-zinc-900">
+                <h3 className="flex items-center gap-2 font-logo text-base font-bold text-slate-900 dark:text-white">
+                  <Clock className="h-5 w-5 text-violet-600 dark:text-violet-400" aria-hidden />
+                  {t('teacherClass.invite.recentTitle')}
+                </h3>
+                {classInviteUrl ? (
+                  <div className="mt-4 flex items-center gap-3 rounded-2xl bg-zinc-50 px-3 py-3 dark:bg-zinc-800/60">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-zinc-200 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300">
+                      <Link2 className="h-4 w-4" aria-hidden />
+                    </span>
+                    <p className="min-w-0 flex-1 truncate font-mono text-sm text-zinc-800 dark:text-zinc-200">
+                      {truncateInviteUrlDisplay(classInviteUrl)}
+                    </p>
+                    <span className="shrink-0 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                      {t('teacherClass.invite.activeBadge')}
+                    </span>
+                    <button
+                      type="button"
+                      title={t('teacherClass.invite.copyLink')}
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-zinc-500 transition hover:bg-zinc-200 hover:text-zinc-800 dark:hover:bg-zinc-600 dark:hover:text-white"
+                      onClick={() => {
+                        void navigator.clipboard?.writeText(classInviteUrl).then(
+                          () => toast.success(t('teacherClass.invite.copied')),
+                          () => toast.error(t('teacherClass.invite.copyFailed')),
+                        );
+                      }}
+                    >
+                      <Copy className="h-4 w-4" aria-hidden />
+                    </button>
+                  </div>
+                ) : (
+                  <p className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">{t('teacherClass.invite.recentEmpty')}</p>
+                )}
+              </div>
+            </div>
           </div>
 
           {inviteEmailEnabled ? (
-            <div className="relative mt-10 border-t border-sky-200/70 pt-8 dark:border-sky-800/50">
-              <p className="mb-1 text-xs font-bold uppercase tracking-wide text-sky-700 dark:text-sky-300">
+            <div className="relative mt-10 rounded-3xl border border-zinc-100 bg-white p-6 shadow-lg dark:border-zinc-800 dark:bg-zinc-900 sm:p-8">
+              <p className="mb-1 text-xs font-bold uppercase tracking-wide text-violet-700 dark:text-violet-300">
                 {t('teacherClass.invite.optional')}
               </p>
-              <h3 className="font-logo text-base font-bold text-sky-950 dark:text-sky-50">
-                {t('teacherClass.invite.emailTitle')}
-              </h3>
-              <p className="mt-2 text-sm leading-relaxed text-sky-900/85 dark:text-sky-100/85">
+              <h3 className="font-logo text-base font-bold text-slate-900 dark:text-white">{t('teacherClass.invite.emailTitle')}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
                 {t('teacherClass.invite.emailSubtitle')}
               </p>
               <form className="mt-5 space-y-5" onSubmit={sendInvite}>
@@ -1204,81 +1631,203 @@ function KidsTeacherClassPageContent() {
               </form>
             </div>
           ) : (
-            <p className="mt-8 text-xs text-sky-800/70 dark:text-sky-200/60">
-              {t('teacherClass.invite.emailDisabled')}
-            </p>
+            <p className="mt-8 text-xs text-zinc-500 dark:text-zinc-400">{t('teacherClass.invite.emailDisabled')}</p>
           )}
-        </KidsCard>
+        </>
       )}
 
       {tab === 'students' && (
-        <KidsCard tone="amber">
-          <h2 className="font-logo text-lg font-bold text-amber-950 dark:text-amber-50">{t('teacherClass.students.title')}</h2>
-          {students.length > 0 ? (
-            <p className="mt-2 text-xs text-amber-900/85 dark:text-amber-100/85">
-              {t('teacherClass.students.subtitle')}
-            </p>
-          ) : null}
+        <section className="rounded-3xl border border-zinc-100 bg-white p-5 shadow-xl dark:border-zinc-800 dark:bg-zinc-900 sm:p-8">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h2 className="font-logo text-xl font-bold text-slate-900 dark:text-white sm:text-2xl">
+                {t('teacherClass.students.title')}
+              </h2>
+              <p className="mt-1 max-w-xl text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+                {t('teacherClass.students.subtitle')}
+              </p>
+            </div>
+            <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center lg:w-auto lg:max-w-lg">
+              <div className="relative min-w-0 flex-1">
+                <Search
+                  className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-violet-600 dark:text-violet-400"
+                  strokeWidth={2.5}
+                  aria-hidden
+                />
+                <input
+                  id={studentsSearchInputId}
+                  type="search"
+                  value={studentsSearchQuery}
+                  onChange={(e) => setStudentsSearchQuery(e.target.value)}
+                  placeholder={t('teacherClass.students.searchPlaceholder')}
+                  autoComplete="off"
+                  className="w-full rounded-2xl border border-zinc-200 bg-zinc-50 py-2.5 pr-3 pl-10 text-sm font-medium text-slate-900 outline-none transition placeholder:text-zinc-400 focus:border-violet-400 focus:bg-white focus:ring-2 focus:ring-violet-400/25 dark:border-zinc-600 dark:bg-zinc-800/80 dark:text-white dark:placeholder:text-zinc-500 dark:focus:border-violet-500 dark:focus:bg-zinc-900"
+                />
+              </div>
+              <button
+                type="button"
+                aria-pressed={studentsNameSortDesc}
+                title={
+                  studentsNameSortDesc
+                    ? t('teacherClass.students.sortNameAscHint')
+                    : t('teacherClass.students.sortNameDescHint')
+                }
+                onClick={() => setStudentsNameSortDesc((v) => !v)}
+                className="flex h-11 w-full shrink-0 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-violet-700 shadow-sm transition hover:border-violet-300 hover:bg-violet-50 sm:w-11 dark:border-zinc-600 dark:bg-zinc-800 dark:text-violet-300 dark:hover:border-violet-600 dark:hover:bg-violet-950/40"
+              >
+                <ListFilter className="h-5 w-5" strokeWidth={2.35} aria-hidden />
+                <span className="sr-only">{t('teacherClass.students.filterAria')}</span>
+              </button>
+            </div>
+          </div>
+
           {students.length === 0 ? (
-            <div className="mt-6">
-              <KidsEmptyState
-                emoji="🎈"
-                title={t('teacherClass.students.emptyTitle')}
-                description={t('teacherClass.students.emptyDesc')}
-              />
+            <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50/80 px-6 py-10 text-center dark:border-zinc-700 dark:bg-zinc-800/40 sm:col-span-2 lg:col-span-2">
+                <p className="font-logo text-lg font-bold text-slate-800 dark:text-white">{t('teacherClass.students.emptyTitle')}</p>
+                <p className="mx-auto mt-2 max-w-md text-sm text-zinc-600 dark:text-zinc-400">{t('teacherClass.students.emptyDesc')}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setTab('invite')}
+                className="flex min-h-[200px] flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-zinc-300 bg-zinc-50/30 p-6 text-center transition hover:border-violet-400 hover:bg-violet-50/40 dark:border-zinc-600 dark:bg-zinc-900/30 dark:hover:border-violet-600 dark:hover:bg-violet-950/20"
+              >
+                <span className="flex h-14 w-14 items-center justify-center rounded-full bg-violet-100 text-violet-700 ring-2 ring-violet-200/80 dark:bg-violet-950/60 dark:text-violet-300 dark:ring-violet-800/60">
+                  <UserPlus className="h-7 w-7" strokeWidth={2.25} aria-hidden />
+                </span>
+                <span className="font-logo text-base font-bold text-slate-800 dark:text-white">{t('teacherClass.students.addNewCard')}</span>
+              </button>
             </div>
           ) : (
-            <ul className="mt-6 divide-y divide-amber-200/60 dark:divide-amber-900/40">
-              {students.map((en) => (
-                <li
-                  key={en.id}
-                  className="flex flex-col gap-3 py-4 first:pt-0 sm:flex-row sm:items-center sm:justify-between"
+            <>
+              {filteredStudents.length === 0 ? (
+                <p className="mt-8 text-center text-sm font-medium text-zinc-600 dark:text-zinc-400">
+                  {t('teacherClass.students.searchNoResults')}
+                </p>
+              ) : null}
+              <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {filteredStudents.map((en) => {
+                  const pic = en.student.profile_picture;
+                  const pub = en.class_published_assignment_count;
+                  const sub = en.assignments_submitted_count ?? 0;
+                  const pubLabel = typeof pub === 'number' ? String(pub) : '—';
+                  const subLabel = typeof pub === 'number' ? String(sub) : '—';
+                  return (
+                    <article
+                      key={en.id}
+                      className="relative flex flex-col rounded-2xl border border-zinc-100 bg-white p-4 shadow-lg ring-1 ring-black/[0.03] dark:border-zinc-800 dark:bg-zinc-900 dark:ring-white/5"
+                    >
+                      <details className="absolute top-3 right-3 z-10">
+                        <summary className="flex cursor-pointer list-none items-center justify-center rounded-full p-2 text-zinc-600 outline-none hover:bg-zinc-100 focus-visible:ring-2 focus-visible:ring-violet-400 dark:text-zinc-300 dark:hover:bg-zinc-800 [&::-webkit-details-marker]:hidden">
+                          <span className="sr-only">{t('teacherClass.students.menuAria')}</span>
+                          <MoreVertical className="h-5 w-5" strokeWidth={2.25} aria-hidden />
+                        </summary>
+                        <div
+                          className="absolute right-0 z-20 mt-1 w-56 overflow-hidden rounded-xl border border-zinc-200 bg-white py-1 shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
+                          role="menu"
+                        >
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="flex w-full px-4 py-2.5 text-left text-sm font-medium text-slate-800 hover:bg-zinc-50 dark:text-gray-100 dark:hover:bg-zinc-800"
+                            onClick={(e) => {
+                              void navigator.clipboard?.writeText(en.student.email).then(
+                                () => {
+                                  toast.success(t('teacherClass.students.emailCopied'));
+                                  (e.currentTarget.closest('details') as HTMLDetailsElement | null)?.removeAttribute(
+                                    'open',
+                                  );
+                                },
+                                () => toast.error(t('teacherClass.invite.copyFailed')),
+                              );
+                            }}
+                          >
+                            {t('teacherClass.students.menuCopyEmail')}
+                          </button>
+                          <p className="border-t border-zinc-100 px-4 py-2 text-xs text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+                            {t('teacherClass.students.registered')}: {new Date(en.created_at).toLocaleDateString(language)}
+                          </p>
+                        </div>
+                      </details>
+
+                      <div className="flex gap-3 pr-10">
+                        {pic ? (
+                          <img
+                            src={pic}
+                            alt={studentDisplayName(en)}
+                            className="h-14 w-14 shrink-0 rounded-full object-cover ring-2 ring-violet-100 dark:ring-violet-900/50"
+                          />
+                        ) : (
+                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-violet-100 font-logo text-lg font-black text-violet-800 ring-2 ring-violet-200/80 dark:bg-violet-950/60 dark:text-violet-200 dark:ring-violet-800/60">
+                            {studentInitials(en)}
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="font-logo text-base font-bold text-slate-900 dark:text-white">
+                            {studentDisplayName(en)}
+                          </p>
+                          <p className="mt-0.5 truncate text-sm text-zinc-500 dark:text-zinc-400">{en.student.email}</p>
+                          <p className="mt-1 text-xs font-medium text-zinc-400 dark:text-zinc-500">
+                            {t('teacherClass.students.studentIdLabel').replace('{id}', String(en.student.id))}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-2 gap-2">
+                        <div className="rounded-xl bg-zinc-100 px-3 py-2.5 dark:bg-zinc-800/90">
+                          <p className="text-[9px] font-bold uppercase leading-tight tracking-wide text-zinc-500 dark:text-zinc-400">
+                            {t('teacherClass.students.publishedChallenges')}
+                          </p>
+                          <p className="mt-1 font-logo text-2xl font-black text-slate-900 dark:text-white">{pubLabel}</p>
+                        </div>
+                        <div className="rounded-xl bg-zinc-100 px-3 py-2.5 dark:bg-zinc-800/90">
+                          <p className="text-[9px] font-bold uppercase leading-tight tracking-wide text-zinc-500 dark:text-zinc-400">
+                            {t('teacherClass.students.submitted')}
+                          </p>
+                          <p className="mt-1 font-logo text-2xl font-black text-slate-900 dark:text-white">{subLabel}</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex flex-col gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void startParentConversation(en)}
+                          className="flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-violet-600 px-4 text-sm font-bold text-white shadow-md shadow-violet-500/25 transition hover:bg-violet-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-500 dark:bg-violet-600 dark:hover:bg-violet-500"
+                        >
+                          <MessageCircle className="h-5 w-5 shrink-0" strokeWidth={2.25} aria-hidden />
+                          {t('teacherClass.students.messageParent')}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={removingEnrollmentId === en.id}
+                          onClick={() => void removeStudentFromClass(en)}
+                          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-zinc-200 bg-zinc-100 px-4 text-sm font-bold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-rose-300 dark:hover:bg-rose-950/30"
+                        >
+                          <LogOut className="h-4 w-4 shrink-0" strokeWidth={2.35} aria-hidden />
+                          {removingEnrollmentId === en.id ? t('teacherClass.students.removing') : t('teacherClass.students.removeFromClass')}
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+                <button
+                  type="button"
+                  onClick={() => setTab('invite')}
+                  className="flex min-h-[260px] flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-zinc-300 bg-zinc-50/30 p-6 text-center transition hover:border-violet-400 hover:bg-violet-50/40 dark:border-zinc-600 dark:bg-zinc-900/30 dark:hover:border-violet-600 dark:hover:bg-violet-950/20"
                 >
-                  <div>
-                    <p className="font-bold text-slate-900 dark:text-white">
-                      {en.student.first_name} {en.student.last_name}
-                    </p>
-                    <p className="text-sm text-slate-600 dark:text-gray-400">{en.student.email}</p>
-                    {typeof en.class_published_assignment_count === 'number' ? (
-                      <p className="mt-2 text-xs font-semibold text-violet-800 dark:text-violet-200">
-                        {t('teacherClass.students.publishedChallenges')}: {en.class_published_assignment_count}
-                        {' · '}
-                        {t('teacherClass.students.submitted')}: {en.assignments_submitted_count ?? 0}
-                        <span className="font-black text-fuchsia-700 dark:text-fuchsia-300">
-                          {' '}
-                          ({en.assignments_submitted_count ?? 0}/{en.class_published_assignment_count})
-                        </span>
-                      </p>
-                    ) : null}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 sm:flex-col sm:items-end">
-                    <span className="text-xs font-semibold text-amber-700 dark:text-amber-300">
-                      {t('teacherClass.students.registered')}: {new Date(en.created_at).toLocaleDateString(language)}
-                    </span>
-                    <KidsSecondaryButton
-                      type="button"
-                      onClick={() => void startParentConversation(en)}
-                    >
-                      {t('teacherClass.students.messageParent')}
-                    </KidsSecondaryButton>
-                    <KidsSecondaryButton
-                      type="button"
-                      className="border-rose-200 text-rose-700 hover:bg-rose-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/40"
-                      disabled={removingEnrollmentId === en.id}
-                      onClick={() => void removeStudentFromClass(en)}
-                    >
-                      {removingEnrollmentId === en.id ? t('teacherClass.students.removing') : t('teacherClass.students.removeFromClass')}
-                    </KidsSecondaryButton>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                  <span className="flex h-14 w-14 items-center justify-center rounded-full bg-violet-100 text-violet-700 ring-2 ring-violet-200/80 dark:bg-violet-950/60 dark:text-violet-300 dark:ring-violet-800/60">
+                    <UserPlus className="h-7 w-7" strokeWidth={2.25} aria-hidden />
+                  </span>
+                  <span className="font-logo text-base font-bold text-slate-800 dark:text-white">{t('teacherClass.students.addNewCard')}</span>
+                </button>
+              </div>
+            </>
           )}
-        </KidsCard>
+        </section>
       )}
 
       {tab === 'kindergarten' && isKidsPreschoolClass(cls) && (
-        <KidsCard tone="emerald" className="!max-w-none overflow-visible border-teal-100/80 dark:border-teal-900/40">
+        <section className="max-w-none overflow-visible rounded-3xl border border-zinc-100 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-6">
           <KidsPreschoolDailyBoard
             kgDate={kgDate}
             setKgDate={setKgDate}
@@ -1298,26 +1847,32 @@ function KidsTeacherClassPageContent() {
             kgBulkNote={kgBulkNote}
             setKgBulkNote={setKgBulkNote}
             t={t}
+            locale={language}
           />
-        </KidsCard>
+        </section>
       )}
 
       {tab === 'assignments' && (
         <div className="flex flex-col gap-3">
-          <p className="text-sm text-slate-600 dark:text-gray-400 lg:hidden">
-            {t('teacherClass.assignments.mobileHint')}
-          </p>
-          <div className="grid gap-4 lg:grid-cols-2 lg:gap-6">
-            <KidsCard className="order-2 flex min-h-[260px] flex-col lg:order-1 lg:min-h-0">
-              <div className="shrink-0">
-                <h2 className="font-logo text-lg font-bold text-slate-900 dark:text-white">{t('teacherClass.assignments.newTitle')}</h2>
-                <p className="mt-1 text-sm text-slate-600 dark:text-gray-400">
-                  {t('teacherClass.assignments.newSubtitle')}
-                  {assignmentVideoEnabled
-                    ? ` ${t('teacherClass.assignments.videoEnabled')}`
-                    : ` ${t('teacherClass.assignments.videoDisabled')}`}
-                </p>
+          <p className="text-sm text-slate-600 dark:text-gray-400 lg:hidden">{t('teacherClass.assignments.mobileHint')}</p>
+          <div className="grid gap-6 lg:grid-cols-[minmax(17rem,22rem)_minmax(0,1fr)] lg:items-start lg:gap-8 xl:grid-cols-[minmax(19rem,24rem)_minmax(0,1fr)]">
+            <section className="order-2 flex min-h-[260px] flex-col rounded-3xl border border-zinc-100 bg-white p-5 shadow-lg dark:border-zinc-800 dark:bg-zinc-900 sm:p-6 lg:order-1 lg:min-h-0">
+              <div className="flex items-center gap-3">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-violet-600 text-white shadow-md shadow-violet-500/30 dark:bg-violet-500">
+                  <Plus className="h-6 w-6" strokeWidth={2.5} aria-hidden />
+                </span>
+                <div className="min-w-0">
+                  <h2 className="font-logo text-lg font-bold leading-tight text-slate-900 dark:text-white sm:text-xl">
+                    {t('teacherClass.assignments.formSidebarTitle')}
+                  </h2>
+                  <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                    {assignmentVideoEnabled
+                      ? t('teacherClass.assignments.videoEnabled')
+                      : t('teacherClass.assignments.videoDisabled')}
+                  </p>
+                </div>
               </div>
+              <p className="mt-3 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{t('teacherClass.assignments.heroSubtitle')}</p>
 
               <button
                 type="button"
@@ -1326,86 +1881,175 @@ function KidsTeacherClassPageContent() {
                 aria-expanded={isNewChallengeOpen}
                 aria-controls={newChallengeSectionId}
               >
-                <span>{t('teacherClass.assignments.newTitle')}</span>
+                <span>{t('teacherClass.assignments.formSidebarTitle')}</span>
                 <span aria-hidden>{isNewChallengeOpen ? '▲' : '▼'}</span>
               </button>
 
-              <div id={newChallengeSectionId} className={`mt-4 ${isNewChallengeOpen ? 'block' : 'hidden'} lg:block`}>
+              <div id={newChallengeSectionId} className={`mt-5 ${isNewChallengeOpen ? 'block' : 'hidden'} lg:block`}>
                 <form className="space-y-4" onSubmit={createAssignment}>
-                  <KidsFormField id={asgTitleId} label={t('teacherClass.assignments.title')} required>
+                  <div>
+                    <p className="text-[11px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                      {t('teacherClass.assignments.formClassLabel')}
+                    </p>
+                    <div className="mt-1.5 rounded-2xl bg-zinc-100 px-4 py-3 text-sm font-semibold text-slate-800 dark:bg-zinc-800/90 dark:text-zinc-100">
+                      {cls.name}
+                    </div>
+                  </div>
+                  <div>
+                    <label htmlFor={asgTitleId} className="text-[11px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                      {t('teacherClass.assignments.title')}
+                    </label>
                     <input
                       id={asgTitleId}
                       required
                       value={asgTitle}
                       onChange={(e) => setAsgTitle(e.target.value)}
-                      className={kidsInputClass}
-                      placeholder={t('teacherClass.assignments.titlePlaceholder')}
+                      className="mt-1.5 w-full rounded-2xl border-0 bg-zinc-100 px-4 py-3 text-base text-slate-900 shadow-inner shadow-zinc-200/50 outline-none ring-0 transition placeholder:text-zinc-400 focus:bg-white focus:ring-2 focus:ring-violet-400/35 dark:bg-zinc-800/80 dark:text-white dark:shadow-none dark:placeholder:text-zinc-500 dark:focus:bg-zinc-900 dark:focus:ring-violet-600/40"
+                      placeholder={t('teacherClass.assignments.titlePlaceholderHomework')}
                     />
-                  </KidsFormField>
-                  <KidsFormField id="asg-purpose" label={t('teacherClass.assignments.purpose')}>
+                  </div>
+                  <div>
+                    <label htmlFor="asg-purpose" className="text-[11px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                      {t('teacherClass.assignments.descriptionLabel')}
+                    </label>
                     <textarea
                       id="asg-purpose"
                       value={asgPurpose}
                       onChange={(e) => setAsgPurpose(e.target.value)}
-                      rows={2}
-                      className={kidsTextareaClass}
+                      rows={4}
+                      className="mt-1.5 min-h-[120px] w-full resize-y rounded-2xl border-0 bg-zinc-100 px-4 py-3 text-base text-slate-900 shadow-inner shadow-zinc-200/50 outline-none ring-0 transition placeholder:text-zinc-400 focus:bg-white focus:ring-2 focus:ring-violet-400/35 dark:bg-zinc-800/80 dark:text-white dark:shadow-none dark:placeholder:text-zinc-500 dark:focus:bg-zinc-900 dark:focus:ring-violet-600/40"
+                      placeholder={t('teacherClass.assignments.purposePlaceholderHomework')}
                     />
-                  </KidsFormField>
-                  <KidsFormField id="asg-mat" label={t('teacherClass.assignments.materials')}>
-                    <textarea
-                      id="asg-mat"
-                      value={asgMaterials}
-                      onChange={(e) => setAsgMaterials(e.target.value)}
-                      rows={2}
-                      className={kidsTextareaClass}
-                      placeholder={t('teacherClass.assignments.materialsPlaceholder')}
-                    />
-                  </KidsFormField>
-                  <KidsFormField
-                    id={asgOpenAtId}
-                    label={t('teacherClass.assignments.openAt')}
-                    required
-                    hint={t('teacherClass.assignments.openAtHint')}
-                  >
-                    <KidsDateTimeField
-                      id={asgOpenAtId}
-                      value={asgOpenAt}
-                      onChange={setAsgOpenAt}
-                      required
-                      placeholder={t('teacherClass.assignments.openAtPlaceholder')}
-                    />
-                  </KidsFormField>
-                  <KidsFormField
-                    id={asgCloseAtId}
-                    label={t('teacherClass.assignments.closeAt')}
-                    required
-                    hint={t('teacherClass.assignments.closeAtHint')}
-                  >
-                    <KidsDateTimeField
-                      id={asgCloseAtId}
-                      value={asgCloseAt}
-                      onChange={setAsgCloseAt}
-                      required
-                      placeholder={t('teacherClass.assignments.closeAtPlaceholder')}
-                    />
-                  </KidsFormField>
-                  <fieldset className="rounded-2xl border-2 border-violet-100 bg-violet-50/50 p-4 dark:border-violet-900/40 dark:bg-violet-950/30">
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label htmlFor={asgOpenAtId} className="text-[11px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                        {t('teacherClass.assignments.startDateLabel')}
+                      </label>
+                      <div className="mt-1.5 rounded-2xl bg-zinc-100 px-2 py-2 dark:bg-zinc-800/80">
+                        <KidsDateTimeField
+                          id={asgOpenAtId}
+                          value={asgOpenAt}
+                          onChange={setAsgOpenAt}
+                          required
+                          placeholder={t('teacherClass.assignments.openAtPlaceholder')}
+                        />
+                      </div>
+                      <p className="mt-1 text-[10px] text-zinc-500 dark:text-zinc-500">{t('teacherClass.assignments.openAtHint')}</p>
+                    </div>
+                    <div>
+                      <label htmlFor={asgCloseAtId} className="text-[11px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                        {t('teacherClass.assignments.deadlineLabel')}
+                      </label>
+                      <div className="mt-1.5 rounded-2xl bg-zinc-100 px-2 py-2 dark:bg-zinc-800/80">
+                        <KidsDateTimeField
+                          id={asgCloseAtId}
+                          value={asgCloseAt}
+                          onChange={setAsgCloseAt}
+                          required
+                          placeholder={t('teacherClass.assignments.closeAtPlaceholder')}
+                        />
+                      </div>
+                      <p className="mt-1 text-[10px] text-zinc-500 dark:text-zinc-500">{t('teacherClass.assignments.closeAtHint')}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-[11px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                      {t('teacherClass.assignments.materialsVisualLabel')}
+                    </span>
+                    <div className="mt-2 rounded-2xl border-2 border-dashed border-zinc-200 bg-zinc-50/80 px-3 py-4 dark:border-zinc-600 dark:bg-zinc-800/40">
+                      <div className="mb-3 flex items-center gap-2 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                        <Upload className="h-4 w-4 text-violet-500" strokeWidth={2.25} aria-hidden />
+                        {t('teacherClass.assignments.materialsVisualHint')}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {asgMaterialTags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="inline-flex items-center gap-1 rounded-full bg-fuchsia-100 px-3 py-1 text-xs font-bold text-fuchsia-900 dark:bg-fuchsia-950/50 dark:text-fuchsia-100"
+                          >
+                            {tag}
+                            <button
+                              type="button"
+                              className="rounded-full p-0.5 hover:bg-fuchsia-200/80 dark:hover:bg-fuchsia-900/60"
+                              onClick={() => setAsgMaterialTags((prev) => prev.filter((x) => x !== tag))}
+                              aria-label={t('teacherClass.assignments.removeMaterial')}
+                            >
+                              <X className="h-3.5 w-3.5" aria-hidden />
+                            </button>
+                          </span>
+                        ))}
+                        <input
+                          value={asgMaterialDraft}
+                          onChange={(e) => setAsgMaterialDraft(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key !== 'Enter') return;
+                            e.preventDefault();
+                            const v = asgMaterialDraft.trim();
+                            if (!v || asgMaterialTags.length >= 24) return;
+                            if (asgMaterialTags.includes(v)) return;
+                            setAsgMaterialTags((p) => [...p, v]);
+                            setAsgMaterialDraft('');
+                          }}
+                          className="min-w-32 flex-1 rounded-xl border-0 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none placeholder:text-zinc-400 focus:ring-2 focus:ring-violet-400/30 dark:bg-zinc-900/60 dark:text-white sm:max-w-[200px]"
+                          placeholder={t('teacherClass.assignments.materialTagPlaceholder')}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const v = asgMaterialDraft.trim();
+                            if (!v || asgMaterialTags.length >= 24) return;
+                            if (asgMaterialTags.includes(v)) return;
+                            setAsgMaterialTags((p) => [...p, v]);
+                            setAsgMaterialDraft('');
+                          }}
+                          className="inline-flex items-center gap-1 rounded-full border border-dashed border-violet-300 bg-violet-50/80 px-3 py-2 text-xs font-bold text-violet-700 transition hover:bg-violet-100 dark:border-violet-600 dark:bg-violet-950/40 dark:text-violet-300"
+                        >
+                          <Plus className="h-4 w-4" aria-hidden />
+                          {t('teacherClass.assignments.addMaterialItem')}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-[11px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                      {t('teacherClass.assignments.categoryIconLabel')}
+                    </span>
+                    <div className="mt-2 flex flex-wrap gap-3">
+                      {CHALLENGE_FORM_THEMES.map(({ id, icon: Icon }) => (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => setAsgChallengeTheme(id)}
+                          className={`flex h-12 w-12 items-center justify-center rounded-full border-2 transition ${
+                            asgChallengeTheme === id
+                              ? 'border-violet-500 bg-violet-100 text-violet-800 shadow-md dark:border-violet-400 dark:bg-violet-950/60 dark:text-violet-200'
+                              : 'border-zinc-200 bg-zinc-100 text-zinc-500 hover:border-violet-200 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
+                          }`}
+                          aria-pressed={asgChallengeTheme === id}
+                          aria-label={t(`teacherClass.assignments.theme.${id}`)}
+                        >
+                          <Icon className="h-5 w-5" strokeWidth={2.25} aria-hidden />
+                        </button>
+                      ))}
+                    </div>
+                    <p className="mt-2 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+                      {t('teacherClass.assignments.categoryIconHint')}
+                    </p>
+                  </div>
+                  <fieldset className="rounded-2xl border-2 border-violet-100 bg-violet-50/40 p-4 dark:border-violet-900/40 dark:bg-violet-950/25">
                     <legend className="px-2 text-sm font-bold text-violet-900 dark:text-violet-100">
                       {t('teacherClass.assignments.rules')}
                     </legend>
-                    <p className="mt-2 text-sm text-slate-600 dark:text-gray-400">
-                      {t('teacherClass.assignments.rulesHint')}
-                    </p>
-                    <div
-                      className={`mt-3 grid gap-3 ${assignmentVideoEnabled ? 'sm:grid-cols-2' : 'sm:grid-cols-1'}`}
-                    >
+                    <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{t('teacherClass.assignments.rulesHint')}</p>
+                    <div className={`mt-3 grid gap-3 ${assignmentVideoEnabled ? 'sm:grid-cols-2' : 'sm:grid-cols-1'}`}>
                       <button
                         type="button"
                         onClick={() => setAsgMediaType('image')}
                         className={`rounded-2xl border-2 p-4 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-500 ${
                           asgMediaType === 'image'
-                            ? 'border-violet-500 bg-white shadow-md shadow-violet-500/15 ring-2 ring-violet-300/60 dark:border-violet-400 dark:bg-violet-950/40 dark:ring-violet-600/40'
-                            : 'border-violet-200/80 bg-white/60 hover:border-violet-300 dark:border-violet-800/60 dark:bg-gray-900/40 dark:hover:border-violet-700'
+                            ? 'border-violet-500 bg-white shadow-md ring-2 ring-violet-300/60 dark:border-violet-400 dark:bg-violet-950/40 dark:ring-violet-600/40'
+                            : 'border-violet-200/80 bg-white/70 hover:border-violet-300 dark:border-violet-800/60 dark:bg-zinc-900/50'
                         }`}
                       >
                         <span className="text-2xl" aria-hidden>
@@ -1414,9 +2058,7 @@ function KidsTeacherClassPageContent() {
                         <span className="mt-2 block font-logo text-base font-bold text-slate-900 dark:text-white">
                           {t('teacherClass.assignments.imageMode')}
                         </span>
-                        <span className="mt-1 block text-xs text-slate-600 dark:text-gray-400">
-                          {t('teacherClass.assignments.imageModeHint')}
-                        </span>
+                        <span className="mt-1 block text-xs text-zinc-600 dark:text-zinc-400">{t('teacherClass.assignments.imageModeHint')}</span>
                       </button>
                       {assignmentVideoEnabled ? (
                         <button
@@ -1424,8 +2066,8 @@ function KidsTeacherClassPageContent() {
                           onClick={() => setAsgMediaType('video')}
                           className={`rounded-2xl border-2 p-4 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-500 ${
                             asgMediaType === 'video'
-                              ? 'border-violet-500 bg-white shadow-md shadow-violet-500/15 ring-2 ring-violet-300/60 dark:border-violet-400 dark:bg-violet-950/40 dark:ring-violet-600/40'
-                              : 'border-violet-200/80 bg-white/60 hover:border-violet-300 dark:border-violet-800/60 dark:bg-gray-900/40 dark:hover:border-violet-700'
+                              ? 'border-violet-500 bg-white shadow-md ring-2 ring-violet-300/60 dark:border-violet-400 dark:bg-violet-950/40 dark:ring-violet-600/40'
+                              : 'border-violet-200/80 bg-white/70 hover:border-violet-300 dark:border-violet-800/60 dark:bg-zinc-900/50'
                           }`}
                         >
                           <span className="text-2xl" aria-hidden>
@@ -1434,9 +2076,7 @@ function KidsTeacherClassPageContent() {
                           <span className="mt-2 block font-logo text-base font-bold text-slate-900 dark:text-white">
                             {t('teacherClass.assignments.videoMode')}
                           </span>
-                          <span className="mt-1 block text-xs text-slate-600 dark:text-gray-400">
-                            {t('teacherClass.assignments.videoModeHint')}
-                          </span>
+                          <span className="mt-1 block text-xs text-zinc-600 dark:text-zinc-400">{t('teacherClass.assignments.videoModeHint')}</span>
                         </button>
                       ) : null}
                     </div>
@@ -1445,9 +2085,7 @@ function KidsTeacherClassPageContent() {
                         <label htmlFor="asg-video-duration" className={`${kidsLabelClass} block`}>
                           {t('teacherClass.assignments.videoLimit')}
                         </label>
-                        <p className="mb-2 text-xs text-slate-500 dark:text-gray-400">
-                          {t('teacherClass.assignments.videoLimitHint')}
-                        </p>
+                        <p className="mb-2 text-xs text-zinc-500 dark:text-zinc-400">{t('teacherClass.assignments.videoLimitHint')}</p>
                         <KidsSelect
                           id="asg-video-duration"
                           value={String(asgVideoSec)}
@@ -1460,9 +2098,7 @@ function KidsTeacherClassPageContent() {
                       <label htmlFor="asg-submission-rounds" className={`${kidsLabelClass} block`}>
                         {t('teacherClass.assignments.roundCount')}
                       </label>
-                      <p className="mb-2 text-xs text-slate-500 dark:text-gray-400">
-                        {t('teacherClass.assignments.roundCountHint')}
-                      </p>
+                      <p className="mb-2 text-xs text-zinc-500 dark:text-zinc-400">{t('teacherClass.assignments.roundCountHint')}</p>
                       <KidsSelect
                         id="asg-submission-rounds"
                         value={String(asgSubmissionRounds)}
@@ -1471,97 +2107,277 @@ function KidsTeacherClassPageContent() {
                       />
                     </div>
                   </fieldset>
-                  <KidsPrimaryButton type="submit" disabled={asgSaving}>
-                    {asgSaving ? t('profile.saving') : t('teacherClass.assignments.publish')}
-                  </KidsPrimaryButton>
+                  <button
+                    type="submit"
+                    disabled={asgSaving}
+                    className="flex w-full min-h-[52px] items-center justify-center rounded-full bg-linear-to-r from-violet-600 via-violet-500 to-fuchsia-600 px-6 text-sm font-black text-white shadow-lg shadow-violet-500/30 transition hover:from-violet-500 hover:via-violet-400 hover:to-fuchsia-500 disabled:opacity-50"
+                  >
+                    {asgSaving ? t('profile.saving') : t('teacherClass.assignments.publishCtaShort')}
+                  </button>
                 </form>
               </div>
-            </KidsCard>
+            </section>
 
-            <KidsCard className="order-1 flex min-h-[280px] flex-col lg:order-2 lg:min-h-0">
-              <div className="shrink-0">
-                <h2 className="font-logo text-lg font-bold text-slate-900 dark:text-white">{t('teacherClass.assignments.listTitle')}</h2>
-                <p className="mt-1 text-xs text-slate-500 dark:text-gray-400">
-                  {t('teacherClass.assignments.listHint')}
+            <div className="order-1 flex flex-col gap-5 lg:order-2">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h2 className="font-logo text-xl font-bold text-slate-900 dark:text-white sm:text-2xl">
+                    {t('teacherClass.assignments.listHomeworkTitle')}
+                  </h2>
+                  <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                    {t('teacherClass.assignments.listHomeworkSubtitle')
+                      .replace('{shown}', String(displayedAdventureAssignments.length))
+                      .replace('{total}', String(adventureAssignments.length))}
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div
+                    className="flex rounded-full border border-zinc-200 bg-zinc-100 p-1 dark:border-zinc-600 dark:bg-zinc-800"
+                    role="group"
+                    aria-label={t('teacherClass.assignments.filterAria')}
+                  >
+                    <button
+                      type="button"
+                      aria-pressed={assignmentsListFilter === 'all'}
+                      onClick={() => setAssignmentsListFilter('all')}
+                      className={`rounded-full px-3 py-1.5 text-xs font-bold transition sm:text-sm ${
+                        assignmentsListFilter === 'all'
+                          ? 'bg-white text-violet-700 shadow-sm dark:bg-zinc-900 dark:text-violet-300'
+                          : 'text-zinc-500 dark:text-zinc-400'
+                      }`}
+                    >
+                      {t('teacherClass.assignments.filterAll')}
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={assignmentsListFilter === 'active'}
+                      onClick={() => setAssignmentsListFilter('active')}
+                      className={`rounded-full px-3 py-1.5 text-xs font-bold transition sm:text-sm ${
+                        assignmentsListFilter === 'active'
+                          ? 'bg-violet-100 text-violet-800 shadow-sm dark:bg-violet-950/50 dark:text-violet-200'
+                          : 'text-zinc-500 dark:text-zinc-400'
+                      }`}
+                    >
+                      {t('teacherClass.assignments.filterActive')}
+                    </button>
+                  </div>
+                  <div className="flex rounded-xl border border-zinc-200 bg-zinc-100 p-1 dark:border-zinc-600 dark:bg-zinc-800">
+                    <button
+                      type="button"
+                      aria-pressed={assignmentsViewMode === 'grid'}
+                      onClick={() => setAssignmentsViewMode('grid')}
+                      className={`rounded-lg p-2 transition ${assignmentsViewMode === 'grid' ? 'bg-white text-violet-700 shadow-sm dark:bg-zinc-900 dark:text-violet-300' : 'text-zinc-500'}`}
+                      title={t('teacherClass.assignments.viewGrid')}
+                    >
+                      <LayoutGrid className="h-5 w-5" aria-hidden />
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={assignmentsViewMode === 'list'}
+                      onClick={() => setAssignmentsViewMode('list')}
+                      className={`rounded-lg p-2 transition ${assignmentsViewMode === 'list' ? 'bg-white text-violet-700 shadow-sm dark:bg-zinc-900 dark:text-violet-300' : 'text-zinc-500'}`}
+                      title={t('teacherClass.assignments.viewList')}
+                    >
+                      <LucideList className="h-5 w-5" aria-hidden />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {assignments.length === 0 ? (
+                <p className="rounded-2xl border border-zinc-100 bg-white p-6 text-sm text-zinc-500 shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
+                  {t('teacherClass.assignments.empty')}
                 </p>
-              </div>
-              <div className="mt-3 space-y-6">
-                {assignments.length === 0 ? (
-                  <p className="text-sm text-slate-500 dark:text-gray-400">{t('teacherClass.assignments.empty')}</p>
-                ) : (
-                  <>
-                    <div>
-                      <h3 className="font-logo text-sm font-bold text-amber-900 dark:text-amber-100">
-                        {t('teacherClass.assignments.planned')} <span className="font-sans text-xs font-semibold">({plannedAssignments.length})</span>
-                      </h3>
-                      <p className="mt-1 text-[11px] text-amber-900/80 dark:text-amber-200/90">
-                        {t('teacherClass.assignments.plannedHint')}
-                      </p>
-                      {plannedAssignments.length === 0 ? (
-                        <p className="mt-2 text-sm text-slate-500 dark:text-gray-400">{t('teacherClass.assignments.noPlanned')}</p>
-                      ) : (
-                        <ul className="mt-2 space-y-3">
-                          {plannedAssignments.map((a) => (
-                            <li
-                              key={a.id}
-                              className="rounded-2xl border-2 border-amber-200/90 bg-linear-to-br from-amber-50/90 to-white px-4 py-3 dark:border-amber-800/60 dark:from-amber-950/40 dark:to-gray-900/50"
+              ) : displayedAdventureAssignments.length === 0 ? (
+                <p className="rounded-2xl border border-zinc-100 bg-white p-6 text-sm text-zinc-500 shadow-md dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
+                  {t('teacherClass.assignments.emptyFiltered')}
+                </p>
+              ) : (
+                <ul
+                  className={
+                    assignmentsViewMode === 'grid'
+                      ? 'grid grid-cols-1 gap-4 sm:grid-cols-2'
+                      : 'flex flex-col gap-4'
+                  }
+                >
+                  {displayedAdventureAssignments.map((a) => {
+                    const nowMs = Date.now();
+                    const badge = assignmentBadgeKind(a, nowMs);
+                    const themeId = assignmentCardTheme(a);
+                    const headerGrad = challengeCardHeaderGradient(themeId);
+                    const subN = a.submission_count ?? 0;
+                    const enr = Math.max(1, a.enrolled_student_count ?? students.length);
+                    const closeRaw = a.submission_closes_at;
+                    const dateStr = closeRaw
+                      ? new Date(closeRaw).toLocaleDateString(
+                          language === 'tr' ? 'tr-TR' : language === 'ge' ? 'de-DE' : 'en-US',
+                        )
+                      : '—';
+                    const badgeCls =
+                      badge === 'planned'
+                        ? 'bg-amber-100/95 text-amber-950 ring-amber-200 dark:bg-amber-950/70 dark:text-amber-100 dark:ring-amber-800'
+                        : badge === 'endsSoon'
+                          ? 'bg-amber-100/95 text-amber-900 ring-amber-300 dark:bg-amber-950/50 dark:text-amber-50 dark:ring-amber-700'
+                          : badge === 'active'
+                            ? 'bg-emerald-100/95 text-emerald-900 ring-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-100 dark:ring-emerald-800'
+                            : badge === 'draft'
+                              ? 'bg-white/90 text-zinc-700 ring-zinc-200 dark:bg-zinc-900/90 dark:text-zinc-200'
+                              : 'bg-white/90 text-zinc-600 ring-zinc-200 dark:bg-zinc-900/90 dark:text-zinc-400';
+                    const badgeLabel =
+                      badge === 'planned'
+                        ? t('teacherClass.assignments.badgePlanned')
+                        : badge === 'endsSoon'
+                          ? t('teacherClass.assignments.badgeEndsSoon')
+                          : badge === 'active'
+                            ? t('teacherClass.assignments.badgeActive')
+                            : badge === 'draft'
+                              ? t('teacherClass.assignments.badgeDraft')
+                              : t('teacherClass.assignments.badgeEnded');
+                    const deadlinePill = assignmentDeadlinePillText(a, nowMs, t);
+                    return (
+                      <li
+                        key={a.id}
+                        className={`flex overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-md ring-1 ring-black/3 dark:border-zinc-800 dark:bg-zinc-900 dark:ring-white/5 ${
+                          assignmentsViewMode === 'list' ? 'flex-col sm:flex-row sm:items-stretch' : 'flex-col'
+                        }`}
+                      >
+                        <div
+                          className={`relative shrink-0 bg-linear-to-br ${headerGrad} ${
+                            assignmentsViewMode === 'list'
+                              ? 'aspect-[16/10] sm:aspect-auto sm:h-auto sm:min-h-0 sm:w-44 sm:max-w-[11rem]'
+                              : 'aspect-[16/10] w-full'
+                          }`}
+                        >
+                          <span className="absolute left-3 top-3 max-w-[85%] truncate rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-slate-900 shadow-sm dark:bg-black/55 dark:text-white">
+                            {t(`teacherClass.assignments.themeSubject.${themeId}`)}
+                          </span>
+                          <span
+                            className={`absolute right-3 top-3 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide ring-1 ${badgeCls}`}
+                          >
+                            {badgeLabel}
+                          </span>
+                        </div>
+                        <div className="flex min-w-0 flex-1 flex-col p-4">
+                          <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+                            <p className="min-w-0 flex-1 font-logo text-lg font-bold leading-snug text-slate-900 dark:text-white">
+                              {a.title}
+                            </p>
+                            <p className="shrink-0 text-xs font-semibold text-zinc-400 dark:text-zinc-500">{dateStr}</p>
+                          </div>
+                          <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                            {(a.purpose || '').trim() || t('teacherClass.assignments.noPurposeFallback')}
+                          </p>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-100 px-3 py-1.5 text-xs font-bold text-violet-900 dark:bg-violet-950/50 dark:text-violet-100">
+                              <Users className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+                              {t('teacherClass.assignments.cardDeliveryPill')
+                                .replace('{sub}', String(subN))
+                                .replace('{enr}', String(enr))}
+                            </span>
+                            <span className="inline-flex items-center gap-1.5 rounded-full bg-pink-100 px-3 py-1.5 text-xs font-bold text-pink-950 dark:bg-pink-950/40 dark:text-pink-100">
+                              <Clock className="h-3.5 w-3.5 shrink-0 opacity-80" aria-hidden />
+                              {deadlinePill}
+                            </span>
+                          </div>
+                          <div className="mt-4 grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              onClick={() => openAssignmentEdit(a)}
+                              className="flex min-h-10 items-center justify-center rounded-full bg-zinc-100 px-3 text-xs font-bold text-zinc-800 transition hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700 sm:text-sm"
                             >
-                              {assignmentCardBody(a)}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                    <div>
-                      <h3 className="font-logo text-sm font-bold text-violet-900 dark:text-violet-100">
-                        {t('teacherClass.assignments.live')} <span className="font-sans text-xs font-semibold">({liveAssignments.length})</span>
-                      </h3>
-                      {liveAssignments.length === 0 ? (
-                        <p className="mt-2 text-sm text-slate-500 dark:text-gray-400">{t('teacherClass.assignments.listEmpty')}</p>
-                      ) : (
-                        <ul className="mt-2 space-y-3">
-                          {liveAssignments.map((a) => (
-                            <li
-                              key={a.id}
-                              className="rounded-2xl border-2 border-violet-100 bg-white/80 px-4 py-3 dark:border-violet-900/40 dark:bg-gray-800/50"
+                              {t('teacherClass.assignments.card.edit')}
+                            </button>
+                            <Link
+                              href={`${pathPrefix}/ogretmen/sinif/${classId}/proje/${a.id}`}
+                              className="flex min-h-10 items-center justify-center rounded-full bg-violet-100 px-3 text-xs font-bold text-violet-800 transition hover:bg-violet-200 dark:bg-violet-950/50 dark:text-violet-100 dark:hover:bg-violet-900/40 sm:text-sm"
                             >
-                              {assignmentCardBody(a)}
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  </>
-                )}
+                              {t('teacherClass.assignments.cardSubmissions')}
+                            </Link>
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
+                  <li className="flex min-h-[200px] flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-zinc-300 bg-zinc-50/50 p-6 text-center dark:border-zinc-600 dark:bg-zinc-900/30">
+                    <span className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-dashed border-violet-300 text-violet-600 dark:border-violet-700 dark:text-violet-400">
+                      <Plus className="h-7 w-7" strokeWidth={2} aria-hidden />
+                    </span>
+                    <p className="max-w-xs text-sm font-medium text-zinc-600 dark:text-zinc-400">{t('teacherClass.assignments.draftPlaceholder')}</p>
+                  </li>
+                </ul>
+              )}
+
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="flex flex-col justify-between rounded-2xl bg-linear-to-br from-violet-600 to-violet-700 p-5 text-white shadow-md shadow-violet-500/20">
+                  <div className="flex items-center gap-2 text-violet-100">
+                    <TrendingUp className="h-5 w-5 shrink-0" strokeWidth={2.25} aria-hidden />
+                    <span className="text-[10px] font-bold uppercase tracking-wider">{t('teacherClass.assignments.kpiPerformanceTitle')}</span>
+                  </div>
+                  <div className="mt-4">
+                    <p className="text-sm font-semibold text-violet-100/90">{t('teacherClass.assignments.kpiSubmissionRate')}</p>
+                    <p className="mt-1 font-logo text-3xl font-black tabular-nums">%{classChallengeKpis.submissionRatePct}</p>
+                  </div>
+                </div>
+                <div className="rounded-2xl border border-zinc-100 border-l-4 border-l-rose-500 bg-white p-5 shadow-md dark:border-zinc-800 dark:bg-zinc-900">
+                  <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400">
+                    <Clock className="h-5 w-5 shrink-0" strokeWidth={2.25} aria-hidden />
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                      {t('teacherClass.assignments.kpiPendingTitle')}
+                    </span>
+                  </div>
+                  <p className="mt-3 font-logo text-3xl font-black text-slate-900 tabular-nums dark:text-white">
+                    {classChallengeKpis.pendingSubmissions}
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-zinc-600 dark:text-zinc-400">{t('teacherClass.assignments.kpiPendingBody')}</p>
+                </div>
+                <div className="rounded-2xl border border-violet-200/80 bg-linear-to-br from-pink-50 to-violet-50 p-5 shadow-md dark:border-violet-900/40 dark:from-pink-950/30 dark:to-violet-950/20">
+                  <div className="flex items-center gap-2 text-violet-600 dark:text-violet-300">
+                    <Star className="h-5 w-5 shrink-0" strokeWidth={2.25} aria-hidden />
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                      {t('teacherClass.assignments.kpiSuccessTitle')}
+                    </span>
+                  </div>
+                  <p className="mt-3 text-sm font-semibold text-zinc-600 dark:text-zinc-400">{t('teacherClass.assignments.kpiClassOfMonth')}</p>
+                  <p className="mt-1 font-logo text-xl font-black text-violet-700 dark:text-violet-300">{cls.name}</p>
+                  <p className="mt-2 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">{t('teacherClass.assignments.kpiSuccessFoot')}</p>
+                </div>
               </div>
-            </KidsCard>
+            </div>
           </div>
         </div>
       )}
 
       {tab === 'peer' && (
-        <KidsCard tone="emerald">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="font-logo text-lg font-bold text-emerald-950 dark:text-emerald-50">
+        <section className="rounded-3xl border border-zinc-100 border-l-4 border-l-violet-500 bg-white p-5 shadow-xl dark:border-zinc-800 dark:bg-zinc-900 sm:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0">
+              <h2 className="font-logo text-xl font-bold text-slate-900 dark:text-white sm:text-2xl">
                 {t('teacherClass.peer.title')}
               </h2>
-              <p className="mt-1 text-sm text-emerald-900/85 dark:text-emerald-100/85">
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
                 {t('teacherClass.peer.subtitle')}
               </p>
             </div>
-            <KidsSecondaryButton type="button" disabled={peerLoading} onClick={() => void loadPeerChallenges()}>
+            <button
+              type="button"
+              disabled={peerLoading}
+              onClick={() => void loadPeerChallenges()}
+              className="inline-flex shrink-0 items-center justify-center rounded-2xl border border-violet-200/80 bg-violet-50/60 px-4 py-2.5 text-sm font-bold text-violet-900 shadow-sm transition hover:bg-violet-100/80 disabled:cursor-not-allowed disabled:opacity-50 dark:border-violet-800/50 dark:bg-violet-950/30 dark:text-violet-100 dark:hover:bg-violet-950/50"
+            >
               {peerLoading ? t('common.loading') : t('teacherClass.peer.refresh')}
-            </KidsSecondaryButton>
+            </button>
           </div>
           {peerLoading && peerChallenges.length === 0 ? (
-            <p className="mt-6 text-sm text-emerald-800 dark:text-emerald-200">{t('common.loading')}</p>
+            <p className="mt-8 text-sm text-zinc-600 dark:text-zinc-400">{t('common.loading')}</p>
           ) : peerChallenges.length === 0 ? (
-            <p className="mt-6 text-sm text-emerald-800/80 dark:text-emerald-200/90">
-              {t('teacherClass.peer.empty')}
-            </p>
+            <div className="mt-8 flex flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-zinc-200 bg-zinc-50/60 px-6 py-12 text-center dark:border-zinc-700 dark:bg-zinc-900/40">
+              <span className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-dashed border-violet-300 text-violet-600 dark:border-violet-700 dark:text-violet-400">
+                <Trophy className="h-7 w-7" strokeWidth={2} aria-hidden />
+              </span>
+              <p className="max-w-sm text-sm font-medium text-zinc-600 dark:text-zinc-400">{t('teacherClass.peer.empty')}</p>
+            </div>
           ) : (
-            <div className="mt-6 space-y-8">
+            <div className="mt-8 space-y-10">
               {(() => {
                 const pending = peerChallenges.filter(
                   (c) => c.status === 'pending_teacher' && c.source === 'student',
@@ -1572,56 +2388,76 @@ function KidsTeacherClassPageContent() {
                   <>
                     {pending.length > 0 ? (
                       <div className="space-y-4">
-                        <h3 className="text-xs font-black uppercase tracking-wide text-amber-800 dark:text-amber-200">
+                        <h3 className="text-[11px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                           {t('teacherClass.peer.pendingTitle').replace('{count}', String(pending.length))}
                         </h3>
                         <ul className="space-y-4">
                           {pending.map((ch) => (
                             <li
                               key={ch.id}
-                              className="rounded-2xl border-2 border-amber-200/90 bg-amber-50/90 p-4 dark:border-amber-800 dark:bg-amber-950/40"
+                              className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-md dark:border-zinc-700 dark:bg-zinc-900/60 dark:shadow-none"
                             >
-                              <p className="font-logo text-lg font-bold text-amber-950 dark:text-amber-50">{ch.title}</p>
-                              <p className="mt-1 text-xs font-semibold text-amber-900 dark:text-amber-200">
-                                {t('teacherClass.peer.starter')}: {peerStarterLabel(ch)}
-                              </p>
-                              <p className="mt-1 text-xs text-amber-900/90 dark:text-amber-100/85">
-                                {t('teacherClass.peer.roundCount')}: {Math.max(1, ch.submission_rounds ?? 1)}
-                              </p>
-                              {ch.starts_at || ch.ends_at ? (
-                                <p className="mt-1 text-xs font-semibold text-amber-900 dark:text-amber-100">
-                                  {ch.starts_at
-                                    ? `${t('competitions.start')}: ${new Date(ch.starts_at).toLocaleString(language)}`
-                                    : null}
-                                  {ch.starts_at && ch.ends_at ? ' · ' : null}
-                                  {ch.ends_at
-                                    ? `${t('competitions.end')}: ${new Date(ch.ends_at).toLocaleString(language)}`
-                                    : null}
-                                </p>
-                              ) : null}
-                              {ch.description ? (
-                                <p className="mt-2 whitespace-pre-wrap text-sm text-amber-950/90 dark:text-amber-100/90">
-                                  {ch.description}
-                                </p>
-                              ) : null}
-                              {ch.rules_or_goal ? (
-                                <p className="mt-2 whitespace-pre-wrap text-sm text-amber-900/85 dark:text-amber-100/85">
-                                  <span className="font-bold">{t('competitions.rulesOptional')}:</span> {ch.rules_or_goal}
-                                </p>
-                              ) : null}
-                              <label className="mt-3 block text-xs font-bold text-amber-900 dark:text-amber-200">
+                              <div className="flex flex-wrap items-start gap-3">
+                                <div
+                                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300"
+                                  aria-hidden
+                                >
+                                  <Trophy className="h-5 w-5" strokeWidth={2.25} />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span
+                                      className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${peerStatusBadgeClass('pending_teacher')}`}
+                                    >
+                                      {t('teacherClass.peer.status.pending')}
+                                    </span>
+                                  </div>
+                                  <p className="mt-2 font-logo text-lg font-bold text-slate-900 dark:text-white">{ch.title}</p>
+                                  <p className="mt-1 text-xs font-semibold text-zinc-600 dark:text-zinc-400">
+                                    {t('teacherClass.peer.starter')}: {peerStarterLabel(ch)}
+                                  </p>
+                                  <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-500">
+                                    {t('teacherClass.peer.roundCount')}: {Math.max(1, ch.submission_rounds ?? 1)}
+                                  </p>
+                                  {ch.starts_at || ch.ends_at ? (
+                                    <p className="mt-1 text-xs font-semibold text-zinc-600 dark:text-zinc-400">
+                                      {ch.starts_at
+                                        ? `${t('competitions.start')}: ${new Date(ch.starts_at).toLocaleString(language)}`
+                                        : null}
+                                      {ch.starts_at && ch.ends_at ? ' · ' : null}
+                                      {ch.ends_at
+                                        ? `${t('competitions.end')}: ${new Date(ch.ends_at).toLocaleString(language)}`
+                                        : null}
+                                    </p>
+                                  ) : null}
+                                  {ch.description ? (
+                                    <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">
+                                      {ch.description}
+                                    </p>
+                                  ) : null}
+                                  {ch.rules_or_goal ? (
+                                    <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                                      <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                                        {t('competitions.rulesOptional')}:
+                                      </span>{' '}
+                                      {ch.rules_or_goal}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              </div>
+                              <label className="mt-4 block text-[11px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                                 {t('teacherClass.peer.rejectNote')}
                                 <textarea
                                   value={rejectNoteById[ch.id] ?? ''}
                                   onChange={(e) =>
                                     setRejectNoteById((prev) => ({ ...prev, [ch.id]: e.target.value }))
                                   }
-                                  className={`${kidsTextareaClass} mt-1 min-h-[72px]`}
+                                  className={`${kidsTextareaClass} mt-1.5 min-h-[72px]`}
                                   maxLength={600}
                                   placeholder={t('teacherClass.peer.rejectNotePlaceholder')}
                                 />
                               </label>
-                              <div className="mt-3 flex flex-wrap gap-2">
+                              <div className="mt-4 flex flex-wrap gap-2">
                                 <KidsPrimaryButton type="button" onClick={() => void reviewPeerChallengeRow(ch.id, 'approve')}>
                                   {t('teacherClass.peer.approve')}
                                 </KidsPrimaryButton>
@@ -1635,21 +2471,37 @@ function KidsTeacherClassPageContent() {
                       </div>
                     ) : null}
                     {other.length > 0 ? (
-                      <div className="space-y-3">
-                        <h3 className="text-xs font-black uppercase tracking-wide text-emerald-800 dark:text-emerald-200">
+                      <div className="space-y-4">
+                        <h3 className="text-[11px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                           {t('teacherClass.peer.other')}
                         </h3>
-                        <ul className="space-y-2">
+                        <ul className="grid gap-3 sm:grid-cols-2">
                           {other.map((ch) => (
                             <li
                               key={ch.id}
-                              className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-200/80 bg-white/80 px-3 py-2 dark:border-emerald-900 dark:bg-emerald-950/20"
+                              className="flex gap-3 rounded-2xl border border-zinc-200 bg-zinc-50/80 p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/50 dark:shadow-none"
                             >
-                              <span className="font-semibold text-emerald-950 dark:text-emerald-50">{ch.title}</span>
-                              <span className="text-xs font-bold text-emerald-800 dark:text-emerald-200">
-                                {peerRowStatusTr(ch.status, t)}
-                                {ch.source === 'teacher' ? ` · ${t('teacherClass.peer.byTeacher')}` : ''}
-                              </span>
+                              <div
+                                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-violet-600 shadow-sm ring-1 ring-zinc-100 dark:bg-zinc-800 dark:text-violet-400 dark:ring-zinc-700"
+                                aria-hidden
+                              >
+                                <Trophy className="h-5 w-5" strokeWidth={2.25} />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <p className="font-logo text-base font-bold leading-snug text-slate-900 dark:text-white">{ch.title}</p>
+                                <div className="mt-2 flex flex-wrap items-center gap-2">
+                                  <span
+                                    className={`inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${peerStatusBadgeClass(ch.status)}`}
+                                  >
+                                    {peerRowStatusTr(ch.status, t)}
+                                  </span>
+                                  {ch.source === 'teacher' ? (
+                                    <span className="text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                                      {t('teacherClass.peer.byTeacher')}
+                                    </span>
+                                  ) : null}
+                                </div>
+                              </div>
                             </li>
                           ))}
                         </ul>
@@ -1660,64 +2512,316 @@ function KidsTeacherClassPageContent() {
               })()}
             </div>
           )}
-        </KidsCard>
+        </section>
       )}
 
       {tab === 'stars' && (
-        <KidsCard tone="amber">
+        <div className="space-y-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <h2 className="font-logo text-lg font-bold text-amber-950 dark:text-amber-50">
+            <div className="min-w-0">
+              <h2 className="font-logo text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">
                 {t('teacherClass.stars.title')}
               </h2>
-              <p className="mt-1 text-sm text-amber-900/80 dark:text-amber-100/80">
-                {t('teacherClass.stars.subtitle')}
+              <p className="mt-2 max-w-2xl text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                {t('teacherClass.stars.heroSubtitle')}
               </p>
             </div>
-            <KidsSecondaryButton type="button" onClick={() => loadChampion()}>
-              {t('teacherClass.stars.load')}
-            </KidsSecondaryButton>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => toast(t('teacherClass.stars.pastStarsHint'))}
+                className="inline-flex items-center justify-center rounded-full border border-zinc-200 bg-zinc-100/90 px-4 py-2.5 text-sm font-bold text-zinc-800 shadow-sm transition hover:bg-zinc-200/90 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"
+              >
+                {t('teacherClass.stars.pastStars')}
+              </button>
+              <button
+                type="button"
+                disabled={starsLoading}
+                onClick={() => void loadChampion()}
+                className="inline-flex items-center justify-center rounded-full bg-violet-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-violet-500/30 transition hover:bg-violet-700 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-violet-500 dark:hover:bg-violet-400"
+              >
+                {starsLoading ? t('common.loading') : t('teacherClass.stars.primaryCta')}
+              </button>
+            </div>
           </div>
-          {champion ? (
-            <ul className="mt-6 space-y-2">
-              {champion.top.length === 0 ? (
-                <li className="text-sm text-amber-800 dark:text-amber-200">{t('teacherClass.stars.emptyWeek')}</li>
-              ) : (
-                champion.top.map((row, i) => (
+
+          <div className="overflow-hidden rounded-3xl border border-zinc-100 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="grid gap-0 lg:grid-cols-2 lg:items-stretch">
+              <div className="relative flex min-h-[220px] flex-col justify-end bg-linear-to-br from-violet-600 via-violet-500 to-amber-300 p-6 sm:min-h-[280px] lg:min-h-[320px]">
+                <div className="pointer-events-none absolute inset-0 opacity-30">
+                  <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/20 blur-2xl" />
+                  <div className="absolute bottom-12 left-1/4 h-32 w-32 rounded-full bg-amber-200/40 blur-2xl" />
+                </div>
+                <div className="relative flex flex-1 flex-col items-center justify-center gap-2 pb-10 pt-6">
+                  <Trophy className="h-20 w-20 text-white drop-shadow-lg sm:h-24 sm:w-24" strokeWidth={1.75} aria-hidden />
+                  <p className="text-center font-logo text-lg font-black tracking-wide text-white/95 drop-shadow-sm">
+                    {t('teacherClass.stars.visualTagline')}
+                  </p>
+                </div>
+                <div className="relative z-10 flex flex-wrap gap-2">
+                  {champion?.week_start ? (
+                    <span className="rounded-full bg-black/45 px-3 py-1.5 text-xs font-bold text-white backdrop-blur-sm">
+                      {formatStarWeekRangeLabel(champion.week_start, language)}
+                    </span>
+                  ) : null}
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-300 px-3 py-1.5 text-xs font-black text-amber-950 shadow-md">
+                    <Star className="h-3.5 w-3.5 fill-amber-950 text-amber-950" aria-hidden />
+                    {t('teacherClass.stars.weekWinnerBadge')}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex flex-col justify-center p-6 sm:p-8">
+                {starsLoading && !champion ? (
+                  <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">{t('common.loading')}</p>
+                ) : champion && champion.top.length > 0 ? (
+                  (() => {
+                    const row = champion.top[0]!;
+                    const u = row.student;
+                    const pic = u.profile_picture;
+                    const name = starStudentDisplayName(u);
+                    const helpPct = Math.min(100, Math.round((row.submission_count / starsMaxSubmission) * 100));
+                    const gp = u.growth_points ?? 0;
+                    const createPct = Math.min(100, Math.round((gp / Math.max(starsMaxGrowthPoints, 1)) * 100));
+                    return (
+                      <>
+                        <div className="flex gap-4">
+                          {pic ? (
+                            <img
+                              src={pic}
+                              alt=""
+                              className="h-14 w-14 shrink-0 rounded-full object-cover ring-2 ring-violet-200 dark:ring-violet-800"
+                            />
+                          ) : (
+                            <div
+                              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-violet-100 font-logo text-lg font-black text-violet-800 dark:bg-violet-950/60 dark:text-violet-200"
+                              aria-hidden
+                            >
+                              {starStudentInitials(u)}
+                            </div>
+                          )}
+                          <div className="min-w-0">
+                            <p className="font-logo text-xl font-bold text-slate-900 dark:text-white">{name}</p>
+                            <p className="mt-0.5 text-sm font-semibold text-violet-600 dark:text-violet-400">
+                              {cls.name} · {t('teacherClass.stars.studentRole')}
+                            </p>
+                            <p className="mt-1 text-xs font-semibold text-zinc-500 dark:text-zinc-400">
+                              {row.submission_count} {t('teacherClass.stars.submissions')} · {t('roadmap.growthPoints')}: {gp}
+                              {u.growth_stage ? (
+                                <span>
+                                  {' '}
+                                  · {u.growth_stage.title}
+                                </span>
+                              ) : null}
+                            </p>
+                          </div>
+                        </div>
+                        <h3 className="mt-6 text-sm font-black uppercase tracking-wide text-zinc-800 dark:text-zinc-200">
+                          {t('teacherClass.stars.whyChosenTitle')}
+                        </h3>
+                        <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                          {t('teacherClass.stars.whyChosenBody')
+                            .replace('{name}', name)
+                            .replace('{count}', String(row.submission_count))}
+                        </p>
+                        <div className="mt-6 grid gap-4 sm:grid-cols-2">
+                          <div className="rounded-2xl border border-zinc-100 bg-zinc-50/90 p-3 dark:border-zinc-700 dark:bg-zinc-800/50">
+                            <p className="text-[10px] font-black uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                              {t('teacherClass.stars.skillHelpfulness')}
+                            </p>
+                            <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-600">
+                              <div
+                                className="h-full rounded-full bg-violet-600 transition-all dark:bg-violet-400"
+                                style={{ width: `${helpPct}%` }}
+                              />
+                            </div>
+                          </div>
+                          <div className="rounded-2xl border border-zinc-100 bg-zinc-50/90 p-3 dark:border-zinc-700 dark:bg-zinc-800/50">
+                            <p className="text-[10px] font-black uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                              {t('teacherClass.stars.skillCreativity')}
+                            </p>
+                            <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-600">
+                              <div
+                                className="h-full rounded-full bg-pink-600 transition-all dark:bg-pink-400"
+                                style={{ width: `${createPct}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()
+                ) : champion && champion.top.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center gap-3 py-6 text-center">
+                    <span className="flex h-14 w-14 items-center justify-center rounded-full border-2 border-dashed border-zinc-300 text-zinc-400 dark:border-zinc-600">
+                      <Star className="h-7 w-7" strokeWidth={2} aria-hidden />
+                    </span>
+                    <p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">{t('teacherClass.stars.emptyWeek')}</p>
+                  </div>
+                ) : (
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400">{t('teacherClass.stars.loadHint')}</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {champion && champion.top.length > 1 ? (
+            <div className="rounded-2xl border border-zinc-200/80 bg-zinc-50/40 px-4 py-3 dark:border-zinc-700 dark:bg-zinc-900/40">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                {t('teacherClass.stars.leaderboardTitle')}
+              </p>
+              <ul className="mt-3 space-y-2">
+                {champion.top.slice(1).map((row, i) => (
                   <li
                     key={row.student.id}
-                    className="flex flex-col gap-2 rounded-2xl bg-linear-to-r from-amber-100 to-orange-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between dark:from-amber-950/50 dark:to-orange-950/40"
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-zinc-100 bg-white px-3 py-2.5 text-sm shadow-sm dark:border-zinc-700 dark:bg-zinc-800/80"
                   >
-                    <div className="min-w-0 flex-1">
-                      <p className="font-bold text-amber-950 dark:text-amber-50">
-                        {i + 1}. {row.student.first_name} {row.student.last_name || row.student.email}
-                      </p>
-                      <p className="mt-1 text-xs font-semibold text-amber-900/90 dark:text-amber-100/90">
-                        {t('roadmap.growthPoints')}: {row.student.growth_points ?? 0}
-                        {row.student.growth_stage ? (
-                          <span> · {t('roadmap.title')}: {row.student.growth_stage.title}</span>
-                        ) : null}
-                      </p>
-                      {row.student.growth_stage?.subtitle ? (
-                        <p className="mt-0.5 text-[11px] leading-snug text-amber-800/80 dark:text-amber-200/80">
-                          {row.student.growth_stage.subtitle}
-                        </p>
-                      ) : null}
-                    </div>
-                    <span className="shrink-0 self-start rounded-full bg-white/80 px-3 py-1 text-sm font-bold text-amber-900 sm:self-center dark:bg-gray-900/80 dark:text-amber-100">
+                    <span className="font-semibold text-slate-900 dark:text-white">
+                      {i + 2}. {starStudentDisplayName(row.student)}
+                    </span>
+                    <span className="rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-bold text-violet-800 dark:bg-violet-950/50 dark:text-violet-200">
                       {row.submission_count} {t('teacherClass.stars.submissions')}
                     </span>
                   </li>
-                ))
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          <div className="grid gap-6 lg:grid-cols-2">
+            <section className="rounded-3xl border border-zinc-100 bg-white p-5 shadow-lg dark:border-zinc-800 dark:bg-zinc-900 sm:p-6">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="font-logo text-lg font-bold text-slate-900 dark:text-white">
+                  {t('teacherClass.stars.nomineesTitle')}
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => toast(t('teacherClass.stars.seeAllHint'))}
+                  className="text-sm font-bold text-violet-600 hover:text-violet-700 dark:text-violet-400 dark:hover:text-violet-300"
+                >
+                  {t('teacherClass.stars.seeAll')}
+                </button>
+              </div>
+              {starNominees.length === 0 ? (
+                <p className="mt-6 text-sm text-zinc-500 dark:text-zinc-400">{t('teacherClass.stars.nomineesEmpty')}</p>
+              ) : (
+                <ul className="mt-5 space-y-3">
+                  {starNominees.map((row) => {
+                    const u = row.student;
+                    const pic = u.profile_picture;
+                    const sub =
+                      u.growth_stage?.title ||
+                      t('teacherClass.stars.nomineeSubline').replace('{n}', String(row.submission_count));
+                    return (
+                      <li
+                        key={u.id}
+                        className="relative flex items-center gap-3 rounded-2xl border border-zinc-100 bg-zinc-50/80 px-3 py-3 dark:border-zinc-700 dark:bg-zinc-800/40"
+                      >
+                        {pic ? (
+                          <img src={pic} alt="" className="h-11 w-11 shrink-0 rounded-full object-cover" />
+                        ) : (
+                          <div
+                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-violet-100 font-logo text-sm font-bold text-violet-800 dark:bg-violet-950/50 dark:text-violet-200"
+                            aria-hidden
+                          >
+                            {starStudentInitials(u)}
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate font-bold text-slate-900 dark:text-white">{starStudentDisplayName(u)}</p>
+                          <p className="truncate text-xs font-medium text-zinc-500 dark:text-zinc-400">{sub}</p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1.5 text-violet-500 dark:text-violet-400">
+                          <Heart className="h-4 w-4" strokeWidth={2.25} aria-hidden />
+                          <Medal className="h-4 w-4 text-pink-500 dark:text-pink-400" strokeWidth={2.25} aria-hidden />
+                        </div>
+                        <details className="relative shrink-0">
+                          <summary className="flex cursor-pointer list-none items-center justify-center rounded-full p-1.5 text-zinc-500 hover:bg-zinc-200/80 dark:text-zinc-400 dark:hover:bg-zinc-700 [&::-webkit-details-marker]:hidden">
+                            <span className="sr-only">{t('teacherClass.students.menuAria')}</span>
+                            <MoreVertical className="h-5 w-5" strokeWidth={2.25} aria-hidden />
+                          </summary>
+                          <div
+                            className="absolute right-0 z-20 mt-1 w-48 overflow-hidden rounded-xl border border-zinc-200 bg-white py-1 shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
+                            role="menu"
+                          >
+                            <button
+                              type="button"
+                              role="menuitem"
+                              className="flex w-full px-4 py-2.5 text-left text-sm font-medium text-slate-800 hover:bg-zinc-50 dark:text-gray-100 dark:hover:bg-zinc-800"
+                              onClick={(e) => {
+                                void navigator.clipboard?.writeText(u.email).then(
+                                  () => {
+                                    toast.success(t('teacherClass.students.emailCopied'));
+                                    (e.currentTarget.closest('details') as HTMLDetailsElement | null)?.removeAttribute(
+                                      'open',
+                                    );
+                                  },
+                                  () => toast.error(t('teacherClass.invite.copyFailed')),
+                                );
+                              }}
+                            >
+                              {t('teacherClass.students.menuCopyEmail')}
+                            </button>
+                          </div>
+                        </details>
+                      </li>
+                    );
+                  })}
+                </ul>
               )}
-            </ul>
-          ) : (
-            <p className="mt-6 text-sm text-amber-800/80 dark:text-amber-200/80">
-              {t('teacherClass.stars.loadHint')}
-            </p>
-          )}
-        </KidsCard>
+            </section>
+
+            <section className="flex flex-col justify-between rounded-3xl bg-linear-to-br from-fuchsia-900 via-purple-900 to-violet-950 p-6 text-white shadow-xl sm:p-7">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/20 bg-white/10">
+                  <Trophy className="h-6 w-6 text-white" strokeWidth={2} aria-hidden />
+                </div>
+                <span className="rounded-full bg-white/15 px-3 py-1 text-[10px] font-black uppercase tracking-wide text-white ring-1 ring-white/25">
+                  {t('teacherClass.stars.monthReportBadge')}
+                </span>
+              </div>
+              <div className="mt-8">
+                <p className="font-logo text-3xl font-black leading-tight sm:text-4xl">
+                  {t('teacherClass.stars.monthReportMain').replace('{count}', String(classStarActiveCount))}
+                </p>
+                <p className="mt-3 max-w-sm text-sm leading-relaxed text-white/85">
+                  {t('teacherClass.stars.monthReportFooter')}
+                </p>
+              </div>
+            </section>
+          </div>
+        </div>
       )}
+
+      {deleteClassModalOpen && cls ? (
+        <KidsCenteredModal
+          variant="danger"
+          title={t('teacherClass.general.deleteClass')}
+          onClose={() => {
+            if (!deletingClass) setDeleteClassModalOpen(false);
+          }}
+          maxWidthClass="max-w-md"
+          footer={
+            <div className="flex flex-wrap justify-end gap-2">
+              <KidsSecondaryButton type="button" disabled={deletingClass} onClick={() => setDeleteClassModalOpen(false)}>
+                {t('common.cancel')}
+              </KidsSecondaryButton>
+              <button
+                type="button"
+                disabled={deletingClass}
+                onClick={() => void executeDeleteClass()}
+                className="inline-flex min-h-11 items-center justify-center rounded-full border-2 border-transparent bg-rose-600 px-6 text-sm font-bold text-white shadow-md transition hover:bg-rose-500 disabled:pointer-events-none disabled:opacity-50 dark:bg-rose-600 dark:hover:bg-rose-500"
+              >
+                {deletingClass ? t('teacherClass.general.deleting') : t('teacherClass.general.deleteClass')}
+              </button>
+            </div>
+          }
+        >
+          <p className="text-sm leading-relaxed text-slate-700 dark:text-gray-300">
+            {t('teacherClass.general.deleteConfirm').replace('{name}', cls.name)}
+          </p>
+        </KidsCenteredModal>
+      ) : null}
 
       {editAssignment ? (
         <KidsCenteredModal
@@ -1776,6 +2880,32 @@ function KidsTeacherClassPageContent() {
                       className={kidsTextareaClass}
                     />
                   </KidsFormField>
+                  <div>
+                    <span className="text-[11px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                      {t('teacherClass.assignments.categoryIconLabel')}
+                    </span>
+                    <div className="mt-2 flex flex-wrap gap-3">
+                      {CHALLENGE_FORM_THEMES.map(({ id, icon: Icon }) => (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => setEditChallengeTheme(id)}
+                          className={`flex h-12 w-12 items-center justify-center rounded-full border-2 transition ${
+                            editChallengeTheme === id
+                              ? 'border-violet-500 bg-violet-100 text-violet-800 shadow-md dark:border-violet-400 dark:bg-violet-950/60 dark:text-violet-200'
+                              : 'border-zinc-200 bg-zinc-100 text-zinc-500 hover:border-violet-200 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
+                          }`}
+                          aria-pressed={editChallengeTheme === id}
+                          aria-label={t(`teacherClass.assignments.theme.${id}`)}
+                        >
+                          <Icon className="h-5 w-5" strokeWidth={2.25} aria-hidden />
+                        </button>
+                      ))}
+                    </div>
+                    <p className="mt-2 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+                      {t('teacherClass.assignments.categoryIconHint')}
+                    </p>
+                  </div>
                   <KidsFormField
                     id={editAsgOpenAtId}
                     label={t('teacherClass.assignments.openAt')}

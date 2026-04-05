@@ -87,42 +87,67 @@ export default function KidsMessagesPage() {
     return <p className="text-center text-sm text-violet-800 dark:text-violet-200">{t('common.loading')}</p>;
   }
 
+  function topicInitials(topic: string): string {
+    const parts = (topic || '').trim().split(/\s+/).filter(Boolean).slice(0, 2);
+    if (parts.length === 0) return '?';
+    return parts.map((p) => (p[0] || '').toUpperCase()).join('').slice(0, 2);
+  }
+
+  function formatListTime(iso: string | null): string {
+    if (!iso) return t('messages.noMessageYet');
+    const d = new Date(iso);
+    const locale = language === 'tr' ? 'tr-TR' : language === 'ge' ? 'de-DE' : 'en-US';
+    const today = new Date();
+    const startToday = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    const startMsg = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const diffDays = Math.round((startToday - startMsg) / 86400000);
+    if (diffDays === 0) return d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
+    if (diffDays === 1) return t('messageDetail.yesterday');
+    if (diffDays < 7) return d.toLocaleDateString(locale, { weekday: 'short' });
+    return d.toLocaleDateString(locale, { dateStyle: 'short' });
+  }
+
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
-      <h1 className="font-logo text-2xl font-bold text-violet-950 dark:text-violet-50">{t('messages.title')}</h1>
-      <p className="text-sm text-slate-600 dark:text-slate-300">
-        {t('messages.subtitle')}
-      </p>
-      {loading ? <p className="text-sm text-slate-500">{t('common.loading')}</p> : null}
+    <div className="mx-auto max-w-lg space-y-5 px-1 pb-10 sm:max-w-xl">
+      <header>
+        <h1 className="font-logo text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{t('messages.title')}</h1>
+        <div className="mt-2 h-1 w-14 rounded-full bg-violet-600" aria-hidden />
+        <p className="mt-3 text-sm leading-relaxed text-zinc-500 dark:text-zinc-400">{t('messages.subtitle')}</p>
+      </header>
+      {loading ? <p className="text-sm text-zinc-500">{t('common.loading')}</p> : null}
       {error ? <p className="text-sm text-red-600 dark:text-red-400">{error}</p> : null}
       {!loading && !error && rows.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-violet-300 bg-violet-50/50 p-6 text-sm text-violet-900 dark:border-violet-800 dark:bg-violet-950/20 dark:text-violet-100">
+        <div className="rounded-[1.75rem] border border-dashed border-violet-200 bg-zinc-50/80 p-8 text-center text-sm text-zinc-600 dark:border-violet-800 dark:bg-zinc-900/40 dark:text-zinc-300">
           {t('messages.empty')}
         </div>
       ) : null}
-      <ul className="space-y-2">
-        {rows.map((c) => (
-          <li key={c.id}>
-            <Link
-              href={`${pathPrefix}/mesajlar/${c.id}`}
-              className="block rounded-2xl border-2 border-violet-200 bg-white/90 px-4 py-3 hover:border-fuchsia-300 dark:border-violet-800 dark:bg-gray-900/70"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <p className="font-semibold text-violet-950 dark:text-violet-100">
-                  {c.topic?.trim() || t('messages.conversationFallback').replace('{id}', String(c.id))}
-                </p>
-                <span className="text-xs text-slate-500 dark:text-slate-400">
-                  {c.last_message_at
-                    ? new Date(c.last_message_at).toLocaleString(language === 'tr' ? 'tr-TR' : language === 'ge' ? 'de-DE' : 'en-US', { dateStyle: 'short', timeStyle: 'short' })
-                    : t('messages.noMessageYet')}
-                </span>
-              </div>
-              <p className="mt-1 text-xs font-semibold text-fuchsia-700 dark:text-fuchsia-300">
-                {t('messages.unread')}: {c.unread_count}
-              </p>
-            </Link>
-          </li>
-        ))}
+      <ul className="space-y-3">
+        {rows.map((c) => {
+          const name = c.topic?.trim() || t('messages.conversationFallback').replace('{id}', String(c.id));
+          return (
+            <li key={c.id}>
+              <Link
+                href={`${pathPrefix}/mesajlar/${c.id}`}
+                className="flex gap-3 rounded-[1.35rem] border-2 border-transparent bg-white p-4 shadow-md shadow-zinc-200/40 transition hover:border-violet-300/80 dark:bg-zinc-900 dark:shadow-black/20"
+              >
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-500 text-sm font-black text-white shadow-inner">
+                  {topicInitials(name)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="truncate font-bold text-slate-900 dark:text-white">{name}</p>
+                    <span className="shrink-0 text-xs tabular-nums text-zinc-400">{formatListTime(c.last_message_at)}</span>
+                  </div>
+                  <p className="mt-1 truncate text-sm text-zinc-500 dark:text-zinc-400">
+                    {c.unread_count > 0
+                      ? `${t('messages.unread')}: ${c.unread_count}`
+                      : t('messages.listPreview')}
+                  </p>
+                </div>
+              </Link>
+            </li>
+          );
+        })}
       </ul>
       {user.role === 'parent' && !accessReady ? (
         <KidsCenteredModal title={t('messages.passwordModalTitle')} onClose={() => router.replace(`${pathPrefix}/veli/panel`)}>

@@ -1,684 +1,677 @@
 'use client';
 
 import {
-  Backpack,
   ArrowRight,
-  CalendarDays,
-  DoorOpen,
+  Award,
+  BarChart2,
+  Bell,
+  BellPlus,
+  Brain,
+  Briefcase,
   GraduationCap,
-  Mic2,
-  PartyPopper,
-  ShieldCheck,
-  Sparkles,
+  Image as ImageIcon,
+  Info,
+  LineChart,
+  ListChecks,
+  Lock,
+  Megaphone,
+  Rocket,
+  Settings,
   Star,
-  Target,
+  Timer,
   Trophy,
   Users,
-  Images,
-  MessageCircle,
-  Rocket,
-  Wand2,
+  UsersRound,
+  Zap,
 } from 'lucide-react';
 import Image from 'next/image';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { useCallback, useEffect, useId, useState, type ReactNode } from 'react';
+import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import { KidsRoleLoginForm } from '@/src/components/kids/kids-role-login-form';
-import { KidsCenteredModal, KidsPrimaryButton, KidsSecondaryButton } from '@/src/components/kids/kids-ui';
-import { kidsHomeHref } from '@/src/lib/kids-config';
+import { KidsCenteredModal } from '@/src/components/kids/kids-ui';
 import { useKidsI18n } from '@/src/providers/kids-language-provider';
+
+const KIDS_LANDING_IMG_WIDTH = 1200;
+const KIDS_LANDING_IMG_HEIGHT = 800;
+
+/** Mockup görselleri — `next/image` remotePatterns */
+const HOME_V2_IMG = {
+  hero: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDx9WDdHS0xLIjAHeEctnK7HhAwn-6oZDcy1cLNaETqoHpERPTrcpy4MO1tG6UmZDIeIsCVZVWsWtCUsuEYzUmfjMPVj92IiqYvmNoKPn_XytVf73-uqs9eX9Nc_dQE8G6ZhviQAsf1yv27PFVGXvwM_gN8_I07kQb_zIuRXTu539sqp_ndjsZhANonJDIX4wZfBFUSxH6eMX1sxjIQwFlGl_Pz2A6428GNdYUBtHl8JipofcaeGtGu9JiniM4YCzwiu_KowGQQiwq4',
+  z1: 'https://lh3.googleusercontent.com/aida-public/AB6AXuATps57d3DgEPJp9lPwaTD5jf713gQZRR_Z4RbZtXHleaFkWujMkf023oK9SIu4cnTmtq8rQMmm3uWZA1bYyCnInzFx1h4B9u-mopxiq0aEUX3neyn3JhtHKH2jHpz1ypsJqR5wwdv1Hh164jTdclO1ULcfffJEKcUZc3Zdckg06LdYdjWSt7OKHNjvqOJ652v3XozYzIyKhVjJMBq0K6bMtn8lUag2Uqw61OjyQ2ud18QoNI9eSjqduGrujQf-j7DI2wDhrISH1Jt6',
+  z2: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDYzwwvpe9Atp762KAGOlmzTCfkpUbUXjwua13ReUKOA2i2bqzHSXOq10BPsbEyjYRwyCQp-eFijzGVIAZuLBr4GkIMvsCn6GTz6Pc_QCiO61BPBjty2tT3st8sThhdgbkizHqdt9EVJHqBLxTJaX2iTBxjKVYXjniH2wB9Vv22ruru4BckhkVgk-gqwzTrWfHVvN2cR9B4ETWMjasp2rU-gmCbRjCBXlrKxrfZcEGhhPMA5_2VMFUfM6p8GDBZxi9wDGQq3Q0vs_s_',
+  z3: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDCOXEl38LIlhTowGtL362uJ2LUC3HsqDj_lI4ttFeR_T4O6g32kdU7146liibFKOQae4s7B3qJj89nemVmHoyZlAIf4jNqVX_4fA7bI-dFTDFEm8M-yF0NuW1XiL7Ok_o4C_gDxTZ-tAG0HxmFIQWhZ4Dp0V7NGS07JZHxWV3UBj0MsSlw9UTKf3217QIGLqtYrlzGb95WPcjG0IXeAim0F5WuCZSw59ffi2pGxBMYGvGe5Ba7MJhql4P4Yb_Bp2TGN1Y0Q4IXZJoh',
+  z4: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDdtFx7ckufeVvOi8jgdC8WRMzvyhOg-hD6_OYx2Y4U2WVWNI2oK0c2xcrrdrPyOVQmCIJrsA8ulCC5yjviBnP9RSXCns7dvkP0UrTRfTri00ZNBnUy5n6-ADAUsRMs1aXwDahUMjMm-cOcBpI37xuQb4BCFn6qZTtuhF_gqVBuIrDZItH68DRcazGipmMTEAKxdhX-evM8Nc8HLSwZPvIIs1l4iffDgXWUdbSjdkTvidM9_7n6mG3tCGIH4SieLGjNUMDnjJRZ4MNm',
+  bento: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDZ6aXX4cFfuXkk2h_yQvClDBOVwW0E5qhz8UVp5kSku4lYUxMOgycxBo29K4hbEWU1lX8b02mfVHJL-YN1X8Vij95BxnqrAVduph9FVbZwT-zkMmUpdjYcUz0VU0ORMB8nitj8GL_Ge02KrR8gTwbDBfa2x6fJ77qDtQUTN4OpR1JrJlm94TZpEGKpAJ18H0XX6zRYUzf8zZtLjEWtM_vN6fK52ZRlsoNuzrdo_uc1oU8dHC6ftSXSCIAgvSGYDSpMDr8VYxQDnM8S',
+} as const;
 
 type LoginTab = 'student' | 'teacher' | 'parent';
 
-function KidsLandingRolePickCard({
-  label,
-  ariaLabel,
-  icon,
-  circleClass,
-  onPick,
-}: {
-  label: string;
-  ariaLabel: string;
-  icon: ReactNode;
-  circleClass: string;
-  onPick: () => void;
-}) {
+function KidsLoginBrandLockup({ ariaLabel }: { ariaLabel: string }) {
   return (
-    <button
-      type="button"
-      onClick={onPick}
+    <div
+      role="img"
       aria-label={ariaLabel}
-      className="group flex min-h-0 w-full min-w-0 flex-col items-center gap-2 rounded-3xl border border-slate-200/90 bg-white/95 px-2 py-4 shadow-sm transition hover:-translate-y-0.5 hover:border-sky-300/90 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-500 sm:gap-3 sm:px-4 sm:py-6 dark:border-slate-600/80 dark:bg-gray-900/90 dark:hover:border-sky-600/70"
+      className="font-logo flex flex-wrap items-center justify-center gap-0 text-[1.35rem] font-semibold tracking-tight sm:text-2xl md:text-[1.65rem]"
     >
-      <span
-        className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-full shadow-inner sm:h-[4.5rem] sm:w-[4.5rem] ${circleClass}`}
-        aria-hidden
-      >
-        {icon}
+      <span className="bg-gradient-to-r from-violet-600 via-fuchsia-500 to-amber-500 bg-clip-text text-transparent dark:from-violet-300 dark:via-fuchsia-300 dark:to-amber-300">
+        Marifetli
       </span>
-      <span className="font-logo text-center text-xs font-black leading-tight text-slate-900 sm:text-base dark:text-white">
-        {label}
-      </span>
-      <ArrowRight
-        className="h-4 w-4 shrink-0 text-sky-500 transition group-hover:translate-x-1 sm:h-5 sm:w-5 dark:text-sky-400"
-        strokeWidth={2.5}
-        aria-hidden
-      />
-    </button>
-  );
-}
-
-/** `frontend/public/kids/landing/` → her zaman kökten `/kids/landing/...` */
-const KIDS_LANDING_IMAGE = (file: string) => `/kids/landing/${file}`;
-
-/** Üretilen PNG’ler 16:10; grid içinde `fill` yerine sabit oran kullanıyoruz (yükseme sıfır hatası). */
-const KIDS_LANDING_IMG_WIDTH = 1600;
-const KIDS_LANDING_IMG_HEIGHT = 1000;
-
-/** Görsel–metin zig-zag: `imageFirst` true → solda görsel; false → solda metin (md+). */
-function KidsLandingZigzagRow({
-  title,
-  body,
-  imageSrc,
-  imageAlt,
-  iconWrapClass,
-  icon,
-  imageFirst,
-  imageBackdropClass,
-}: {
-  title: string;
-  body: string;
-  imageSrc: string;
-  imageAlt: string;
-  iconWrapClass: string;
-  icon: ReactNode;
-  imageFirst: boolean;
-  /** Yumuşak “blob” leke (örn. lime veya pembe) — referans görseldeki gibi */
-  imageBackdropClass?: string;
-}) {
-  const imageFrame = (
-    <div className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white/90 shadow-lg shadow-slate-200/40 dark:border-slate-600/60 dark:bg-slate-900/80 dark:shadow-black/20">
-      <Image
-        src={imageSrc}
-        alt={imageAlt}
-        width={KIDS_LANDING_IMG_WIDTH}
-        height={KIDS_LANDING_IMG_HEIGHT}
-        className="h-auto w-full object-cover"
-        sizes="(max-width: 767px) 100vw, 50vw"
-        priority={false}
-      />
-    </div>
-  );
-
-  const imageCol = (
-    <div className="w-full min-w-0 md:max-w-none">
-      {imageBackdropClass ? (
-        <div className="relative isolate py-2 md:py-4">
-          <div
-            className={`pointer-events-none absolute left-1/2 top-[55%] z-0 h-[95%] w-[98%] -translate-x-1/2 -translate-y-1/2 scale-[1.06] rounded-[42%_58%_50%_50%/48%_52%_55%_45%] opacity-95 blur-[0.5px] ${imageBackdropClass}`}
-            aria-hidden
-          />
-          <div className="relative z-10">{imageFrame}</div>
-        </div>
-      ) : (
-        imageFrame
-      )}
-    </div>
-  );
-
-  const textCol = (
-    <div className="flex min-w-0 flex-col gap-4">
-      <div className="flex items-start gap-4 sm:gap-5">
-        <div
-          className={`mt-1 shrink-0 inline-flex h-11 w-11 items-center justify-center rounded-full text-white shadow-md sm:h-12 sm:w-12 ${iconWrapClass}`}
-          aria-hidden
-        >
-          {icon}
-        </div>
-        <div className="min-w-0 flex-1 space-y-3">
-          <h2 className="font-logo text-xl font-black leading-tight text-slate-900 dark:text-white sm:text-2xl lg:text-3xl">
-            {title}
-          </h2>
-          <p className="max-w-xl text-base font-medium leading-relaxed text-slate-600 dark:text-gray-300">
-            {body}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-
-  return (
-    <div className="grid gap-8 md:grid-cols-2 md:items-start md:gap-10 lg:gap-14">
-      {imageFirst ? (
-        <>
-          {imageCol}
-          {textCol}
-        </>
-      ) : (
-        <>
-          {textCol}
-          {imageCol}
-        </>
-      )}
+      <span className="text-slate-800 dark:text-slate-100"> Kids</span>
     </div>
   );
 }
 
 export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
+  const { t } = useKidsI18n();
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const [loginOpen, setLoginOpen] = useState(false);
   const [tab, setTab] = useState<LoginTab>('student');
-  /** Modal içi: girişte üst bilgi kutusu; şifre sıfırlamada gizlenir */
   const [modalAuthPhase, setModalAuthPhase] = useState<'login' | 'forgot' | 'sent'>('login');
+  const featuresRef = useRef<HTMLDivElement>(null);
   const tabListId = useId();
-  const { t } = useKidsI18n();
 
   const closeLogin = useCallback(() => {
     setLoginOpen(false);
     setModalAuthPhase('login');
-  }, []);
-
-  useEffect(() => {
-    setModalAuthPhase('login');
-  }, [tab]);
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete('giris');
+    const q = next.toString();
+    router.replace(q ? `${pathname}?${q}` : pathname, { scroll: false });
+  }, [pathname, router, searchParams]);
 
   useEffect(() => {
     const g = searchParams.get('giris');
-    if (g === 'ogrenci') {
-      setTab('student');
-      setLoginOpen(true);
-    } else if (g === 'ogretmen') {
-      setTab('teacher');
-      setLoginOpen(true);
-    } else if (g === 'veli') {
-      setTab('parent');
-      setLoginOpen(true);
-    } else if (g === '1') {
-      setLoginOpen(true);
-    } else {
-      return;
-    }
-    const home = kidsHomeHref(pathPrefix);
-    router.replace(home, { scroll: false });
-  }, [searchParams, pathPrefix, router]);
+    if (!g) return;
+    if (g === 'ogrenci') setTab('student');
+    else if (g === 'veli') setTab('parent');
+    else if (g === 'ogretmen') setTab('teacher');
+    setLoginOpen(true);
+  }, [searchParams]);
 
   return (
-    <div className="relative mx-auto max-w-5xl overflow-hidden pb-8">
-      {/* Dekor: yumuşak lekeler */}
-      <div
-        className="pointer-events-none absolute -left-24 top-8 h-56 w-56 rounded-full bg-fuchsia-400/30 blur-3xl dark:bg-fuchsia-600/20"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute -right-16 bottom-32 h-64 w-64 rounded-full bg-amber-300/35 blur-3xl dark:bg-amber-500/15"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute left-1/2 top-1/3 h-40 w-40 -translate-x-1/2 rounded-full bg-sky-400/25 blur-2xl dark:bg-sky-600/15"
-        aria-hidden
-      />
+    <>
+        <div className="relative mx-auto max-w-7xl overflow-hidden px-3 pb-14 sm:px-6">
+          <div
+            className="pointer-events-none absolute -left-24 top-8 h-56 w-56 rounded-full bg-fuchsia-400/25 blur-3xl dark:bg-fuchsia-600/15"
+            aria-hidden
+          />
+          <div
+            className="pointer-events-none absolute -right-16 bottom-32 h-64 w-64 rounded-full bg-amber-300/30 blur-3xl dark:bg-amber-500/12"
+            aria-hidden
+          />
 
-      <div className="relative space-y-10">
-        {/* Üst şerit */}
-        <div className="flex flex-wrap items-center justify-center gap-2 text-center">
-          <span className="inline-flex items-center gap-1.5 rounded-full border-2 border-violet-200 bg-white/90 px-3 py-1 text-xs font-bold text-violet-800 shadow-sm dark:border-violet-800 dark:bg-violet-950/60 dark:text-violet-100">
-            <Sparkles className="inline-block h-3.5 w-3.5 animate-pulse" aria-hidden />
-            {t('landing.safeArea')}
-          </span>
-          <span className="inline-flex items-center gap-1 rounded-full border-2 border-amber-200 bg-amber-50/90 px-3 py-1 text-xs font-bold text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-100">
-            <ShieldCheck className="h-3.5 w-3.5" aria-hidden /> {t('landing.learnByFun')}
-          </span>
-        </div>
-
-        {/* Ana kahraman */}
-        <div className="relative">
-          <PartyPopper className="pointer-events-none absolute -top-2 right-4 h-8 w-8 animate-bounce text-fuchsia-400 sm:right-12 sm:h-10 sm:w-10" aria-hidden />
-          <Star className="pointer-events-none absolute bottom-8 left-2 h-7 w-7 animate-pulse text-amber-400 sm:left-8 sm:h-8 sm:w-8" aria-hidden />
-
-          <div className="rounded-[2rem] border-4 border-white/90 bg-gradient-to-br from-violet-500 via-fuchsia-500 to-amber-400 p-1.5 shadow-2xl shadow-fuchsia-500/30 dark:border-violet-900/60 dark:from-violet-800 dark:via-fuchsia-800 dark:to-amber-700">
-            <div className="rounded-[1.65rem] bg-white/95 px-6 py-10 dark:bg-gray-950/95 sm:px-12 sm:py-14">
-              <p className="text-center text-sm font-black uppercase tracking-[0.2em] text-fuchsia-600 dark:text-fuchsia-400">
-                Marifetli Kids
-              </p>
-              <h1 className="font-logo mt-3 text-center text-4xl font-black leading-tight text-violet-950 dark:text-white sm:text-6xl">
-                {t('landing.heroTitleLine1')}
-                <br />
-                <span className="bg-gradient-to-r from-fuchsia-600 to-amber-500 bg-clip-text text-transparent dark:from-fuchsia-400 dark:to-amber-400">
-                  {t('landing.heroTitleLine2')}
-                </span>
-              </h1>
-              <p className="mx-auto mt-5 max-w-lg text-center text-base font-medium leading-relaxed text-slate-600 dark:text-gray-300 sm:text-lg">
-                {t('landing.heroSubtitle')}
-              </p>
-
-              <div className="mx-auto mt-10 w-full max-w-3xl px-0 sm:px-2">
-                <p className="text-center text-lg font-black text-slate-900 dark:text-white sm:text-xl">
-                  {t('landing.whichRole')}
-                </p>
-                <div className="mt-6 grid w-full grid-cols-3 gap-2 sm:gap-4 md:gap-5">
-                  <KidsLandingRolePickCard
-                    label={t('landing.role.teacher')}
-                    ariaLabel={t('landing.role.teacher')}
-                    icon={<GraduationCap className="h-7 w-7 text-rose-600 sm:h-8 sm:w-8 dark:text-rose-200" />}
-                    circleClass="bg-amber-300/90 text-rose-600 dark:bg-amber-400/40 dark:text-rose-200"
-                    onPick={() => {
-                      setTab('teacher');
-                      setLoginOpen(true);
-                    }}
+          <div className="relative space-y-16 pt-2">
+            {/* Hero — tam genişlik görsel */}
+            <section className="px-1 md:px-0">
+              <div className="relative mx-auto max-w-7xl overflow-hidden rounded-2xl bg-slate-900 shadow-2xl shadow-violet-500/10">
+                <div className="relative min-h-[min(520px,85vh)] w-full md:min-h-[480px]">
+                  <Image
+                    src={HOME_V2_IMG.hero}
+                    alt=""
+                    fill
+                    priority
+                    className="object-cover opacity-70"
+                    sizes="(max-width: 1280px) 100vw, 1280px"
                   />
-                  <KidsLandingRolePickCard
-                    label={t('landing.role.parent')}
-                    ariaLabel={t('landing.role.parent')}
-                    icon={<Users className="h-7 w-7 text-sky-800 sm:h-8 sm:w-8 dark:text-sky-100" />}
-                    circleClass="bg-sky-200/95 text-sky-800 dark:bg-sky-900/50 dark:text-sky-100"
-                    onPick={() => {
-                      setTab('parent');
-                      setLoginOpen(true);
-                    }}
+                  <div
+                    className="absolute inset-0 bg-gradient-to-r from-slate-900 via-slate-900/60 to-transparent"
+                    aria-hidden
                   />
-                  <KidsLandingRolePickCard
-                    label={t('landing.role.student')}
-                    ariaLabel={t('landing.role.student')}
-                    icon={<Backpack className="h-7 w-7 text-emerald-800 sm:h-8 sm:w-8 dark:text-lime-100" />}
-                    circleClass="bg-lime-300/90 text-emerald-800 dark:bg-lime-900/40 dark:text-lime-100"
-                    onPick={() => {
-                      setTab('student');
-                      setLoginOpen(true);
-                    }}
-                  />
-                </div>
-                <div
-                  className="mt-8 flex flex-col items-center justify-center gap-2 sm:flex-row sm:gap-4"
-                  aria-label={t('landing.trustAria')}
-                >
-                  <div className="flex items-center gap-0.5 text-amber-400" aria-hidden>
-                    <span className="text-xl leading-none sm:text-2xl">★</span>
-                    <span className="text-xl leading-none sm:text-2xl">★</span>
-                    <span className="text-xl leading-none sm:text-2xl">★</span>
-                    <span className="text-xl leading-none sm:text-2xl">★</span>
-                    <span className="text-xl leading-none text-amber-400/45 sm:text-2xl">★</span>
+                  <div className="relative z-10 flex min-h-[min(520px,85vh)] items-center px-6 py-12 md:min-h-[480px] md:px-16 md:py-14 lg:px-20">
+                    <div className="max-w-2xl">
+                      <div className="mb-8 inline-flex w-fit items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 backdrop-blur-md">
+                        <span className="h-2 w-2 shrink-0 animate-ping rounded-full bg-amber-400" aria-hidden />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-white">
+                          {t('landing.homeV2.immersiveBadge')}
+                        </span>
+                      </div>
+                      <h2 className="mb-6 font-logo text-4xl font-black leading-tight text-white md:text-6xl lg:text-7xl">
+                        {t('landing.homeV2.immersiveTitle1')}
+                        <br />
+                        {t('landing.homeV2.immersiveTitle2')}
+                      </h2>
+                      <p className="mb-10 text-lg font-medium leading-relaxed text-slate-300 md:text-xl">
+                        {t('landing.homeV2.immersiveBody')}
+                      </p>
+                      <div className="flex flex-col gap-5 sm:flex-row">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setTab('student');
+                            setLoginOpen(true);
+                          }}
+                          className="inline-flex items-center justify-center gap-3 rounded-full bg-gradient-to-r from-violet-600 to-fuchsia-600 px-8 py-4 text-lg font-black text-white shadow-xl shadow-violet-500/30 transition hover:scale-[1.03] active:scale-[0.99]"
+                        >
+                          {t('landing.login')}
+                          <Rocket className="h-5 w-5 shrink-0" aria-hidden />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setLoginOpen(true)}
+                          className="rounded-full border border-white/20 bg-white/10 px-8 py-4 text-lg font-bold text-white backdrop-blur-md transition hover:bg-white/20"
+                        >
+                          {t('landing.alreadyHaveAccount')}
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-center text-sm font-medium text-slate-500 dark:text-slate-400">
-                    {t('landing.trustLine')}
-                  </p>
                 </div>
               </div>
+            </section>
 
-              <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
-                <KidsPrimaryButton
-                  type="button"
-                  className="min-h-14 w-full max-w-xs rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 text-base font-black shadow-lg shadow-fuchsia-500/35 ring-4 ring-fuchsia-200/50 hover:from-violet-500 hover:to-fuchsia-500 dark:ring-fuchsia-900/40"
-                  onClick={() => setLoginOpen(true)}
+            {/* Bento — serbest kurs + rozet yolu */}
+            <section className="px-1 pb-2 md:px-0 md:pb-4">
+              <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 md:grid-cols-3">
+                <div className="group relative overflow-hidden rounded-2xl border border-slate-100 bg-white p-8 shadow-md transition-all duration-500 hover:shadow-xl dark:border-zinc-700 dark:bg-zinc-900 md:col-span-2 md:p-10">
+                  <div
+                    className="absolute right-0 top-0 h-32 w-32 rounded-bl-full bg-violet-500/5"
+                    aria-hidden
+                  />
+                  <div className="relative z-10 flex flex-col items-center gap-10 md:flex-row">
+                    <div className="flex-1">
+                      <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-2xl bg-violet-500/10 text-violet-600 dark:text-violet-400">
+                        <Rocket className="h-10 w-10" strokeWidth={2} aria-hidden />
+                      </div>
+                      <h3 className="mb-4 font-logo text-2xl font-black text-slate-900 dark:text-white md:text-3xl">
+                        {t('landing.homeV2.bentoCourseTitle')}
+                      </h3>
+                      <p className="mb-8 text-lg leading-relaxed text-slate-600 dark:text-slate-300">
+                        {t('landing.homeV2.bentoCourseBody')}
+                      </p>
+                      <Link
+                        href={`${pathPrefix}/ogrenci/kursu`}
+                        className="inline-flex items-center gap-3 text-lg font-black text-violet-600 transition-all group-hover:gap-6 dark:text-violet-400"
+                      >
+                        {t('landing.homeV2.bentoCourseCta')}
+                        <ArrowRight className="h-5 w-5 shrink-0" aria-hidden />
+                      </Link>
+                    </div>
+                    <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl shadow-2xl shadow-black/10 md:w-80 md:shrink-0">
+                      <Image
+                        src={HOME_V2_IMG.bento}
+                        alt=""
+                        width={640}
+                        height={480}
+                        className="h-full w-full object-cover transition duration-700 group-hover:scale-110"
+                        sizes="(max-width: 768px) 100vw, 320px"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <Link
+                  href={`${pathPrefix}/ogrenci/yol`}
+                  className="group relative flex flex-col justify-between overflow-hidden rounded-2xl bg-gradient-to-br from-violet-600 to-fuchsia-600 p-8 text-white shadow-xl shadow-violet-500/20 md:p-10"
                 >
-                  <Rocket className="h-4 w-4" aria-hidden /> {t('landing.login')}
-                </KidsPrimaryButton>
-                <KidsSecondaryButton
-                  type="button"
-                  className="min-h-12 w-full max-w-xs rounded-2xl border-2 border-violet-300 font-bold text-violet-900 dark:border-violet-700 dark:text-violet-100"
-                  onClick={() => setLoginOpen(true)}
-                >
-                  {t('landing.alreadyHaveAccount')}
-                </KidsSecondaryButton>
+                  <div
+                    className="absolute -bottom-10 -right-10 h-48 w-48 rounded-full bg-white/10 blur-3xl"
+                    aria-hidden
+                  />
+                  <div className="relative z-10">
+                    <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-2xl bg-white/20 text-white">
+                      <Award className="h-10 w-10" strokeWidth={2} aria-hidden />
+                    </div>
+                    <h3 className="mb-4 font-logo text-2xl font-black md:text-3xl">{t('landing.homeV2.bentoBadgeTitle')}</h3>
+                    <p className="text-lg leading-relaxed text-white/80">{t('landing.homeV2.bentoBadgeBody')}</p>
+                  </div>
+                  <div className="relative z-10 mt-10 flex -space-x-4" aria-hidden>
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-white/30 bg-amber-400 text-amber-950 shadow-lg transition-transform delay-0 duration-300 group-hover:-translate-y-2">
+                      <Award className="h-8 w-8" strokeWidth={2} />
+                    </div>
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-white/30 bg-fuchsia-500 text-white shadow-lg transition-transform delay-75 duration-300 group-hover:-translate-y-2">
+                      <Star className="h-8 w-8 fill-current" strokeWidth={2} />
+                    </div>
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-white/30 bg-violet-200 text-violet-800 shadow-lg transition-transform delay-150 duration-300 group-hover:-translate-y-2">
+                      <Trophy className="h-8 w-8" strokeWidth={2} />
+                    </div>
+                  </div>
+                </Link>
               </div>
-              
+            </section>
+
+            {/* Zig-zag özellikler */}
+            <div ref={featuresRef} className="space-y-24 overflow-hidden py-6">
+              {/* 1 — AI test */}
+              <section className="mx-auto max-w-7xl">
+                <div className="grid items-center gap-12 md:grid-cols-2">
+                  <div className="relative order-2 md:order-1">
+                    <div className="absolute inset-0 -rotate-3 rounded-[2.5rem] bg-violet-500/10" aria-hidden />
+                    <Image
+                      src={HOME_V2_IMG.z1}
+                      alt=""
+                      width={KIDS_LANDING_IMG_WIDTH}
+                      height={KIDS_LANDING_IMG_HEIGHT}
+                      className="relative z-10 h-[420px] w-full rounded-[2.5rem] object-cover shadow-lg"
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                    />
+                  </div>
+                  <div className="order-1 space-y-5 md:order-2 md:pl-8">
+                    <h2 className="font-logo text-3xl font-bold text-slate-900 dark:text-white md:text-4xl md:leading-tight">
+                      {t('landing.homeV2.z1.title')}
+                    </h2>
+                    <p className="text-lg leading-relaxed text-slate-600 dark:text-slate-300">
+                      {t('landing.homeV2.z1.body')}
+                    </p>
+                    <ul className="space-y-3">
+                      <li className="flex items-center gap-3 font-semibold text-violet-700 dark:text-violet-300">
+                        <Zap className="h-5 w-5 shrink-0" aria-hidden /> {t('landing.homeV2.z1.b1')}
+                      </li>
+                      <li className="flex items-center gap-3 font-semibold text-violet-700 dark:text-violet-300">
+                        <BarChart2 className="h-5 w-5 shrink-0" aria-hidden /> {t('landing.homeV2.z1.b2')}
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </section>
+
+              {/* 2 — Ödev */}
+              <section className="rounded-[2rem] bg-slate-100/80 py-16 dark:bg-zinc-900/50">
+                <div className="mx-auto max-w-7xl px-2">
+                  <div className="grid items-center gap-12 md:grid-cols-2">
+                    <div className="space-y-5 md:pr-8">
+                      <h2 className="font-logo text-3xl font-bold text-slate-900 dark:text-white md:text-4xl">
+                        {t('landing.homeV2.z2.title')}
+                      </h2>
+                      <p className="text-lg leading-relaxed text-slate-600 dark:text-slate-300">
+                        {t('landing.homeV2.z2.body')}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setTab('teacher');
+                          setLoginOpen(true);
+                        }}
+                        className="flex items-center gap-2 font-bold text-violet-700 transition hover:translate-x-1 dark:text-violet-300"
+                      >
+                        {t('landing.homeV2.z2.cta')} <ArrowRight className="h-4 w-4" aria-hidden />
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <div className="absolute inset-0 rotate-3 rounded-[2.5rem] bg-rose-500/10" aria-hidden />
+                      <Image
+                        src={HOME_V2_IMG.z2}
+                        alt=""
+                        width={KIDS_LANDING_IMG_WIDTH}
+                        height={KIDS_LANDING_IMG_HEIGHT}
+                        className="relative z-10 h-[420px] w-full rounded-[2.5rem] object-cover shadow-lg"
+                        sizes="(max-width: 768px) 100vw, 50vw"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* 3 — Veli */}
+              <section className="mx-auto max-w-7xl">
+                <div className="grid items-center gap-12 md:grid-cols-2">
+                  <div className="relative order-2 md:order-1">
+                    <div className="absolute inset-0 -rotate-2 rounded-[2.5rem] bg-amber-400/15" aria-hidden />
+                    <Image
+                      src={HOME_V2_IMG.z3}
+                      alt=""
+                      width={KIDS_LANDING_IMG_WIDTH}
+                      height={KIDS_LANDING_IMG_HEIGHT}
+                      className="relative z-10 h-[420px] w-full rounded-[2.5rem] object-cover shadow-lg"
+                      sizes="(max-width: 768px) 100vw, 50vw"
+                    />
+                  </div>
+                  <div className="order-1 space-y-5 md:order-2 md:pl-8">
+                    <h2 className="font-logo text-3xl font-bold text-slate-900 dark:text-white md:text-4xl">
+                      {t('landing.homeV2.z3.title')}
+                    </h2>
+                    <p className="text-lg leading-relaxed text-slate-600 dark:text-slate-300">
+                      {t('landing.homeV2.z3.body')}
+                    </p>
+                    <div className="grid grid-cols-2 gap-3 pt-2">
+                      <div className="rounded-2xl bg-white p-4 shadow-sm dark:bg-zinc-800">
+                        <Lock className="mb-2 h-8 w-8 text-fuchsia-600" aria-hidden />
+                        <p className="text-sm font-bold text-slate-900 dark:text-white">{t('landing.homeV2.z3.card1')}</p>
+                      </div>
+                      <div className="rounded-2xl bg-white p-4 shadow-sm dark:bg-zinc-800">
+                        <ImageIcon className="mb-2 h-8 w-8 text-fuchsia-600" aria-hidden />
+                        <p className="text-sm font-bold text-slate-900 dark:text-white">{t('landing.homeV2.z3.card2')}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* 4 — Uzman */}
+              <section className="rounded-[2rem] bg-violet-500/5 py-16 dark:bg-violet-950/20">
+                <div className="mx-auto max-w-7xl px-2">
+                  <div className="grid items-center gap-12 md:grid-cols-2">
+                    <div className="space-y-5 md:pr-8">
+                      <h2 className="font-logo text-3xl font-bold text-slate-900 dark:text-white md:text-4xl">
+                        {t('landing.homeV2.z4.title')}
+                      </h2>
+                      <p className="text-lg leading-relaxed text-slate-600 dark:text-slate-300">
+                        {t('landing.homeV2.z4.body')}
+                      </p>
+                      <div className="flex items-center gap-4 rounded-3xl bg-white p-4 shadow-sm dark:bg-zinc-800">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-300 text-amber-950">
+                          <Brain className="h-6 w-6" aria-hidden />
+                        </div>
+                        <div>
+                          <p className="font-bold text-slate-900 dark:text-white">{t('landing.homeV2.z4.expertTitle')}</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400">{t('landing.homeV2.z4.expertSub')}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="relative">
+                      <Image
+                        src={HOME_V2_IMG.z4}
+                        alt=""
+                        width={KIDS_LANDING_IMG_WIDTH}
+                        height={KIDS_LANDING_IMG_HEIGHT}
+                        className="relative z-10 h-[420px] w-full rounded-[2.5rem] object-cover shadow-2xl"
+                        sizes="(max-width: 768px) 100vw, 50vw"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* 5 — Sınıf duyuruları */}
+              <section className="mx-auto max-w-7xl px-1 md:px-0">
+                <div className="flex flex-col items-center gap-12 md:flex-row md:items-stretch">
+                  <div className="w-full flex-1">
+                    <div className="group rounded-2xl border border-slate-100 bg-white p-8 shadow-md transition-all hover:border-amber-500/20 dark:border-zinc-700 dark:bg-zinc-900 md:p-12">
+                      <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-2xl bg-amber-100 text-amber-600 transition-transform group-hover:scale-110 dark:bg-amber-950/50 dark:text-amber-300">
+                        <Megaphone className="h-10 w-10" strokeWidth={2} aria-hidden />
+                      </div>
+                      <h3 className="mb-4 font-logo text-2xl font-black text-slate-900 dark:text-white md:text-3xl">
+                        {t('landing.homeV2.z5.title')}
+                      </h3>
+                      <p className="mb-8 text-lg font-medium leading-relaxed text-slate-600 dark:text-slate-300">
+                        {t('landing.homeV2.z5.body')}
+                      </p>
+                      <Link
+                        href={`${pathPrefix}/duyurular`}
+                        className="flex w-full items-center justify-center gap-2 rounded-xl bg-amber-50 py-4 text-sm font-bold text-amber-700 transition-all hover:bg-amber-600 hover:text-white dark:bg-amber-950/40 dark:text-amber-200 dark:hover:bg-amber-600 dark:hover:text-white"
+                      >
+                        {t('landing.homeV2.z5.cta')}
+                        <BellPlus className="h-4 w-4 shrink-0" aria-hidden />
+                      </Link>
+                    </div>
+                  </div>
+                  <div className="flex w-full flex-1 items-center justify-center">
+                    <div className="relative flex aspect-square w-full max-w-md items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500/5 to-amber-500/20">
+                      <div className="relative z-10 flex w-72 max-w-[85vw] rotate-2 flex-col rounded-2xl border-2 border-amber-200/50 bg-white/80 p-6 shadow-xl backdrop-blur-md transition-transform duration-500 hover:rotate-0 dark:border-amber-800/50 dark:bg-zinc-900/85">
+                        <div className="mb-4 flex items-center gap-3">
+                          <Bell className="h-6 w-6 shrink-0 text-amber-600 dark:text-amber-400" aria-hidden />
+                          <div className="h-3 w-40 rounded-full bg-amber-100 dark:bg-amber-900/50" aria-hidden />
+                        </div>
+                        <div className="space-y-2" aria-hidden>
+                          <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-700" />
+                          <div className="h-2 w-full rounded-full bg-slate-100 dark:bg-slate-700" />
+                          <div className="h-2 w-1/2 rounded-full bg-slate-100 dark:bg-slate-700" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
             </div>
+
+            {/* Veli kontrollü oyun merkezi */}
+            <section className="mx-auto max-w-7xl px-1 pb-12 pt-2 md:px-2">
+              <div className="group relative overflow-hidden rounded-2xl bg-slate-900 p-8 shadow-2xl shadow-slate-900/20 md:p-12">
+                <div
+                  className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-violet-500/20 blur-3xl"
+                  aria-hidden
+                />
+                <div className="relative z-10 flex flex-col items-center gap-12 md:flex-row">
+                  <div className="flex-1">
+                    <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-violet-500/30 bg-violet-500/20 px-5 py-2 backdrop-blur-md">
+                      <UsersRound className="h-4 w-4 shrink-0 text-violet-300" aria-hidden />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-violet-300">
+                        {t('landing.homeV2.parentBadge')}
+                      </span>
+                    </div>
+                    <h3 className="mb-6 font-logo text-3xl font-black text-white md:text-4xl">
+                      {t('landing.homeV2.parentTitle')}
+                    </h3>
+                    <p className="mb-10 text-lg leading-relaxed text-slate-400 md:text-xl">
+                      {t('landing.homeV2.parentBody')}
+                    </p>
+                    <Link
+                      href={`${pathPrefix}/veli/ebeveyn-kontrolleri`}
+                      className="inline-flex w-fit items-center gap-3 rounded-2xl bg-white px-8 py-4 text-sm font-black text-slate-900 transition hover:bg-violet-500 hover:text-white"
+                    >
+                      {t('landing.homeV2.parentCta')}
+                      <Settings className="h-4 w-4 shrink-0" aria-hidden />
+                    </Link>
+                  </div>
+                  <div className="flex w-full justify-center md:w-auto">
+                    <div className="relative flex aspect-[4/3] w-full max-w-sm flex-col items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur-sm">
+                      <div className="grid grid-cols-2 gap-6">
+                        <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-white/10 transition-colors group-hover:bg-violet-500/30">
+                          <Timer className="h-10 w-10 text-violet-300" aria-hidden />
+                        </div>
+                        <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-white/10 transition-colors group-hover:bg-fuchsia-500/30">
+                          <Lock className="h-10 w-10 text-fuchsia-300" aria-hidden />
+                        </div>
+                        <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-white/10 transition-colors group-hover:bg-amber-400/30">
+                          <LineChart className="h-10 w-10 text-amber-300" aria-hidden />
+                        </div>
+                        <div className="flex h-24 w-24 items-center justify-center rounded-2xl bg-white/10 transition-colors group-hover:bg-blue-400/30">
+                          <ListChecks className="h-10 w-10 text-blue-400" aria-hidden />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
           </div>
         </div>
-
-        {/* Bento özellikler */}
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="group rounded-3xl border-2 border-sky-200 bg-gradient-to-br from-sky-50 to-white p-5 shadow-md transition hover:-translate-y-0.5 hover:shadow-lg dark:border-sky-800/50 dark:from-sky-950/40 dark:to-gray-900/90">
-            <span className="text-3xl transition group-hover:scale-110" aria-hidden>
-              <Target className="h-7 w-7 text-sky-600" />
-            </span>
-            <h2 className="font-logo mt-2 text-lg font-bold text-sky-900 dark:text-sky-100">Challenges</h2>
-            <p className="mt-1.5 text-sm leading-relaxed text-sky-900/80 dark:text-sky-100/80">
-              {t('landing.card.challengesBody')}
-            </p>
-          </div>
-          <div className="group rounded-3xl border-2 border-amber-200 bg-gradient-to-br from-amber-50 to-white p-5 shadow-md transition hover:-translate-y-0.5 hover:shadow-lg dark:border-amber-800/50 dark:from-amber-950/40 dark:to-gray-900/90">
-            <span className="text-3xl transition group-hover:rotate-6" aria-hidden>
-              <Mic2 className="h-7 w-7 text-amber-600" />
-            </span>
-            <h2 className="font-logo mt-2 text-lg font-bold text-amber-900 dark:text-amber-100">{t('landing.card.freestyleTitle')}</h2>
-            <p className="mt-1.5 text-sm leading-relaxed text-amber-900/80 dark:text-amber-100/80">
-              {t('landing.card.freestyleBody')}
-            </p>
-          </div>
-          <div className="group rounded-3xl border-2 border-violet-200 bg-gradient-to-br from-violet-50 to-white p-5 shadow-md transition hover:-translate-y-0.5 hover:shadow-lg dark:border-violet-800/50 dark:from-violet-950/40 dark:to-gray-900/90 sm:col-span-1">
-            <span className="text-3xl transition group-hover:scale-110" aria-hidden>
-              <Trophy className="h-7 w-7 text-violet-600" />
-            </span>
-            <h2 className="font-logo mt-2 text-lg font-bold text-violet-900 dark:text-violet-100">{t('landing.card.badgeTitle')}</h2>
-            <p className="mt-1.5 text-sm leading-relaxed text-violet-900/80 dark:text-violet-100/80">
-              {t('landing.card.badgeBody')}
-            </p>
-          </div>
-        </div>
-
-        {/* Zig-zag + Oyun merkezi + öğrenci/öğretmen kartları; orta çizgi aynı relative blokta (yarım kalmaması için) */}
-        <div className="relative space-y-10">
-          <section
-            className="relative py-10 sm:py-14"
-            aria-labelledby="kids-landing-features-heading"
-          >
-            <h2 id="kids-landing-features-heading" className="sr-only">
-              Marifetli Kids özellikleri
-            </h2>
-
-            <div className="relative flex flex-col gap-16 sm:gap-20 md:gap-28 lg:gap-32">
-            <KidsLandingZigzagRow
-              imageFirst
-              title={t('landing.feature.connect.title')}
-              body={t('landing.feature.connect.body')}
-              imageSrc={KIDS_LANDING_IMAGE('kids-landing-messages.png')}
-              imageAlt={t('landing.feature.connect.alt')}
-              iconWrapClass="bg-sky-500 ring-4 ring-sky-100 dark:ring-sky-900/50"
-              icon={<MessageCircle className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={2.25} aria-hidden />}
-            />
-            <KidsLandingZigzagRow
-              imageFirst={false}
-              title={t('landing.feature.window.title')}
-              body={t('landing.feature.window.body')}
-              imageSrc={KIDS_LANDING_IMAGE('kids-landing-stories.png')}
-              imageAlt={t('landing.feature.window.alt')}
-              iconWrapClass="bg-amber-500 ring-4 ring-amber-100 dark:ring-amber-900/50"
-              icon={<Images className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={2.25} aria-hidden />}
-            />
-            <KidsLandingZigzagRow
-              imageFirst
-              title={t('landing.feature.calendar.title')}
-              body={t('landing.feature.calendar.body')}
-              imageSrc={KIDS_LANDING_IMAGE('kids-landing-events.png')}
-              imageAlt={t('landing.feature.calendar.alt')}
-              iconWrapClass="bg-violet-600 ring-4 ring-violet-100 dark:ring-violet-900/50"
-              icon={<CalendarDays className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={2.25} aria-hidden />}
-            />
-            <KidsLandingZigzagRow
-              imageFirst={false}
-              title={t('landing.feature.grow.title')}
-              body={t('landing.feature.grow.body')}
-              imageSrc={KIDS_LANDING_IMAGE('kids-landing-grow.png')}
-              imageAlt={t('landing.feature.grow.alt')}
-              iconWrapClass="bg-lime-500 ring-4 ring-lime-100 dark:ring-lime-900/50"
-              icon={<Rocket className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={2.25} aria-hidden />}
-              imageBackdropClass="bg-lime-200/55 dark:bg-emerald-900/35"
-            />
-            <KidsLandingZigzagRow
-              imageFirst
-              title={t('landing.feature.classroom.title')}
-              body={t('landing.feature.classroom.body')}
-              imageSrc={KIDS_LANDING_IMAGE('kids-landing-toolkit.png')}
-              imageAlt={t('landing.feature.classroom.alt')}
-              iconWrapClass="bg-rose-500 ring-4 ring-rose-100 dark:ring-rose-900/50"
-              icon={<Wand2 className="h-6 w-6 sm:h-7 sm:w-7" strokeWidth={2.25} aria-hidden />}
-              imageBackdropClass="bg-rose-200/50 dark:bg-rose-950/30"
-            />
-            </div>
-          </section>
-
-          {/* Oyun merkezi tanıtımı */}
-          <div className="relative z-[3] rounded-3xl border-2 border-fuchsia-200 bg-gradient-to-br from-fuchsia-50 via-violet-50 to-sky-50 p-6 shadow-md dark:border-fuchsia-800/50 dark:from-fuchsia-950/30 dark:via-violet-950/30 dark:to-sky-950/30">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="max-w-2xl">
-              <p className="inline-flex items-center gap-1 rounded-full border border-fuchsia-300 bg-white/80 px-2.5 py-1 text-xs font-black text-fuchsia-700 dark:border-fuchsia-700 dark:bg-fuchsia-950/40 dark:text-fuchsia-200">
-                <Backpack className="h-3.5 w-3.5" aria-hidden /> {t('landing.game.new')}
-              </p>
-              <h2 className="font-logo mt-3 text-2xl font-black text-violet-950 dark:text-violet-50 sm:text-3xl">
-                {t('landing.game.title')}
-              </h2>
-              <p className="mt-3 text-sm leading-relaxed text-slate-700 dark:text-slate-200 sm:text-base">
-                {t('landing.game.body')}
-              </p>
-            </div>
-            <div className="text-5xl sm:text-6xl" aria-hidden>
-              <Trophy className="h-10 w-10 text-amber-500" />
-            </div>
-          </div>
-          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-            <KidsPrimaryButton
-              type="button"
-              className="min-h-12 rounded-2xl"
-              onClick={() => router.push(`${pathPrefix}/ogrenci/oyun-merkezi`)}
-            >
-              {t('landing.discoverGame')}
-            </KidsPrimaryButton>
-            <KidsSecondaryButton
-              type="button"
-              className="min-h-12 rounded-2xl"
-              onClick={() => {
-                setTab('student');
-                setLoginOpen(true);
-              }}
-            >
-              {t('landing.loginAsStudent')}
-            </KidsSecondaryButton>
-          </div>
-          </div>
-
-          {/* Öğrenci / öğretmen — aynı blokta orta çizgi sütun aralığına kadar uzanır */}
-          <div className="relative z-[1] grid gap-5 sm:grid-cols-2">
-            <div className="rounded-3xl border-2 border-sky-200/90 bg-white/80 p-6 dark:border-sky-800/60 dark:bg-gray-900/70">
-              <div className="flex items-center gap-3">
-                <span className="text-3xl" aria-hidden>
-                  <Backpack className="h-7 w-7 text-sky-600" />
-                </span>
-                <h2 className="font-logo text-xl font-bold text-sky-900 dark:text-sky-100">{t('landing.studentQuestion')}</h2>
-              </div>
-              <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-gray-300">
-                {t('landing.studentCardBody')}
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setTab('student');
-                  setLoginOpen(true);
-                }}
-                className="mt-4 text-sm font-bold text-sky-700 underline underline-offset-2 hover:text-fuchsia-600 dark:text-sky-300"
-              >
-                {t('landing.studentLoginCta')}
-              </button>
-            </div>
-            <div className="rounded-3xl border-2 border-emerald-200/90 bg-white/80 p-6 dark:border-emerald-800/60 dark:bg-gray-900/70">
-              <div className="flex items-center gap-3">
-                <span className="text-3xl" aria-hidden>
-                  <GraduationCap className="h-7 w-7 text-emerald-600" />
-                </span>
-                <h2 className="font-logo text-xl font-bold text-emerald-900 dark:text-emerald-100">{t('landing.teacherQuestion')}</h2>
-              </div>
-              <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-gray-300">
-                {t('landing.teacherCardBody')}
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  setTab('teacher');
-                  setLoginOpen(true);
-                }}
-                className="mt-4 text-sm font-bold text-emerald-700 underline underline-offset-2 hover:text-fuchsia-600 dark:text-emerald-300"
-              >
-                {t('landing.teacherLoginCta')}
-              </button>
-            </div>
-          </div>
-
-          {/* md+: net görünen kıvrımlı orta çizgi */}
-          <div className="pointer-events-none absolute left-1/2 top-6 bottom-6 z-[2] hidden w-8 -translate-x-1/2 md:block dark:opacity-90" aria-hidden>
-            <svg className="h-full w-full" viewBox="0 0 28 240" preserveAspectRatio="none">
-              <path
-                d="M14 0 C 3 16, 25 32, 14 48 C 3 64, 25 80, 14 96 C 3 112, 25 128, 14 144 C 3 160, 25 176, 14 192 C 3 208, 25 224, 14 240"
-                fill="none"
-                stroke="rgb(14 165 233 / 0.84)"
-                strokeWidth="3"
-                strokeLinecap="round"
-              />
-            </svg>
-          </div>
-        </div>
-
-        <p className="text-center text-sm font-semibold text-violet-800/90 dark:text-violet-200/90">
-          {t('landing.footerTrust')}
-        </p>
-      </div>
 
       {loginOpen ? (
         <KidsCenteredModal
-          title={
-            <span className="flex items-center gap-2">
-              <DoorOpen className="h-4 w-4" aria-hidden />
-              {t('landing.login')}
-            </span>
-          }
+          title={null}
           onClose={closeLogin}
-          maxWidthClass="max-w-md"
-          panelClassName="max-h-[88dvh]"
+          chrome="login"
+          closeLabel={t('kidsLogin.closeModal')}
+          maxWidthClass="max-w-md sm:max-w-lg"
+          panelClassName="max-h-[90dvh]"
         >
-          <p className="text-sm text-slate-600 dark:text-gray-400">
-            {t('landing.modalHelp')}
-          </p>
+          <div className="relative min-h-0 overflow-hidden px-5 pb-10 pt-14 before:pointer-events-none before:absolute before:inset-x-0 before:top-0 before:z-0 before:h-40 before:bg-gradient-to-b before:from-fuchsia-100/50 before:via-violet-100/35 before:to-transparent dark:before:from-fuchsia-950/35 dark:before:via-violet-950/25 sm:px-8 sm:pb-12 sm:pt-16">
+            <div className="relative z-[1] flex flex-col items-center">
+              <KidsLoginBrandLockup ariaLabel={t('landing.loginBrandTitle')} />
+              <p className="mt-3 max-w-[18rem] bg-gradient-to-r from-violet-600 via-fuchsia-600 to-amber-500 bg-clip-text text-center text-[10px] font-bold uppercase leading-relaxed tracking-[0.18em] text-transparent dark:from-violet-300 dark:via-fuchsia-300 dark:to-amber-300 sm:mt-4 sm:max-w-none sm:text-[11px] sm:tracking-[0.2em]">
+                {t('landing.loginBrandTagline')}
+              </p>
+            </div>
 
-          <div
-            id={tabListId}
-            className="mt-4 rounded-2xl bg-gradient-to-r from-violet-200/80 via-fuchsia-200/70 to-amber-200/80 p-1.5 dark:from-violet-900/50 dark:via-fuchsia-900/50 dark:to-amber-900/40"
-            role="tablist"
-            aria-label={t('landing.loginType')}
-          >
-            <div className="grid grid-cols-3 gap-1">
-              <button
-                type="button"
-                role="tab"
-                id={`${tabListId}-student`}
-                aria-selected={tab === 'student'}
-                aria-controls={`${tabListId}-panel-student`}
-                onClick={() => setTab('student')}
-                className={`rounded-xl px-2 py-3 text-xs font-black transition sm:px-3 sm:text-sm sm:py-3.5 ${
-                  tab === 'student'
-                    ? 'bg-white text-violet-950 shadow-md ring-2 ring-fuchsia-400/60 dark:bg-gray-950 dark:text-white dark:ring-fuchsia-500/40'
-                    : 'text-violet-900/80 hover:bg-white/70 dark:text-violet-100/80 dark:hover:bg-violet-950/40'
-                }`}
+            <div
+              id={tabListId}
+              className="relative z-[1] mt-6 rounded-full bg-gradient-to-r from-violet-200/80 via-zinc-200/90 to-fuchsia-200/75 p-1 shadow-inner dark:from-violet-900/55 dark:via-zinc-800/95 dark:to-fuchsia-900/50"
+              role="tablist"
+              aria-label={t('landing.loginType')}
+            >
+              <div className="grid grid-cols-3 gap-1">
+                <button
+                  type="button"
+                  role="tab"
+                  id={`${tabListId}-student`}
+                  aria-selected={tab === 'student'}
+                  aria-controls={`${tabListId}-panel-student`}
+                  onClick={() => setTab('student')}
+                  className={`flex items-center justify-center gap-1.5 rounded-full px-2 py-3 text-[11px] font-black transition sm:text-xs ${
+                    tab === 'student'
+                      ? 'bg-white text-violet-800 shadow-[0_4px_18px_-2px_rgba(139,92,246,0.45)] ring-2 ring-violet-300/80 dark:bg-violet-950/85 dark:text-violet-100 dark:ring-violet-500/45'
+                      : 'text-violet-800 hover:bg-white/80 dark:text-violet-200 dark:hover:bg-violet-950/40'
+                  }`}
+                >
+                  <GraduationCap
+                    className={`h-4 w-4 shrink-0 sm:h-4 sm:w-4 ${tab === 'student' ? 'text-violet-600 dark:text-violet-300' : 'text-violet-500 dark:text-violet-400'}`}
+                    strokeWidth={tab === 'student' ? 2.75 : 2.25}
+                    aria-hidden
+                  />
+                  <span className="leading-tight">{t('landing.role.student')}</span>
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  id={`${tabListId}-parent`}
+                  aria-selected={tab === 'parent'}
+                  aria-controls={`${tabListId}-panel-parent`}
+                  onClick={() => setTab('parent')}
+                  className={`flex items-center justify-center gap-1.5 rounded-full px-2 py-3 text-[11px] font-black transition sm:text-xs ${
+                    tab === 'parent'
+                      ? 'bg-white text-emerald-900 shadow-[0_4px_18px_-2px_rgba(16,185,129,0.42)] ring-2 ring-emerald-300/80 dark:bg-emerald-950/70 dark:text-emerald-100 dark:ring-emerald-500/40'
+                      : 'text-emerald-800 hover:bg-white/80 dark:text-emerald-200 dark:hover:bg-emerald-950/35'
+                  }`}
+                >
+                  <Users
+                    className={`h-4 w-4 shrink-0 ${tab === 'parent' ? 'text-emerald-600 dark:text-emerald-300' : 'text-emerald-500 dark:text-emerald-400'}`}
+                    strokeWidth={tab === 'parent' ? 2.75 : 2.25}
+                    aria-hidden
+                  />
+                  <span className="leading-tight">{t('landing.role.parent')}</span>
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  id={`${tabListId}-teacher`}
+                  aria-selected={tab === 'teacher'}
+                  aria-controls={`${tabListId}-panel-teacher`}
+                  onClick={() => setTab('teacher')}
+                  className={`flex items-center justify-center gap-1.5 rounded-full px-2 py-3 text-[11px] font-black transition sm:text-xs ${
+                    tab === 'teacher'
+                      ? 'bg-white text-sky-900 shadow-[0_4px_18px_-2px_rgba(14,165,233,0.42)] ring-2 ring-sky-300/80 dark:bg-sky-950/70 dark:text-sky-100 dark:ring-sky-500/40'
+                      : 'text-sky-800 hover:bg-white/80 dark:text-sky-200 dark:hover:bg-sky-950/35'
+                  }`}
+                >
+                  <Briefcase
+                    className={`h-4 w-4 shrink-0 ${tab === 'teacher' ? 'text-sky-600 dark:text-sky-300' : 'text-sky-500 dark:text-sky-400'}`}
+                    strokeWidth={tab === 'teacher' ? 2.75 : 2.25}
+                    aria-hidden
+                  />
+                  <span className="leading-tight">{t('landing.role.teacher')}</span>
+                </button>
+              </div>
+            </div>
+
+            {tab === 'student' ? (
+              <div
+                id={`${tabListId}-panel-student`}
+                role="tabpanel"
+                aria-labelledby={`${tabListId}-student`}
+                className="relative z-[1] mt-5 space-y-4"
               >
-                <span className="mr-1" aria-hidden>
-                  <Backpack className="inline h-3.5 w-3.5" />
-                </span>
-                {t('landing.role.student')}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                id={`${tabListId}-parent`}
-                aria-selected={tab === 'parent'}
-                aria-controls={`${tabListId}-panel-parent`}
-                onClick={() => setTab('parent')}
-                className={`rounded-xl px-2 py-3 text-xs font-black transition sm:px-3 sm:text-sm sm:py-3.5 ${
-                  tab === 'parent'
-                    ? 'bg-white text-amber-950 shadow-md ring-2 ring-amber-400/60 dark:bg-gray-950 dark:text-amber-50 dark:ring-amber-500/40'
-                    : 'text-amber-900/80 hover:bg-white/70 dark:text-amber-100/80 dark:hover:bg-amber-950/30'
-                }`}
+                {modalAuthPhase === 'login' ? (
+                  <div className="flex gap-3 rounded-xl border-2 border-sky-300/70 bg-[#EBF5FF]/95 p-4 shadow-md shadow-sky-200/45 dark:border-sky-600/50 dark:bg-sky-950/55 dark:shadow-sky-950/30">
+                    <div
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-indigo-500 text-white shadow-md shadow-sky-400/35"
+                      aria-hidden
+                    >
+                      <Info className="h-5 w-5" strokeWidth={2.5} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-bold text-sky-950 dark:text-sky-50">{t('landing.loginWelcomeTitle')}</p>
+                      <p className="mt-1 text-xs leading-relaxed text-sky-900/90 dark:text-sky-100/85">
+                        {t('landing.studentModalHint')}
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
+                <KidsRoleLoginForm
+                  embedded
+                  surfaceVariant="card"
+                  fieldIdSuffix="student"
+                  title={t('landing.studentLoginTitle')}
+                  subtitle={t('landing.studentLoginSubtitle')}
+                  identifierLabel={t('landing.studentIdentifierLabel')}
+                  identifierPlaceholder={t('landing.studentIdentifierPlaceholder')}
+                  identifierInputType="text"
+                  allowedRoles={['student']}
+                  redirectTo="/ogrenci/panel"
+                  onEmbeddedForgotPhaseChange={setModalAuthPhase}
+                />
+              </div>
+            ) : tab === 'parent' ? (
+              <div
+                id={`${tabListId}-panel-parent`}
+                role="tabpanel"
+                aria-labelledby={`${tabListId}-parent`}
+                className="relative z-[1] mt-5 space-y-4"
               >
-                <span className="mr-1" aria-hidden>
-                  <Users className="inline h-3.5 w-3.5" />
-                </span>
-                {t('landing.role.parent')}
-              </button>
-              <button
-                type="button"
-                role="tab"
-                id={`${tabListId}-teacher`}
-                aria-selected={tab === 'teacher'}
-                aria-controls={`${tabListId}-panel-teacher`}
-                onClick={() => setTab('teacher')}
-                className={`rounded-xl px-2 py-3 text-xs font-black transition sm:px-3 sm:text-sm sm:py-3.5 ${
-                  tab === 'teacher'
-                    ? 'bg-white text-emerald-950 shadow-md ring-2 ring-emerald-400/60 dark:bg-gray-950 dark:text-emerald-50 dark:ring-emerald-500/40'
-                    : 'text-emerald-900/80 hover:bg-white/70 dark:text-emerald-100/80 dark:hover:bg-emerald-950/30'
-                }`}
+                {modalAuthPhase === 'login' ? (
+                  <div className="flex gap-3 rounded-xl border-2 border-sky-300/70 bg-[#EBF5FF]/95 p-4 shadow-md shadow-sky-200/45 dark:border-sky-600/50 dark:bg-sky-950/55 dark:shadow-sky-950/30">
+                    <div
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-indigo-500 text-white shadow-md shadow-sky-400/35"
+                      aria-hidden
+                    >
+                      <Info className="h-5 w-5" strokeWidth={2.5} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-bold text-sky-950 dark:text-sky-50">{t('landing.loginWelcomeTitle')}</p>
+                      <p className="mt-1 text-xs leading-relaxed text-sky-900/90 dark:text-sky-100/85">
+                        {t('landing.parentModalHint')}
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
+                <KidsRoleLoginForm
+                  embedded
+                  surfaceVariant="card"
+                  fieldIdSuffix="parent"
+                  title={t('landing.parentLoginTitle')}
+                  subtitle={t('landing.parentLoginSubtitle')}
+                  allowedRoles={['parent']}
+                  redirectTo="/veli/panel"
+                  onEmbeddedForgotPhaseChange={setModalAuthPhase}
+                />
+              </div>
+            ) : (
+              <div
+                id={`${tabListId}-panel-teacher`}
+                role="tabpanel"
+                aria-labelledby={`${tabListId}-teacher`}
+                className="relative z-[1] mt-5 space-y-4"
               >
-                <span className="mr-1" aria-hidden>
-                  <GraduationCap className="inline h-3.5 w-3.5" />
-                </span>
-                {t('landing.role.teacher')}
-              </button>
+                {modalAuthPhase === 'login' ? (
+                  <div className="flex gap-3 rounded-xl border-2 border-sky-300/70 bg-[#EBF5FF]/95 p-4 shadow-md shadow-sky-200/45 dark:border-sky-600/50 dark:bg-sky-950/55 dark:shadow-sky-950/30">
+                    <div
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-sky-400 to-indigo-500 text-white shadow-md shadow-sky-400/35"
+                      aria-hidden
+                    >
+                      <Info className="h-5 w-5" strokeWidth={2.5} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-bold text-sky-950 dark:text-sky-50">{t('landing.loginWelcomeTitle')}</p>
+                      <p className="mt-1 text-xs leading-relaxed text-sky-900/90 dark:text-sky-100/85">
+                        {t('landing.teacherModalHint')}
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
+                <KidsRoleLoginForm
+                  embedded
+                  surfaceVariant="card"
+                  fieldIdSuffix="teacher"
+                  title={t('landing.teacherLoginTitle')}
+                  subtitle={t('landing.teacherLoginSubtitle')}
+                  allowedRoles={['teacher', 'admin']}
+                  redirectTo="/ogretmen/panel"
+                  onEmbeddedForgotPhaseChange={setModalAuthPhase}
+                />
+              </div>
+            )}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-0 h-36 overflow-hidden" aria-hidden>
+              <div className="absolute -bottom-10 left-[4%] h-44 w-52 -rotate-6 rounded-[55%_45%_50%_50%] bg-gradient-to-tr from-orange-300/65 to-amber-200/50 blur-2xl dark:from-amber-600/25 dark:to-orange-900/20" />
+              <div className="absolute -bottom-8 right-[2%] h-40 w-48 rotate-6 rounded-[50%_50%_45%_55%] bg-gradient-to-bl from-fuchsia-400/50 to-violet-400/45 blur-2xl dark:from-fuchsia-700/20 dark:to-violet-900/25" />
+              <div className="absolute -bottom-4 left-1/3 h-28 w-36 rounded-full bg-cyan-300/35 blur-2xl dark:bg-cyan-800/15" />
+              <div className="absolute bottom-0 left-1/2 h-28 w-[90%] -translate-x-1/2 rounded-t-[100%] bg-gradient-to-t from-fuchsia-300/35 via-violet-200/20 to-transparent dark:from-fuchsia-900/30 dark:via-transparent" />
             </div>
           </div>
-
-          {tab === 'student' ? (
-            <div
-              id={`${tabListId}-panel-student`}
-              role="tabpanel"
-              aria-labelledby={`${tabListId}-student`}
-              className="mt-5 space-y-4"
-            >
-              {modalAuthPhase === 'login' ? (
-                <div className="rounded-2xl border-2 border-sky-200 bg-sky-50/80 p-3 dark:border-sky-800/60 dark:bg-sky-950/35">
-                  <p className="text-xs leading-relaxed text-sky-900/90 dark:text-sky-100/90">
-                    {t('landing.studentModalHint')}
-                  </p>
-                </div>
-              ) : null}
-              <KidsRoleLoginForm
-                embedded
-                fieldIdSuffix="student"
-                title={t('landing.studentLoginTitle')}
-                subtitle={t('landing.studentLoginSubtitle')}
-                identifierLabel={t('landing.studentIdentifierLabel')}
-                identifierPlaceholder={t('landing.studentIdentifierPlaceholder')}
-                identifierInputType="text"
-                allowedRoles={['student']}
-                redirectTo="/ogrenci/panel"
-                onEmbeddedForgotPhaseChange={setModalAuthPhase}
-              />
-            </div>
-          ) : tab === 'parent' ? (
-            <div
-              id={`${tabListId}-panel-parent`}
-              role="tabpanel"
-              aria-labelledby={`${tabListId}-parent`}
-              className="mt-5 space-y-4"
-            >
-              {modalAuthPhase === 'login' ? (
-                <div className="rounded-2xl border-2 border-amber-200 bg-amber-50/80 p-3 dark:border-amber-800/60 dark:bg-amber-950/35">
-                  <p className="text-xs leading-relaxed text-amber-900/90 dark:text-amber-100/90">
-                    {t('landing.parentModalHint')}
-                  </p>
-                </div>
-              ) : null}
-              <KidsRoleLoginForm
-                embedded
-                fieldIdSuffix="parent"
-                title={t('landing.parentLoginTitle')}
-                subtitle={t('landing.parentLoginSubtitle')}
-                allowedRoles={['parent']}
-                redirectTo="/veli/panel"
-                onEmbeddedForgotPhaseChange={setModalAuthPhase}
-              />
-            </div>
-          ) : (
-            <div
-              id={`${tabListId}-panel-teacher`}
-              role="tabpanel"
-              aria-labelledby={`${tabListId}-teacher`}
-              className="mt-5 space-y-4"
-            >
-              {modalAuthPhase === 'login' ? (
-                <div className="rounded-2xl border-2 border-emerald-200 bg-emerald-50/80 p-3 dark:border-emerald-800/60 dark:bg-emerald-950/35">
-                  <p className="text-xs leading-relaxed text-emerald-900/90 dark:text-emerald-100/90">
-                    {t('landing.teacherModalHint')}
-                  </p>
-                </div>
-              ) : null}
-              <KidsRoleLoginForm
-                embedded
-                fieldIdSuffix="teacher"
-                title={t('landing.teacherLoginTitle')}
-                subtitle={t('landing.teacherLoginSubtitle')}
-                allowedRoles={['teacher', 'admin']}
-                redirectTo="/ogretmen/panel"
-                onEmbeddedForgotPhaseChange={setModalAuthPhase}
-              />
-            </div>
-          )}
         </KidsCenteredModal>
       ) : null}
-    </div>
+    </>
   );
 }

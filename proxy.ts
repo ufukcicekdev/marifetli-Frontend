@@ -4,7 +4,7 @@ import type { NextRequest } from 'next/server';
 const KIDS_HEADER = 'x-marifetli-kids';
 const KIDS_COOKIE = 'marifetli_kids_portal';
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
   const isKidsPath = pathname === '/kids' || pathname.startsWith('/kids/');
 

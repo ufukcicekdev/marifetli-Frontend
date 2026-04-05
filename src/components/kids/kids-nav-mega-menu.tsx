@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import toast from 'react-hot-toast';
 import { useSidebarStore } from '@/src/stores/sidebar-store';
 import { ThemeToggle } from '@/src/components/theme-toggle';
 import { KIDS_HEADER_HEIGHT_PX } from '@/src/components/kids/kids-header';
@@ -13,6 +14,7 @@ import { isKidsNavActive, kidsNavLinks, type KidsNavItem } from '@/src/component
 import { marifetliKidsLegalPathOnKidsPortal } from '@/src/lib/marifetli-kids-legal-paths';
 import { NavIcon } from '@/src/components/nav-icon';
 import { useKidsI18n } from '@/src/providers/kids-language-provider';
+import { kidsPatchMe, type KidsLanguageCode } from '@/src/lib/kids-api';
 
 function navDescription(item: KidsNavItem, t: (key: string) => string): string {
   const d: Record<string, string> = {
@@ -46,9 +48,27 @@ export function KidsNavMegaMenu({ pathPrefix }: KidsNavMegaMenuProps) {
   const pathname = usePathname();
   const isOpen = useSidebarStore((s) => s.isOpen);
   const close = useSidebarStore((s) => s.close);
-  const { user, loading } = useKidsAuth();
+  const { user, loading, refreshUser } = useKidsAuth();
   const siteAdmin = useAuthStore((s) => Boolean(s.user?.is_staff || s.user?.is_superuser));
-  const { t } = useKidsI18n();
+  const { t, language, canChangeLanguage, setLanguageLocal } = useKidsI18n();
+  const [savingLanguage, setSavingLanguage] = useState(false);
+
+  async function onLanguageChange(nextRaw: string) {
+    if (!canChangeLanguage) return;
+    const next = (nextRaw === 'en' || nextRaw === 'ge' ? nextRaw : 'tr') as KidsLanguageCode;
+    if (next === language) return;
+    setLanguageLocal(next);
+    setSavingLanguage(true);
+    try {
+      await kidsPatchMe({ preferred_language: next });
+      await refreshUser();
+      toast.success(t('profile.saved'));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : t('common.saveFailed'));
+    } finally {
+      setSavingLanguage(false);
+    }
+  }
 
   const items = useMemo(
     () => kidsNavLinks(pathPrefix, loading ? null : user?.role ?? null, { siteAdmin }),
@@ -94,6 +114,27 @@ export function KidsNavMegaMenu({ pathPrefix }: KidsNavMegaMenuProps) {
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{t('sidebar.theme')}</span>
                   <ThemeToggle />
                 </div>
+                {canChangeLanguage ? (
+                  <div className="rounded-2xl border border-violet-200/80 bg-violet-50/70 p-3 dark:border-violet-800 dark:bg-violet-950/30">
+                    <label htmlFor="kids-mega-language-mobile" className="mb-1 block text-xs font-semibold text-violet-900 dark:text-violet-100">
+                      {t('sidebar.language')}
+                    </label>
+                    <select
+                      id="kids-mega-language-mobile"
+                      className="h-10 w-full rounded-xl border border-violet-300 bg-white px-3 text-sm text-violet-900 dark:border-violet-700 dark:bg-gray-900 dark:text-violet-100"
+                      value={language}
+                      disabled={savingLanguage}
+                      onChange={(e) => void onLanguageChange(e.target.value)}
+                    >
+                      <option value="tr">{t('profile.language.tr')}</option>
+                      <option value="en">{t('profile.language.en')}</option>
+                      <option value="ge">{t('profile.language.ge')}</option>
+                    </select>
+                    {savingLanguage ? (
+                      <p className="mt-1 text-[11px] text-violet-700 dark:text-violet-300">{t('sidebar.languageSaving')}</p>
+                    ) : null}
+                  </div>
+                ) : null}
                 {!user && (
                   <Link
                     href={kidsLoginPortalHref(pathPrefix)}
@@ -107,6 +148,28 @@ export function KidsNavMegaMenu({ pathPrefix }: KidsNavMegaMenuProps) {
                   </Link>
                 )}
               </div>
+
+              {canChangeLanguage ? (
+                <div className="mb-4 hidden rounded-2xl border border-violet-200/80 bg-violet-50/70 p-3 dark:border-violet-800 dark:bg-violet-950/30 md:block">
+                  <label htmlFor="kids-mega-language-desktop" className="mb-1 block text-xs font-semibold text-violet-900 dark:text-violet-100">
+                    {t('sidebar.language')}
+                  </label>
+                  <select
+                    id="kids-mega-language-desktop"
+                    className="h-10 w-full rounded-xl border border-violet-300 bg-white px-3 text-sm text-violet-900 dark:border-violet-700 dark:bg-gray-900 dark:text-violet-100"
+                    value={language}
+                    disabled={savingLanguage}
+                    onChange={(e) => void onLanguageChange(e.target.value)}
+                  >
+                    <option value="tr">{t('profile.language.tr')}</option>
+                    <option value="en">{t('profile.language.en')}</option>
+                    <option value="ge">{t('profile.language.ge')}</option>
+                  </select>
+                  {savingLanguage ? (
+                    <p className="mt-1 text-[11px] text-violet-700 dark:text-violet-300">{t('sidebar.languageSaving')}</p>
+                  ) : null}
+                </div>
+              ) : null}
 
               <div className="grid grid-cols-1 gap-1 md:grid-cols-2">
                 {items.map((item) => {

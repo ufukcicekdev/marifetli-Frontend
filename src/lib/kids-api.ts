@@ -381,6 +381,8 @@ export type KidsAssignment = {
   require_video: boolean;
   /** Aynı konu başlığı altında kaç ayrı teslim (Challenge 1…N). */
   submission_rounds?: number;
+  /** Öğretmen listesinde kart üst bandı / etiket teması; boşsa istemci id’ye göre renk seçer. */
+  challenge_card_theme?: 'art' | 'science' | 'motion' | 'music' | null;
   is_published: boolean;
   /** Öğrencilere “yeni challenge” bildiriminin gittiği zaman (planlı challenge’larda başlangıçtan sonra dolur). */
   students_notified_at?: string | null;
@@ -2184,6 +2186,7 @@ export async function kidsCreateAssignment(
       require_image: body.require_image ?? false,
       require_video: body.require_video ?? false,
       submission_rounds: body.submission_rounds ?? 1,
+      challenge_card_theme: body.challenge_card_theme ?? null,
       recurrence_type: body.recurrence_type ?? 'none',
       recurrence_interval: body.recurrence_interval ?? 1,
       recurrence_until: body.recurrence_until ?? null,
@@ -2213,6 +2216,7 @@ export async function kidsPatchAssignment(
     require_image: boolean;
     require_video: boolean;
     submission_rounds: number;
+    challenge_card_theme: 'art' | 'science' | 'motion' | 'music' | null;
     submission_opens_at: string | null;
     submission_closes_at: string | null;
     recurrence_type: 'none' | 'daily' | 'weekly';
@@ -3035,7 +3039,7 @@ export type KidsTestQuestion = {
 
 export type KidsTest = {
   id: number;
-  kids_class: number;
+  kids_class: number | null;
   created_by: number;
   source_test?: number | null;
   title: string;
@@ -3043,6 +3047,8 @@ export type KidsTest = {
   duration_minutes: number | null;
   status: 'draft' | 'published' | 'archived';
   published_at: string | null;
+  /** Öğrenci denemesi yoksa silinebilir (GET /tests/mine/ ve detay). */
+  deletable?: boolean;
   /** Okuma metinleri; eski API yanıtlarında boş olabilir. */
   passages?: KidsTestReadingPassage[];
   questions: KidsTestQuestion[];
@@ -3223,6 +3229,43 @@ export async function kidsCreateClassTest(
   return data as KidsTest;
 }
 
+/** Sınıfa bağlı olmayan taslak test (öğretmen arşivi). */
+export async function kidsCreateStandaloneTest(body: {
+  title: string;
+  instructions?: string;
+  duration_minutes?: number | null;
+  status?: 'draft' | 'published' | 'archived';
+  passages?: { order: number; title: string; body: string }[];
+  questions: {
+    order: number;
+    stem: string;
+    topic?: string;
+    subtopic?: string;
+    choices: { key: string; text: string }[];
+    correct_choice_key: string;
+    points?: number;
+    source_page_order?: number | null;
+    reading_passage_order?: number | null;
+  }[];
+  source_images?: File[];
+}): Promise<KidsTest> {
+  const fd = new FormData();
+  fd.append('title', body.title);
+  fd.append('instructions', body.instructions ?? '');
+  if (body.duration_minutes != null) fd.append('duration_minutes', String(body.duration_minutes));
+  if (body.status) fd.append('status', body.status);
+  fd.append('passages', JSON.stringify(body.passages ?? []));
+  fd.append('questions', JSON.stringify(body.questions));
+  for (const image of body.source_images ?? []) fd.append('source_images', image);
+  const res = await kidsAuthorizedFetch('/tests/create/', {
+    method: 'POST',
+    body: fd,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Test oluşturulamadı');
+  return data as KidsTest;
+}
+
 export async function kidsListClassTests(classId: number): Promise<KidsTest[]> {
   const res = await kidsAuthorizedFetch(`/classes/${classId}/tests/`, { method: 'GET' });
   const data = await res.json().catch(() => []);
@@ -3240,14 +3283,27 @@ export async function kidsListMyCreatedTests(): Promise<KidsTest[]> {
 export async function kidsDistributeTestToClasses(
   testId: number,
   classIds: number[],
-): Promise<{ created: KidsTest[]; created_count: number; skipped_class_ids: number[] }> {
+  opts?: { duration_minutes?: number | null },
+): Promise<{
+  created: KidsTest[];
+  created_count: number;
+  skipped_class_ids: number[];
+  home_class_assigned?: boolean;
+}> {
+  const payload: { class_ids: number[]; duration_minutes?: number } = { class_ids: classIds };
+  if (opts?.duration_minutes != null) payload.duration_minutes = opts.duration_minutes;
   const res = await kidsAuthorizedFetch(`/tests/${testId}/distribute/`, {
     method: 'POST',
-    body: JSON.stringify({ class_ids: classIds }),
+    body: JSON.stringify(payload),
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Test sınıflara gönderilemedi');
-  return data as { created: KidsTest[]; created_count: number; skipped_class_ids: number[] };
+  return data as {
+    created: KidsTest[];
+    created_count: number;
+    skipped_class_ids: number[];
+    home_class_assigned?: boolean;
+  };
 }
 
 export async function kidsGetTest(testId: number): Promise<KidsTest> {
@@ -3285,6 +3341,13 @@ export async function kidsPatchTest(
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Test güncellenemedi');
   return data as KidsTest;
+}
+
+export async function kidsDeleteTest(testId: number): Promise<void> {
+  const res = await kidsAuthorizedFetch(`/tests/${testId}/`, { method: 'DELETE' });
+  if (res.status === 204) return;
+  const data = await res.json().catch(() => ({}));
+  throw new Error((data as ApiErrorBody)?.detail || 'Test silinemedi');
 }
 
 export async function kidsStudentListTests(): Promise<KidsStudentTestListItem[]> {

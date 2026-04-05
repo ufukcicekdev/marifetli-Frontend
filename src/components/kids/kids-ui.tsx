@@ -1,8 +1,23 @@
 'use client';
 
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { createPortal } from 'react-dom';
+
+/**
+ * `<dialog showModal()>` top layer içinde kalır; `document.body` portalı listenin arkasında kalır.
+ * Modal içindeki `KidsSelect` bu köke portallanır.
+ */
+export const KidsModalDropdownPortalContext = createContext<HTMLElement | null>(null);
 
 function isScrollableOverflowAxis(v: string): boolean {
   return /(auto|scroll|overlay)/.test(v);
@@ -191,19 +206,28 @@ export function KidsSecondaryButton({
   );
 }
 
-type TabDef = { id: string; label: string; icon: string };
+export type KidsTabDef = { id: string; label: string; icon?: ReactNode };
+
+function kidsTabShowsIcon(icon: KidsTabDef['icon']): boolean {
+  if (icon == null) return false;
+  if (typeof icon === 'string') return icon.length > 0;
+  return true;
+}
 
 export function KidsTabs({
   tabs,
   active,
   onChange,
   ariaLabel = 'Sekmeler',
+  variant = 'gradient',
 }: {
-  tabs: TabDef[];
+  tabs: KidsTabDef[];
   active: string;
   onChange: (id: string) => void;
   /** role="tablist" için erişilebilir ad */
   ariaLabel?: string;
+  /** `outline`: ince cerceve + mor dolgu aktif; `gradient`: mevcut cocuk paneli stili */
+  variant?: 'gradient' | 'outline';
 }) {
   return (
     <div
@@ -213,6 +237,15 @@ export function KidsTabs({
     >
       {tabs.map((t) => {
         const isOn = active === t.id;
+        const showIcon = kidsTabShowsIcon(t.icon);
+        const onClass =
+          variant === 'outline'
+            ? 'border border-violet-600 bg-violet-600 text-white shadow-md shadow-violet-500/25 dark:border-violet-500 dark:bg-violet-600'
+            : 'border-2 border-transparent bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-md shadow-fuchsia-500/20';
+        const offClass =
+          variant === 'outline'
+            ? 'border border-zinc-200 bg-white text-slate-800 shadow-sm hover:border-violet-200 hover:bg-violet-50/40 dark:border-zinc-600 dark:bg-zinc-900 dark:text-gray-100 dark:hover:border-violet-700 dark:hover:bg-violet-950/30'
+            : 'border-2 border-transparent bg-white/70 text-slate-700 hover:border-violet-200 hover:bg-white dark:bg-gray-800/70 dark:text-gray-200 dark:hover:border-violet-800';
         return (
           <button
             key={t.id}
@@ -220,15 +253,13 @@ export function KidsTabs({
             role="tab"
             aria-selected={isOn}
             onClick={() => onChange(t.id)}
-            className={`shrink-0 rounded-full px-4 py-2.5 text-sm font-bold transition ${
-              isOn
-                ? 'bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white shadow-md shadow-fuchsia-500/20'
-                : 'border-2 border-transparent bg-white/70 text-slate-700 hover:border-violet-200 hover:bg-white dark:bg-gray-800/70 dark:text-gray-200 dark:hover:border-violet-800'
-            }`}
+            className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2.5 text-sm font-bold transition ${isOn ? onClass : offClass}`}
           >
-            <span className="mr-1.5" aria-hidden>
-              {t.icon}
-            </span>
+            {showIcon ? (
+              <span className="inline-flex shrink-0 items-center [&_svg]:h-4 [&_svg]:w-4" aria-hidden>
+                {t.icon}
+              </span>
+            ) : null}
             {t.label}
           </button>
         );
@@ -291,6 +322,7 @@ export function KidsSelect({
   const [mounted, setMounted] = useState(false);
   const [coords, setCoords] = useState<PanelCoords | null>(null);
   const [query, setQuery] = useState('');
+  const modalDropdownPortalRoot = useContext(KidsModalDropdownPortalContext);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -399,19 +431,24 @@ export function KidsSelect({
     );
   }
 
+  const dropdownMount =
+    typeof document !== 'undefined' ? (modalDropdownPortalRoot ?? document.body) : null;
+
   const dropdown =
-    mounted && open && !disabled && coords
+    mounted && open && !disabled && coords && dropdownMount
       ? createPortal(
           <div
             ref={panelRef}
             role="presentation"
-            className="fixed z-[9999] flex min-h-0 flex-col overflow-hidden rounded-2xl border-2 border-violet-300 bg-white shadow-2xl ring-1 ring-black/10 dark:border-violet-600 dark:bg-zinc-950 dark:ring-white/15"
+            className="pointer-events-auto fixed z-[9999] flex min-h-0 flex-col overflow-hidden rounded-2xl border-2 border-violet-300 bg-white shadow-2xl ring-1 ring-black/10 dark:border-violet-600 dark:bg-zinc-950 dark:ring-white/15"
             style={{
               top: coords.top,
               left: coords.left,
               width: coords.width,
               maxHeight: coords.maxH,
             }}
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
           >
             {searchEnabled ? (
               <div className="shrink-0 border-b-2 border-violet-200 bg-white p-2 dark:border-violet-800 dark:bg-zinc-950">
@@ -459,7 +496,7 @@ export function KidsSelect({
               )}
             </ul>
           </div>,
-          document.body,
+          dropdownMount,
         )
       : null;
 
@@ -506,8 +543,11 @@ export function KidsCenteredModal({
   panelClassName = '',
   maxWidthClass = 'max-w-lg',
   variant = 'default',
+  chrome = 'default',
+  closeLabel,
 }: {
-  title: ReactNode;
+  /** null: yalnızca kapat; başlık satırı gösterilmez */
+  title: ReactNode | null;
   children: ReactNode;
   footer?: ReactNode;
   onClose: () => void;
@@ -517,8 +557,13 @@ export function KidsCenteredModal({
   maxWidthClass?: string;
   /** danger: silme/onay modalları — başlık sarımsız, footer hafif rose vurgusu */
   variant?: 'default' | 'danger';
+  /** login: pastel arka plan, büyük yuvarlak kart, üst şerit yok — kapat üst sağda */
+  chrome?: 'default' | 'login';
+  /** chrome=login iken kapat düğmesi erişilebilir adı (örn. i18n) */
+  closeLabel?: string;
 }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const [dropdownPortalEl, setDropdownPortalEl] = useState<HTMLDivElement | null>(null);
 
   useLayoutEffect(() => {
     const el = dialogRef.current;
@@ -538,6 +583,23 @@ export function KidsCenteredModal({
       ? 'border-t-2 border-rose-100 bg-rose-50/60 p-4 dark:border-rose-900/40 dark:bg-rose-950/25'
       : 'border-t-2 border-violet-100 bg-violet-50/50 p-4 dark:border-violet-900 dark:bg-violet-950/40';
 
+  const backdropClass =
+    chrome === 'login'
+      ? 'kids-dialog-backdrop kids-dialog-backdrop--centered bg-gradient-to-br from-amber-200/90 via-violet-200/85 to-fuchsia-300/80 backdrop-blur-md dark:from-violet-950 dark:via-fuchsia-950 dark:to-amber-950/50'
+      : 'kids-dialog-backdrop kids-dialog-backdrop--centered bg-violet-950/60 backdrop-blur-sm';
+
+  const panelBaseClass =
+    chrome === 'login'
+      ? 'relative flex max-h-[85dvh] w-full min-w-0 shrink-0 flex-col overflow-hidden rounded-[1.75rem] border-2 border-white/90 bg-gradient-to-b from-white via-violet-50/30 to-fuchsia-50/20 shadow-[0_28px_64px_-10px_rgba(124,58,237,0.42),0_12px_40px_-12px_rgba(236,72,153,0.22)] dark:border-violet-500/30 dark:from-zinc-900 dark:via-violet-950/40 dark:to-fuchsia-950/25 sm:max-h-[90dvh] sm:rounded-[2.25rem]'
+      : 'flex max-h-[85dvh] w-full min-w-0 shrink-0 flex-col overflow-hidden rounded-2xl border-2 border-violet-300 bg-white shadow-2xl shadow-fuchsia-500/20 dark:border-violet-700 dark:bg-gray-900 sm:max-h-[90dvh] sm:rounded-3xl';
+
+  const scrollPaddingClass =
+    chrome === 'login'
+      ? 'min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-0 [-webkit-overflow-scrolling:touch]'
+      : 'min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-4 [-webkit-overflow-scrolling:touch]';
+
+  const closeText = closeLabel ?? '✕ Kapat';
+
   return createPortal(
     <dialog
       ref={dialogRef}
@@ -547,45 +609,67 @@ export function KidsCenteredModal({
         onClose();
       }}
     >
-      <div className="kids-dialog-fill">
-        <div
-          className="kids-dialog-backdrop kids-dialog-backdrop--centered bg-violet-950/60 backdrop-blur-sm"
-          role="presentation"
-          onClick={onClose}
-        >
-          <div
-            className={`flex max-h-[85dvh] w-full min-w-0 shrink-0 flex-col overflow-hidden rounded-2xl border-2 border-violet-300 bg-white shadow-2xl shadow-fuchsia-500/20 dark:border-violet-700 dark:bg-gray-900 sm:max-h-[90dvh] sm:rounded-3xl ${maxWidthClass} ${panelClassName}`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className={`flex shrink-0 items-center justify-between gap-2 px-4 py-3 ${headerClass}`}>
-              <h2
-                className={`min-w-0 font-logo text-lg font-bold tracking-tight ${
-                  variant === 'danger'
-                    ? 'text-rose-950 dark:text-rose-100'
-                    : 'text-violet-950 dark:text-violet-100'
-                }`}
-              >
-                {title}
-              </h2>
-              <button
-                type="button"
-                onClick={onClose}
-                className="shrink-0 rounded-full border-2 border-violet-300 bg-white px-3 py-1.5 text-sm font-black text-violet-800 shadow-sm hover:bg-violet-50 dark:border-violet-700 dark:bg-gray-800 dark:text-violet-200 dark:hover:bg-violet-950"
-              >
-                ✕ Kapat
-              </button>
+      <KidsModalDropdownPortalContext.Provider value={dropdownPortalEl}>
+        <div className="kids-dialog-fill">
+          <div className={backdropClass} role="presentation" onClick={onClose}>
+            <div
+              className={`${panelBaseClass} ${maxWidthClass} ${panelClassName}`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {chrome === 'login' ? (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="absolute right-3 top-3 z-20 flex h-10 w-10 items-center justify-center rounded-full border-2 border-violet-200/80 bg-white/95 text-lg font-bold text-violet-400 shadow-md shadow-violet-200/40 transition hover:border-fuchsia-300 hover:bg-fuchsia-50/80 hover:text-fuchsia-600 dark:border-violet-600 dark:bg-violet-950/90 dark:text-violet-300 dark:hover:bg-violet-900 dark:hover:text-fuchsia-300"
+                  aria-label={closeText}
+                >
+                  <span aria-hidden>×</span>
+                </button>
+              ) : (
+                <div
+                  className={`flex shrink-0 items-center gap-2 px-4 py-3 ${headerClass} ${
+                    title == null ? 'justify-end' : 'justify-between'
+                  }`}
+                >
+                  {title != null ? (
+                    <h2
+                      className={`min-w-0 font-logo text-lg font-bold tracking-tight ${
+                        variant === 'danger'
+                          ? 'text-rose-950 dark:text-rose-100'
+                          : 'text-violet-950 dark:text-violet-100'
+                      }`}
+                    >
+                      {title}
+                    </h2>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="shrink-0 rounded-full border-2 border-violet-300 bg-white px-3 py-1.5 text-sm font-black text-violet-800 shadow-sm hover:bg-violet-50 dark:border-violet-700 dark:bg-gray-800 dark:text-violet-200 dark:hover:bg-violet-950"
+                  >
+                    {closeText}
+                  </button>
+                </div>
+              )}
+              <div className={scrollPaddingClass}>{children}</div>
+              {footer ? (
+                <div className={`shrink-0 ${footerClass}`}>
+                  {footer}
+                </div>
+              ) : null}
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain p-4 [-webkit-overflow-scrolling:touch]">
-              {children}
-            </div>
-            {footer ? (
-              <div className={`shrink-0 ${footerClass}`}>
-                {footer}
-              </div>
-            ) : null}
           </div>
         </div>
-      </div>
+        {/*
+          Top-layer: liste body'ye portallanınca modalın arkasında kalıyor; kök `<dialog>` içinde tutulur.
+          Tam ekran `pointer-events-none` sarmalayıcı bazı tarayıcılarda tıklamayı backdrop'a geçirir; bu yüzden
+          yalnızca sıfır boyutlu kök — liste paneli `position:fixed` ile görünür ve tıklanabilir kalır.
+        */}
+        <div
+          ref={setDropdownPortalEl}
+          className="fixed left-0 top-0 z-[300] h-0 w-0 overflow-visible"
+        />
+      </KidsModalDropdownPortalContext.Provider>
     </dialog>,
     document.body,
   );

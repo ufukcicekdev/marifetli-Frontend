@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useId, useState } from 'react';
+import Link from 'next/link';
 import { useParams, usePathname } from 'next/navigation';
+import { ArrowRight, Plus, Smile, User } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { kidsApiUrl } from '@/src/lib/kids-config';
 import {
@@ -9,12 +11,42 @@ import {
   type KidsInvitePreview,
 } from '@/src/lib/kids-invite-public';
 import { applyKidsSessionFromAuthResponse } from '@/src/lib/kids-session-storage';
+import { marifetliKidsLegalPathOnKidsPortal } from '@/src/lib/marifetli-kids-legal-paths';
 import { reconcileAuthStoreWithAccessToken } from '@/src/stores/auth-store';
 import { trPhoneDigitsFromInput, trPhoneInputChange } from '@/src/lib/tr-phone-input';
 import { useKidsI18n } from '@/src/providers/kids-language-provider';
 
 function needsParentEmailInForm(p: KidsInvitePreview): boolean {
   return Boolean(p.requires_parent_email ?? p.requires_student_email);
+}
+
+const pillParent =
+  'w-full rounded-full bg-slate-100 px-4 py-3.5 text-sm text-slate-900 shadow-none placeholder:text-slate-400 outline-none ring-1 ring-slate-300/90 transition-[background-color,box-shadow] focus:bg-white focus:ring-2 focus:ring-violet-500 focus:ring-offset-0 dark:bg-slate-800 dark:text-white dark:ring-slate-600 dark:placeholder:text-slate-500 dark:focus:bg-slate-900 dark:focus:ring-violet-400';
+
+const pillChild =
+  'w-full rounded-full bg-slate-50 px-4 py-3.5 text-sm text-slate-900 shadow-none placeholder:text-slate-400 outline-none ring-1 ring-slate-300/90 transition-[background-color,box-shadow] focus:bg-white focus:ring-2 focus:ring-violet-500 focus:ring-offset-0 dark:bg-slate-950 dark:text-white dark:ring-slate-600 dark:placeholder:text-slate-500 dark:focus:ring-violet-400';
+
+function fieldLabel(className?: string) {
+  return `mb-1.5 block text-sm font-bold text-slate-800 dark:text-slate-100 ${className ?? ''}`;
+}
+
+type ChildFormRow = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  password: string;
+};
+
+function createChildRow(): ChildFormRow {
+  return {
+    id:
+      typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+        ? crypto.randomUUID()
+        : `child-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
+    first_name: '',
+    last_name: '',
+    password: '',
+  };
 }
 
 export default function KidsInviteAcceptPage() {
@@ -31,13 +63,15 @@ export default function KidsInviteAcceptPage() {
   const [parentLastName, setParentLastName] = useState('');
   const [parentPhone, setParentPhone] = useState('');
   const [parentPassword, setParentPassword] = useState('');
-  const [children, setChildren] = useState([{ first_name: '', last_name: '', password: '' }]);
+  const [children, setChildren] = useState<ChildFormRow[]>(() => [createChildRow()]);
   const [loading, setLoading] = useState(false);
 
   const parentEmailId = useId();
 
-  const prefix = pathname.startsWith('/kids') ? '/kids' : '';
-  const panelHref = `${prefix}/veli/panel`;
+  const pathPrefix = pathname.startsWith('/kids') ? '/kids' : '';
+  const panelHref = `${pathPrefix}/veli/panel`;
+  const termsHref = marifetliKidsLegalPathOnKidsPortal(pathPrefix, 'terms');
+  const privacyHref = marifetliKidsLegalPathOnKidsPortal(pathPrefix, 'privacy');
 
   useEffect(() => {
     if (!token) {
@@ -144,237 +178,320 @@ export default function KidsInviteAcceptPage() {
     }
   }
 
+  const cardShell = 'mx-auto w-full max-w-xl rounded-[2.5rem] bg-white p-6 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.12)] sm:p-10 dark:bg-slate-900 dark:shadow-[0_20px_50px_-20px_rgba(0,0,0,0.5)] dark:ring-1 dark:ring-slate-700';
+
   if (previewError && !preview) {
     return (
-      <div className="mx-auto max-w-md rounded-3xl border-2 border-rose-200 bg-white p-8 shadow-sm dark:border-rose-900 dark:bg-gray-900">
+      <div className={cardShell}>
         <h1 className="text-xl font-bold text-slate-900 dark:text-white">{t('invite.unavailable')}</h1>
-        <p className="mt-2 text-sm text-slate-600 dark:text-gray-400">{previewError}</p>
+        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">{previewError}</p>
       </div>
     );
   }
 
   if (!preview) {
     return (
-      <div className="mx-auto max-w-md rounded-3xl border-2 border-sky-200 bg-white p-8 text-center text-slate-600 dark:border-sky-900 dark:bg-gray-900 dark:text-gray-400">
+      <div className={`${cardShell} text-center text-slate-500 dark:text-slate-400`}>
         {t('common.loading')}
       </div>
     );
   }
 
   const exp = new Date(preview.expires_at);
-  const schoolLine = [preview.school_name, preview.class_name].filter(Boolean).join(' · ');
   const askEmail = needsParentEmailInForm(preview);
+  const classLine = t('invite.classSummaryLine')
+    .replace('{teacher}', preview.teacher_display)
+    .replace('{className}', preview.class_name);
 
   return (
-    <div className="mx-auto max-w-lg rounded-3xl border-2 border-sky-200 bg-white p-8 shadow-sm dark:border-sky-800 dark:bg-gray-900">
-      <p className="text-sm font-semibold text-sky-700 dark:text-sky-300">{t('invite.classInvite')}</p>
-      <h1 className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">
-        <span className="text-sky-600 dark:text-sky-400">{preview.teacher_display}</span> {t('invite.joinClass')}
-      </h1>
-      <p className="mt-2 text-lg font-bold text-violet-800 dark:text-violet-200">{preview.class_name}</p>
-      {schoolLine ? (
-        <p className="mt-1 text-sm text-slate-600 dark:text-gray-400">{schoolLine}</p>
-      ) : null}
-      {preview.class_description ? (
-        <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-gray-400">
-          {preview.class_description}
+    <div className={cardShell}>
+      <header className="text-center sm:text-left">
+        <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl dark:text-white">
+          {t('invite.registrationTitle')}
+        </h1>
+        <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{t('invite.registrationSubtitle')}</p>
+        <p className="mt-3 text-sm font-semibold text-violet-700 dark:text-violet-300">{classLine}</p>
+        {preview.school_name ? (
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{preview.school_name}</p>
+        ) : null}
+        {preview.class_description ? (
+          <p className="mt-2 text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+            {preview.class_description}
+          </p>
+        ) : null}
+        <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+          {t('invite.validUntil')} <span className="font-semibold text-slate-600 dark:text-slate-300">{exp.toLocaleDateString(language)}</span>
         </p>
-      ) : null}
-      <p className="mt-3 text-xs text-slate-500 dark:text-gray-500">
-        {t('invite.validUntil')} <strong>{exp.toLocaleDateString(language)}</strong>.
-      </p>
-      <p className="mt-3 rounded-xl bg-violet-50 px-3 py-2 text-xs leading-relaxed text-violet-900 dark:bg-violet-950/40 dark:text-violet-100">
-        {t('invite.parentFlow')}
-      </p>
+      </header>
 
-      <form className="mt-8 space-y-4" onSubmit={onSubmit}>
-        {askEmail ? (
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-gray-300" htmlFor={parentEmailId}>
-              {t('invite.parentEmail')} <span className="text-rose-500">*</span>
-            </label>
-            <input
-              id={parentEmailId}
-              type="email"
-              required
-              autoComplete="email"
-              value={parentEmail}
-              onChange={(e) => setParentEmail(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-900 outline-none ring-sky-400 focus:ring-2 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-              placeholder="veli@email.com"
-            />
-            <p className="mt-1 text-xs text-slate-500 dark:text-gray-500">
-              {t('invite.parentEmailHint')}
-            </p>
+      <form className="mt-8 space-y-8" onSubmit={onSubmit}>
+        <section>
+          <div className="mb-4 flex items-center gap-2.5">
+            <span
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-600 dark:bg-violet-950/60 dark:text-violet-300"
+              aria-hidden
+            >
+              <User className="h-5 w-5" strokeWidth={2} />
+            </span>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('invite.parentSectionTitle')}</h2>
           </div>
-        ) : (
-          <p className="rounded-xl bg-sky-50 px-3 py-2 text-sm text-sky-900 dark:bg-sky-950/50 dark:text-sky-100">
-            {t('invite.emailLockedHint')}
-          </p>
-        )}
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-gray-300" htmlFor="pfn">
-              {t('invite.parentName')} <span className="text-rose-500">*</span>
-            </label>
-            <input
-              id="pfn"
-              required
-              autoComplete="given-name"
-              value={parentFirstName}
-              onChange={(e) => setParentFirstName(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 outline-none ring-sky-400 focus:ring-2 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-gray-300" htmlFor="pln">
-              {t('invite.parentLastName')} <span className="text-rose-500">*</span>
-            </label>
-            <input
-              id="pln"
-              required
-              autoComplete="family-name"
-              value={parentLastName}
-              onChange={(e) => setParentLastName(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 outline-none ring-sky-400 focus:ring-2 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-            />
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-gray-300" htmlFor="pph">
-            {t('invite.parentPhone')}
-          </label>
-          <input
-            id="pph"
-            type="tel"
-            inputMode="numeric"
-            autoComplete="tel"
-            maxLength={14}
-            value={parentPhone}
-            onChange={(e) => setParentPhone(trPhoneInputChange(e.target.value))}
-            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 font-mono tabular-nums outline-none ring-sky-400 focus:ring-2 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-            placeholder="0 5XX XXX XX XX"
-          />
-          <p className="mt-1 text-xs text-slate-500 dark:text-gray-500">{t('invite.phoneHint')}</p>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-gray-300" htmlFor="ppw">
-            {t('invite.parentPassword')} <span className="text-rose-500">*</span> <span className="text-xs font-normal">({t('invite.min8')})</span>
-          </label>
-          <input
-            id="ppw"
-            type="password"
-            minLength={8}
-            autoComplete="new-password"
-            required
-            value={parentPassword}
-            onChange={(e) => setParentPassword(e.target.value)}
-            className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 outline-none ring-sky-400 focus:ring-2 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
-          />
-        </div>
-
-        <hr className="border-slate-200 dark:border-gray-700" />
-
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-xs font-bold uppercase tracking-wide text-fuchsia-700 dark:text-fuchsia-300">
-            {t('invite.childAccounts')}
-          </p>
-          <button
-            type="button"
-            onClick={() =>
-              setChildren((prev) =>
-                prev.length >= 10 ? prev : [...prev, { first_name: '', last_name: '', password: '' }],
-              )
-            }
-            className="rounded-full border border-fuchsia-300 px-3 py-1 text-xs font-bold text-fuchsia-700 hover:bg-fuchsia-50 dark:border-fuchsia-700 dark:text-fuchsia-300 dark:hover:bg-fuchsia-950/40"
-          >
-            {t('invite.addChild')}
-          </button>
-        </div>
-
-        {children.map((child, idx) => (
-          <div key={idx} className="rounded-2xl border border-slate-200 p-3 dark:border-gray-700">
-            <div className="mb-2 flex items-center justify-between">
-              <p className="text-sm font-bold text-slate-800 dark:text-gray-100">{t('invite.child')} {idx + 1}</p>
-              {children.length > 1 ? (
-                <button
-                  type="button"
-                  onClick={() => setChildren((prev) => prev.filter((_, i) => i !== idx))}
-                  className="text-xs font-semibold text-rose-600 hover:underline dark:text-rose-300"
-                >
-                  {t('messageDetail.remove')}
-                </button>
-              ) : null}
-            </div>
+          <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-gray-300">
-                  {t('invite.childName')} <span className="text-rose-500">*</span>
+                <label className={fieldLabel()} htmlFor="pfn">
+                  {t('invite.labelFirstName')} <span className="font-bold text-rose-500">*</span>
                 </label>
                 <input
+                  id="pfn"
                   required
-                  autoComplete="off"
-                  value={child.first_name}
-                  onChange={(e) =>
-                    setChildren((prev) =>
-                      prev.map((c, i) => (i === idx ? { ...c, first_name: e.target.value } : c)),
-                    )
-                  }
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 outline-none ring-sky-400 focus:ring-2 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                  autoComplete="given-name"
+                  value={parentFirstName}
+                  onChange={(e) => setParentFirstName(e.target.value)}
+                  placeholder={t('invite.placeholderParentFirstName')}
+                  className={pillParent}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-gray-300">
-                  {t('invite.childLastName')} <span className="text-rose-500">*</span>
+                <label className={fieldLabel()} htmlFor="pln">
+                  {t('invite.labelLastName')} <span className="font-bold text-rose-500">*</span>
                 </label>
                 <input
+                  id="pln"
                   required
-                  autoComplete="off"
-                  value={child.last_name}
-                  onChange={(e) =>
-                    setChildren((prev) =>
-                      prev.map((c, i) => (i === idx ? { ...c, last_name: e.target.value } : c)),
-                    )
-                  }
-                  className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 outline-none ring-sky-400 focus:ring-2 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                  autoComplete="family-name"
+                  value={parentLastName}
+                  onChange={(e) => setParentLastName(e.target.value)}
+                  placeholder={t('invite.placeholderParentLastName')}
+                  className={pillParent}
                 />
               </div>
             </div>
-            <div className="mt-3">
-              <label className="block text-sm font-medium text-slate-700 dark:text-gray-300">
-                {t('invite.childPassword')} <span className="text-rose-500">*</span>{' '}
-                <span className="text-xs font-normal">({t('invite.min8')})</span>
+
+            {askEmail ? (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="sm:col-span-1">
+                  <label className={fieldLabel()} htmlFor={parentEmailId}>
+                    {t('invite.labelEmail')} <span className="font-bold text-rose-500">*</span>
+                  </label>
+                  <input
+                    id={parentEmailId}
+                    type="email"
+                    required
+                    autoComplete="email"
+                    value={parentEmail}
+                    onChange={(e) => setParentEmail(e.target.value)}
+                    placeholder={t('invite.placeholderEmail')}
+                    className={pillParent}
+                  />
+                  <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">{t('invite.parentEmailHint')}</p>
+                </div>
+                <div className="sm:col-span-1">
+                  <label className={fieldLabel()} htmlFor="pph">
+                    {t('invite.labelPhone')}
+                  </label>
+                  <input
+                    id="pph"
+                    type="tel"
+                    inputMode="numeric"
+                    autoComplete="tel"
+                    maxLength={14}
+                    value={parentPhone}
+                    onChange={(e) => setParentPhone(trPhoneInputChange(e.target.value))}
+                    placeholder={t('invite.placeholderPhone')}
+                    className={`${pillParent} font-mono tabular-nums`}
+                  />
+                  <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">{t('invite.phoneHint')}</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p className="rounded-full bg-violet-50 px-4 py-3 text-sm text-violet-900 dark:bg-violet-950/40 dark:text-violet-100">
+                  {t('invite.emailLockedHint')}
+                </p>
+                <div>
+                  <label className={fieldLabel()} htmlFor="pph">
+                    {t('invite.labelPhone')}
+                  </label>
+                  <input
+                    id="pph"
+                    type="tel"
+                    inputMode="numeric"
+                    autoComplete="tel"
+                    maxLength={14}
+                    value={parentPhone}
+                    onChange={(e) => setParentPhone(trPhoneInputChange(e.target.value))}
+                    placeholder={t('invite.placeholderPhone')}
+                    className={`${pillParent} font-mono tabular-nums`}
+                  />
+                  <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">{t('invite.phoneHint')}</p>
+                </div>
+              </>
+            )}
+
+            <div>
+              <label className={fieldLabel()} htmlFor="ppw">
+                {t('invite.createPasswordLabel')} <span className="font-bold text-rose-500">*</span>
               </label>
               <input
+                id="ppw"
                 type="password"
                 minLength={8}
                 autoComplete="new-password"
                 required
-                value={child.password}
-                onChange={(e) =>
-                  setChildren((prev) =>
-                    prev.map((c, i) => (i === idx ? { ...c, password: e.target.value } : c)),
-                  )
-                }
-                className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 outline-none ring-sky-400 focus:ring-2 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                value={parentPassword}
+                onChange={(e) => setParentPassword(e.target.value)}
+                placeholder="········"
+                className={pillParent}
               />
+              <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">{t('invite.min8')}</p>
             </div>
           </div>
-        ))}
-        <p className="text-xs text-slate-500 dark:text-gray-500">
-          {t('invite.multipleChildrenHint')}
-        </p>
+        </section>
+
+        <div className="border-t border-slate-200 dark:border-slate-700" />
+
+        <section>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <span
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-violet-100 text-violet-600 dark:bg-violet-950/60 dark:text-violet-300"
+                aria-hidden
+              >
+                <Smile className="h-5 w-5" strokeWidth={2} />
+              </span>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('invite.childSectionTitle')}</h2>
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                setChildren((prev) => (prev.length >= 10 ? prev : [...prev, createChildRow()]))
+              }
+              className="inline-flex items-center gap-1.5 rounded-full bg-violet-100 px-4 py-2 text-sm font-semibold text-violet-700 transition-colors hover:bg-violet-200/80 dark:bg-violet-950/50 dark:text-violet-200 dark:hover:bg-violet-900/50"
+            >
+              <Plus className="h-4 w-4" strokeWidth={2.5} />
+              {t('invite.addAnotherChild')}
+            </button>
+          </div>
+
+          <div className="rounded-3xl bg-slate-100 p-4 sm:p-5 dark:bg-slate-800/80">
+            <div className="flex flex-col gap-4">
+              {children.map((child, idx) => (
+                <div
+                  key={child.id}
+                  className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-slate-200/90 dark:bg-slate-900 dark:ring-slate-600"
+                >
+                  <div className="mb-3 flex items-center justify-between gap-2">
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                      {t('invite.child')} {idx + 1}
+                    </p>
+                    {children.length > 1 ? (
+                      <button
+                        type="button"
+                        onClick={() => setChildren((prev) => prev.filter((c) => c.id !== child.id))}
+                        className="shrink-0 text-xs font-semibold text-rose-600 hover:underline dark:text-rose-300"
+                      >
+                        {t('invite.removeChild')}
+                      </button>
+                    ) : null}
+                  </div>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <label className={fieldLabel()}>
+                        {t('invite.childName')} <span className="font-bold text-rose-500">*</span>
+                      </label>
+                      <input
+                        required
+                        autoComplete="off"
+                        value={child.first_name}
+                        onChange={(e) =>
+                          setChildren((prev) =>
+                            prev.map((c) =>
+                              c.id === child.id ? { ...c, first_name: e.target.value } : c,
+                            ),
+                          )
+                        }
+                        placeholder={t('invite.placeholderChildFirstName')}
+                        className={pillChild}
+                      />
+                    </div>
+                    <div>
+                      <label className={fieldLabel()}>
+                        {t('invite.childLastName')} <span className="font-bold text-rose-500">*</span>
+                      </label>
+                      <input
+                        required
+                        autoComplete="off"
+                        value={child.last_name}
+                        onChange={(e) =>
+                          setChildren((prev) =>
+                            prev.map((c) =>
+                              c.id === child.id ? { ...c, last_name: e.target.value } : c,
+                            ),
+                          )
+                        }
+                        placeholder={t('invite.placeholderChildLastName')}
+                        className={pillChild}
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <label className={fieldLabel()}>
+                      {t('invite.childLoginPasswordLabel')} <span className="font-bold text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="password"
+                      minLength={8}
+                      autoComplete="new-password"
+                      required
+                      value={child.password}
+                      onChange={(e) =>
+                        setChildren((prev) =>
+                          prev.map((c) =>
+                            c.id === child.id ? { ...c, password: e.target.value } : c,
+                          ),
+                        )
+                      }
+                      placeholder={t('invite.placeholderChildPassword')}
+                      className={pillChild}
+                    />
+                    <p className="mt-2 text-xs italic text-slate-500 dark:text-slate-400">
+                      {t('invite.childPasswordHelper')}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">{t('invite.multipleChildrenHint')}</p>
+        </section>
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-full bg-sky-500 py-2.5 text-sm font-semibold text-white hover:bg-sky-600 disabled:opacity-60"
+          className="flex w-full items-center justify-center gap-2 rounded-full bg-linear-to-r from-violet-600 via-violet-500 to-purple-400 py-4 text-sm font-semibold text-white shadow-[0_12px_28px_-8px_rgba(109,40,217,0.55)] transition-[filter,opacity] hover:brightness-105 disabled:opacity-60 dark:shadow-[0_12px_28px_-8px_rgba(0,0,0,0.45)]"
         >
-          {loading ? t('profile.saving') : t('invite.submit')}
+          {loading ? (
+            t('profile.saving')
+          ) : (
+            <>
+              {t('invite.submitCta')}
+              <ArrowRight className="h-5 w-5" strokeWidth={2.5} />
+            </>
+          )}
         </button>
+
+        <p className="text-center text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+          {t('invite.termsBeforeLinks')}
+          <Link href={termsHref} className="font-medium text-violet-600 underline-offset-2 hover:underline dark:text-violet-400">
+            {t('sidebar.legal.terms')}
+          </Link>
+          {t('invite.termsBetweenLinks')}
+          <Link href={privacyHref} className="font-medium text-violet-600 underline-offset-2 hover:underline dark:text-violet-400">
+            {t('sidebar.legal.privacy')}
+          </Link>
+          {t('invite.termsAfterLinks')}
+        </p>
       </form>
     </div>
   );

@@ -17,6 +17,7 @@ type KidsHeaderProps = {
 
 /** Kids header tek satır kullanır, bu yüzden daha kısa tutulur. */
 export const KIDS_HEADER_HEIGHT_PX = 52;
+export const KIDS_HEADER_BASE_PX = KIDS_HEADER_HEIGHT_PX;
 
 export function KidsHeader({ pathPrefix }: KidsHeaderProps) {
   const sidebarToggle = useSidebarStore((s) => s.toggle);
@@ -26,7 +27,7 @@ export function KidsHeader({ pathPrefix }: KidsHeaderProps) {
   const { user, logout } = useKidsAuth();
   const { t } = useKidsI18n();
   const isKidsAdmin = user?.role === 'admin';
-  const brandHref = homeHref;
+  const vividBrandLogo = user?.role === 'teacher' || user?.role === 'admin';
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -46,7 +47,7 @@ export function KidsHeader({ pathPrefix }: KidsHeaderProps) {
       className="fixed top-0 left-0 right-0 z-50 flex flex-col border-b border-gray-200 bg-white text-gray-900 shadow-sm dark:border-gray-700 dark:bg-gray-900 dark:text-white"
       style={{ height: KIDS_HEADER_HEIGHT_PX }}
     >
-      <div className="relative flex h-[52px] min-h-[52px] w-full shrink-0 items-stretch justify-between gap-1 px-2 sm:gap-2 sm:px-4">
+      <div className="relative flex h-[52px] min-h-[52px] w-full shrink-0 items-center justify-between gap-1 px-2 sm:gap-2 sm:px-4">
         <div className="flex w-9 shrink-0 items-center sm:w-auto sm:min-w-0">
           <button
             type="button"
@@ -81,7 +82,9 @@ export function KidsHeader({ pathPrefix }: KidsHeaderProps) {
 
         <Link
           href={homeHref}
-          className="font-logo absolute left-1/2 flex -translate-x-1/2 items-center justify-center gap-0 whitespace-nowrap text-xl font-semibold tracking-tight text-gray-900 hover:opacity-90 dark:text-white sm:text-2xl md:text-3xl"
+          className={`font-logo absolute left-1/2 z-10 flex -translate-x-1/2 items-center justify-center gap-0 whitespace-nowrap text-xl font-semibold tracking-tight hover:opacity-90 sm:text-2xl md:text-3xl ${
+            vividBrandLogo ? 'text-violet-600 dark:text-violet-300' : 'text-gray-900 dark:text-white'
+          }`}
         >
           <Image
             src="/logo.png"
@@ -91,7 +94,9 @@ export function KidsHeader({ pathPrefix }: KidsHeaderProps) {
             className="-mr-1.5 h-8 w-8 shrink-0 object-contain sm:h-9 sm:w-9 md:h-10 md:w-10"
             priority
           />
-          <span lang="en" className="leading-none">arifetli</span>
+          <span lang="en" className="leading-none">
+            arifetli
+          </span>
           <span
             lang="en"
             className="ml-1.5 rounded-xl bg-linear-to-r from-amber-400 to-orange-400 px-2 py-0.5 text-xs font-extrabold tracking-wide text-white shadow-sm"
@@ -101,7 +106,7 @@ export function KidsHeader({ pathPrefix }: KidsHeaderProps) {
         </Link>
 
         <div className="header-top-right flex min-w-0 shrink-0 items-center justify-end gap-0.5 self-stretch sm:gap-2">
-          <span className="hidden md:inline-flex">
+          <span className="hidden shrink-0 md:inline-flex">
             <ThemeToggle />
           </span>
           {user ? <KidsNotificationBell pathPrefix={pathPrefix} /> : null}

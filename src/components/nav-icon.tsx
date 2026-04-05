@@ -4,6 +4,7 @@ import {
   Bell,
   BookOpen,
   Brain,
+  ClipboardList,
   Flame,
   FolderOpen,
   Gamepad2,
@@ -11,9 +12,11 @@ import {
   Home,
   KeyRound,
   List,
+  ListChecks,
   Mail,
   Megaphone,
   MessageCircle,
+  MessagesSquare,
   Palette,
   School,
   Search,
@@ -47,9 +50,12 @@ export type NavIconName =
   | 'parent'
   | 'timer'
   | 'chat'
+  | 'messages'
   | 'announce'
   | 'login'
-  | 'site';
+  | 'site'
+  | 'homework'
+  | 'tests';
 
 const ICON_COLOR: Record<NavIconName, string> = {
   home: 'text-rose-500',
@@ -65,7 +71,7 @@ const ICON_COLOR: Record<NavIconName, string> = {
   expert: 'text-pink-500',
   teacher: 'text-blue-500',
   bell: 'text-yellow-500',
-  profile: 'text-slate-500',
+  profile: 'text-indigo-600',
   student: 'text-lime-500',
   challenge: 'text-purple-500',
   trophy: 'text-amber-500',
@@ -73,7 +79,10 @@ const ICON_COLOR: Record<NavIconName, string> = {
   parent: 'text-rose-500',
   timer: 'text-cyan-600',
   chat: 'text-sky-500',
-  announce: 'text-red-500',
+  messages: 'text-cyan-600',
+  announce: 'text-rose-600',
+  homework: 'text-orange-500',
+  tests: 'text-sky-600',
   login: 'text-violet-600',
   site: 'text-emerald-600',
 };
@@ -126,6 +135,12 @@ export function NavIcon({ name, className = 'h-4 w-4' }: { name: NavIconName; cl
       return <Timer className={cls} aria-hidden />;
     case 'chat':
       return <MessageCircle className={cls} aria-hidden />;
+    case 'messages':
+      return <MessagesSquare className={cls} aria-hidden />;
+    case 'homework':
+      return <ClipboardList className={cls} aria-hidden />;
+    case 'tests':
+      return <ListChecks className={cls} aria-hidden />;
     case 'announce':
       return <Megaphone className={cls} aria-hidden />;
     case 'login':
