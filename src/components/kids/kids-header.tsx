@@ -10,6 +10,7 @@ import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import { KidsNotificationBell } from '@/src/components/kids/kids-notification-bell';
 import { KIDS_USE_SIDEBAR, kidsLoginPortalHref } from '@/src/lib/kids-config';
 import { useKidsI18n } from '@/src/providers/kids-language-provider';
+import { KidsLanguageSelectField } from '@/src/components/kids/kids-language-select';
 
 type KidsHeaderProps = {
   pathPrefix: string;
@@ -160,6 +161,9 @@ export function KidsHeader({ pathPrefix }: KidsHeaderProps) {
                     {isKidsAdmin ? (
                       <p className="mt-1 text-xs font-medium text-brand dark:text-brand">{t('header.admin')}</p>
                     ) : null}
+                  </div>
+                  <div className="border-b border-gray-200 px-3 py-2 dark:border-gray-700">
+                    <KidsLanguageSelectField id="kids-header-language" variant="header" />
                   </div>
                   <Link
                     href={`${pathPrefix}/bildirimler`}

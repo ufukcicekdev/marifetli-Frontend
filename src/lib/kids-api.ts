@@ -2986,6 +2986,8 @@ export type KidsMessage = {
   created_at: string;
 };
 
+export type KidsAnnouncementCategory = 'event' | 'info' | 'general';
+
 export type KidsAnnouncement = {
   id: number;
   scope: 'class' | 'school';
@@ -2994,6 +2996,8 @@ export type KidsAnnouncement = {
   target_role: 'all' | 'parent' | 'student' | 'teacher';
   title: string;
   body: string;
+  /** Yoksa (eski kayıt) istemci `general` varsayar */
+  category?: KidsAnnouncementCategory;
   is_pinned: boolean;
   is_published: boolean;
   published_at: string | null;
@@ -3141,10 +3145,42 @@ export async function kidsSendConversationMessage(
   return data as KidsMessage;
 }
 
-export async function kidsListAnnouncements(): Promise<KidsAnnouncement[]> {
-  const res = await kidsAuthorizedFetch('/announcements/', { method: 'GET' });
-  const data = await res.json().catch(() => []);
+/** Kids duyurular listesi sayfa boyutu (API `limit` ile aynı). */
+export const KIDS_ANNOUNCEMENTS_PAGE_SIZE = 3;
+
+export type KidsAnnouncementsPaged = {
+  results: KidsAnnouncement[];
+  count: number;
+  limit: number;
+  offset: number;
+  has_more: boolean;
+};
+
+/**
+ * Duyuruları listeler. `limit` verilirse sayfalı JSON döner; verilmezse tüm liste (dizi) — geriye dönük uyumluluk.
+ */
+export async function kidsListAnnouncements(
+  params?: { limit: number; offset?: number },
+): Promise<KidsAnnouncement[] | KidsAnnouncementsPaged> {
+  const sp = new URLSearchParams();
+  if (params?.limit != null) {
+    sp.set('limit', String(params.limit));
+    sp.set('offset', String(params.offset ?? 0));
+  }
+  const q = sp.toString();
+  const res = await kidsAuthorizedFetch(`/announcements/${q ? `?${q}` : ''}`, { method: 'GET' });
+  const data = await res.json().catch(() => (params?.limit != null ? {} : []));
   if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Duyurular yüklenemedi');
+  if (params?.limit != null && data && typeof data === 'object' && !Array.isArray(data) && 'results' in data) {
+    const o = data as KidsAnnouncementsPaged;
+    return {
+      results: Array.isArray(o.results) ? o.results : [],
+      count: typeof o.count === 'number' ? o.count : 0,
+      limit: typeof o.limit === 'number' ? o.limit : params.limit,
+      offset: typeof o.offset === 'number' ? o.offset : params.offset ?? 0,
+      has_more: Boolean(o.has_more),
+    };
+  }
   return Array.isArray(data) ? (data as KidsAnnouncement[]) : [];
 }
 
@@ -3551,6 +3587,7 @@ export async function kidsCreateAnnouncement(body: {
   target_role?: 'all' | 'parent' | 'student' | 'teacher';
   title: string;
   body: string;
+  category?: KidsAnnouncementCategory;
   is_pinned?: boolean;
   is_published?: boolean;
   expires_at?: string | null;
@@ -3597,6 +3634,7 @@ export async function kidsPatchAnnouncement(
   body: Partial<{
     title: string;
     body: string;
+    category: KidsAnnouncementCategory;
     is_pinned: boolean;
     is_published: boolean;
     expires_at: string | null;

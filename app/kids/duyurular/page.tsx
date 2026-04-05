@@ -11,9 +11,11 @@ import {
   kidsDeleteAnnouncementAttachment,
   kidsListClasses,
   kidsListAnnouncements,
+  KIDS_ANNOUNCEMENTS_PAGE_SIZE,
   kidsPatchAnnouncement,
   kidsUploadAnnouncementAttachment,
   type KidsAnnouncement,
+  type KidsAnnouncementCategory,
   type KidsClass,
 } from '@/src/lib/kids-api';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
@@ -27,32 +29,17 @@ const ANNOUNCEMENT_IMAGE_MAX_BYTES = 10 * 1024 * 1024;
 const ANNOUNCEMENT_DOCUMENT_MAX_BYTES = 20 * 1024 * 1024;
 const ALL_CLASSES_VALUE = '__all_school__';
 
-function announcementCategoryStyle(
-  id: number,
-  title: string,
+function styleFromCategory(
+  cat: KidsAnnouncementCategory,
   translate: (k: string) => string,
 ): { label: string; pillClass: string } {
-  const t = title || '';
-  if (/etkinlik|gösteri|gosteri|konser|yarışma|yarisma|gezi|şenlik|senlik|festival/i.test(t)) {
+  if (cat === 'event') {
     return {
       label: translate('announcements.catEvent'),
       pillClass: 'bg-pink-100 text-pink-800 ring-pink-200/80 dark:bg-pink-950/50 dark:text-pink-100 dark:ring-pink-800/60',
     };
   }
-  if (/bilgi|hatırlatma|hatirlatma|toplantı|toplanti|açıklama|aciklama|bildiri/i.test(t)) {
-    return {
-      label: translate('announcements.catInfo'),
-      pillClass: 'bg-amber-100 text-amber-900 ring-amber-200/80 dark:bg-amber-950/40 dark:text-amber-100 dark:ring-amber-800/50',
-    };
-  }
-  const m = Math.abs(id) % 3;
-  if (m === 0) {
-    return {
-      label: translate('announcements.catEvent'),
-      pillClass: 'bg-pink-100 text-pink-800 ring-pink-200/80 dark:bg-pink-950/50 dark:text-pink-100 dark:ring-pink-800/60',
-    };
-  }
-  if (m === 1) {
+  if (cat === 'info') {
     return {
       label: translate('announcements.catInfo'),
       pillClass: 'bg-amber-100 text-amber-900 ring-amber-200/80 dark:bg-amber-950/40 dark:text-amber-100 dark:ring-amber-800/50',
@@ -62,6 +49,34 @@ function announcementCategoryStyle(
     label: translate('announcements.catGeneral'),
     pillClass: 'bg-violet-100 text-violet-800 ring-violet-200/80 dark:bg-violet-950/50 dark:text-violet-100 dark:ring-violet-800/60',
   };
+}
+
+/** Rozet ve liste filtresi için aynı kategori (API’de yoksa başlık/id ile legacy) */
+function effectiveAnnouncementCategory(a: {
+  id: number;
+  title: string;
+  category?: KidsAnnouncementCategory | null;
+}): KidsAnnouncementCategory {
+  const c = a.category;
+  if (c === 'event' || c === 'info' || c === 'general') return c;
+  const title = a.title || '';
+  if (/etkinlik|gösteri|gosteri|konser|yarışma|yarisma|gezi|şenlik|senlik|festival/i.test(title)) {
+    return 'event';
+  }
+  if (/bilgi|hatırlatma|hatirlatma|toplantı|toplanti|açıklama|aciklama|bildiri/i.test(title)) {
+    return 'info';
+  }
+  const m = Math.abs(a.id) % 3;
+  if (m === 0) return 'event';
+  if (m === 1) return 'info';
+  return 'general';
+}
+
+function announcementCategoryStyle(
+  a: { id: number; title: string; category?: KidsAnnouncementCategory | null },
+  translate: (k: string) => string,
+): { label: string; pillClass: string } {
+  return styleFromCategory(effectiveAnnouncementCategory(a), translate);
 }
 
 function titleInitials(title: string): string[] {
@@ -109,12 +124,14 @@ export default function KidsAnnouncementsPage() {
   const [saving, setSaving] = useState(false);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
+  const [category, setCategory] = useState<KidsAnnouncementCategory>('general');
   const [files, setFiles] = useState<File[]>([]);
   const [classes, setClasses] = useState<KidsClass[]>([]);
   const [classId, setClassId] = useState('');
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editBody, setEditBody] = useState('');
+  const [editCategory, setEditCategory] = useState<KidsAnnouncementCategory>('general');
   const [editFiles, setEditFiles] = useState<File[]>([]);
   const [editSaving, setEditSaving] = useState(false);
   const [deletingAttachmentId, setDeletingAttachmentId] = useState<number | null>(null);
@@ -125,6 +142,9 @@ export default function KidsAnnouncementsPage() {
     announcementId: number;
     startIndex: number;
   } | null>(null);
+  const [listCategoryTab, setListCategoryTab] = useState<'all' | KidsAnnouncementCategory>('all');
+  const [announcementsHasMore, setAnnouncementsHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const editLightboxAnn = useMemo(() => {
     if (!announcementEditLightbox) return null;
@@ -146,6 +166,15 @@ export default function KidsAnnouncementsPage() {
       ? Math.min(Math.max(0, announcementEditLightbox.startIndex), editLightboxItems.length - 1)
       : 0;
 
+  const categoryOptions = useMemo(
+    () => [
+      { value: 'event', label: t('announcements.catEvent') },
+      { value: 'info', label: t('announcements.catInfo') },
+      { value: 'general', label: t('announcements.catGeneral') },
+    ],
+    [t],
+  );
+
   const canCreate = user?.role === 'teacher' || user?.role === 'admin';
   const selectedClassId = useMemo(() => Number(classId || 0), [classId]);
   const isAllSchoolScope = classId === ALL_CLASSES_VALUE;
@@ -154,8 +183,17 @@ export default function KidsAnnouncementsPage() {
   async function load() {
     setLoading(true);
     try {
-      const list = await kidsListAnnouncements();
-      setRows(list);
+      const raw = await kidsListAnnouncements({
+        limit: KIDS_ANNOUNCEMENTS_PAGE_SIZE,
+        offset: 0,
+      });
+      if (Array.isArray(raw)) {
+        setRows(raw);
+        setAnnouncementsHasMore(false);
+      } else {
+        setRows(raw.results);
+        setAnnouncementsHasMore(raw.has_more);
+      }
       if (canCreate) {
         const classList = await kidsListClasses();
         setClasses(classList);
@@ -169,6 +207,36 @@ export default function KidsAnnouncementsPage() {
       toast.error(e instanceof Error ? e.message : t('announcements.loadError'));
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadMoreAnnouncements() {
+    if (loadingMore || !announcementsHasMore || loading) return;
+    setLoadingMore(true);
+    try {
+      const raw = await kidsListAnnouncements({
+        limit: KIDS_ANNOUNCEMENTS_PAGE_SIZE,
+        offset: rows.length,
+      });
+      if (Array.isArray(raw)) {
+        setRows((prev) => {
+          const ids = new Set(prev.map((r) => r.id));
+          const add = raw.filter((r) => !ids.has(r.id));
+          return [...prev, ...add];
+        });
+        setAnnouncementsHasMore(false);
+      } else {
+        setRows((prev) => {
+          const ids = new Set(prev.map((r) => r.id));
+          const add = raw.results.filter((r) => !ids.has(r.id));
+          return [...prev, ...add];
+        });
+        setAnnouncementsHasMore(raw.has_more);
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('announcements.loadError'));
+    } finally {
+      setLoadingMore(false);
     }
   }
 
@@ -197,11 +265,29 @@ export default function KidsAnnouncementsPage() {
   const sorted = useMemo(
     () =>
       [...rows].sort((a, b) => {
+        if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1;
         const at = a.published_at ? new Date(a.published_at).getTime() : 0;
         const bt = b.published_at ? new Date(b.published_at).getTime() : 0;
-        return bt - at;
+        if (bt !== at) return bt - at;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       }),
     [rows],
+  );
+
+  const filteredSorted = useMemo(() => {
+    if (listCategoryTab === 'all') return sorted;
+    return sorted.filter((a) => effectiveAnnouncementCategory(a) === listCategoryTab);
+  }, [sorted, listCategoryTab]);
+
+  const listCategoryTabs = useMemo(
+    () =>
+      [
+        { id: 'all' as const, label: t('announcements.filterAll') },
+        { id: 'event' as const, label: t('announcements.catEvent') },
+        { id: 'general' as const, label: t('announcements.catGeneral') },
+        { id: 'info' as const, label: t('announcements.catInfo') },
+      ] as const,
+    [t],
   );
 
   const classNameById = useMemo(() => {
@@ -302,6 +388,9 @@ export default function KidsAnnouncementsPage() {
     setOpenAnnouncementId(a.id);
     setEditTitle(a.title || '');
     setEditBody(a.body || '');
+    setEditCategory(
+      a.category === 'event' || a.category === 'info' || a.category === 'general' ? a.category : 'general',
+    );
     setEditFiles([]);
   }
 
@@ -309,6 +398,7 @@ export default function KidsAnnouncementsPage() {
     setEditingId(null);
     setEditTitle('');
     setEditBody('');
+    setEditCategory('general');
     setEditFiles([]);
     setAnnouncementEditLightbox(null);
   }
@@ -323,7 +413,11 @@ export default function KidsAnnouncementsPage() {
     }
     setEditSaving(true);
     try {
-      let latest = await kidsPatchAnnouncement(editingId, { title: titleText, body: bodyText });
+      let latest = await kidsPatchAnnouncement(editingId, {
+        title: titleText,
+        body: bodyText,
+        category: editCategory,
+      });
       if (editFiles.length > 0) {
         for (const f of editFiles) {
           latest = await kidsUploadAnnouncementAttachment(editingId, f);
@@ -391,6 +485,7 @@ export default function KidsAnnouncementsPage() {
               kids_class: null,
               title: titleText,
               body: bodyText,
+              category,
               is_published: true,
               target_role: 'all',
             }
@@ -399,6 +494,7 @@ export default function KidsAnnouncementsPage() {
               kids_class: selectedClassId,
               title: titleText,
               body: bodyText,
+              category,
               is_published: true,
               target_role: 'all',
             },
@@ -412,6 +508,7 @@ export default function KidsAnnouncementsPage() {
       }
       setTitle('');
       setBody('');
+      setCategory('general');
       setFiles([]);
       toast.success(t('announcements.published'));
       await load();
@@ -463,6 +560,19 @@ export default function KidsAnnouncementsPage() {
                     placeholder={t('announcements.bodyPlaceholder')}
                     className="mt-1.5 w-full resize-y rounded-2xl border-0 bg-zinc-100 px-4 py-3 text-sm text-slate-900 shadow-inner outline-none ring-1 ring-zinc-200/80 transition focus:ring-2 focus:ring-violet-400/40 dark:bg-zinc-800 dark:text-white dark:ring-zinc-700"
                   />
+                </div>
+
+                <div>
+                  <label className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t('announcements.categoryField')}</label>
+                  <div className="mt-1.5 rounded-2xl bg-zinc-100 px-2 py-2 ring-1 ring-zinc-200/80 dark:bg-zinc-800 dark:ring-zinc-700">
+                    <KidsSelect
+                      value={category}
+                      onChange={(v) => setCategory(v as KidsAnnouncementCategory)}
+                      options={categoryOptions}
+                      searchable={false}
+                    />
+                  </div>
+                  <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">{t('announcements.categoryHint')}</p>
                 </div>
 
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-end">
@@ -566,15 +676,45 @@ export default function KidsAnnouncementsPage() {
               {t('announcements.seeAll')}
             </a>
           </div>
+          <div
+            role="tablist"
+            aria-label={t('announcements.categoryFilterAria')}
+            className="-mx-1 flex flex-wrap gap-2 overflow-x-auto pb-1"
+          >
+            {listCategoryTabs.map((tab) => {
+              const active = listCategoryTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setListCategoryTab(tab.id)}
+                  className={`shrink-0 rounded-full px-3.5 py-1.5 text-xs font-bold transition ring-1 ${
+                    active
+                      ? 'bg-violet-600 text-white ring-violet-500 shadow-md shadow-violet-500/20 dark:bg-violet-600 dark:ring-violet-500'
+                      : 'bg-zinc-100 text-zinc-600 ring-zinc-200/80 hover:bg-zinc-200/80 dark:bg-zinc-800/80 dark:text-zinc-300 dark:ring-zinc-700 dark:hover:bg-zinc-700/80'
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              );
+            })}
+          </div>
         {loading ? <p className="text-sm text-slate-500">{t('common.loading')}</p> : null}
         {!loading && sorted.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-violet-300 bg-violet-50/50 p-6 text-sm text-violet-900 dark:border-violet-800 dark:bg-violet-950/20 dark:text-violet-100">
             {t('announcements.empty')}
           </div>
         ) : null}
+        {!loading && sorted.length > 0 && filteredSorted.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50/50 p-6 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-300">
+            {t('announcements.emptyCategory')}
+          </div>
+        ) : null}
       <ul className="space-y-4">
-        {sorted.map((a) => {
-          const cat = announcementCategoryStyle(a.id, a.title, t);
+        {filteredSorted.map((a) => {
+          const cat = announcementCategoryStyle(a, t);
           const locale = language === 'tr' ? 'tr-TR' : language === 'ge' ? 'de-DE' : 'en-US';
           const dateLine = a.published_at
             ? new Date(a.published_at).toLocaleString(locale, { dateStyle: 'long', timeStyle: 'short' })
@@ -678,6 +818,19 @@ export default function KidsAnnouncementsPage() {
                   placeholder={t('announcements.bodyField')}
                   className={kidsTextareaClass}
                 />
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-violet-900/90 dark:text-violet-100/90">
+                    {t('announcements.categoryField')}
+                  </label>
+                  <div className="rounded-xl bg-white/80 px-2 py-1.5 ring-1 ring-violet-200/70 dark:bg-slate-900/50 dark:ring-violet-800/60">
+                    <KidsSelect
+                      value={editCategory}
+                      onChange={(v) => setEditCategory(v as KidsAnnouncementCategory)}
+                      options={categoryOptions}
+                      searchable={false}
+                    />
+                  </div>
+                </div>
                 <div className="space-y-2">
                   <p className="text-xs font-semibold text-violet-900/90 dark:text-violet-100/90">{t('announcements.newAttachments')}</p>
                   {Array.isArray(a.attachments) && a.attachments.length > 0 ? (
@@ -896,6 +1049,18 @@ export default function KidsAnnouncementsPage() {
           );
         })}
       </ul>
+        {announcementsHasMore ? (
+          <div className="flex justify-center pt-2">
+            <button
+              type="button"
+              onClick={() => void loadMoreAnnouncements()}
+              disabled={loadingMore || loading}
+              className="rounded-full border border-violet-400/80 bg-violet-950/30 px-5 py-2.5 text-sm font-bold text-violet-100 transition hover:bg-violet-900/50 disabled:opacity-50 dark:border-violet-600 dark:bg-violet-950/40 dark:hover:bg-violet-900/60"
+            >
+              {loadingMore ? t('announcements.loadingMore') : t('announcements.loadMore')}
+            </button>
+          </div>
+        ) : null}
       </section>
       </div>
       {announcementEditLightbox && editLightboxItems.length > 0 ? (
