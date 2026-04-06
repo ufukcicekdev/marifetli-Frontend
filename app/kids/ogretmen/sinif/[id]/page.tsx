@@ -1224,7 +1224,7 @@ function KidsTeacherClassPageContent() {
     'min-h-[44px] w-full justify-between gap-2 rounded-none border-0 bg-transparent px-0 py-0 text-left text-base font-medium text-slate-900 shadow-none ring-0 focus:border-0 focus:ring-0 focus-visible:ring-0 dark:text-white';
 
   return (
-    <KidsPanelMax className="max-w-6xl! px-4 py-6 pb-12 sm:px-6">
+    <KidsPanelMax className="max-w-6xl! min-w-0 px-4 py-6 pb-12 sm:px-6">
       <nav
         className="mb-5 text-sm text-zinc-500 dark:text-zinc-400"
         aria-label={t('teacherClass.headerBreadcrumbAria')}
@@ -1637,7 +1637,7 @@ function KidsTeacherClassPageContent() {
       )}
 
       {tab === 'students' && (
-        <section className="rounded-3xl border border-zinc-100 bg-white p-5 shadow-xl dark:border-zinc-800 dark:bg-zinc-900 sm:p-8">
+        <section className="min-w-0 max-w-full overflow-x-clip rounded-3xl border border-zinc-100 bg-white p-5 shadow-xl dark:border-zinc-800 dark:bg-zinc-900 sm:p-8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <h2 className="font-logo text-xl font-bold text-slate-900 dark:text-white sm:text-2xl">
@@ -1705,7 +1705,7 @@ function KidsTeacherClassPageContent() {
                   {t('teacherClass.students.searchNoResults')}
                 </p>
               ) : null}
-              <div className="mt-8 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="mt-8 grid min-w-0 max-w-full grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {filteredStudents.map((en) => {
                   const pic = en.student.profile_picture;
                   const pub = en.class_published_assignment_count;
@@ -1715,7 +1715,7 @@ function KidsTeacherClassPageContent() {
                   return (
                     <article
                       key={en.id}
-                      className="relative flex flex-col rounded-2xl border border-zinc-100 bg-white p-4 shadow-lg ring-1 ring-black/[0.03] dark:border-zinc-800 dark:bg-zinc-900 dark:ring-white/5"
+                      className="relative flex min-w-0 max-w-full flex-col overflow-hidden rounded-2xl border border-zinc-100 bg-white p-4 shadow-lg ring-1 ring-black/[0.03] dark:border-zinc-800 dark:bg-zinc-900 dark:ring-white/5"
                     >
                       <details className="absolute top-3 right-3 z-10">
                         <summary className="flex cursor-pointer list-none items-center justify-center rounded-full p-2 text-zinc-600 outline-none hover:bg-zinc-100 focus-visible:ring-2 focus-visible:ring-violet-400 dark:text-zinc-300 dark:hover:bg-zinc-800 [&::-webkit-details-marker]:hidden">
@@ -1750,7 +1750,7 @@ function KidsTeacherClassPageContent() {
                         </div>
                       </details>
 
-                      <div className="flex gap-3 pr-10">
+                      <div className="flex min-w-0 gap-3 pr-10">
                         {pic ? (
                           <img
                             src={pic}
@@ -1762,25 +1762,25 @@ function KidsTeacherClassPageContent() {
                             {studentInitials(en)}
                           </div>
                         )}
-                        <div className="min-w-0 flex-1">
-                          <p className="font-logo text-base font-bold text-slate-900 dark:text-white">
+                        <div className="min-w-0 flex-1 overflow-hidden">
+                          <p className="break-words font-logo text-base font-bold text-slate-900 dark:text-white">
                             {studentDisplayName(en)}
                           </p>
-                          <p className="mt-0.5 truncate text-sm text-zinc-500 dark:text-zinc-400">{en.student.email}</p>
-                          <p className="mt-1 text-xs font-medium text-zinc-400 dark:text-zinc-500">
+                          <p className="mt-0.5 break-all text-sm text-zinc-500 dark:text-zinc-400">{en.student.email}</p>
+                          <p className="mt-1 break-all text-xs font-medium text-zinc-400 dark:text-zinc-500">
                             {t('teacherClass.students.studentIdLabel').replace('{id}', String(en.student.id))}
                           </p>
                         </div>
                       </div>
 
-                      <div className="mt-4 grid grid-cols-2 gap-2">
-                        <div className="rounded-xl bg-zinc-100 px-3 py-2.5 dark:bg-zinc-800/90">
+                      <div className="mt-4 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
+                        <div className="min-w-0 rounded-xl bg-zinc-100 px-3 py-2.5 dark:bg-zinc-800/90">
                           <p className="text-[9px] font-bold uppercase leading-tight tracking-wide text-zinc-500 dark:text-zinc-400">
                             {t('teacherClass.students.publishedChallenges')}
                           </p>
                           <p className="mt-1 font-logo text-2xl font-black text-slate-900 dark:text-white">{pubLabel}</p>
                         </div>
-                        <div className="rounded-xl bg-zinc-100 px-3 py-2.5 dark:bg-zinc-800/90">
+                        <div className="min-w-0 rounded-xl bg-zinc-100 px-3 py-2.5 dark:bg-zinc-800/90">
                           <p className="text-[9px] font-bold uppercase leading-tight tracking-wide text-zinc-500 dark:text-zinc-400">
                             {t('teacherClass.students.submitted')}
                           </p>
@@ -1788,11 +1788,11 @@ function KidsTeacherClassPageContent() {
                         </div>
                       </div>
 
-                      <div className="mt-4 flex flex-col gap-2">
+                      <div className="mt-4 flex min-w-0 flex-col gap-2">
                         <button
                           type="button"
                           onClick={() => void startParentConversation(en)}
-                          className="flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-violet-600 px-4 text-sm font-bold text-white shadow-md shadow-violet-500/25 transition hover:bg-violet-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-500 dark:bg-violet-600 dark:hover:bg-violet-500"
+                          className="flex min-h-12 w-full min-w-0 items-center justify-center gap-2 whitespace-normal rounded-full bg-violet-600 px-3 text-center text-sm font-bold text-white shadow-md shadow-violet-500/25 transition hover:bg-violet-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-500 dark:bg-violet-600 dark:hover:bg-violet-500 sm:px-4"
                         >
                           <MessageCircle className="h-5 w-5 shrink-0" strokeWidth={2.25} aria-hidden />
                           {t('teacherClass.students.messageParent')}
@@ -1801,7 +1801,7 @@ function KidsTeacherClassPageContent() {
                           type="button"
                           disabled={removingEnrollmentId === en.id}
                           onClick={() => void removeStudentFromClass(en)}
-                          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-full border border-zinc-200 bg-zinc-100 px-4 text-sm font-bold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-rose-300 dark:hover:bg-rose-950/30"
+                          className="flex min-h-11 w-full min-w-0 items-center justify-center gap-2 whitespace-normal rounded-full border border-zinc-200 bg-zinc-100 px-3 text-center text-sm font-bold text-rose-700 transition hover:bg-rose-50 disabled:opacity-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-rose-300 dark:hover:bg-rose-950/30 sm:px-4"
                         >
                           <LogOut className="h-4 w-4 shrink-0" strokeWidth={2.35} aria-hidden />
                           {removingEnrollmentId === en.id ? t('teacherClass.students.removing') : t('teacherClass.students.removeFromClass')}
