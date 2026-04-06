@@ -49,15 +49,29 @@ type LoginTab = 'student' | 'teacher' | 'parent';
 
 function KidsLoginBrandLockup({ ariaLabel }: { ariaLabel: string }) {
   return (
-    <div
-      role="img"
-      aria-label={ariaLabel}
-      className="font-logo flex flex-wrap items-center justify-center gap-0 text-[1.35rem] font-semibold tracking-tight sm:text-2xl md:text-[1.65rem]"
-    >
-      <span className="bg-gradient-to-r from-violet-600 via-fuchsia-500 to-amber-500 bg-clip-text text-transparent dark:from-violet-300 dark:via-fuchsia-300 dark:to-amber-300">
-        Marifetli
-      </span>
-      <span className="text-slate-800 dark:text-slate-100"> Kids</span>
+    <div role="img" aria-label={ariaLabel} className="flex flex-col items-center">
+      <div className="font-logo flex flex-wrap items-center justify-center gap-0 text-xl font-semibold tracking-tight sm:text-2xl md:text-[1.65rem]">
+        <Image
+          src="/logo.png"
+          alt=""
+          width={52}
+          height={52}
+          className="-mr-1 h-11 w-11 shrink-0 object-contain sm:h-12 sm:w-12 md:h-14 md:w-14"
+          priority
+        />
+        <span
+          lang="en"
+          className="bg-linear-to-r from-violet-600 via-fuchsia-500 to-amber-500 bg-clip-text leading-none text-transparent dark:from-violet-300 dark:via-fuchsia-300 dark:to-amber-300"
+        >
+          arifetli
+        </span>
+        <span
+          lang="en"
+          className="ml-1.5 rounded-xl bg-linear-to-r from-amber-400 to-orange-400 px-2 py-0.5 text-[10px] font-extrabold tracking-wide text-white shadow-sm sm:text-xs"
+        >
+          KIDS
+        </span>
+      </div>
     </div>
   );
 }
