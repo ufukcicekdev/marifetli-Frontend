@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { TopicPageContent } from './topic-page-content';
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.marifetli.com.tr';
+const SITE_URL = (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.marifetli.com.tr').replace(/\/$/, '');
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://web-production-5404d.up.railway.app/api';
 
 const SPECIAL_SLUGS: Record<string, { title: string; description: string }> = {
@@ -40,7 +40,10 @@ export async function generateMetadata({
       next: { revalidate: 300 },
     });
     if (!res.ok) {
-      return { title: `${slug} | Marifetli` };
+      return {
+        title: `${slug} | Marifetli`,
+        alternates: { canonical: `${SITE_URL}/t/${slug}` },
+      };
     }
     const cat = await res.json();
     const name = cat.name || slug;
@@ -61,13 +64,15 @@ export async function generateMetadata({
       alternates: { canonical: `${SITE_URL}/t/${slug}` },
     };
   } catch {
-    return { title: `${slug} | Marifetli` };
+    return {
+      title: `${slug} | Marifetli`,
+      alternates: { canonical: `${SITE_URL}/t/${slug}` },
+    };
   }
 }
 
 /** Kategori/konu sayfası için BreadcrumbList + WebPage JSON-LD (Google & AI SEO). Alt kategoride parent_slug/parent_name ile ana kategori eklenir. */
 function buildTopicPageStructuredData(slug: string, name: string, description: string, parentSlug?: string | null, parentName?: string | null) {
-  const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.marifetli.com.tr';
   const items: { '@type': string; position: number; name: string; item: string }[] = [
     { '@type': 'ListItem', position: 1, name: 'Marifetli', item: SITE_URL },
     { '@type': 'ListItem', position: 2, name: 'Konular', item: `${SITE_URL}/sorular` },

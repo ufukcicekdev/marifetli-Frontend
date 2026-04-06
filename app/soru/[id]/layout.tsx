@@ -122,7 +122,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const question = await getQuestion(id);
   if (!question?.title) {
-    return { title: 'Soru Bulunamadı' };
+    const fallbackUrl = `${SITE_URL}/soru/${encodeURIComponent(id)}`;
+    return {
+      title: 'Soru Bulunamadı',
+      robots: { index: false, follow: true },
+      alternates: { canonical: fallbackUrl },
+    };
   }
   const title = question.meta_title || question.title;
   const description = question.meta_description || question.description || question.title;
