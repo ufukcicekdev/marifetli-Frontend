@@ -1,22 +1,71 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import {
+  ArrowRight,
+  Clock,
+  Grid3x3,
+  History,
+  Lock,
+  Pause,
+  Play,
+  RefreshCw,
+  Rocket,
+  Search as SearchIcon,
+  Signal,
+  Sparkles,
+  Star,
+  Trophy,
+  Volume2,
+  VolumeX,
+} from 'lucide-react';
+import {
   kidsCompleteGameSession,
+  kidsGetBadgeRoadmap,
   kidsMyGameSessions,
   kidsStartGameSession,
   kidsStudentGamesOverview,
+  type KidsBadgeRoadmap,
   type KidsGame,
   type KidsGameSession,
+  type KidsRoadmapMilestone,
 } from '@/src/lib/kids-api';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
+import { localizedKidsGameCopy } from '@/src/lib/kids-game-i18n';
+import { localizedMilestoneCopy } from '@/src/lib/kids-roadmap-i18n';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import { useKidsI18n } from '@/src/providers/kids-language-provider';
-import { KidsCard, KidsPanelMax, KidsPrimaryButton, KidsSecondaryButton } from '@/src/components/kids/kids-ui';
+import { KidsPanelMax, KidsPrimaryButton, KidsSecondaryButton } from '@/src/components/kids/kids-ui';
 
 const MEMORY_ICONS = ['🍎', '🚗', '⭐', '🐶', '🎈', '⚽', '🌈', '🦋'];
+
+const MEMORY_ICON_LABEL_KEY: Record<string, string> = {
+  '🍎': 'gameCenter.memory.cards.apple',
+  '🚗': 'gameCenter.memory.cards.car',
+  '⭐': 'gameCenter.memory.cards.star',
+  '🐶': 'gameCenter.memory.cards.dog',
+  '🎈': 'gameCenter.memory.cards.balloon',
+  '⚽': 'gameCenter.memory.cards.ball',
+  '🌈': 'gameCenter.memory.cards.rainbow',
+  '🦋': 'gameCenter.memory.cards.butterfly',
+};
+
+function memoryPairLabel(icon: string, t: (key: string) => string): string {
+  const key = MEMORY_ICON_LABEL_KEY[icon];
+  if (!key) return icon;
+  const out = t(key);
+  return out === key ? icon : out;
+}
+
+function formatMmSs(totalSeconds: number): string {
+  const m = Math.floor(Math.max(0, totalSeconds) / 60);
+  const s = Math.max(0, totalSeconds) % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
 const WORD_LEVELS = ['KEDI', 'OKUL', 'SEKER', 'KALEM', 'OYUNCU'];
 const SHAPES = ['🔺', '🔵', '🟩', '🟨'];
 
@@ -54,6 +103,168 @@ function mathOperationForGame(game: KidsGame | null): MathOperation {
   if (slug === 'hizli-carpma') return 'mul';
   if (slug === 'hizli-bolme') return 'div';
   return 'add';
+}
+
+/** Mockup / AIDA — matematik kahraman görseli (next.config remotePatterns) */
+const MATH_HERO_IMAGE =
+  'https://lh3.googleusercontent.com/aida-public/AB6AXuB9N0DQzs1ArPrnKoZ1YVAN5m28WXbszvA4_CFhhQGMpEgDkZbX_m91FQIecc5oN90t9s9xA6TESU3mCUMRJqu49O5YZTbS2HI8FQorefCUHxHsYwjKb8-_7_5aF0azl29rVMyOOyXDbRXR3PxBJwHAdGRQna2B8VAebM5P9DLhwgPcirfsDpHzko8PWwl7JaNL-cj0GbMMZgEOBqRgodyYLHRtJIGnGlhXApQVCpCR0wPZtSt9qBbOqb_0fc7TDKq68yp1nc9YpJvs';
+
+function sortGamesForHub(list: KidsGame[]): KidsGame[] {
+  return [...list].sort((a, b) => {
+    const idxa = list.findIndex((x) => x.id === a.id);
+    const idxb = list.findIndex((x) => x.id === b.id);
+    const ta = gameTypeFor(a, idxa >= 0 ? idxa : 0);
+    const tb = gameTypeFor(b, idxb >= 0 ? idxb : 0);
+    const order = (gt: MiniGameType) =>
+      gt === 'math' ? 0 : gt === 'memory' ? 1 : gt === 'word' ? 2 : 3;
+    const oa = order(ta);
+    const ob = order(tb);
+    if (oa !== ob) return oa - ob;
+    return a.sort_order - b.sort_order;
+  });
+}
+
+function formatSessionWhen(iso: string, language: string, t: (key: string) => string): string {
+  const d = new Date(iso);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffM = Math.floor(diffMs / 60000);
+  const diffH = Math.floor(diffMs / 3600000);
+  if (diffM < 1) return t('gameCenter.hub.timeJustNow');
+  if (diffM < 60) return t('gameCenter.hub.timeMinutesAgo').replace('{n}', String(diffM));
+  if (diffH < 24 && d.getDate() === now.getDate() && d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()) {
+    return t('gameCenter.hub.timeHoursAgo').replace('{n}', String(Math.max(1, diffH)));
+  }
+  const y = new Date(now);
+  y.setDate(y.getDate() - 1);
+  if (d.getDate() === y.getDate() && d.getMonth() === y.getMonth() && d.getFullYear() === y.getFullYear()) {
+    const loc = language === 'en' ? 'en-US' : language === 'ge' ? 'de-DE' : 'tr-TR';
+    const time = d.toLocaleTimeString(loc, { hour: '2-digit', minute: '2-digit' });
+    return t('gameCenter.hub.timeYesterday').replace('{time}', time);
+  }
+  const loc = language === 'en' ? 'en-US' : language === 'ge' ? 'de-DE' : 'tr-TR';
+  return d.toLocaleString(loc, { dateStyle: 'short', timeStyle: 'short' });
+}
+
+function galaxyLabelForType(gType: MiniGameType, t: (key: string) => string): string {
+  if (gType === 'math') return t('gameCenter.hub.mathGalaxy');
+  if (gType === 'memory') return t('gameCenter.hub.memoryGalaxy');
+  if (gType === 'word') return t('gameCenter.hub.wordGalaxy');
+  return t('gameCenter.hub.shapeGalaxy');
+}
+
+function difficultyPillClass(d: 'easy' | 'medium' | 'hard'): string {
+  if (d === 'easy') return 'border-emerald-500/30 bg-emerald-500/20 text-emerald-300';
+  if (d === 'medium') return 'border-amber-500/30 bg-amber-500/20 text-amber-200';
+  return 'border-red-500/30 bg-red-500/20 text-red-300';
+}
+
+function BadgeShelfMilestone({
+  milestone,
+  palette,
+  t,
+}: {
+  milestone: KidsRoadmapMilestone | undefined;
+  palette: 'gold' | 'violet';
+  t: (key: string) => string;
+}) {
+  if (!milestone) {
+    return (
+      <div className="text-center">
+        <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-slate-100 text-3xl dark:bg-slate-800">🎯</div>
+        <p className="mt-3 text-sm font-black text-slate-400 dark:text-slate-500">{t('gameCenter.hub.pathSoon')}</p>
+        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t('gameCenter.hub.pathSoonSub')}</p>
+      </div>
+    );
+  }
+  const copy = localizedMilestoneCopy(milestone, t);
+  const unlocked = milestone.unlocked;
+  const grad = palette === 'gold' ? 'from-amber-300 to-amber-600' : 'from-violet-400 to-purple-800';
+  return (
+    <div className="text-center">
+      <div
+        className={`mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-linear-to-br ${grad} text-3xl shadow-lg transition group-hover:scale-105 ${
+          unlocked ? '' : 'opacity-45 grayscale'
+        }`}
+      >
+        {milestoneShelfEmoji(milestone.icon)}
+      </div>
+      <p className="mt-3 text-sm font-black text-slate-900 dark:text-white">{copy.title}</p>
+      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">{copy.subtitle}</p>
+    </div>
+  );
+}
+
+function milestoneShelfEmoji(icon: string): string {
+  const map: Record<string, string> = {
+    seed: '🌱',
+    sprout: '🌿',
+    tree: '🌳',
+    star_tree: '✨',
+    book: '📚',
+    flag: '🚩',
+    medal_pick: '🏅',
+    gamepad: '🎮',
+    flask: '🧪',
+    gallery: '🖼️',
+  };
+  return map[icon] || '⭐';
+}
+
+function DailyGoalRing({
+  pct,
+  today,
+  limit,
+  t,
+}: {
+  pct: number;
+  today: number;
+  limit: number;
+  t: (key: string) => string;
+}) {
+  const r = 54;
+  const c = 2 * Math.PI * r;
+  const clamped = Math.min(100, Math.max(0, pct));
+  const offset = c * (1 - clamped / 100);
+  return (
+    <div className="flex max-w-full flex-col items-stretch gap-6 rounded-[2rem] border border-violet-200/80 bg-white/70 p-6 shadow-lg backdrop-blur-md sm:flex-row sm:items-center sm:gap-8 dark:border-white/10 dark:bg-zinc-900/50">
+      <div className="relative mx-auto h-32 w-32 shrink-0 sm:mx-0">
+        <svg className="h-32 w-32 -rotate-90" viewBox="0 0 128 128" aria-hidden>
+          <circle cx="64" cy="64" r="54" fill="none" stroke="currentColor" strokeWidth="8" className="text-slate-200 dark:text-slate-700" />
+          <circle
+            cx="64"
+            cy="64"
+            r="54"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="8"
+            strokeLinecap="round"
+            strokeDasharray={c}
+            strokeDashoffset={offset}
+            className="text-violet-600 dark:text-violet-400"
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-2xl font-black text-slate-900 dark:text-white">{clamped}%</span>
+        </div>
+      </div>
+      <div className="min-w-0 flex-1 text-center sm:text-left">
+        <p className="text-xs font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">{t('gameCenter.hub.dailyGoal')}</p>
+        <p className="text-3xl font-black text-slate-900 dark:text-white">
+          {today}{' '}
+          <span className="text-lg font-bold text-slate-400 dark:text-slate-500">
+            / {limit} {t('gameCenter.minute')}
+          </span>
+        </p>
+        <div className="mt-2 flex items-center justify-center gap-2 sm:justify-start">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
+          <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+            {clamped >= 100 ? t('gameCenter.hub.dailyGoalMet') : t('gameCenter.hub.dailyGoalInProgress')}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function gameVisual(type: MiniGameType): { icon: string; chip: string; cardGlow: string } {
@@ -117,27 +328,57 @@ function playGameSound(kind: SoundKind, enabled: boolean) {
 
 function MemoryLevel({
   level,
+  maxLevel,
+  sessionScore,
+  combo,
+  gameTitle,
+  profilePicture,
+  userInitial,
   onLevelDone,
   soundOn,
   onCorrect,
   onWrong,
+  t,
 }: {
   level: number;
+  maxLevel: number;
+  sessionScore: number;
+  combo: number;
+  gameTitle: string;
+  profilePicture: string | null;
+  userInitial: string;
   onLevelDone: (scoreDelta: number) => void;
   soundOn: boolean;
   onCorrect: () => void;
   onWrong: () => void;
+  t: (key: string) => string;
 }) {
+  const [roundKey, setRoundKey] = useState(0);
+  const [paused, setPaused] = useState(false);
   const pairCount = Math.min(3 + level, 6);
-  const icons = useMemo(() => shuffle(MEMORY_ICONS).slice(0, pairCount), [pairCount, level]);
+  const icons = useMemo(() => shuffle(MEMORY_ICONS).slice(0, pairCount), [pairCount, level, roundKey]);
   const cards = useMemo(
-    () => shuffle(icons.flatMap((icon, i) => [{ id: `${i}-a`, icon }, { id: `${i}-b`, icon }])),
-    [icons],
+    () => shuffle(icons.flatMap((icon, i) => [{ id: `${roundKey}-${i}-a`, icon }, { id: `${roundKey}-${i}-b`, icon }])),
+    [icons, roundKey],
   );
   const [openIds, setOpenIds] = useState<string[]>([]);
   const [matched, setMatched] = useState<string[]>([]);
   const [lock, setLock] = useState(false);
   const [completed, setCompleted] = useState(false);
+  const initialSeconds = Math.max(75, 195 - level * 15);
+  const [secondsLeft, setSecondsLeft] = useState(initialSeconds);
+
+  useEffect(() => {
+    setSecondsLeft(Math.max(75, 195 - level * 15));
+  }, [level, roundKey]);
+
+  useEffect(() => {
+    if (paused || completed) return;
+    const id = window.setInterval(() => {
+      setSecondsLeft((s) => Math.max(0, s - 1));
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [paused, completed]);
 
   useEffect(() => {
     if (!completed && matched.length === cards.length && cards.length > 0) {
@@ -146,8 +387,18 @@ function MemoryLevel({
     }
   }, [completed, matched.length, cards.length, level, onLevelDone]);
 
+  function restartRound() {
+    setRoundKey((k) => k + 1);
+    setOpenIds([]);
+    setMatched([]);
+    setLock(false);
+    setCompleted(false);
+    setPaused(false);
+    playGameSound('tap', soundOn);
+  }
+
   function onPick(id: string, icon: string) {
-    if (lock || openIds.includes(id) || matched.includes(id)) return;
+    if (paused || lock || openIds.includes(id) || matched.includes(id)) return;
     playGameSound('tap', soundOn);
     const next = [...openIds, id];
     setOpenIds(next);
@@ -170,21 +421,135 @@ function MemoryLevel({
     }, 450);
   }
 
+  const pairProgressPct =
+    cards.length > 0 ? Math.round((matched.length / cards.length) * 100) : 0;
+  const pairsRemaining = Math.max(0, (cards.length - matched.length) / 2);
+  const showCoach = matched.length > 0 && !completed && pairsRemaining > 0;
+  const displayTitle = gameTitle.trim() || t('gameCenter.type.memory');
+
   return (
-    <div className="grid grid-cols-3 gap-3 md:grid-cols-4 md:gap-4">
-      {cards.map((c) => {
-        const shown = openIds.includes(c.id) || matched.includes(c.id);
-        return (
-          <button
-            key={c.id}
-            type="button"
-            onClick={() => onPick(c.id, c.icon)}
-            className="h-20 rounded-2xl border-2 border-violet-300 bg-white text-3xl shadow-sm transition hover:scale-105 md:h-24 md:text-4xl"
+    <div className="relative mx-auto max-w-5xl pb-4">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+        <h2 className="font-logo text-xl font-black tracking-tight text-violet-700 dark:text-violet-300 md:text-2xl">
+          {displayTitle}
+        </h2>
+        <div className="flex flex-wrap items-center justify-center gap-3 sm:justify-end">
+          <div className="flex items-center gap-2 rounded-full bg-violet-100 px-4 py-2 text-sm font-bold text-violet-800 dark:bg-violet-900/50 dark:text-violet-100">
+            <Clock className="h-4 w-4 shrink-0 opacity-80" aria-hidden />
+            <span className="text-xs font-black uppercase tracking-tight text-violet-600/80 dark:text-violet-300/90">
+              {t('gameCenter.memory.remainingTime')}
+            </span>
+            <span className="font-mono text-base font-black tabular-nums">{formatMmSs(secondsLeft)}</span>
+          </div>
+          <div className="flex items-center gap-2 rounded-full bg-amber-100 px-3 py-2 text-sm font-black text-amber-900 dark:bg-amber-900/40 dark:text-amber-100">
+            <span aria-hidden>🪙</span>
+            <span>{sessionScore.toLocaleString()}</span>
+          </div>
+          <div className="rounded-full bg-gradient-to-r from-fuchsia-500 to-pink-500 px-3 py-1.5 text-xs font-black uppercase tracking-wide text-white shadow-md shadow-fuchsia-500/30">
+            {combo >= 2
+              ? t('gameCenter.memory.comboLine').replace('{n}', String(combo))
+              : t('gameCenter.memory.comboWarmup')}
+          </div>
+          <Trophy className="h-8 w-8 text-amber-500" strokeWidth={2} aria-hidden />
+          <div
+            className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-violet-200 bg-violet-50 text-sm font-black text-violet-700 dark:border-violet-600 dark:bg-violet-950 dark:text-violet-200"
+            aria-hidden
           >
-            {shown ? c.icon : '❓'}
-          </button>
-        );
-      })}
+            {profilePicture ? (
+              <Image src={profilePicture} alt="" width={40} height={40} className="h-full w-full object-cover" />
+            ) : (
+              userInitial.slice(0, 1).toUpperCase()
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-8 max-w-4xl px-0 sm:px-2">
+        <div className="mb-2 flex items-end justify-between gap-2">
+          <span className="text-xs font-bold uppercase tracking-tight text-slate-400 dark:text-slate-500">
+            {t('gameCenter.memory.levelProgress')
+              .replace('{level}', String(level))
+              .replace('{max}', String(maxLevel))}
+          </span>
+          <span className="text-xs font-black text-violet-600 dark:text-violet-400">{pairProgressPct}%</span>
+        </div>
+        <div className="h-3 w-full rounded-full bg-slate-200/90 p-0.5 dark:bg-slate-700/90">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-violet-600 via-fuchsia-500 to-orange-400 transition-[width] duration-500 ease-out"
+            style={{ width: `${pairProgressPct}%` }}
+          />
+        </div>
+      </div>
+
+      <div className="relative mb-10 grid grid-cols-2 gap-4 sm:grid-cols-4 sm:gap-6">
+        {cards.map((c, idx) => {
+          const shown = openIds.includes(c.id) || matched.includes(c.id);
+          const BackIcon = idx % 2 === 0 ? Star : Rocket;
+          return (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => onPick(c.id, c.icon)}
+              disabled={paused}
+              className="group relative aspect-[4/5] w-full min-h-0 cursor-pointer rounded-xl border-0 bg-transparent p-0 text-left shadow-none transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-violet-500 disabled:pointer-events-none disabled:opacity-60"
+            >
+              {shown ? (
+                <div className="flex h-full w-full flex-col rounded-xl border border-white/60 bg-gradient-to-br from-white to-violet-50 p-1 shadow-xl shadow-violet-500/10 dark:border-violet-500/30 dark:from-slate-900 dark:to-violet-950/80">
+                  <div className="flex h-full w-full flex-col items-center justify-center gap-3 rounded-lg border-2 border-violet-500 ring-4 ring-violet-500/15 dark:border-violet-400 dark:ring-violet-400/20">
+                    <span className="text-5xl leading-none sm:text-6xl" aria-hidden>
+                      {c.icon}
+                    </span>
+                    <span className="px-2 text-center text-[10px] font-black uppercase leading-tight text-violet-900 dark:text-violet-100 sm:text-xs">
+                      {memoryPairLabel(c.icon, t)}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <div className="relative flex h-full w-full flex-col overflow-hidden rounded-xl border-4 border-white/25 bg-gradient-to-br from-violet-600 to-pink-500 p-4 shadow-lg transition-transform duration-300 group-hover:scale-[1.02] group-active:scale-[0.98] dark:border-white/15">
+                  <div
+                    className="pointer-events-none absolute inset-0 opacity-20"
+                    style={{
+                      backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
+                      backgroundSize: '20px 20px',
+                    }}
+                  />
+                  <div className="relative flex flex-1 items-center justify-center">
+                    <BackIcon className="h-12 w-12 text-white/90 sm:h-14 sm:w-14" strokeWidth={1.75} aria-hidden />
+                  </div>
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {showCoach ? (
+        <div className="pointer-events-none absolute right-2 bottom-36 z-10 max-w-[min(100%,18rem)] rounded-2xl border border-violet-100 bg-white/95 px-3 py-2 text-sm font-semibold text-violet-900 shadow-lg dark:border-violet-800 dark:bg-slate-900/95 dark:text-violet-100 sm:bottom-32 md:right-8">
+          <span className="mr-1.5" aria-hidden>
+            🐻
+          </span>
+          {t('gameCenter.memory.coachMore').replace('{n}', String(pairsRemaining))}
+        </div>
+      ) : null}
+
+      <div className="flex flex-col items-stretch justify-center gap-4 px-2 sm:flex-row sm:gap-6">
+        <button
+          type="button"
+          onClick={() => setPaused((p) => !p)}
+          className="inline-flex items-center justify-center gap-3 rounded-xl bg-violet-100 px-8 py-4 text-base font-bold text-violet-800 shadow-sm transition hover:bg-violet-200/90 active:scale-[0.98] dark:bg-violet-900/40 dark:text-violet-100 dark:hover:bg-violet-900/60"
+        >
+          {paused ? <Play className="h-5 w-5 shrink-0" aria-hidden /> : <Pause className="h-5 w-5 shrink-0" aria-hidden />}
+          {paused ? t('gameCenter.memory.resume') : t('gameCenter.memory.pause')}
+        </button>
+        <button
+          type="button"
+          onClick={restartRound}
+          className="inline-flex items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-violet-600 to-fuchsia-500 px-10 py-4 text-base font-bold text-white shadow-xl shadow-violet-400/40 transition hover:brightness-110 active:scale-[0.98] dark:shadow-violet-900/50"
+        >
+          <RefreshCw className="h-5 w-5 shrink-0" aria-hidden />
+          {t('gameCenter.memory.restart')}
+        </button>
+      </div>
     </div>
   );
 }
@@ -284,46 +649,79 @@ function MathLevel({
     }
   }
 
+  const cheerLine =
+    feedback === null
+      ? t('gameCenter.math.cheerDefault')
+      : feedback.ok
+        ? t('gameCenter.math.cheerCorrect')
+        : t('gameCenter.math.cheerRetry');
+
+  const progressLine = t('gameCenter.math.questionProgress')
+    .replace('{current}', String(idx + 1))
+    .replace('{total}', String(total));
+
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-base font-semibold text-slate-800">{t('gameCenter.question')}: {idx + 1} / {total}</p>
-        <p className="rounded-full bg-violet-100 px-3 py-1 text-xs font-black text-violet-800">{t('gameCenter.answerQuick')}</p>
+    <div className="relative -mx-2 -mt-2 overflow-hidden rounded-2xl border border-fuchsia-500/20 bg-linear-to-b from-slate-950 via-violet-950/95 to-slate-950 shadow-inner shadow-violet-950/50 md:-mx-4 md:rounded-3xl">
+      <div
+        className="pointer-events-none absolute inset-0 z-0 opacity-40"
+        aria-hidden
+        style={{
+          backgroundImage:
+            'radial-gradient(ellipse 80% 50% at 50% 0%, rgba(192,38,211,0.25) 0%, transparent 55%), radial-gradient(ellipse 60% 40% at 80% 100%, rgba(124,58,237,0.2) 0%, transparent 50%)',
+        }}
+      />
+      <div className="relative z-10 flex flex-col items-center px-4 py-6 md:px-8 md:py-10">
+        <p className="mb-1 text-center text-[11px] font-bold uppercase tracking-wider text-violet-300/90">{progressLine}</p>
+        <div className="mb-3 max-w-lg rounded-full border border-white/10 bg-white/10 px-5 py-2.5 text-center text-sm font-semibold text-violet-100 shadow-lg backdrop-blur-md md:text-base">
+          {cheerLine}
+        </div>
+        <div className="mb-6 flex h-12 w-12 items-center justify-center rounded-xl border border-white/15 bg-white/5 text-2xl shadow-lg backdrop-blur-sm" aria-hidden>
+          🐻
+        </div>
+
+        <div className="relative w-full max-w-2xl">
+          <div className="absolute -bottom-1 left-1/2 h-8 w-3/5 max-w-md -translate-x-1/2 rounded-full bg-fuchsia-500/25 blur-2xl" aria-hidden />
+          <div className="relative rounded-3xl border border-violet-400/25 bg-slate-900/55 p-6 shadow-2xl shadow-violet-950/80 backdrop-blur-xl md:p-10">
+            <div className="mb-6 flex justify-center">
+              <span className="rounded-full bg-linear-to-r from-rose-500 to-fuchsia-600 px-4 py-1.5 text-xs font-black uppercase tracking-wide text-white shadow-md">
+                {t('gameCenter.answerQuick')}
+              </span>
+            </div>
+            <p className="text-center text-4xl font-black tracking-tight text-white drop-shadow-sm md:text-5xl lg:text-6xl">
+              {a} {opSymbol} {b} = ?
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-8 grid w-full max-w-3xl grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+          {choices.map((c, i) => {
+            const isPicked = selected === c;
+            const isCorrectPick = isPicked && c === correctResult;
+            const isWrongPick = isPicked && c !== correctResult;
+            return (
+              <button
+                key={`${idx}-${c}-${i}`}
+                type="button"
+                onClick={() => submit(c)}
+                disabled={selected !== null}
+                className={`min-h-14 rounded-2xl border-2 text-xl font-black tabular-nums transition md:min-h-20 md:text-3xl ${
+                  isCorrectPick
+                    ? 'border-fuchsia-400 bg-violet-950/70 text-white shadow-[0_0_20px_rgba(192,38,211,0.55)] ring-2 ring-fuchsia-400/40'
+                    : isWrongPick
+                      ? 'border-rose-400 bg-rose-950/40 text-rose-100 shadow-[0_0_16px_rgba(244,63,94,0.35)] ring-2 ring-rose-400/30'
+                      : 'border-white/20 bg-violet-950/45 text-white backdrop-blur-sm hover:border-fuchsia-400/35 hover:bg-violet-900/55 active:scale-[0.98]'
+                } disabled:pointer-events-none disabled:opacity-90`}
+              >
+                {Number.isInteger(c) ? c : Math.round(c)}
+              </button>
+            );
+          })}
+        </div>
+
+        {feedback && !feedback.ok ? (
+          <p className="mt-5 max-w-md text-center text-sm font-semibold text-rose-200/95">{feedback.text}</p>
+        ) : null}
       </div>
-      <div className="rounded-2xl border-2 border-violet-200 bg-violet-50 px-4 py-4 text-center">
-        <p className="text-4xl font-black text-violet-800 md:text-5xl">{a} {opSymbol} {b} = ?</p>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        {choices.map((c, i) => {
-          const isPicked = selected === c;
-          return (
-            <button
-              key={`${idx}-${c}-${i}`}
-              type="button"
-              onClick={() => submit(c)}
-              disabled={selected !== null}
-              className={`h-16 rounded-2xl border-2 text-2xl font-black transition md:h-20 md:text-3xl ${
-                isPicked
-                  ? c === correctResult
-                    ? 'border-emerald-500 bg-emerald-100 text-emerald-800'
-                    : 'border-rose-500 bg-rose-100 text-rose-800'
-                  : 'border-violet-300 bg-white text-violet-800 hover:scale-105 hover:bg-violet-50'
-              }`}
-            >
-              {c}
-            </button>
-          );
-        })}
-      </div>
-      {feedback ? (
-        <p
-          className={`text-sm font-semibold ${
-            feedback.ok ? 'text-emerald-700 dark:text-emerald-300' : 'text-rose-700 dark:text-rose-300'
-          }`}
-        >
-          {feedback.text}
-        </p>
-      ) : null}
     </div>
   );
 }
@@ -464,6 +862,8 @@ function GameStage({
   onCorrect,
   onWrong,
   t,
+  profilePicture,
+  userInitial,
 }: {
   activeType: MiniGameType | null;
   level: number;
@@ -477,18 +877,35 @@ function GameStage({
   onCorrect: () => void;
   onWrong: () => void;
   t: (key: string) => string;
+  profilePicture: string | null;
+  userInitial: string;
 }) {
+  const isMemory = activeType === 'memory';
   return (
-    <div className="rounded-3xl border-4 border-violet-300/80 bg-gradient-to-br from-violet-50 via-white to-fuchsia-50 p-4 shadow-2xl dark:border-violet-700 dark:from-violet-950/40 dark:via-gray-900 dark:to-fuchsia-950/30 md:p-6">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-black text-violet-900 dark:text-violet-100">{t('gameCenter.level')}: {level}/{maxLevel}</p>
-        <p className="text-sm font-black text-fuchsia-700 dark:text-fuchsia-200">{t('gameCenter.score')}: {sessionScore}</p>
-        <p className="rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-800">🔥 {t('gameCenter.combo')}: {combo}</p>
-      </div>
+    <div
+      className={
+        isMemory
+          ? 'space-y-3'
+          : 'rounded-3xl border-4 border-violet-300/80 bg-gradient-to-br from-violet-50 via-white to-fuchsia-50 p-4 shadow-2xl dark:border-violet-700 dark:from-violet-950/40 dark:via-gray-900 dark:to-fuchsia-950/30 md:p-6'
+      }
+    >
+      {!isMemory ? (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm font-black text-violet-900 dark:text-violet-100">
+            {t('gameCenter.level')}: {level}/{maxLevel}
+          </p>
+          <p className="text-sm font-black text-fuchsia-700 dark:text-fuchsia-200">
+            {t('gameCenter.score')}: {sessionScore}
+          </p>
+          <p className="rounded-full bg-amber-100 px-3 py-1 text-xs font-black text-amber-800">
+            🔥 {t('gameCenter.combo')}: {combo}
+          </p>
+        </div>
+      ) : null}
       {fx.type ? (
         <div
           key={fx.id}
-          className={`mb-3 rounded-2xl px-3 py-2 text-sm font-black animate-pulse ${
+          className={`rounded-2xl px-3 py-2 text-sm font-black animate-pulse ${
             fx.type === 'correct' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
           }`}
         >
@@ -496,29 +913,44 @@ function GameStage({
           {fx.text}
         </div>
       ) : null}
-      <div className="rounded-2xl border-2 border-violet-200 bg-white/90 p-4 dark:border-violet-800 dark:bg-gray-950/80 md:p-6">
-        {activeType === 'memory' ? (
-          <MemoryLevel key={`memory-${level}`} level={level} onLevelDone={onLevelDone} soundOn={soundOn} onCorrect={onCorrect} onWrong={onWrong} />
-        ) : null}
-        {activeType === 'math' ? (
-          <MathLevel
-            key={`math-${(activeGame?.slug || 'add')}-${level}`}
-            level={level}
-            onLevelDone={onLevelDone}
-            soundOn={soundOn}
-            operation={mathOperationForGame(activeGame)}
-            onCorrect={onCorrect}
-            onWrong={onWrong}
-            t={t}
-          />
-        ) : null}
-        {activeType === 'word' ? (
-          <WordLevel key={`word-${level}`} level={level} onLevelDone={onLevelDone} soundOn={soundOn} onCorrect={onCorrect} onWrong={onWrong} t={t} />
-        ) : null}
-        {activeType === 'shape' ? (
-          <ShapeLevel key={`shape-${level}`} level={level} onLevelDone={onLevelDone} soundOn={soundOn} onCorrect={onCorrect} onWrong={onWrong} t={t} />
-        ) : null}
-      </div>
+      {isMemory ? (
+        <MemoryLevel
+          key={`memory-${level}`}
+          level={level}
+          maxLevel={maxLevel}
+          sessionScore={sessionScore}
+          combo={combo}
+          gameTitle={activeGame ? localizedKidsGameCopy(activeGame, 'title', t) : ''}
+          profilePicture={profilePicture}
+          userInitial={userInitial}
+          onLevelDone={onLevelDone}
+          soundOn={soundOn}
+          onCorrect={onCorrect}
+          onWrong={onWrong}
+          t={t}
+        />
+      ) : (
+        <div className="rounded-2xl border-2 border-violet-200 bg-white/90 p-4 dark:border-violet-800 dark:bg-gray-950/80 md:p-6">
+          {activeType === 'math' ? (
+            <MathLevel
+              key={`math-${(activeGame?.slug || 'add')}-${level}`}
+              level={level}
+              onLevelDone={onLevelDone}
+              soundOn={soundOn}
+              operation={mathOperationForGame(activeGame)}
+              onCorrect={onCorrect}
+              onWrong={onWrong}
+              t={t}
+            />
+          ) : null}
+          {activeType === 'word' ? (
+            <WordLevel key={`word-${level}`} level={level} onLevelDone={onLevelDone} soundOn={soundOn} onCorrect={onCorrect} onWrong={onWrong} t={t} />
+          ) : null}
+          {activeType === 'shape' ? (
+            <ShapeLevel key={`shape-${level}`} level={level} onLevelDone={onLevelDone} soundOn={soundOn} onCorrect={onCorrect} onWrong={onWrong} t={t} />
+          ) : null}
+        </div>
+      )}
     </div>
   );
 }
@@ -526,7 +958,7 @@ function GameStage({
 export default function KidsGameHubPage() {
   const router = useRouter();
   const { user, loading: authLoading, pathPrefix } = useKidsAuth();
-  const { t } = useKidsI18n();
+  const { t, language } = useKidsI18n();
   const [loading, setLoading] = useState(true);
   const [games, setGames] = useState<KidsGame[]>([]);
   const [sessions, setSessions] = useState<KidsGameSession[]>([]);
@@ -552,12 +984,14 @@ export default function KidsGameHubPage() {
     text: '',
     id: 0,
   });
+  const [roadmap, setRoadmap] = useState<KidsBadgeRoadmap | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [overview, history] = await Promise.all([
+      const [overview, history, roadmapRes] = await Promise.all([
         kidsStudentGamesOverview(),
         kidsMyGameSessions().catch(() => ({ sessions: [] })),
+        kidsGetBadgeRoadmap().catch(() => null),
       ]);
       setGames(overview.games);
       setTodayMinutes(overview.today_minutes_played);
@@ -583,6 +1017,7 @@ export default function KidsGameHubPage() {
       setBestScoreByGame(bests);
       setDailyQuests(quests);
       setSessions(history.sessions);
+      setRoadmap(roadmapRes);
       const running = history.sessions.find((s) => s.status === 'active') || null;
       setActiveSession(running);
       if (running) {
@@ -612,6 +1047,39 @@ export default function KidsGameHubPage() {
   }, [authLoading, user?.id, user?.role, pathPrefix, router, load]);
 
   const remaining = useMemo(() => Math.max(0, dailyLimit - todayMinutes), [dailyLimit, todayMinutes]);
+  const dailyPct = useMemo(
+    () => (dailyLimit > 0 ? Math.min(100, Math.round((todayMinutes / dailyLimit) * 100)) : 0),
+    [dailyLimit, todayMinutes],
+  );
+  const sortedHubGames = useMemo(() => sortGamesForHub(games), [games]);
+  const featuredGame = sortedHubGames[0] ?? null;
+  const sideGames = sortedHubGames.slice(1, 3);
+  const moreGames = sortedHubGames.slice(3);
+  const maxScoreInSessionsByGame = useMemo(() => {
+    const m = new Map<number, number>();
+    for (const s of sessions) {
+      if (s.status !== 'completed') continue;
+      const prev = m.get(s.game.id) ?? 0;
+      if (s.score > prev) m.set(s.game.id, s.score);
+    }
+    return m;
+  }, [sessions]);
+  const badgeMilestones = useMemo(() => {
+    const ms = [...(roadmap?.milestones ?? [])].sort((a, b) => a.order - b.order);
+    return { first: ms[0], second: ms[1] };
+  }, [roadmap]);
+  const hubGrowthXp = roadmap?.growth_points ?? user?.growth_points ?? 0;
+  const featuredMeta = useMemo(() => {
+    if (!featuredGame) return null;
+    const idx = games.findIndex((x) => x.id === featuredGame.id);
+    const gType = gameTypeFor(featuredGame, idx >= 0 ? idx : 0);
+    return {
+      gType,
+      quest: dailyQuests[featuredGame.id],
+      blocked: blockedIds.includes(featuredGame.id),
+      selectedDifficulty: selectedDifficultyByGame[featuredGame.id] || 'easy',
+    };
+  }, [featuredGame, games, dailyQuests, blockedIds, selectedDifficultyByGame]);
 
   async function onStart(game: KidsGame) {
     setSaving(true);
@@ -631,7 +1099,7 @@ export default function KidsGameHubPage() {
       }
       setSessions((prev) => [s, ...prev.filter((x) => x.id !== s.id)]);
       playGameSound('tap', soundOn);
-      toast.success(t('gameCenter.started').replace('{title}', game.title));
+      toast.success(t('gameCenter.started').replace('{title}', localizedKidsGameCopy(game, 'title', t)));
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('gameCenter.startFailed'));
     } finally {
@@ -709,50 +1177,28 @@ export default function KidsGameHubPage() {
 
   return (
     <KidsPanelMax>
-      <div className="pointer-events-none relative mb-3 h-8 overflow-hidden rounded-full bg-gradient-to-r from-pink-200 via-violet-200 to-sky-200">
-        <span className="absolute left-4 top-1 text-lg">✨</span>
-        <span className="absolute left-1/3 top-1 text-lg">🎉</span>
-        <span className="absolute left-2/3 top-1 text-lg">🌈</span>
-        <span className="absolute right-4 top-1 text-lg">⭐</span>
-      </div>
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="font-logo flex items-center gap-2 text-2xl font-bold text-slate-900 dark:text-white">
-            <span className="inline-block animate-bounce" aria-hidden>🎮</span>
-            {t('gameCenter.title')}
-            <span className="inline-block animate-pulse" aria-hidden>🪄</span>
-          </h1>
-          <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-            {t('gameCenter.subtitle')}
-          </p>
-        </div>
-        <KidsSecondaryButton type="button" disabled={loading || saving} onClick={() => void load()}>
-          🔄 {t('homework.refresh')}
-        </KidsSecondaryButton>
-        <KidsSecondaryButton type="button" onClick={() => setSoundOn((v) => !v)}>
-          {soundOn ? `🔊 ${t('gameCenter.soundOn')}` : `🔇 ${t('gameCenter.soundOff')}`}
-        </KidsSecondaryButton>
-      </div>
-
-      <KidsCard tone="sky" className="relative overflow-hidden">
-        <p className="text-sm font-semibold text-sky-900 dark:text-sky-100">
-          <span className="mr-2 inline-flex items-center rounded-full bg-sky-200 px-2 py-0.5 text-[11px] font-black text-sky-900 dark:bg-sky-800 dark:text-sky-100">
-            {t('gameCenter.time')}
-          </span>
-          {t('gameCenter.todayTime')}: {todayMinutes} {t('gameCenter.minute')} / {dailyLimit} {t('gameCenter.minute')}
-        </p>
-        <p className="mt-1 text-xs text-sky-800 dark:text-sky-200">
-          {t('gameCenter.remainingTime')}: {remaining} {t('gameCenter.minute')} · {t('gameCenter.level')}: {gradeLevel}. {t('gameCenter.class')} · {t('gameCenter.goal')}
-        </p>
-      </KidsCard>
-
       {activeSession ? (
-        <section className="mt-5">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h2 className="font-logo text-xl font-black text-slate-900 dark:text-white">
-              {activeSession.game.title} {t('gameCenter.playing')}
-            </h2>
-            <div className="flex gap-2">
+        <section className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="font-logo text-xl font-black text-slate-900 dark:text-white">
+                {localizedKidsGameCopy(activeSession.game, 'title', t)} {t('gameCenter.playing')}
+              </h2>
+              <KidsSecondaryButton type="button" onClick={() => setSoundOn((v) => !v)}>
+                {soundOn ? (
+                  <>
+                    <Volume2 className="mr-1 inline h-4 w-4 align-middle" aria-hidden />
+                    {t('gameCenter.soundOn')}
+                  </>
+                ) : (
+                  <>
+                    <VolumeX className="mr-1 inline h-4 w-4 align-middle" aria-hidden />
+                    {t('gameCenter.soundOff')}
+                  </>
+                )}
+              </KidsSecondaryButton>
+            </div>
+            <div className="flex flex-wrap gap-2">
               <KidsPrimaryButton type="button" disabled={saving} onClick={() => void onFinish('completed')}>
                 ✅ {t('gameCenter.finish')}
               </KidsPrimaryButton>
@@ -774,132 +1220,428 @@ export default function KidsGameHubPage() {
             onCorrect={onCorrect}
             onWrong={onWrong}
             t={t}
+            profilePicture={user.profile_picture ?? null}
+            userInitial={(user.first_name || user.email || '?').trim().slice(0, 1)}
           />
         </section>
       ) : (
-      <div className="mt-6 grid gap-4 md:grid-cols-2">
-        {games.map((g) => {
-          const blocked = blockedIds.includes(g.id);
-          const gType = gameTypeFor(g, games.findIndex((x) => x.id === g.id));
-          const selectedDifficulty = selectedDifficultyByGame[g.id] || 'easy';
-          const quest = dailyQuests[g.id];
-          const vis = gameVisual(gType);
-          const typeLabel: Record<MiniGameType, string> = {
-            memory: t('gameCenter.type.memory'),
-            math: t('gameCenter.type.math'),
-            word: t('gameCenter.type.word'),
-            shape: t('gameCenter.type.shape'),
-          };
-          const difficultyLabel: Record<'easy' | 'medium' | 'hard', string> = {
-            easy: t('gameCenter.difficulty.easy'),
-            medium: t('gameCenter.difficulty.medium'),
-            hard: t('gameCenter.difficulty.hard'),
-          };
-          return (
-            <KidsCard
-              key={g.id}
-              className={`group relative overflow-hidden shadow-xl transition duration-200 hover:-translate-y-1 hover:scale-[1.01] ${vis.cardGlow}`}
-            >
-              <div className="pointer-events-none absolute -right-4 -top-4 text-6xl opacity-15" aria-hidden>
-                {vis.icon}
-              </div>
-              <div
-                className="pointer-events-none absolute inset-x-0 top-0 h-1.5 bg-gradient-to-r from-transparent via-white/80 to-transparent opacity-0 transition group-hover:opacity-100"
-                aria-hidden
-              />
-              <div className="mb-2 flex items-center gap-2">
-                <span className="text-3xl transition group-hover:scale-110" aria-hidden>{vis.icon}</span>
-                <h2 className="font-logo text-lg font-bold text-slate-900 dark:text-white">{g.title}</h2>
-                <span className={`ml-auto rounded-full bg-gradient-to-r px-2.5 py-1 text-[11px] font-black text-white ${vis.chip}`}>
-                  {typeLabel[gType]}
-                </span>
-              </div>
-              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{g.description}</p>
-              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                {t('gameCenter.level')}: {g.min_grade}-{g.max_grade}. {t('gameCenter.class')} · {t('gameCenter.difficulty.title')}: {g.difficulty}
+        <div className="space-y-12">
+          <section className="flex flex-col gap-10 xl:flex-row xl:items-center xl:justify-between">
+            <div className="max-w-xl space-y-3">
+              <h1 className="font-logo text-3xl font-black tracking-tight text-slate-900 dark:text-white md:text-4xl lg:text-5xl">
+                {t('gameCenter.hub.greeting').replace(
+                  '{name}',
+                  user.first_name?.trim() ||
+                    user.student_login_name?.trim() ||
+                    t('gameCenter.hub.greetingDefaultName'),
+                )}
+              </h1>
+              <p className="text-lg font-medium text-slate-600 dark:text-slate-300">{t('gameCenter.hub.greetingSub')}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                {t('gameCenter.level')}: {gradeLevel}. {t('gameCenter.class')} · {t('gameCenter.remainingTime')}: {remaining}{' '}
+                {t('gameCenter.minute')}
               </p>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                <span className="rounded-full bg-violet-100 px-2 py-0.5 text-[11px] font-semibold text-violet-800 dark:bg-violet-900/50 dark:text-violet-100">
-                  {t('gameCenter.gameType')}: {typeLabel[gType]}
-                </span>
-                <span className="rounded-full bg-pink-100 px-2 py-0.5 text-[11px] font-semibold text-pink-800 dark:bg-pink-900/40 dark:text-pink-100">
-                  {t('gameCenter.badgeGainActive')}
-                </span>
+              <div className="flex flex-wrap gap-2 pt-2">
+                <KidsSecondaryButton type="button" disabled={loading || saving} onClick={() => void load()}>
+                  <RefreshCw className="mr-1 inline h-4 w-4 align-middle" aria-hidden />
+                  {t('homework.refresh')}
+                </KidsSecondaryButton>
+                <KidsSecondaryButton type="button" onClick={() => setSoundOn((v) => !v)}>
+                  {soundOn ? (
+                    <>
+                      <Volume2 className="mr-1 inline h-4 w-4 align-middle" aria-hidden />
+                      {t('gameCenter.soundOn')}
+                    </>
+                  ) : (
+                    <>
+                      <VolumeX className="mr-1 inline h-4 w-4 align-middle" aria-hidden />
+                      {t('gameCenter.soundOff')}
+                    </>
+                  )}
+                </KidsSecondaryButton>
               </div>
-              <div className="mt-2">
-                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">{t('gameCenter.difficultyMode')}</label>
-                <select
-                  value={selectedDifficulty}
-                  disabled={saving || Boolean(activeSession)}
-                  onChange={(e) =>
-                    setSelectedDifficultyByGame((prev) => ({
-                      ...prev,
-                      [g.id]: e.target.value as 'easy' | 'medium' | 'hard',
-                    }))
-                  }
-                  className="mt-1 h-9 rounded-lg border border-violet-300 px-2 text-sm"
-                >
-                  <option value="easy">{t('gameCenter.difficulty.easy')}</option>
-                  <option value="medium">{t('gameCenter.difficulty.medium')}</option>
-                  <option value="hard">{t('gameCenter.difficulty.hard')}</option>
-                </select>
-                <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
-                  {t('gameCenter.activeMode')}: {difficultyLabel[selectedDifficulty]}
-                </p>
-              </div>
-              <div className="mt-2 rounded-xl border border-emerald-200 bg-emerald-50 px-2 py-1.5 text-xs text-emerald-900">
-                <div>
-                  {t('gameCenter.dailyQuest')}: {quest?.completed_today ? t('gameCenter.done') : t('gameCenter.pending')} · {t('gameCenter.targetScore')}: {quest?.score_target ?? 50}
-                </div>
-                <div>{t('gameCenter.weeklyStreak')}: {quest?.streak_count ?? 0} {t('gameCenter.day')} · {t('gameCenter.bestScore')}: {bestScoreByGame[g.id] ?? 0}</div>
-                <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-emerald-200/70">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-500"
-                    style={{
-                      width: `${Math.min(
-                        100,
-                        ((bestScoreByGame[g.id] ?? 0) / Math.max(1, quest?.score_target ?? 50)) * 100,
-                      )}%`,
-                    }}
-                  />
-                </div>
-              </div>
-              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{g.instructions}</p>
-              <div className="mt-4">
-                <KidsPrimaryButton
-                  type="button"
-                  disabled={saving || blocked || Boolean(activeSession)}
-                  onClick={() => void onStart(g)}
-                >
-                  {blocked ? `🔒 ${t('gameCenter.blockedByParent')}` : `🚀 ${t('gameCenter.startGame')}`}
-                </KidsPrimaryButton>
-              </div>
-            </KidsCard>
-          );
-        })}
-      </div>
-      )}
+            </div>
+            <DailyGoalRing pct={dailyPct} today={todayMinutes} limit={dailyLimit} t={t} />
+          </section>
 
-      {!activeSession ? (
-      <KidsCard className="mt-6">
-        <h3 className="font-logo text-base font-bold text-slate-900 dark:text-white">📜 {t('gameCenter.historyTitle')}</h3>
-        {sessions.length === 0 ? (
-          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{t('gameCenter.noSessions')}</p>
-        ) : (
-          <ul className="mt-3 space-y-2 text-sm">
-            {sessions.slice(0, 8).map((s) => (
-              <li key={s.id} className="rounded-xl border border-slate-200 px-3 py-2 dark:border-slate-700">
-                <span className="font-medium text-slate-900 dark:text-white">{s.game.title}</span>
-                <span className="text-slate-600 dark:text-slate-300">
-                  {' '}
-                  · {s.status} · {t('gameCenter.score').toLowerCase()} {s.score} · {Math.round((s.duration_seconds || 0) / 60)} {t('gameCenter.minute')}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </KidsCard>
-      ) : null}
+          {loading && !featuredGame ? (
+            <div className="h-[28rem] animate-pulse rounded-[2rem] bg-slate-200 dark:bg-slate-800" />
+          ) : null}
+
+          {!loading && !featuredGame ? (
+            <p className="text-center text-slate-600 dark:text-slate-400">{t('gameCenter.loadError')}</p>
+          ) : null}
+
+          {featuredGame && featuredMeta ? (
+            <section className="relative overflow-hidden rounded-[2rem] border border-violet-500/20 bg-linear-to-br from-slate-950 via-violet-950 to-indigo-950 p-6 shadow-2xl sm:p-10 md:rounded-[2.5rem]">
+              <div
+                className="pointer-events-none absolute inset-0 opacity-90"
+                style={{
+                  backgroundImage:
+                    'radial-gradient(ellipse at 18% 18%, rgba(168,85,247,0.2) 0%, transparent 42%), radial-gradient(ellipse at 82% 58%, rgba(59,130,246,0.16) 0%, transparent 40%)',
+                }}
+              />
+              <div className="relative z-10 mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <h3 className="text-3xl font-black tracking-tight text-white md:text-4xl">{t('gameCenter.hub.universeTitle')}</h3>
+                  <p className="mt-1 font-medium text-white/65">{t('gameCenter.hub.universeSub')}</p>
+                </div>
+                <a
+                  href="#oyun-merkezi-tum-oyunlar"
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/10 px-5 py-2.5 text-sm font-bold text-violet-200 transition hover:bg-white/15"
+                >
+                  {t('gameCenter.hub.seeAllGalaxy')}
+                  <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
+                </a>
+              </div>
+
+              <div className="relative z-10 grid gap-6 xl:grid-cols-12">
+                <div className="xl:col-span-8">
+                  <div className="group relative min-h-[420px] overflow-hidden rounded-[2rem] border border-white/10 bg-linear-to-br from-purple-900/40 to-black/70 md:min-h-[500px]">
+                    <div className="pointer-events-none absolute inset-0">
+                      {featuredMeta.gType === 'math' ? (
+                        <Image
+                          src={MATH_HERO_IMAGE}
+                          alt={t('gameCenter.hub.featuredAlt')}
+                          fill
+                          className="object-contain object-bottom-right opacity-90 transition duration-700 group-hover:scale-[1.03]"
+                          sizes="(max-width: 1280px) 100vw, 60vw"
+                          priority
+                        />
+                      ) : (
+                        <div
+                          className="absolute right-2 bottom-2 text-[min(28vw,12rem)] leading-none opacity-25 select-none"
+                          aria-hidden
+                        >
+                          {gameVisual(featuredMeta.gType).icon}
+                        </div>
+                      )}
+                    </div>
+                    <div className="absolute inset-0 bg-linear-to-r from-black/85 via-black/45 to-transparent" />
+                    <div className="relative flex min-h-[420px] flex-col justify-end p-6 md:min-h-[500px] md:p-10">
+                      <span className="mb-3 inline-block w-fit rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-black uppercase tracking-widest text-violet-200 backdrop-blur-md">
+                        {galaxyLabelForType(featuredMeta.gType, t)}
+                      </span>
+                      <h4 className="mb-4 max-w-[14ch] text-4xl font-black leading-[0.95] text-white md:text-5xl lg:text-6xl">
+                        {localizedKidsGameCopy(featuredGame, 'title', t)}
+                      </h4>
+                      <div className="mb-4 flex flex-wrap gap-3">
+                        <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-bold text-white/85">
+                          <Signal className="h-4 w-4 text-amber-300" aria-hidden />
+                          {
+                            {
+                              easy: t('gameCenter.difficulty.easy'),
+                              medium: t('gameCenter.difficulty.medium'),
+                              hard: t('gameCenter.difficulty.hard'),
+                            }[featuredMeta.selectedDifficulty]
+                          }
+                        </span>
+                        <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-bold text-white/85">
+                          <Star className="h-4 w-4 text-violet-300" fill="currentColor" aria-hidden />
+                          {t('gameCenter.hub.xpTarget').replace('{n}', String(featuredMeta.quest?.score_target ?? 100))}
+                        </span>
+                      </div>
+                      <p className="mb-4 max-w-lg text-base font-medium text-white/70 md:text-lg">
+                        {localizedKidsGameCopy(featuredGame, 'description', t)}
+                      </p>
+                      <div className="mb-4 max-w-xs">
+                        <label className="mb-1 block text-xs font-semibold text-white/50" htmlFor="hub-featured-difficulty">
+                          {t('gameCenter.difficultyMode')}
+                        </label>
+                        <select
+                          id="hub-featured-difficulty"
+                          value={featuredMeta.selectedDifficulty}
+                          disabled={saving || Boolean(activeSession)}
+                          onChange={(e) =>
+                            setSelectedDifficultyByGame((prev) => ({
+                              ...prev,
+                              [featuredGame.id]: e.target.value as 'easy' | 'medium' | 'hard',
+                            }))
+                          }
+                          className="h-10 w-full rounded-xl border border-white/15 bg-white/10 px-3 text-sm font-semibold text-white"
+                        >
+                          <option value="easy">{t('gameCenter.difficulty.easy')}</option>
+                          <option value="medium">{t('gameCenter.difficulty.medium')}</option>
+                          <option value="hard">{t('gameCenter.difficulty.hard')}</option>
+                        </select>
+                      </div>
+                      <KidsPrimaryButton
+                        type="button"
+                        className="w-full uppercase tracking-wider sm:w-auto"
+                        disabled={saving || featuredMeta.blocked || Boolean(activeSession)}
+                        onClick={() => void onStart(featuredGame)}
+                      >
+                        {featuredMeta.blocked ? `🔒 ${t('gameCenter.blockedByParent')}` : t('gameCenter.hub.startNow')}
+                      </KidsPrimaryButton>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-6 xl:col-span-4">
+                  {sideGames.map((g) => {
+                    const idx = games.findIndex((x) => x.id === g.id);
+                    const gType = gameTypeFor(g, idx >= 0 ? idx : 0);
+                    const quest = dailyQuests[g.id];
+                    const blocked = blockedIds.includes(g.id);
+                    const selectedDifficulty = selectedDifficultyByGame[g.id] || 'easy';
+                    const rewardLabel = gType === 'word' ? t('gameCenter.hub.toEarn') : t('gameCenter.hub.reward');
+                    const rewardValue =
+                      gType === 'word'
+                        ? t('gameCenter.hub.wordBadgeTeaser')
+                        : t('gameCenter.hub.diamondReward').replace('{n}', String(quest?.score_target ?? 250));
+                    return (
+                      <div
+                        key={g.id}
+                        className="flex min-h-[240px] flex-1 flex-col justify-between rounded-[2rem] border border-white/10 bg-white/5 p-8 backdrop-blur-md transition hover:-translate-y-1 hover:bg-white/10"
+                      >
+                        <div className="space-y-5">
+                          <div
+                            className={`flex h-14 w-14 items-center justify-center rounded-2xl border ${
+                              gType === 'memory'
+                                ? 'border-fuchsia-400/30 bg-fuchsia-500/20'
+                                : gType === 'word'
+                                  ? 'border-amber-400/30 bg-amber-500/20'
+                                  : 'border-emerald-400/30 bg-emerald-500/20'
+                            }`}
+                          >
+                            {gType === 'memory' ? (
+                              <Grid3x3 className="h-7 w-7 text-fuchsia-200" aria-hidden />
+                            ) : gType === 'word' ? (
+                              <SearchIcon className="h-7 w-7 text-amber-200" aria-hidden />
+                            ) : (
+                              <Sparkles className="h-7 w-7 text-emerald-200" aria-hidden />
+                            )}
+                          </div>
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <h4 className="text-xl font-black text-white">{localizedKidsGameCopy(g, 'title', t)}</h4>
+                            <span
+                              className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-widest ${difficultyPillClass(selectedDifficulty)}`}
+                            >
+                              {
+                                {
+                                  easy: t('gameCenter.difficulty.easy'),
+                                  medium: t('gameCenter.difficulty.medium'),
+                                  hard: t('gameCenter.difficulty.hard'),
+                                }[selectedDifficulty]
+                              }
+                            </span>
+                          </div>
+                          <p className="text-sm font-medium text-white/60">{localizedKidsGameCopy(g, 'description', t)}</p>
+                        </div>
+                        <div className="mt-6 space-y-3">
+                          <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                            <span className="font-bold uppercase text-white/40">{rewardLabel}</span>
+                            <span
+                              className={`font-black ${
+                                gType === 'word' ? 'text-amber-200' : 'text-fuchsia-300'
+                              }`}
+                            >
+                              {rewardValue}
+                            </span>
+                          </div>
+                          <select
+                            value={selectedDifficulty}
+                            disabled={saving || Boolean(activeSession)}
+                            onChange={(e) =>
+                              setSelectedDifficultyByGame((prev) => ({
+                                ...prev,
+                                [g.id]: e.target.value as 'easy' | 'medium' | 'hard',
+                              }))
+                            }
+                            className="h-10 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm font-semibold text-white"
+                          >
+                            <option value="easy">{t('gameCenter.difficulty.easy')}</option>
+                            <option value="medium">{t('gameCenter.difficulty.medium')}</option>
+                            <option value="hard">{t('gameCenter.difficulty.hard')}</option>
+                          </select>
+                          <button
+                            type="button"
+                            disabled={saving || blocked || Boolean(activeSession)}
+                            onClick={() => void onStart(g)}
+                            className="w-full rounded-full border border-white/10 bg-white/10 py-3.5 text-sm font-black text-white transition hover:bg-white/20 disabled:pointer-events-none disabled:opacity-50"
+                          >
+                            {blocked ? `🔒 ${t('gameCenter.blockedByParent')}` : t('gameCenter.hub.explore')}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {moreGames.length > 0 ? (
+                <div
+                  id="oyun-merkezi-tum-oyunlar"
+                  className="relative z-10 mt-10 border-t border-white/10 pt-10"
+                >
+                  <h3 className="mb-2 text-lg font-black text-white">{t('gameCenter.hub.allGamesTitle')}</h3>
+                  <p className="mb-4 text-sm text-white/55">{t('gameCenter.hub.allGamesSub')}</p>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {moreGames.map((g) => {
+                      const idx = games.findIndex((x) => x.id === g.id);
+                      const gType = gameTypeFor(g, idx >= 0 ? idx : 0);
+                      const quest = dailyQuests[g.id];
+                      const blocked = blockedIds.includes(g.id);
+                      const selectedDifficulty = selectedDifficultyByGame[g.id] || 'easy';
+                      const vis = gameVisual(gType);
+                      const typeLabel: Record<MiniGameType, string> = {
+                        memory: t('gameCenter.type.memory'),
+                        math: t('gameCenter.type.math'),
+                        word: t('gameCenter.type.word'),
+                        shape: t('gameCenter.type.shape'),
+                      };
+                      return (
+                        <div
+                          key={g.id}
+                          className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm"
+                        >
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-2xl" aria-hidden>
+                              {vis.icon}
+                            </span>
+                            <h4 className="font-logo font-bold text-white">{localizedKidsGameCopy(g, 'title', t)}</h4>
+                            <span className="ml-auto rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-black uppercase text-violet-200">
+                              {typeLabel[gType]}
+                            </span>
+                          </div>
+                          <p className="mt-2 text-sm text-white/65">{localizedKidsGameCopy(g, 'description', t)}</p>
+                          <p className="mt-2 text-xs text-white/45">
+                            {t('gameCenter.dailyQuest')}: {quest?.completed_today ? t('gameCenter.done') : t('gameCenter.pending')} ·{' '}
+                            {t('gameCenter.bestScore')}: {bestScoreByGame[g.id] ?? 0}
+                          </p>
+                          <div className="mt-3 flex flex-wrap items-end gap-2">
+                            <select
+                              value={selectedDifficulty}
+                              disabled={saving || Boolean(activeSession)}
+                              onChange={(e) =>
+                                setSelectedDifficultyByGame((prev) => ({
+                                  ...prev,
+                                  [g.id]: e.target.value as 'easy' | 'medium' | 'hard',
+                                }))
+                              }
+                              className="h-9 min-w-32 flex-1 rounded-lg border border-white/10 bg-white/5 px-2 text-sm text-white"
+                            >
+                              <option value="easy">{t('gameCenter.difficulty.easy')}</option>
+                              <option value="medium">{t('gameCenter.difficulty.medium')}</option>
+                              <option value="hard">{t('gameCenter.difficulty.hard')}</option>
+                            </select>
+                            <KidsPrimaryButton
+                              type="button"
+                              className="min-h-10 px-5 text-xs"
+                              disabled={saving || blocked || Boolean(activeSession)}
+                              onClick={() => void onStart(g)}
+                            >
+                              {blocked ? '🔒' : t('gameCenter.startGame')}
+                            </KidsPrimaryButton>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div id="oyun-merkezi-tum-oyunlar" className="relative z-10 mt-6 scroll-mt-24" aria-hidden />
+              )}
+            </section>
+          ) : null}
+
+          <div className="grid grid-cols-1 gap-8 xl:grid-cols-12">
+            <section className="rounded-[2rem] border border-slate-100 bg-white p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900 xl:col-span-4">
+              <h3 className="mb-6 flex items-center gap-2 text-xl font-black text-slate-900 dark:text-white">
+                <History className="h-6 w-6 text-violet-600" aria-hidden />
+                {t('gameCenter.historyTitle')}
+              </h3>
+              {sessions.length === 0 ? (
+                <p className="text-sm text-slate-500 dark:text-slate-400">{t('gameCenter.noSessions')}</p>
+              ) : (
+                <div className="space-y-3">
+                  {sessions.slice(0, 6).map((s) => {
+                    const idx = games.findIndex((x) => x.id === s.game.id);
+                    const gType = gameTypeFor(s.game, idx >= 0 ? idx : 0);
+                    const vis = gameVisual(gType);
+                    const when = formatSessionWhen(s.ended_at || s.started_at, language, t);
+                    const isRec =
+                      s.status === 'completed' &&
+                      s.score > 0 &&
+                      (maxScoreInSessionsByGame.get(s.game.id) ?? 0) === s.score;
+                    return (
+                      <div
+                        key={s.id}
+                        className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl border border-transparent bg-slate-50 p-4 transition hover:border-violet-200 hover:shadow-md dark:bg-slate-800/80 dark:hover:border-violet-700"
+                      >
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-violet-100 text-lg dark:bg-violet-900/50">
+                            {vis.icon}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-black text-slate-900 dark:text-white">
+                              {localizedKidsGameCopy(s.game, 'title', t)}
+                            </p>
+                            <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400">{when}</p>
+                          </div>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          {s.status === 'completed' ? (
+                            <p className="font-black text-violet-600 dark:text-violet-400">+{s.score} XP</p>
+                          ) : (
+                            <p className="text-xs font-bold text-slate-500">{s.status}</p>
+                          )}
+                          {isRec ? (
+                            <span className="mt-1 inline-block rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-black uppercase text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+                              {t('gameCenter.hub.record')}
+                            </span>
+                          ) : null}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+
+            <section className="rounded-[2rem] border border-slate-100 bg-white p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900 xl:col-span-5">
+              <h3 className="mb-6 flex items-center gap-2 text-xl font-black text-slate-900 dark:text-white">
+                <Trophy className="h-6 w-6 text-amber-500" aria-hidden />
+                {t('gameCenter.hub.badgeShelf')}
+              </h3>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="group">
+                  <BadgeShelfMilestone milestone={badgeMilestones.first} palette="gold" t={t} />
+                </div>
+                <div className="group">
+                  <BadgeShelfMilestone milestone={badgeMilestones.second} palette="violet" t={t} />
+                </div>
+                <div className="text-center">
+                  <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-linear-to-br from-slate-300 to-slate-500 text-white shadow-inner dark:from-slate-600 dark:to-slate-800">
+                    <Lock className="h-10 w-10 opacity-80" aria-hidden />
+                  </div>
+                  <p className="mt-3 text-sm font-black text-slate-500 dark:text-slate-400">{t('gameCenter.hub.badgeLocked')}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t('gameCenter.hub.badgeMystery')}</p>
+                </div>
+              </div>
+              <Link
+                href={`${pathPrefix}/ogrenci/yol`}
+                className="mt-6 inline-flex items-center gap-2 text-sm font-bold text-violet-600 hover:underline dark:text-violet-400"
+              >
+                {t('gameCenter.hub.moreBadges')}
+                <ArrowRight className="h-4 w-4" aria-hidden />
+              </Link>
+            </section>
+
+            <section className="rounded-[2rem] border border-slate-100 bg-white p-8 shadow-sm dark:border-slate-800 dark:bg-slate-900 xl:col-span-3">
+              <h3 className="mb-6 flex items-center gap-2 text-xl font-black text-slate-900 dark:text-white">
+                <Star className="h-6 w-6 text-violet-600" fill="currentColor" aria-hidden />
+                {t('gameCenter.hub.topAliens')}
+              </h3>
+              <div className="mb-4 rounded-2xl border-l-4 border-violet-500 bg-violet-50 p-4 dark:bg-violet-950/40">
+                <p className="text-xs font-bold uppercase tracking-wide text-violet-700 dark:text-violet-300">{t('gameCenter.hub.yourXp')}</p>
+                <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{hubGrowthXp.toLocaleString()} XP</p>
+              </div>
+              <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">{t('gameCenter.hub.leaderboardHint')}</p>
+            </section>
+          </div>
+        </div>
+      )}
     </KidsPanelMax>
   );
 }

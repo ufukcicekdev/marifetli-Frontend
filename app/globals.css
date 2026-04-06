@@ -436,3 +436,17 @@ header .header-top-right > * {
 .kids-mascot-wiggle {
   animation: kids-mascot-wiggle 0.9s ease-in-out infinite;
 }
+
+/* Öğrenci rozet yolu — aktif düğüm nabzı */
+@keyframes kids-roadmap-node-pulse {
+  0%,
+  100% {
+    box-shadow: 0 25px 50px -12px rgb(139 92 246 / 0.35);
+  }
+  50% {
+    box-shadow: 0 28px 56px -10px rgb(139 92 246 / 0.5);
+  }
+}
+.kids-roadmap-node-pulse {
+  animation: kids-roadmap-node-pulse 2.5s ease-in-out infinite;
+}

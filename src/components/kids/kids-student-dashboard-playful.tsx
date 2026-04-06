@@ -3,28 +3,39 @@
 import Link from 'next/link';
 import NextImage from 'next/image';
 import { jsPDF } from 'jspdf';
+import { useEffect, useMemo, useState } from 'react';
 import {
+  Award,
   Backpack,
+  BookOpen,
   CalendarDays,
+  Download,
+  Flag,
+  FlaskConical,
   Gamepad2,
+  GraduationCap,
+  Image as ImageIcon,
   Leaf,
   Map,
   Medal,
+  Rocket,
   Sparkles,
   Sprout,
   Star,
-  Target,
-  Trophy,
+  Timer,
   TreePine,
 } from 'lucide-react';
 import {
   kidsClassLocationLine,
+  kidsStudentAssignmentAllRoundsSubmitted,
   type KidsAchievementCertificate,
+  type KidsAssignment,
   type KidsBadgeRoadmap,
   type KidsClass,
   type KidsRoadmapMilestone,
   type KidsUser,
 } from '@/src/lib/kids-api';
+import { localizedGrowthStageTitle } from '@/src/lib/kids-roadmap-i18n';
 import { useKidsI18n } from '@/src/providers/kids-language-provider';
 
 function milestoneIcon(icon: string): JSX.Element {
@@ -32,21 +43,73 @@ function milestoneIcon(icon: string): JSX.Element {
   if (icon === 'sprout') return <Leaf className="h-6 w-6" aria-hidden />;
   if (icon === 'tree') return <TreePine className="h-6 w-6" aria-hidden />;
   if (icon === 'star_tree') return <Sparkles className="h-6 w-6" aria-hidden />;
+  if (icon === 'book') return <BookOpen className="h-6 w-6" aria-hidden />;
+  if (icon === 'flag') return <Flag className="h-6 w-6" aria-hidden />;
+  if (icon === 'medal_pick') return <Award className="h-6 w-6" aria-hidden />;
+  if (icon === 'gamepad') return <Gamepad2 className="h-6 w-6" aria-hidden />;
+  if (icon === 'flask') return <FlaskConical className="h-6 w-6" aria-hidden />;
+  if (icon === 'gallery') return <ImageIcon className="h-6 w-6" aria-hidden />;
   return <Star className="h-6 w-6" aria-hidden />;
-}
-
-function growthBarFraction(points: number): number {
-  const p = Math.max(0, points || 0);
-  if (p < 6) return p <= 0 ? 0.06 : p / 6;
-  if (p < 16) return (p - 6) / 10;
-  return 1;
 }
 
 function growthNextHint(points: number, t: (key: string) => string): string {
   const p = Math.max(0, points || 0);
   if (p < 6) return t('student.dashboard.growthHint1');
   if (p < 16) return t('student.dashboard.growthHint2');
-  return t('student.dashboard.growthHint3');
+  if (p < 30) return t('student.dashboard.growthHint3');
+  if (p < 50) return t('student.dashboard.growthHint4');
+  if (p < 80) return t('student.dashboard.growthHint5');
+  return t('student.dashboard.growthHint6');
+}
+
+/** Karşılama kartı sağındaki koç illüstrasyonu (Kids landing hero ile uyumlu). */
+const PANEL_COACH_IMAGE =
+  'https://lh3.googleusercontent.com/aida-public/AB6AXuDx9WDdHS0xLIjAHeEctnK7HhAwn-6oZDcy1cLNaETqoHpERPTrcpy4MO1tG6UmZDIeIsCVZVWsWtCUsuEYzUmfjMPVj92IiqYvmNoKPn_XytVf73-uqs9eX9Nc_dQE8G6ZhviQAsf1yv27PFVGXvwM_gN8_I07kQb_zIuRXTu539sqp_ndjsZhANonJDIX4wZfBFUSxH6eMX1sxjIQwFlGl_Pz2A6428GNdYUBtHl8JipofcaeGtGu9JiniM4YCzwiu_KowGQQiwq4';
+
+function xpTierDisplay(gp: number): { cur: number; max: number } {
+  const p = Math.max(0, gp || 0);
+  if (p < 6) return { cur: p, max: 6 };
+  if (p < 16) return { cur: p, max: 16 };
+  if (p < 30) return { cur: p, max: 30 };
+  if (p < 50) return { cur: p, max: 50 };
+  if (p < 80) return { cur: p, max: 80 };
+  const step = 50;
+  const max = Math.ceil(p / step) * step;
+  if (p >= max) return { cur: p, max: p + step };
+  return { cur: p, max };
+}
+
+function pickFeaturedAssignment(assignments: KidsAssignment[]): KidsAssignment | null {
+  const now = Date.now();
+  const open = assignments.filter((a) => a.is_published && !kidsStudentAssignmentAllRoundsSubmitted(a));
+  const timed = open
+    .filter((a) => {
+      const t = a.submission_closes_at ? new Date(a.submission_closes_at).getTime() : 0;
+      return t > now;
+    })
+    .sort(
+      (a, b) =>
+        new Date(a.submission_closes_at!).getTime() - new Date(b.submission_closes_at!).getTime(),
+    );
+  if (timed.length) return timed[0]!;
+  return open[0] ?? null;
+}
+
+function useSecondsUntil(iso: string | null): number | null {
+  const [s, setS] = useState<number | null>(() =>
+    iso ? Math.max(0, Math.floor((new Date(iso).getTime() - Date.now()) / 1000)) : null,
+  );
+  useEffect(() => {
+    if (!iso) {
+      setS(null);
+      return;
+    }
+    const tick = () => setS(Math.max(0, Math.floor((new Date(iso).getTime() - Date.now()) / 1000)));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [iso]);
+  return s;
 }
 
 function certificateLevelLabel(level: string, t: (key: string) => string): string {
@@ -54,72 +117,6 @@ function certificateLevelLabel(level: string, t: (key: string) => string): strin
   if (level === 'silver') return t('student.certificate.levelSilver');
   if (level === 'bronze') return t('student.certificate.levelBronze');
   return level;
-}
-
-const classShells = [
-  'border-fuchsia-300/90 bg-gradient-to-br from-fuchsia-50 to-white dark:border-fuchsia-800 dark:from-fuchsia-950/50 dark:to-gray-950',
-  'border-sky-300/90 bg-gradient-to-br from-sky-50 to-white dark:border-sky-800 dark:from-sky-950/50 dark:to-gray-950',
-  'border-amber-300/90 bg-gradient-to-br from-amber-50 to-white dark:border-amber-800 dark:from-amber-950/40 dark:to-gray-950',
-  'border-emerald-300/90 bg-gradient-to-br from-emerald-50 to-white dark:border-emerald-800 dark:from-emerald-950/40 dark:to-gray-950',
-];
-
-function RoadmapStrip({
-  milestones,
-  pathPrefix,
-  t,
-}: {
-  milestones: KidsRoadmapMilestone[];
-  pathPrefix: string;
-  t: (key: string) => string;
-}) {
-  const top = [...milestones].sort((a, b) => a.order - b.order).slice(0, 6);
-  if (top.length === 0) return null;
-  return (
-    <section className="rounded-3xl border-2 border-amber-200/80 bg-gradient-to-r from-amber-50/90 via-white to-violet-50/90 p-4 shadow-lg shadow-amber-200/20 dark:border-amber-900/50 dark:from-amber-950/30 dark:via-gray-950 dark:to-violet-950/30">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-logo text-lg font-black text-amber-900 dark:text-amber-100">
-          {t('student.dashboard.roadmapTitle')}
-        </h2>
-        <Link
-          href={`${pathPrefix}/ogrenci/yol`}
-          className="text-sm font-bold text-fuchsia-700 underline-offset-2 hover:underline dark:text-fuchsia-300"
-        >
-          {t('student.dashboard.roadmapSeeAll')}
-        </Link>
-      </div>
-      <ul className="mt-3 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        {top.map((m) => (
-          <li
-            key={m.key}
-            className={
-              'min-w-[5.5rem] shrink-0 rounded-2xl border-2 px-2 py-3 text-center text-xs font-bold transition ' +
-              (m.unlocked
-                ? 'border-amber-400 bg-gradient-to-b from-amber-100 to-amber-50 text-amber-950 shadow-md dark:border-amber-500 dark:from-amber-900/80 dark:to-amber-950 dark:text-amber-50'
-                : 'border-gray-200 bg-gray-100/80 text-gray-500 opacity-90 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-400')
-            }
-          >
-            <span className="text-2xl leading-none" aria-hidden>
-              {milestoneIcon(m.icon)}
-            </span>
-            <span className="mt-1 line-clamp-2 block leading-tight">{m.title}</span>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
-
-function certificateShell(level: KidsAchievementCertificate['level']): string {
-  if (level === 'gold') {
-    return 'border-amber-300 bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 dark:border-amber-700 dark:from-amber-950/50 dark:via-amber-900/40 dark:to-orange-950/30';
-  }
-  if (level === 'silver') {
-    return 'border-slate-300 bg-gradient-to-br from-slate-50 via-white to-indigo-50 dark:border-slate-700 dark:from-slate-950/50 dark:via-gray-950 dark:to-indigo-950/30';
-  }
-  if (level === 'bronze') {
-    return 'border-orange-300 bg-gradient-to-br from-orange-50 via-amber-50 to-lime-50 dark:border-orange-700 dark:from-orange-950/40 dark:via-amber-950/30 dark:to-lime-950/20';
-  }
-  return 'border-violet-200 bg-gradient-to-br from-violet-50 via-white to-fuchsia-50 dark:border-violet-800 dark:from-violet-950/40 dark:via-gray-950 dark:to-fuchsia-950/20';
 }
 
 function escapeXml(raw: string): string {
@@ -291,101 +288,73 @@ function AchievementCertificates({
     doc.save(fname);
   };
 
-  if (!certificates.length) return null;
-  return (
-    <section className="rounded-3xl border-2 border-indigo-200 bg-white/90 p-5 shadow-lg dark:border-indigo-900/40 dark:bg-gray-950/80">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="font-logo flex items-center gap-2 text-xl font-black text-indigo-900 dark:text-indigo-100">
-          <Trophy className="h-5 w-5" aria-hidden /> {t('student.dashboard.certificatesTitle')}
+  if (!certificates.length) {
+    return (
+      <section className="rounded-3xl border border-slate-200/90 bg-white p-6 shadow-md dark:border-zinc-800 dark:bg-zinc-900/90">
+        <h2 className="font-logo text-lg font-black text-slate-900 dark:text-white">
+          {t('student.dashboard.certificatesTitle')}
         </h2>
-        <div className="flex items-center gap-2">
-          <span className="font-logo inline-flex items-center gap-0.5 rounded-full border border-indigo-200 bg-white px-2 py-1 text-[11px] font-semibold text-indigo-900 dark:border-indigo-800 dark:bg-gray-900 dark:text-indigo-100">
-            <NextImage
-              src="/logo.png"
-              alt=""
-              width={16}
-              height={16}
-              className="h-4 w-4 object-contain"
-              aria-hidden
-            />
-            <span lang="en" className="leading-none">arifetli</span>
-            <span
-              lang="en"
-              className="ml-1 rounded-lg bg-linear-to-r from-amber-400 to-orange-400 px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide text-white"
+        <p className="mt-3 text-sm text-slate-500 dark:text-zinc-400">{t('student.dashboard.certificatesEmpty')}</p>
+      </section>
+    );
+  }
+  return (
+    <section className="rounded-3xl border border-slate-200/90 bg-white p-6 shadow-md dark:border-zinc-800 dark:bg-zinc-900/90">
+      <h2 className="font-logo text-lg font-black text-slate-900 dark:text-white">{t('student.dashboard.certificatesTitle')}</h2>
+      <ul className="mt-5 flex flex-col gap-3">
+        {certificates.map((row) => {
+          const iconWrap =
+            row.period_key === 'weekly'
+              ? 'bg-violet-100 text-violet-600 dark:bg-violet-950/60 dark:text-violet-300'
+              : 'bg-fuchsia-100 text-fuchsia-600 dark:bg-fuchsia-950/60 dark:text-fuchsia-300';
+          return (
+            <li
+              key={row.period_key}
+              className="flex items-center gap-4 rounded-2xl border border-slate-100 bg-slate-50/80 p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950/50"
             >
-              KIDS
-            </span>
-          </span>
-          <span className="rounded-full bg-indigo-100 px-3 py-1 text-xs font-black text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300">
-            {t('student.dashboard.certificatesBadge')}
-          </span>
-        </div>
-      </div>
-      <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-        {certificates.map((row) => (
-          <li key={row.period_key} className={`rounded-2xl border-2 p-4 shadow-sm ${certificateShell(row.level)}`}>
-            <div className="flex items-start justify-between gap-2">
-              <p className="font-logo text-base font-black text-slate-900 dark:text-white">{row.title}</p>
-              <span
-                className={
-                  'inline-flex items-center rounded-full px-2.5 py-1 text-xs font-black ' +
-                  (row.earned
-                    ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300'
-                    : 'bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300')
-                }
-              >
-                {row.earned ? t('student.dashboard.certEarned') : t('student.dashboard.certInProgress')}
-              </span>
-            </div>
-            <p className="mt-1 text-xs font-semibold text-slate-600 dark:text-slate-300">{row.message}</p>
-            <p className="mt-2 text-xs font-bold text-slate-700 dark:text-slate-200">
-              {t('student.dashboard.certHomeworkChallenge')
-                .replace('{hw}', String(row.homework_count))
-                .replace('{ch}', String(row.challenge_count))}
-            </p>
-            <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-white/80 dark:bg-gray-900/70">
               <div
-                className="h-full rounded-full bg-gradient-to-r from-violet-500 via-fuchsia-500 to-amber-400 transition-[width] duration-700"
-                style={{ width: `${Math.max(6, Math.min(100, row.progress_percent || 0))}%` }}
-              />
-            </div>
-            <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs font-bold text-slate-700 dark:text-slate-200">
-              <span>
-                {t('student.dashboard.certSteps')
-                  .replace('{total}', String(row.total_count))
-                  .replace('{target}', String(row.target_count))}
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <CalendarDays className="h-3.5 w-3.5" aria-hidden />
-                {row.period_label}
-              </span>
-            </div>
-            <div className="mt-2 flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300">
-              <Medal className="h-3.5 w-3.5" aria-hidden />
-              {t('student.dashboard.certLevel').replace('{level}', certificateLevelLabel(row.level, t))}
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  void onDownloadPng(row);
-                }}
-                className="rounded-xl border border-indigo-300 bg-indigo-50 px-3 py-1.5 text-xs font-black text-indigo-700 transition hover:bg-indigo-100 dark:border-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-200"
+                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${iconWrap}`}
+                aria-hidden
               >
-                {t('student.dashboard.downloadPng')}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  void onDownloadPdf(row);
-                }}
-                className="rounded-xl border border-fuchsia-300 bg-fuchsia-50 px-3 py-1.5 text-xs font-black text-fuchsia-700 transition hover:bg-fuchsia-100 dark:border-fuchsia-700 dark:bg-fuchsia-950/40 dark:text-fuchsia-200"
-              >
-                {t('student.dashboard.downloadPdf')}
-              </button>
-            </div>
-          </li>
-        ))}
+                {row.period_key === 'weekly' ? <Medal className="h-6 w-6" /> : <Star className="h-6 w-6 fill-current" />}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="font-logo text-base font-black text-slate-900 dark:text-white">{row.title}</p>
+                <p className="mt-0.5 flex items-center gap-1 text-xs font-semibold text-slate-500 dark:text-zinc-400">
+                  <CalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                  {row.period_label}
+                </p>
+                <p className="mt-1 text-[11px] font-medium text-slate-600 dark:text-zinc-500">
+                  {t('student.dashboard.certLevel').replace('{level}', certificateLevelLabel(row.level, t))}
+                  {' · '}
+                  {row.earned ? t('student.dashboard.certEarned') : t('student.dashboard.certInProgress')}
+                </p>
+              </div>
+              <div className="flex shrink-0 flex-col gap-1">
+                <button
+                  type="button"
+                  title={t('student.dashboard.downloadPng')}
+                  onClick={() => {
+                    void onDownloadPng(row);
+                  }}
+                  className="flex h-11 w-11 items-center justify-center rounded-xl border border-violet-200 bg-violet-50 text-violet-700 transition hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-950/50 dark:text-violet-200"
+                >
+                  <Download className="h-5 w-5" aria-hidden />
+                </button>
+                <button
+                  type="button"
+                  title={t('student.dashboard.downloadPdf')}
+                  onClick={() => {
+                    void onDownloadPdf(row);
+                  }}
+                  className="hidden text-[10px] font-bold text-violet-600 underline sm:block dark:text-violet-400"
+                >
+                  PDF
+                </button>
+              </div>
+            </li>
+          );
+        })}
       </ul>
     </section>
   );
@@ -395,140 +364,277 @@ type Props = {
   pathPrefix: string;
   user: KidsUser;
   classes: KidsClass[];
+  assignments: KidsAssignment[];
   certificates: KidsAchievementCertificate[];
   roadmap: KidsBadgeRoadmap | null;
   loading: boolean;
 };
 
+const badgeCardShells = [
+  'bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300',
+  'bg-sky-100 text-sky-700 dark:bg-sky-950/50 dark:text-sky-300',
+  'bg-violet-100 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300',
+];
+
 export function KidsStudentDashboardPlayful({
   pathPrefix,
   user,
   classes,
+  assignments,
   certificates,
   roadmap,
   loading,
 }: Props) {
   const { t } = useKidsI18n();
   const gp = user.growth_points ?? 0;
-  const bar = growthBarFraction(gp);
+  const { cur: xpCur, max: xpMax } = xpTierDisplay(gp);
+  const xpBarPct = Math.min(100, Math.round((xpCur / Math.max(1, xpMax)) * 100));
   const stage = user.growth_stage;
   const studentName =
     `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email || t('student.dashboard.defaultName');
 
-  return (
-    <div className="mx-auto max-w-3xl space-y-8">
-      <header className="relative overflow-hidden rounded-[2rem] border-4 border-white/80 bg-gradient-to-br from-violet-500 via-fuchsia-500 to-amber-400 p-1 shadow-2xl shadow-fuchsia-500/25 dark:border-violet-900/60 dark:from-violet-800 dark:via-fuchsia-800 dark:to-amber-700">
-        <div className="rounded-[1.5rem] bg-white/95 px-5 py-6 dark:bg-gray-950/95 sm:px-8 sm:py-8">
-          <p className="text-center text-xs font-black uppercase tracking-[0.25em] text-fuchsia-600 dark:text-fuchsia-400">
-            {t('student.dashboard.cornerSubtitle')}
-          </p>
-          <h1 className="font-logo mt-2 text-center text-3xl font-black text-violet-950 dark:text-white sm:text-4xl">
-            {t('student.dashboard.greeting').replace(
-              '{name}',
-              user.first_name || t('student.dashboard.greetingHeroFallback'),
-            )}
-          </h1>
-          <p className="mx-auto mt-2 max-w-md text-center text-sm font-medium text-slate-600 dark:text-gray-300">
-            {t('student.dashboard.heroBody')}
-          </p>
+  const primaryClass = classes[0];
+  const schoolLine = primaryClass ? kidsClassLocationLine(primaryClass) : null;
+  const classmateCount = primaryClass?.student_count ?? 0;
+  const extraClassmates = Math.max(0, classmateCount - 3);
 
-          {stage ? (
-            <div className="mt-5 rounded-2xl border-2 border-emerald-300/80 bg-gradient-to-r from-emerald-50 to-teal-50 p-4 dark:border-emerald-800 dark:from-emerald-950/50 dark:to-teal-950/40">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="text-4xl" aria-hidden>
-                  <Leaf className="h-8 w-8" />
+  const topMilestones = useMemo(() => {
+    if (!roadmap?.milestones?.length) return [];
+    return [...roadmap.milestones].sort((a, b) => a.order - b.order).slice(0, 3);
+  }, [roadmap]);
+
+  const featured = useMemo(() => pickFeaturedAssignment(assignments), [assignments]);
+  const countdownIso = featured?.submission_closes_at ?? null;
+  const secLeft = useSecondsUntil(countdownIso);
+  const hh = secLeft !== null ? String(Math.floor(secLeft / 3600)).padStart(2, '0') : '--';
+  const mm = secLeft !== null ? String(Math.floor((secLeft % 3600) / 60)).padStart(2, '0') : '--';
+  const ss = secLeft !== null ? String(secLeft % 60).padStart(2, '0') : '--';
+
+  return (
+    <div className="mx-auto max-w-7xl space-y-10 px-1 pb-8 sm:px-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8">
+        <div className="relative overflow-hidden rounded-3xl border border-slate-200/90 bg-white p-6 shadow-md dark:border-zinc-800 dark:bg-zinc-900/90 md:p-8 lg:col-span-8">
+          <div className="relative z-10 max-w-xl pr-0 md:pr-44">
+            <h1 className="font-logo text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white md:text-4xl">
+              {t('student.dashboard.greeting').replace(
+                '{name}',
+                user.first_name || t('student.dashboard.greetingHeroFallback'),
+              )}{' '}
+              <span aria-hidden>👋</span>
+            </h1>
+            <p className="mt-3 text-sm font-medium leading-relaxed text-slate-600 dark:text-zinc-400">
+              {t('student.dashboard.heroBodyPanel')}
+            </p>
+            <div className="mt-6 flex items-center gap-2">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-violet-100 text-violet-600 dark:bg-violet-950/60 dark:text-violet-300">
+                <Rocket className="h-5 w-5" aria-hidden />
+              </span>
+              <span className="font-logo text-sm font-black text-violet-700 dark:text-violet-300">
+                {localizedGrowthStageTitle(stage, t, 'student.dashboard.discoveryTraveler')}
+              </span>
+            </div>
+            {stage?.subtitle ? (
+              <p className="mt-1 text-xs font-medium text-slate-500 dark:text-zinc-500">{stage.subtitle}</p>
+            ) : null}
+            <div className="mt-5">
+              <div className="relative h-4 overflow-hidden rounded-full bg-slate-200 dark:bg-zinc-800">
+                <div
+                  className="h-full rounded-full bg-linear-to-r from-violet-600 to-fuchsia-500 transition-[width] duration-700"
+                  style={{ width: `${xpBarPct}%` }}
+                />
+                <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-[11px] font-black tabular-nums text-slate-800 drop-shadow-sm dark:text-white">
+                  {xpCur} / {xpMax} XP
                 </span>
+              </div>
+              <p className="mt-2 text-xs font-semibold text-slate-500 dark:text-zinc-400">
+                {t('student.dashboard.growthLabel')} <strong className="text-slate-800 dark:text-zinc-200">{gp}</strong>
+                {' · '}
+                {growthNextHint(gp, t)}
+              </p>
+            </div>
+          </div>
+          <div className="relative z-0 mt-8 flex justify-center md:absolute md:right-4 md:top-1/2 md:mt-0 md:w-[42%] md:-translate-y-1/2 md:justify-end">
+            <div className="relative h-48 w-full max-w-[220px] overflow-hidden rounded-2xl bg-slate-900 shadow-inner md:h-56 md:max-w-none">
+              <NextImage
+                src={PANEL_COACH_IMAGE}
+                alt=""
+                fill
+                className="object-cover object-top"
+                sizes="(max-width: 1024px) 220px, 280px"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-3xl border border-slate-200/90 bg-white p-6 shadow-md dark:border-zinc-800 dark:bg-zinc-900/90 lg:col-span-4">
+          {loading ? (
+            <p className="animate-pulse text-sm text-slate-500">{t('student.dashboard.classesLoading')}</p>
+          ) : !primaryClass ? (
+            <p className="text-sm text-slate-600 dark:text-zinc-400">{t('student.dashboard.classesEmpty')}</p>
+          ) : (
+            <>
+              <div className="flex items-start gap-4">
+                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-pink-100 text-pink-600 dark:bg-pink-950/50 dark:text-pink-300">
+                  <GraduationCap className="h-7 w-7" aria-hidden />
+                </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-logo text-lg font-black text-emerald-900 dark:text-emerald-100">{stage.title}</p>
-                  <p className="text-sm font-medium text-emerald-800/90 dark:text-emerald-200/90">{stage.subtitle}</p>
-                  <div className="mt-3 h-3 overflow-hidden rounded-full bg-emerald-200/80 dark:bg-emerald-900/60">
-                    <div
-                      className="h-full rounded-full bg-gradient-to-r from-emerald-400 via-teal-400 to-sky-400 transition-[width] duration-700 ease-out"
-                      style={{ width: `${Math.round(bar * 100)}%` }}
-                    />
-                  </div>
-                  <p className="mt-1.5 text-xs font-semibold text-emerald-800/80 dark:text-emerald-300/80">
-                    {t('student.dashboard.growthLabel')}{' '}
-                    <strong>{gp}</strong>
-                    {' · '}
-                    {growthNextHint(gp, t)}
+                  <p className="font-logo text-lg font-black text-slate-900 dark:text-white">{primaryClass.name}</p>
+                  <p className="mt-1 text-sm font-medium text-slate-500 dark:text-zinc-400">
+                    {schoolLine || primaryClass.school?.name || '—'}
                   </p>
                 </div>
               </div>
-            </div>
-          ) : null}
-        </div>
-      </header>
-
-      {roadmap ? (
-        <RoadmapStrip milestones={roadmap.milestones} pathPrefix={pathPrefix} t={t} />
-      ) : null}
-      <AchievementCertificates certificates={certificates} studentName={studentName} t={t} />
-
-      <section className="rounded-3xl border-2 border-fuchsia-200 bg-white/90 p-5 shadow-lg dark:border-fuchsia-900/40 dark:bg-gray-950/80">
-        <h2 className="font-logo flex items-center gap-2 text-xl font-black text-fuchsia-900 dark:text-fuchsia-100">
-          <Backpack className="h-5 w-5" aria-hidden /> {t('student.dashboard.classesTitle')}
-        </h2>
-        {loading ? (
-          <p className="mt-3 animate-pulse text-sm font-medium text-gray-500">
-            {t('student.dashboard.classesLoading')}
-          </p>
-        ) : classes.length === 0 ? (
-          <p className="mt-3 text-sm font-medium text-gray-600 dark:text-gray-400">
-            {t('student.dashboard.classesEmpty')}
-          </p>
-        ) : (
-          <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-            {classes.map((c, i) => {
-              const loc = kidsClassLocationLine(c);
-              return (
-                <li
-                  key={c.id}
-                  className={`rounded-2xl border-2 p-4 shadow-sm ${classShells[i % classShells.length]}`}
-                >
-                  <span className="font-logo text-base font-black text-violet-950 dark:text-white">{c.name}</span>
-                  {loc ? (
-                    <span className="mt-1 block text-xs font-medium text-gray-600 dark:text-gray-400">{loc}</span>
+              <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-5 dark:border-zinc-800">
+                <div className="flex -space-x-2">
+                  {[0, 1, 2].map((i) => (
+                    <div
+                      key={i}
+                      className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white bg-linear-to-br from-violet-200 to-fuchsia-300 text-xs font-black text-violet-900 dark:border-zinc-900 dark:from-violet-800 dark:to-fuchsia-700 dark:text-white"
+                      aria-hidden
+                    >
+                      {String.fromCharCode(65 + i)}
+                    </div>
+                  ))}
+                  {extraClassmates > 0 ? (
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white bg-slate-200 text-xs font-black text-slate-700 dark:border-zinc-900 dark:bg-zinc-800 dark:text-zinc-200">
+                      +{extraClassmates > 99 ? '99+' : extraClassmates}
+                    </div>
                   ) : null}
+                </div>
+                <Link
+                  href={`${pathPrefix}/ogrenci/projeler`}
+                  className="text-sm font-bold text-violet-600 hover:underline dark:text-violet-400"
+                >
+                  {t('student.dashboard.classListLink')}
+                </Link>
+              </div>
+              {classes.length > 1 ? (
+                <p className="mt-3 text-xs text-slate-500 dark:text-zinc-500">
+                  +{classes.length - 1} {t('student.dashboard.moreClassesHint')}
+                </p>
+              ) : null}
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+        <section className="rounded-3xl border border-slate-200/90 bg-white p-6 shadow-md dark:border-zinc-800 dark:bg-zinc-900/90">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="font-logo text-lg font-black text-slate-900 dark:text-white">
+              {t('student.dashboard.badgesTitle')}
+            </h2>
+            <Link
+              href={`${pathPrefix}/ogrenci/yol`}
+              className="text-sm font-bold text-violet-600 hover:underline dark:text-violet-400"
+            >
+              {t('student.dashboard.badgesSeeAll')}
+            </Link>
+          </div>
+          {topMilestones.length === 0 ? (
+            <p className="mt-4 text-sm text-slate-500 dark:text-zinc-400">{t('student.dashboard.badgesEmpty')}</p>
+          ) : (
+            <ul className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+              {topMilestones.map((m, i) => (
+                <li
+                  key={m.key}
+                  className="flex flex-col items-center rounded-2xl border border-slate-100 bg-slate-50/90 p-4 text-center shadow-sm dark:border-zinc-800 dark:bg-zinc-950/50"
+                >
+                  <div
+                    className={`flex h-16 w-16 items-center justify-center rounded-full ${badgeCardShells[i % badgeCardShells.length]}`}
+                  >
+                    <span className="scale-110">{milestoneIcon(m.icon)}</span>
+                  </div>
+                  <p className="mt-3 text-sm font-black text-slate-900 dark:text-white">{m.title}</p>
+                  <p className="mt-1 text-[11px] font-medium text-slate-500 dark:text-zinc-500">
+                    {m.unlocked ? t('student.dashboard.badgeUnlocked') : t('student.dashboard.badgeLocked')}
+                  </p>
                 </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
+              ))}
+            </ul>
+          )}
+        </section>
 
-      <section className="rounded-3xl border-2 border-violet-300/80 bg-gradient-to-br from-violet-100/90 via-fuchsia-50/80 to-amber-50/70 p-1 shadow-lg dark:border-violet-800 dark:from-violet-950/50 dark:via-fuchsia-950/30 dark:to-amber-950/20">
-        <div className="rounded-[1.35rem] bg-white/95 px-5 py-5 dark:bg-gray-950/90">
-          <h2 className="font-logo flex items-center gap-2 text-lg font-black text-violet-900 dark:text-violet-100">
-            <Target className="h-5 w-5" aria-hidden /> {t('student.dashboard.challengesTitle')}
-          </h2>
-          <p className="mt-1 text-sm font-medium text-slate-600 dark:text-gray-300">
-            {t('student.dashboard.challengesBody')}
-          </p>
-          <Link
-            href={`${pathPrefix}/ogrenci/projeler`}
-            className="mt-4 flex min-h-12 w-full items-center justify-center rounded-2xl bg-gradient-to-r from-violet-600 via-fuchsia-600 to-amber-500 px-6 py-3 text-center text-sm font-black text-white shadow-md shadow-fuchsia-500/25 transition hover:brightness-105"
-          >
-            {t('student.dashboard.challengesCta')}
-          </Link>
+        <AchievementCertificates certificates={certificates} studentName={studentName} t={t} />
+      </div>
+
+      <section className="overflow-hidden rounded-3xl bg-linear-to-r from-violet-600 via-violet-600 to-indigo-700 p-6 shadow-xl md:p-8">
+        <div className="flex flex-col gap-8 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-white/15 backdrop-blur-sm">
+              <Timer className="h-10 w-10 text-white" aria-hidden />
+            </div>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="font-logo text-xl font-black text-white md:text-2xl">
+                  {t('student.dashboard.dailyChallengeTitle')}
+                </h2>
+                {countdownIso ? (
+                  <span className="rounded-full bg-white/20 px-3 py-0.5 text-[10px] font-black uppercase tracking-wide text-white">
+                    {t('student.dashboard.timeLimitedBadge')}
+                  </span>
+                ) : null}
+              </div>
+              <p className="mt-2 text-lg font-black text-white md:text-xl">
+                {featured?.title || t('student.dashboard.dailyChallengeFallbackTitle')}
+              </p>
+              <p className="mt-2 max-w-xl text-sm font-medium text-violet-100">
+                {featured
+                  ? t('student.dashboard.dailyChallengeBodyWithXp')
+                  : t('student.dashboard.dailyChallengeFallbackBody')}
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-col items-center gap-5 lg:items-end">
+            {countdownIso ? (
+              <div className="flex gap-3">
+                {[
+                  { v: hh, lab: t('student.dashboard.countdownHour') },
+                  { v: mm, lab: t('student.dashboard.countdownMinute') },
+                  { v: ss, lab: t('student.dashboard.countdownSecond') },
+                ].map((x) => (
+                  <div key={x.lab} className="text-center">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-900/40 text-lg font-black tabular-nums text-white md:h-16 md:w-16 md:text-xl">
+                      {x.v}
+                    </div>
+                    <p className="mt-1 text-[10px] font-bold uppercase tracking-wide text-violet-200">{x.lab}</p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            <Link
+              href={
+                featured
+                  ? `${pathPrefix}/ogrenci/proje/${featured.id}`
+                  : `${pathPrefix}/ogrenci/projeler`
+              }
+              className="inline-flex min-h-12 w-full min-w-[200px] items-center justify-center rounded-full bg-white px-8 py-3 text-center text-sm font-black text-violet-700 shadow-lg transition hover:scale-[1.02] active:scale-[0.98] lg:w-auto"
+            >
+              {t('student.dashboard.dailyChallengeCta')}
+            </Link>
+          </div>
         </div>
       </section>
 
-      <div className="flex justify-center">
-        <div className="flex w-full max-w-xl flex-col gap-2 sm:flex-row sm:justify-center">
-          <Link
-            href={`${pathPrefix}/ogrenci/yol`}
-            className="inline-flex min-h-12 w-full items-center justify-center rounded-2xl border-2 border-violet-300 bg-violet-50 px-6 py-3 text-sm font-black text-violet-900 transition hover:bg-violet-100 dark:border-violet-700 dark:bg-violet-950/60 dark:text-violet-100 dark:hover:bg-violet-900/60 sm:w-auto"
-          >
-            <Map className="mr-1 h-4 w-4" aria-hidden /> {t('student.dashboard.navRoadmap')}
-          </Link>
-          <Link
-            href={`${pathPrefix}/ogrenci/oyun-merkezi`}
-            className="inline-flex min-h-12 w-full items-center justify-center rounded-2xl border-2 border-emerald-300 bg-emerald-50 px-6 py-3 text-sm font-black text-emerald-900 transition hover:bg-emerald-100 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-100 dark:hover:bg-emerald-900/50 sm:w-auto"
-          >
-            <Gamepad2 className="mr-1 h-4 w-4" aria-hidden /> {t('student.dashboard.navGameCenter')}
-          </Link>
-        </div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
+        <Link
+          href={`${pathPrefix}/ogrenci/yol`}
+          className="inline-flex min-h-12 flex-1 items-center justify-center rounded-2xl border-2 border-violet-200 bg-violet-50 px-6 py-3 text-sm font-black text-violet-900 transition hover:bg-violet-100 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-100 sm:min-w-[200px] sm:flex-none"
+        >
+          <Map className="mr-2 h-4 w-4" aria-hidden /> {t('student.dashboard.navRoadmap')}
+        </Link>
+        <Link
+          href={`${pathPrefix}/ogrenci/oyun-merkezi`}
+          className="inline-flex min-h-12 flex-1 items-center justify-center rounded-2xl border-2 border-emerald-200 bg-emerald-50 px-6 py-3 text-sm font-black text-emerald-900 transition hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-100 sm:min-w-[200px] sm:flex-none"
+        >
+          <Gamepad2 className="mr-2 h-4 w-4" aria-hidden /> {t('student.dashboard.navGameCenter')}
+        </Link>
+        <Link
+          href={`${pathPrefix}/ogrenci/projeler`}
+          className="inline-flex min-h-12 flex-1 items-center justify-center rounded-2xl border-2 border-fuchsia-200 bg-fuchsia-50 px-6 py-3 text-sm font-black text-fuchsia-900 transition hover:bg-fuchsia-100 dark:border-fuchsia-900 dark:bg-fuchsia-950/30 dark:text-fuchsia-100 sm:min-w-[200px] sm:flex-none"
+        >
+          <Backpack className="mr-2 h-4 w-4" aria-hidden /> {t('student.dashboard.challengesTitle')}
+        </Link>
       </div>
     </div>
   );

@@ -494,6 +494,10 @@ export type KidsHomeworkSubmission = {
   }[];
   created_at: string;
   updated_at: string;
+  /** Yalnızca `mark-done` PATCH yanıtında: işlem öncesi/sonrası büyüme puanı. */
+  growth_points_before?: number;
+  growth_points_after?: number;
+  growth_points_delta?: number;
 };
 
 export type KidsHomeworkSubmissionOverview = {
@@ -2126,11 +2130,21 @@ export type KidsRoadmapTeacherPick = {
   earned_at: string;
 };
 
+export type KidsNextMilestoneProgress = {
+  key: string;
+  current: number;
+  target: number;
+  /** Sıradaki kilitli kilometre taşına göre 0–100 (current/target). */
+  percent: number;
+};
+
 export type KidsBadgeRoadmap = {
   milestones: KidsRoadmapMilestone[];
   teacher_picks: KidsRoadmapTeacherPick[];
   growth_points: number;
   teacher_pick_limit: number;
+  /** Yoksa tüm kilometre taşları açık veya liste boş. */
+  next_milestone_progress?: KidsNextMilestoneProgress | null;
 };
 
 export async function kidsGetBadgeRoadmap(): Promise<KidsBadgeRoadmap> {
@@ -3073,6 +3087,12 @@ export type KidsStudentTestListItem = {
   question_count: number;
   /** Öğrenci henüz başlatmadı | çözüyor | teslim etti */
   attempt_status?: KidsStudentTestListAttemptStatus;
+  /** Teslim edilmiş denemenin süresi (dakika); yalnızca submitted. */
+  attempt_duration_minutes?: number | null;
+  /** Teslimde kazanılan büyüme puanı; yalnızca submitted. */
+  xp_earned?: number | null;
+  /** Yüz üzerinden puan; yalnızca submitted. */
+  attempt_score?: number | null;
 };
 
 export type KidsTestAttempt = {

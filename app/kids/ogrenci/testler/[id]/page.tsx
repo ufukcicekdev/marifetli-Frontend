@@ -4,21 +4,75 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
-import { useKidsAuth } from '@/src/providers/kids-auth-provider';
+import {
+  BookOpen,
+  Calculator,
+  CheckCircle2,
+  Eye,
+  FlaskConical,
+  Languages,
+  ListChecks,
+  Star,
+  Timer,
+  Trophy,
+  type LucideIcon,
+} from 'lucide-react';
+import { KidsPanelMax } from '@/src/components/kids/kids-ui';
 import { kidsStudentGetTest, kidsStudentStartTest, kidsStudentSubmitTest, type KidsTestAttempt } from '@/src/lib/kids-api';
-import { kidsSplitReadingFromInstructions, kidsStripTrailingParenTopicSuffix } from '@/src/lib/kids-test-stem';
+import {
+  kidsLocalizedReadingAnswerIntro,
+  kidsSplitReadingFromInstructions,
+  kidsStripTrailingParenTopicSuffix,
+} from '@/src/lib/kids-test-stem';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
+import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import { useKidsI18n } from '@/src/providers/kids-language-provider';
 
 type StudentTestDetail = Awaited<ReturnType<typeof kidsStudentGetTest>>;
 type StudentTestQuestion = StudentTestDetail['questions'][number];
+
+/** Backend `kids/badges.py` içindeki `TEST_FIRST_SUBMIT_GP` ile aynı kalmalı. */
+const KIDS_TEST_SUBMIT_XP = 2;
+
+function interpolate(template: string, vars: Record<string, string | number>): string {
+  let s = template;
+  for (const [k, v] of Object.entries(vars)) {
+    s = s.split(`{${k}}`).join(String(v));
+  }
+  return s;
+}
+
+function testSubjectIcon(title: string): LucideIcon {
+  const s = title.toLowerCase();
+  if (s.includes('mat') || s.includes('sayı') || s.includes('sayi') || s.includes('geometri'))
+    return Calculator;
+  if (s.includes('fen') || s.includes('bilim') || s.includes('science')) return FlaskConical;
+  if (s.includes('ingiliz') || s.includes('english')) return Languages;
+  if (s.includes('türk') || s.includes('turk') || s.includes('edeb')) return BookOpen;
+  return BookOpen;
+}
+
+const glassResultsCard =
+  'rounded-2xl border border-white/50 bg-white/70 p-6 shadow-lg shadow-violet-200/25 backdrop-blur-md dark:border-white/10 dark:bg-zinc-900/60 dark:shadow-none';
+
+function formatAttemptDuration(attempt: KidsTestAttempt | null, t: (k: string) => string): string {
+  if (!attempt?.started_at || !attempt?.submitted_at) return t('tests.studentList.durationUnknown');
+  const ms = new Date(attempt.submitted_at).getTime() - new Date(attempt.started_at).getTime();
+  if (!Number.isFinite(ms) || ms < 0) return t('tests.studentList.durationUnknown');
+  const minutes = Math.max(1, Math.round(ms / 60000));
+  if (minutes > 48 * 60) return t('tests.studentList.durationUnknown');
+  if (minutes >= 120) {
+    return interpolate(t('tests.studentSolve.durationAboutHours'), { h: Math.max(1, Math.round(minutes / 60)) });
+  }
+  return interpolate(t('tests.studentList.attemptMinutes'), { n: minutes });
+}
 
 export default function KidsStudentTestSolvePage() {
   const params = useParams();
   const testId = Number(params.id);
   const router = useRouter();
   const { user, loading: authLoading, pathPrefix } = useKidsAuth();
-  const { t, language } = useKidsI18n();
+  const { t } = useKidsI18n();
   const [detail, setDetail] = useState<StudentTestDetail | null>(null);
   const [attempt, setAttempt] = useState<KidsTestAttempt | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -240,25 +294,113 @@ export default function KidsStudentTestSolvePage() {
     }
   }
 
+  const resultSubtitle = useMemo(() => {
+    const raw = detail?.instructions?.trim();
+    if (!raw) return '';
+    const line = raw.split('\n').filter(Boolean)[0]?.slice(0, 160) || '';
+    return kidsLocalizedReadingAnswerIntro(line, t);
+  }, [detail?.instructions, t]);
+
+  const durationLabel = useMemo(() => formatAttemptDuration(attempt, t), [attempt, t]);
+
+  const resultSubIcon = useMemo(() => {
+    if (!detail) return BookOpen;
+    return testSubjectIcon(detail.title);
+  }, [detail]);
+
+  const scoreRounded = useMemo(() => {
+    if (!attempt || typeof attempt.score !== 'number' || !Number.isFinite(attempt.score)) return null;
+    return Math.round(attempt.score);
+  }, [attempt]);
+
   if (authLoading || loading) return <p className="text-center text-sm">{t('common.loading')}</p>;
   if (!detail) return <p className="text-center text-sm">{t('tests.studentSolve.notFound')}</p>;
 
   const showReadingPanel = hasApiReadingContent || showFallbackReading;
+  const SummaryIcon = resultSubIcon;
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="font-logo text-2xl font-bold text-violet-950 dark:text-violet-50">{detail.title}</h1>
-        <Link href={`${pathPrefix}/ogrenci/testler`} className="rounded-full border border-violet-200 px-3 py-1 text-xs font-bold text-violet-700 dark:border-violet-700 dark:text-violet-200">
-          {t('tests.report.backTests')}
-        </Link>
-      </div>
+    <KidsPanelMax className="max-w-4xl space-y-6 px-1 pb-12 pt-2 sm:px-3 lg:px-6">
+      <Link
+        href={`${pathPrefix}/ogrenci/testler`}
+        className="inline-flex rounded-full border border-violet-200/80 bg-white/60 px-4 py-2 text-xs font-bold text-violet-800 shadow-sm backdrop-blur-sm transition hover:bg-violet-50 dark:border-violet-800 dark:bg-zinc-900/60 dark:text-violet-200 dark:hover:bg-violet-950/40"
+      >
+        {t('tests.report.backTests')}
+      </Link>
+
+      {submitted && attempt ? (
+        <div
+          className={`relative border-emerald-400/30 dark:border-emerald-700/35 ${glassResultsCard}`}
+        >
+          <div className="absolute right-4 top-4 rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-200">
+            {t('tests.studentList.badgeCompleted')}
+          </div>
+          <div className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-100/90 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
+            <SummaryIcon className="h-7 w-7" strokeWidth={2} />
+          </div>
+          <h1 className="mb-2 pr-16 font-logo text-2xl font-extrabold uppercase leading-tight tracking-tight text-slate-900 dark:text-white sm:text-3xl">
+            {detail.title}
+          </h1>
+          {resultSubtitle ? (
+            <p className="mb-6 text-sm leading-relaxed text-slate-600 dark:text-zinc-400">{resultSubtitle}</p>
+          ) : (
+            <div className="mb-6" />
+          )}
+          <div className="mb-6 grid grid-cols-2 gap-x-3 gap-y-4 text-sm">
+            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2 className="h-5 w-5 shrink-0" />
+              <span className="font-medium leading-tight">{t('tests.studentList.finishedLabel')}</span>
+            </div>
+            <div className="flex items-center gap-2 text-slate-600 dark:text-zinc-400">
+              <ListChecks className="h-5 w-5 shrink-0 text-emerald-600" />
+              <span className="leading-tight">
+                {attempt.total_questions} {t('tests.reports.question')}
+              </span>
+            </div>
+            <div className="flex items-center gap-2 text-slate-600 dark:text-zinc-400">
+              <Timer className="h-5 w-5 shrink-0 text-emerald-600" />
+              <span className="leading-tight">{durationLabel}</span>
+            </div>
+            <div className="flex items-center gap-2 text-fuchsia-700 dark:text-fuchsia-400">
+              <Trophy className="h-5 w-5 shrink-0 fill-current" />
+              <span className="font-bold leading-tight">
+                {interpolate(t('tests.studentList.xpEarnedDisplay'), { n: KIDS_TEST_SUBMIT_XP })}
+              </span>
+            </div>
+            <div className="col-span-2 flex items-center gap-2 text-slate-600 dark:text-zinc-400">
+              <Star className="h-5 w-5 shrink-0 fill-amber-400 text-amber-500" />
+              <span className="font-semibold leading-tight">
+                {scoreRounded != null
+                  ? interpolate(t('tests.studentSolve.resultScoreLine'), {
+                      correct: attempt.total_correct,
+                      total: attempt.total_questions,
+                      score: scoreRounded,
+                    })
+                  : t('tests.studentList.scoreUnavailable')}
+              </span>
+            </div>
+          </div>
+          <a
+            href="#ogrenci-test-sorular"
+            className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-emerald-500/30 bg-white/40 py-4 text-sm font-bold text-emerald-800 transition-colors hover:bg-emerald-50/90 dark:border-emerald-600/40 dark:bg-zinc-900/40 dark:text-emerald-200 dark:hover:bg-emerald-950/40"
+          >
+            {t('tests.studentSolve.reviewQuestionsAnchor')}
+            <Eye className="h-5 w-5" />
+          </a>
+        </div>
+      ) : (
+        <h1 className="font-logo text-2xl font-bold text-violet-950 dark:text-violet-50 sm:text-3xl">{detail.title}</h1>
+      )}
       {showFallbackReading ? (
         instructionIntro.trim() ? (
-          <p className="text-sm text-slate-600 dark:text-slate-300">{instructionIntro}</p>
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            {kidsLocalizedReadingAnswerIntro(instructionIntro, t)}
+          </p>
         ) : null
       ) : detail.instructions?.trim() ? (
-        <p className="text-sm text-slate-600 dark:text-slate-300">{detail.instructions}</p>
+        <p className="text-sm text-slate-600 dark:text-slate-300">
+          {kidsLocalizedReadingAnswerIntro(detail.instructions.trim(), t)}
+        </p>
       ) : null}
 
       {showReadingPanel ? (
@@ -269,7 +411,7 @@ export default function KidsStudentTestSolvePage() {
                 return (
                   <div
                     key={`read-${p.id}`}
-                    className="rounded-2xl border-2 border-amber-200/90 bg-gradient-to-b from-amber-50/90 to-white p-5 shadow-sm dark:border-amber-800/70 dark:from-amber-950/35 dark:to-gray-900/80"
+                    className="rounded-2xl border-2 border-amber-200/90 bg-linear-to-b from-amber-50/90 to-white p-5 shadow-sm dark:border-amber-800/70 dark:from-amber-950/35 dark:to-gray-900/80"
                   >
                     <p className="text-[11px] font-black uppercase tracking-wider text-amber-800/90 dark:text-amber-300/90">
                       {t('tests.studentSolve.readingPassageHeading')}
@@ -287,7 +429,7 @@ export default function KidsStudentTestSolvePage() {
               })
             : null}
           {showFallbackReading && instructionStoryFallback ? (
-            <div className="rounded-2xl border-2 border-amber-200/90 bg-gradient-to-b from-amber-50/90 to-white p-5 shadow-sm dark:border-amber-800/70 dark:from-amber-950/35 dark:to-gray-900/80">
+            <div className="rounded-2xl border-2 border-amber-200/90 bg-linear-to-b from-amber-50/90 to-white p-5 shadow-sm dark:border-amber-800/70 dark:from-amber-950/35 dark:to-gray-900/80">
               <p className="text-[11px] font-black uppercase tracking-wider text-amber-800/90 dark:text-amber-300/90">
                 {t('tests.studentSolve.readingPassageHeading')}
               </p>
@@ -305,25 +447,22 @@ export default function KidsStudentTestSolvePage() {
         </div>
       ) : null}
 
-      <div className="rounded-xl border border-violet-200 bg-white p-3 text-sm dark:border-violet-800 dark:bg-gray-900/70">
-        {detail.duration_minutes ? (
-          <p className="font-semibold text-violet-800 dark:text-violet-200">
-            {t('tests.studentSolve.remainingTime')}{' '}
-            {submitted || remainingSec == null
-              ? t('tests.studentSolve.completed')
-              : `${String(Math.floor(remainingSec / 60)).padStart(2, '0')}:${String(remainingSec % 60).padStart(2, '0')}`}
-          </p>
-        ) : (
-          <p className="font-semibold text-violet-800 dark:text-violet-200">{t('tests.studentSolve.noTimeLimit')}</p>
-        )}
-        {submitted ? (
-          <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300">
-            {t('tests.studentSolve.result')}: {attempt?.total_correct}/{attempt?.total_questions} {t('tests.studentSolve.correct')} · {(attempt?.score ?? 0).toLocaleString(language)}/100 {t('tests.studentSolve.points')}
-          </p>
-        ) : null}
-      </div>
+      {!submitted ? (
+        <div className="rounded-xl border border-violet-200 bg-white p-3 text-sm dark:border-violet-800 dark:bg-gray-900/70">
+          {detail.duration_minutes ? (
+            <p className="font-semibold text-violet-800 dark:text-violet-200">
+              {t('tests.studentSolve.remainingTime')}{' '}
+              {remainingSec == null
+                ? t('tests.studentSolve.completed')
+                : `${String(Math.floor(remainingSec / 60)).padStart(2, '0')}:${String(remainingSec % 60).padStart(2, '0')}`}
+            </p>
+          ) : (
+            <p className="font-semibold text-violet-800 dark:text-violet-200">{t('tests.studentSolve.noTimeLimit')}</p>
+          )}
+        </div>
+      ) : null}
 
-      <div className="space-y-6">
+      <div id="ogrenci-test-sorular" className="space-y-6 scroll-mt-28">
         {sortedPassages.map((p) => {
           const group = questionsByPassageOrder.get(p.order) ?? [];
           if (!group.length) return null;
@@ -359,6 +498,6 @@ export default function KidsStudentTestSolvePage() {
           {submitting ? t('tests.studentSolve.submitting') : t('tests.studentSolve.submit')}
         </button>
       ) : null}
-    </div>
+    </KidsPanelMax>
   );
 }

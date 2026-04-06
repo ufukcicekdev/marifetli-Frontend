@@ -38,3 +38,45 @@ export function kidsSplitReadingFromInstructions(raw: string): { intro: string; 
   }
   return { intro: t, story: null };
 }
+
+/**
+ * Sınav çıkışlarında sık geçen "metne göre cevaplayınız" giriş cümlesi; içerik Türkçe kalsa da arayüz diline çevrilir.
+ */
+function normalizeReadingBoilerplateKey(s: string): string {
+  return (s || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .replace(/[.!?…]+$/u, '')
+    .toLocaleLowerCase('tr-TR')
+    .replace(/ı/g, 'i')
+    .replace(/ğ/g, 'g')
+    .replace(/ü/g, 'u')
+    .replace(/ş/g, 's')
+    .replace(/ö/g, 'o')
+    .replace(/ç/g, 'c')
+    .replace(/â/g, 'a')
+    .replace(/î/g, 'i')
+    .replace(/û/g, 'u');
+}
+
+const READING_ANSWER_BOILERPLATE_KEYS = new Set([
+  'asagidaki sorulari okudugunuz metne gore cevaplayiniz',
+  'asagidaki sorulari okudugunuz metne gore yanitlayiniz',
+  'okudugunuz metne gore asagidaki sorulari cevaplayiniz',
+]);
+
+export function kidsIsReadingAnswerBoilerplate(text: string): boolean {
+  const k = normalizeReadingBoilerplateKey(text);
+  if (!k) return false;
+  return READING_ANSWER_BOILERPLATE_KEYS.has(k);
+}
+
+/** Metin bilinen kalıpsa çeviri anahtarından döner; değilse olduğu gibi. */
+export function kidsLocalizedReadingAnswerIntro(text: string, t: (key: string) => string): string {
+  const raw = (text || '').trim();
+  if (!raw) return raw;
+  if (kidsIsReadingAnswerBoilerplate(raw)) {
+    return t('tests.studentSolve.readingAnswerPrompt');
+  }
+  return text;
+}
