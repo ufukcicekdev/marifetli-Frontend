@@ -13,15 +13,20 @@ import {
   KIDS_CLASS_SPECIAL_GRADE,
   kidsBuildTeacherPanelClassName,
   kidsCreateClass,
+  kidsListClassSubmissions,
   kidsListClasses,
   kidsListSchoolClassDirectory,
   kidsListSchools,
   kidsSchoolLocationLine,
   kidsSelfJoinClass,
+  kidsTeacherClassPeerChallenges,
+  kidsTeacherHomeworkInbox,
   type KidsClass,
   type KidsClassKind,
+  type KidsPeerChallenge,
   type KidsSchoolDirectoryClassRow,
   type KidsSchool,
+  type KidsTeacherSubmission,
 } from '@/src/lib/kids-api';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 import { useKidsI18n } from '@/src/providers/kids-language-provider';
@@ -37,6 +42,32 @@ import {
   kidsInputClass,
   kidsTextareaClass,
 } from '@/src/components/kids/kids-ui';
+
+type PendingTaskKind = 'peer' | 'challenge' | 'homework';
+
+type PendingTaskRow = {
+  key: string;
+  kind: PendingTaskKind;
+  title: string;
+  subtitle: string;
+  href: string;
+};
+
+function pendingTaskBadgeClass(kind: PendingTaskKind, idx: number): string {
+  if (kind === 'peer') {
+    return idx % 2 === 0
+      ? 'bg-amber-400 text-amber-950 dark:bg-amber-400 dark:text-amber-950'
+      : 'bg-amber-500 text-amber-950 dark:bg-amber-500';
+  }
+  if (kind === 'challenge') {
+    return idx % 2 === 0
+      ? 'bg-violet-500 text-white dark:bg-violet-500'
+      : 'bg-fuchsia-600 text-white dark:bg-fuchsia-600';
+  }
+  return idx % 2 === 0
+    ? 'bg-emerald-500 text-white dark:bg-emerald-500'
+    : 'bg-teal-600 text-white dark:bg-teal-600';
+}
 
 /** Öğretmenler topluluğu kartı — sıcak sınıf / öğretmen–öğrenci görseli */
 const TEACHER_COMMUNITY_COVER_IMG =
@@ -71,6 +102,8 @@ export default function KidsTeacherPanelPage() {
   const [schoolClassesLoading, setSchoolClassesLoading] = useState(false);
   const [joiningClassId, setJoiningClassId] = useState<number | null>(null);
   const [createClassModalOpen, setCreateClassModalOpen] = useState(false);
+  const [pendingTasks, setPendingTasks] = useState<PendingTaskRow[]>([]);
+  const [pendingTasksLoading, setPendingTasksLoading] = useState(false);
   const classGradeId = useId();
   const classSectionId = useId();
   const descId = useId();
@@ -110,6 +143,124 @@ export default function KidsTeacherPanelPage() {
     if (schools.length === 0 || schoolId) return;
     setSchoolId(String(schools[0].id));
   }, [schools, schoolId]);
+
+  useEffect(() => {
+    if (loading || classes.length === 0) {
+      setPendingTasks([]);
+      setPendingTasksLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setPendingTasksLoading(true);
+    (async () => {
+      try {
+        const classById = new Map(classes.map((c) => [c.id, c]));
+        const homeworkInbox = await kidsTeacherHomeworkInbox().catch(() => []);
+        if (cancelled) return;
+
+        const homeworkGroups = new Map<
+          string,
+          { classId: number; className: string; homeworkId: number; title: string; count: number }
+        >();
+        for (const sub of homeworkInbox) {
+          const hc = sub.homework.kids_class;
+          const cls = classById.get(hc);
+          const className =
+            (sub.homework.class_name || '').trim() || (cls?.name || '').trim() || `Sınıf #${hc}`;
+          const key = `${hc}-${sub.homework.id}`;
+          const g = homeworkGroups.get(key);
+          if (g) g.count += 1;
+          else
+            homeworkGroups.set(key, {
+              classId: hc,
+              className,
+              homeworkId: sub.homework.id,
+              title: sub.homework.title,
+              count: 1,
+            });
+        }
+
+        const perClass = await Promise.all(
+          classes.map(async (c) => {
+            const [subs, peers] = await Promise.all([
+              kidsListClassSubmissions(c.id).catch(() => [] as KidsTeacherSubmission[]),
+              kidsTeacherClassPeerChallenges(c.id).catch(() => [] as KidsPeerChallenge[]),
+            ]);
+            return { classId: c.id, className: c.name, subs, peers };
+          }),
+        );
+        if (cancelled) return;
+
+        const rows: PendingTaskRow[] = [];
+        const kindOrder: Record<PendingTaskKind, number> = { peer: 0, challenge: 1, homework: 2 };
+
+        for (const { classId, className, subs, peers } of perClass) {
+          const pendingPeer = peers.filter((ch) => ch.status === 'pending_teacher' && ch.source === 'student');
+          for (const ch of pendingPeer) {
+            rows.push({
+              key: `peer-${classId}-${ch.id}`,
+              kind: 'peer',
+              title: ch.title.trim() || t('teacher.panel.pendingTaskUntitled'),
+              subtitle: t('teacher.panel.pendingTaskPeerSubtitle').replace('{class}', className),
+              href: `${pathPrefix}/ogretmen/sinif/${classId}?tab=peer`,
+            });
+          }
+
+          const reviewByAsg = new Map<number, { title: string; count: number }>();
+          for (const s of subs) {
+            if (!s.can_review) continue;
+            const aid = s.assignment.id;
+            const ex = reviewByAsg.get(aid);
+            if (ex) ex.count += 1;
+            else reviewByAsg.set(aid, { title: s.assignment.title, count: 1 });
+          }
+          for (const [aid, { title, count }] of reviewByAsg) {
+            rows.push({
+              key: `challenge-${classId}-${aid}`,
+              kind: 'challenge',
+              title: title.trim() || t('teacher.panel.pendingTaskUntitled'),
+              subtitle: t('teacher.panel.pendingTaskChallengeSubtitle')
+                .replace('{class}', className)
+                .replace('{count}', String(count)),
+              href: `${pathPrefix}/ogretmen/sinif/${classId}?tab=assignments`,
+            });
+          }
+        }
+
+        for (const g of homeworkGroups.values()) {
+          rows.push({
+            key: `homework-${g.classId}-${g.homeworkId}`,
+            kind: 'homework',
+            title: g.title.trim() || t('teacher.panel.pendingTaskUntitled'),
+            subtitle: t('teacher.panel.pendingTaskHomeworkSubtitle')
+              .replace('{class}', g.className)
+              .replace('{count}', String(g.count)),
+            href: `${pathPrefix}/ogretmen/sinif/${g.classId}?tab=assignments`,
+          });
+        }
+
+        rows.sort((a, b) => {
+          const kd = kindOrder[a.kind] - kindOrder[b.kind];
+          if (kd !== 0) return kd;
+          const sub = a.subtitle.localeCompare(b.subtitle, 'tr');
+          if (sub !== 0) return sub;
+          return a.title.localeCompare(b.title, 'tr');
+        });
+
+        setPendingTasks(rows);
+      } catch {
+        if (!cancelled) {
+          setPendingTasks([]);
+          toast.error(t('teacher.panel.pendingTasksLoadError'));
+        }
+      } finally {
+        if (!cancelled) setPendingTasksLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, classes, pathPrefix, t]);
 
   useEffect(() => {
     const syncHash = () => {
@@ -617,41 +768,61 @@ export default function KidsTeacherPanelPage() {
 
       <div className="mb-10 grid gap-6 lg:grid-cols-2">
         <KidsCard className="h-full border-zinc-200/80 dark:border-zinc-700">
-          <h3 className="font-logo mb-4 text-lg font-bold text-slate-900 dark:text-white">{t('teacher.panel.planTitle')}</h3>
-          <ul className="space-y-4">
-            {[
-              {
-                time: t('teacher.panel.planItem1Time'),
-                title: t('teacher.panel.planItem1Title'),
-                desc: t('teacher.panel.planItem1Desc'),
-                circle: 'bg-amber-400 text-amber-950 dark:bg-amber-400 dark:text-amber-950',
-              },
-              {
-                time: t('teacher.panel.planItem2Time'),
-                title: t('teacher.panel.planItem2Title'),
-                desc: t('teacher.panel.planItem2Desc'),
-                circle: 'bg-violet-500 text-white dark:bg-violet-500',
-              },
-              {
-                time: t('teacher.panel.planItem3Time'),
-                title: t('teacher.panel.planItem3Title'),
-                desc: t('teacher.panel.planItem3Desc'),
-                circle: 'bg-amber-400 text-amber-950 dark:bg-amber-400 dark:text-amber-950',
-              },
-            ].map((row, idx) => (
-              <li key={idx} className="flex gap-3">
-                <span
-                  className={`flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-full text-center text-[10px] font-bold leading-tight ${row.circle}`}
-                >
-                  {row.time}
-                </span>
-                <div className="min-w-0">
-                  <p className="font-semibold text-slate-900 dark:text-white">{row.title}</p>
-                  <p className="mt-0.5 text-sm text-slate-600 dark:text-gray-400">{row.desc}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-2">
+            <div className="min-w-0">
+              <h3 className="font-logo text-lg font-bold text-slate-900 dark:text-white">
+                {t('teacher.panel.pendingTasksTitle')}
+              </h3>
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t('teacher.panel.pendingTasksHint')}</p>
+            </div>
+            {!loading && !pendingTasksLoading && classes.length > 0 && pendingTasks.length > 0 ? (
+              <p className="shrink-0 text-xs font-bold text-violet-600 dark:text-violet-400">
+                {t('teacher.panel.pendingTasksCount').replace('{count}', String(pendingTasks.length))}
+              </p>
+            ) : null}
+          </div>
+          {loading || pendingTasksLoading ? (
+            <p className="text-center text-sm text-slate-600 dark:text-slate-400">{t('common.loading')}</p>
+          ) : classes.length === 0 ? (
+            <p className="text-sm text-slate-600 dark:text-slate-400">{t('teacher.panel.pendingTasksNoClasses')}</p>
+          ) : pendingTasks.length === 0 ? (
+            <p className="text-sm text-slate-600 dark:text-slate-400">{t('teacher.panel.pendingTasksEmpty')}</p>
+          ) : (
+            <ul
+              className="max-h-[min(22rem,58dvh)] space-y-3 overflow-y-auto overscroll-y-contain scroll-smooth pr-1 sm:max-h-96 xl:max-h-104 [-webkit-overflow-scrolling:touch]"
+              aria-label={t('teacher.panel.pendingTasksTitle')}
+            >
+              {pendingTasks.map((row, idx) => {
+                const kindLabel =
+                  row.kind === 'peer'
+                    ? t('teacher.panel.pendingTaskKindPeer')
+                    : row.kind === 'challenge'
+                      ? t('teacher.panel.pendingTaskKindChallenge')
+                      : t('teacher.panel.pendingTaskKindHomework');
+                return (
+                  <li key={row.key}>
+                    <Link
+                      href={row.href}
+                      className="flex gap-3 rounded-2xl border border-zinc-200/90 bg-zinc-50/50 p-3 transition hover:border-violet-300/80 hover:bg-violet-50/40 dark:border-zinc-700 dark:bg-zinc-900/30 dark:hover:border-violet-700/50 dark:hover:bg-violet-950/25"
+                    >
+                      <span
+                        className={`flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-xl text-center text-[10px] font-bold leading-tight ${pendingTaskBadgeClass(row.kind, idx)}`}
+                      >
+                        {kindLabel}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold leading-snug text-slate-900 dark:text-white">{row.title}</p>
+                        <p className="mt-0.5 text-sm text-slate-600 dark:text-slate-400">{row.subtitle}</p>
+                      </div>
+                      <span className="shrink-0 self-center text-xs font-bold text-violet-600 dark:text-violet-400">
+                        {t('teacher.panel.pendingTaskGo')}
+                      </span>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
         </KidsCard>
 
         <div className="relative min-h-[220px] overflow-hidden rounded-2xl shadow-xl">
@@ -670,7 +841,7 @@ export default function KidsTeacherPanelPage() {
             <h3 className="font-logo text-xl font-bold">{t('teacher.panel.communityTitle')}</h3>
             <p className="mt-2 max-w-md text-sm leading-relaxed text-white/90">{t('teacher.panel.communityDesc')}</p>
             <Link
-              href={`${pathPrefix}/mesajlar`}
+              href="/topluluklar"
               className="mt-6 inline-flex min-h-12 items-center justify-center rounded-full bg-white px-8 text-sm font-bold text-violet-700 shadow-md transition hover:bg-zinc-50"
             >
               {t('teacher.panel.communityCta')}
