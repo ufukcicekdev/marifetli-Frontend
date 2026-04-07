@@ -24,6 +24,8 @@ import { MediaLightbox } from '@/src/components/media-lightbox';
 import { MediaSlider } from '@/src/components/media-slider';
 import type { MediaItem } from '@/src/lib/extract-media';
 import { useKidsI18n } from '@/src/providers/kids-language-provider';
+import { effectiveAnnouncementCategory } from '@/src/lib/kids-announcements-shared';
+import { KidsStudentAnnouncementsView } from '@/src/components/kids/kids-student-announcements';
 
 const ANNOUNCEMENT_IMAGE_MAX_BYTES = 10 * 1024 * 1024;
 const ANNOUNCEMENT_DOCUMENT_MAX_BYTES = 20 * 1024 * 1024;
@@ -49,27 +51,6 @@ function styleFromCategory(
     label: translate('announcements.catGeneral'),
     pillClass: 'bg-violet-100 text-violet-800 ring-violet-200/80 dark:bg-violet-950/50 dark:text-violet-100 dark:ring-violet-800/60',
   };
-}
-
-/** Rozet ve liste filtresi için aynı kategori (API’de yoksa başlık/id ile legacy) */
-function effectiveAnnouncementCategory(a: {
-  id: number;
-  title: string;
-  category?: KidsAnnouncementCategory | null;
-}): KidsAnnouncementCategory {
-  const c = a.category;
-  if (c === 'event' || c === 'info' || c === 'general') return c;
-  const title = a.title || '';
-  if (/etkinlik|gösteri|gosteri|konser|yarışma|yarisma|gezi|şenlik|senlik|festival/i.test(title)) {
-    return 'event';
-  }
-  if (/bilgi|hatırlatma|hatirlatma|toplantı|toplanti|açıklama|aciklama|bildiri/i.test(title)) {
-    return 'info';
-  }
-  const m = Math.abs(a.id) % 3;
-  if (m === 0) return 'event';
-  if (m === 1) return 'info';
-  return 'general';
 }
 
 function announcementCategoryStyle(
@@ -521,6 +502,10 @@ export default function KidsAnnouncementsPage() {
 
   if (authLoading || !user) {
     return <p className="text-center text-sm text-violet-800 dark:text-violet-200">{t('common.loading')}</p>;
+  }
+
+  if (user.role === 'student') {
+    return <KidsStudentAnnouncementsView pathPrefix={pathPrefix} />;
   }
 
   return (

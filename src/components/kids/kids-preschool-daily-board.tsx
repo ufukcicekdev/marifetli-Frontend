@@ -220,8 +220,11 @@ export function KidsPreschoolDailyBoard({
     setNoteForStudent(null);
   }, [kgPatchField, noteForStudent]);
 
+  const veliReportButtonClass =
+    'flex w-full items-center justify-center gap-2 rounded-full border-2 border-violet-400/50 bg-gradient-to-r from-violet-600 via-violet-500 to-cyan-500 py-3.5 text-sm font-black text-white shadow-lg shadow-violet-500/35 transition active:scale-[0.99] disabled:opacity-50 dark:border-violet-700 dark:from-violet-700 dark:via-violet-600 dark:to-cyan-600 dark:shadow-black/40';
+
   return (
-    <div className="relative pb-28 sm:pb-32">
+    <div className="relative pb-6 sm:pb-8">
       <div className="rounded-3xl border border-zinc-100 bg-white p-5 shadow-lg dark:border-zinc-800 dark:bg-zinc-900 sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
@@ -470,6 +473,7 @@ export function KidsPreschoolDailyBoard({
       ) : null}
 
       {kgBoard && kgBoard.rows.length > 0 ? (
+        <>
         <ul className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:gap-6">
           {kgBoard.rows.map((row) => {
             const st = row.student;
@@ -661,6 +665,20 @@ export function KidsPreschoolDailyBoard({
             );
           })}
         </ul>
+        <div className="mt-8 border-t border-zinc-200/90 pt-6 dark:border-zinc-700">
+          <div className="mx-auto w-full max-w-md">
+            <button
+              type="button"
+              disabled={kgBulkBusy || kgLoading}
+              onClick={() => setEndDayModalOpen(true)}
+              className={veliReportButtonClass}
+            >
+              <Send className="h-5 w-5 shrink-0" strokeWidth={2.5} aria-hidden />
+              {kgBulkBusy ? t('teacherClass.kindergarten.bulkWorking') : t('teacherClass.kindergarten.fabEndDay')}
+            </button>
+          </div>
+        </div>
+        </>
       ) : null}
 
       {endDayModalOpen ? (
@@ -724,21 +742,6 @@ export function KidsPreschoolDailyBoard({
         </KidsCenteredModal>
       ) : null}
 
-      {kgBoard && kgBoard.rows.length > 0 ? (
-        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2">
-          <div className="pointer-events-auto w-full max-w-md">
-            <button
-              type="button"
-              disabled={kgBulkBusy || kgLoading}
-              onClick={() => setEndDayModalOpen(true)}
-              className="flex w-full items-center justify-center gap-2 rounded-full border-2 border-violet-400/50 bg-gradient-to-r from-violet-600 via-violet-500 to-cyan-500 py-3.5 text-sm font-black text-white shadow-lg shadow-violet-500/35 transition active:scale-[0.99] disabled:opacity-50 dark:border-violet-700 dark:from-violet-700 dark:via-violet-600 dark:to-cyan-600 dark:shadow-black/40"
-            >
-              <Send className="h-5 w-5 shrink-0" strokeWidth={2.5} aria-hidden />
-              {kgBulkBusy ? t('teacherClass.kindergarten.bulkWorking') : t('teacherClass.kindergarten.fabEndDay')}
-            </button>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

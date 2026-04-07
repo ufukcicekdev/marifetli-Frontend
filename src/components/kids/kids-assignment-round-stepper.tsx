@@ -11,6 +11,10 @@ type Props = {
   onSelectRound: (round: number) => void;
   /** Form kilitliyse tıklamayı kapat */
   disableNavigation?: boolean;
+  /** true: öğrenci taslak doldururken tüm turlara tıklanabilir (sıra kilidi yok). */
+  freeNavigate?: boolean;
+  /** Varsa üst açıklama metni (i18n; {n} yerine tur sayısı). */
+  composeHint?: string;
 };
 
 function slotDone(slots: KidsAssignmentRoundSlot[], r: number): boolean {
@@ -37,21 +41,26 @@ export function KidsAssignmentRoundStepper({
   gateOpen,
   onSelectRound,
   disableNavigation,
+  freeNavigate,
+  composeHint,
 }: Props) {
   if (totalRounds <= 1) return null;
 
   return (
     <div className="mt-4">
       <p className="text-xs font-bold text-violet-800 dark:text-violet-200">
-        Bu konu için {totalRounds} ayrı challenge adımı var. Her adımı sırayla tamamlayıp kaydet; bir sonraki adım öncekine
-        bağlıdır.
+        {composeHint ??
+          (freeNavigate
+            ? `Bu konu için ${totalRounds} ayrı adım var. Her adımı doldurup ileri–geri gezinebilirsin; en sonda tek seferde göndereceksin.`
+            : `Bu konu için ${totalRounds} ayrı challenge adımı var. Her adımı sırayla tamamlayıp kaydet; bir sonraki adım öncekine bağlıdır.`)}
       </p>
       <div className="mt-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:thin]">
         <ol className="flex min-w-min list-none items-center gap-1 px-0.5 sm:gap-2" aria-label="Challenge adımları">
           {Array.from({ length: totalRounds }, (_, i) => i + 1).map((r, idx) => {
             const done = slotDone(roundSlots, r);
             const active = r === activeRound;
-            const allowed = canNavigateToAssignmentRound(r, roundSlots, totalRounds, gateOpen);
+            const allowed =
+              freeNavigate && gateOpen ? true : canNavigateToAssignmentRound(r, roundSlots, totalRounds, gateOpen);
             const locked = !allowed && gateOpen;
             const blocked = Boolean(disableNavigation) || locked;
 
