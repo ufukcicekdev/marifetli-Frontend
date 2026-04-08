@@ -9,7 +9,7 @@
     "last 2 Edge versions"
   ],
   "scripts": {
-    "postinstall": "node -e \"const fs=require('fs'),p=require('path');const s=p.join('node_modules','pdfjs-dist','build','pdf.worker.min.mjs');const d=p.join('public','pdf.worker.min.mjs');if(fs.existsSync(s))fs.copyFileSync(s,d);\"",
+    "postinstall": "node scripts/copy-pdf-worker.cjs",
     "dev": "next dev --port 3000 --hostname 127.0.0.1",
     "build": "next build",
     "start": "next start",
