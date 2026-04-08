@@ -8,15 +8,20 @@ import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import tr from '@/language/tr.json';
 import en from '@/language/en.json';
 import ge from '@/language/ge.json';
+import { kidsTeacherTestsUiByLang } from '@/language/kids-teacher-tests-ui';
 
 const KIDS_LANGUAGE_STORAGE_KEY = 'marifetli_kids_language';
 
 type Dictionary = Record<string, string>;
 
+function mergeTeacherTestsUi(base: Dictionary, lang: KidsLanguageCode): Dictionary {
+  return { ...base, ...kidsTeacherTestsUiByLang[lang] };
+}
+
 const dictionaries: Record<KidsLanguageCode, Dictionary> = {
-  tr: tr as Dictionary,
-  en: en as Dictionary,
-  ge: ge as Dictionary,
+  tr: mergeTeacherTestsUi(tr as Dictionary, 'tr'),
+  en: mergeTeacherTestsUi(en as Dictionary, 'en'),
+  ge: mergeTeacherTestsUi(ge as Dictionary, 'ge'),
 };
 
 function normalizeLanguage(input: string | null | undefined): KidsLanguageCode {

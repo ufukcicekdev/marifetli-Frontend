@@ -5,6 +5,7 @@ import {
   BookOpen,
   Brain,
   ClipboardList,
+  FileText,
   Flame,
   FolderOpen,
   Gamepad2,
@@ -55,7 +56,8 @@ export type NavIconName =
   | 'login'
   | 'site'
   | 'homework'
-  | 'tests';
+  | 'tests'
+  | 'documents';
 
 const ICON_COLOR: Record<NavIconName, string> = {
   home: 'text-rose-500',
@@ -83,6 +85,7 @@ const ICON_COLOR: Record<NavIconName, string> = {
   announce: 'text-rose-600',
   homework: 'text-orange-500',
   tests: 'text-sky-600',
+  documents: 'text-violet-500',
   login: 'text-violet-600',
   site: 'text-emerald-600',
 };
@@ -141,6 +144,8 @@ export function NavIcon({ name, className = 'h-4 w-4' }: { name: NavIconName; cl
       return <ClipboardList className={cls} aria-hidden />;
     case 'tests':
       return <ListChecks className={cls} aria-hidden />;
+    case 'documents':
+      return <FileText className={cls} aria-hidden />;
     case 'announce':
       return <Megaphone className={cls} aria-hidden />;
     case 'login':

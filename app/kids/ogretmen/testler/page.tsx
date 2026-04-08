@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { BarChart3, Clock, FileUp, Plus, Send } from 'lucide-react';
+import { BarChart3, Clock, FileUp, ImagePlus, Plus, Send } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import {
@@ -16,12 +16,47 @@ import {
   kidsPatchTest,
   type KidsClass,
   type KidsTest,
+  type KidsTestQuestionFormat,
 } from '@/src/lib/kids-api';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
+import { kidsPdfFileToPngFiles } from '@/src/lib/kids-pdf-to-images';
 import { MediaSlider } from '@/src/components/media-slider';
 import type { MediaItem } from '@/src/lib/extract-media';
 import { KidsCenteredModal, KidsPrimaryButton, KidsSecondaryButton, KidsSelect } from '@/src/components/kids/kids-ui';
 import { useKidsI18n } from '@/src/providers/kids-language-provider';
+
+const QUESTION_ILLUSTRATION_MAX_BYTES = 5 * 1024 * 1024;
+
+function QuestionStemIllustrationPreview({
+  file,
+  url,
+  cleared,
+}: {
+  file: File | null;
+  url: string | null;
+  cleared: boolean;
+}) {
+  const [blob, setBlob] = useState<string | null>(null);
+  useEffect(() => {
+    if (!file) {
+      setBlob(null);
+      return;
+    }
+    const u = URL.createObjectURL(file);
+    setBlob(u);
+    return () => URL.revokeObjectURL(u);
+  }, [file]);
+  if (cleared) return null;
+  const src = file ? blob : url;
+  if (!src) return null;
+  return (
+    <img
+      src={src}
+      alt=""
+      className="mt-2 max-h-52 w-full rounded-xl border border-violet-200 object-contain dark:border-violet-700"
+    />
+  );
+}
 
 function newPassageLocalId(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -41,6 +76,8 @@ type DraftQuestion = {
   stem: string;
   topic: string;
   subtopic: string;
+  question_format: KidsTestQuestionFormat;
+  constructed_answer: string;
   choices: { key: string; text: string }[];
   correct_choice_key: string;
   points: number;
@@ -48,9 +85,17 @@ type DraftQuestion = {
   source_page_order: number;
   /** Yerel metin kartı kimliği; kayıtta sıraya çevrilir. */
   reading_passage_id: string | null;
+  /** Sunucudan gelen soru görseli URL’si (kaydetmeden önce önizleme). */
+  illustration_url: string | null;
+  /** Yeni seçilen görsel (multipart ile gönderilir). */
+  illustration_file: File | null;
+  /** Sunucudaki görsel kaldırılsın mı (PATCH clear bayrağı). */
+  illustration_cleared: boolean;
 };
 
 const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
+const MAX_PDF_BYTES = 30 * 1024 * 1024;
+const MAX_SOURCE_PAGES = 10;
 
 export default function KidsTeacherTestsPage() {
   const router = useRouter();
@@ -78,7 +123,9 @@ export default function KidsTeacherTestsPage() {
   const [pendingDeleteTestId, setPendingDeleteTestId] = useState<number | null>(null);
   const [deletingTest, setDeletingTest] = useState(false);
   const [uploadDragActive, setUploadDragActive] = useState(false);
+  const [pdfConverting, setPdfConverting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const imagesRef = useRef<File[]>([]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -102,6 +149,10 @@ export default function KidsTeacherTestsPage() {
       }
     })();
   }, [authLoading, user, router, pathPrefix, t]);
+
+  useEffect(() => {
+    imagesRef.current = images;
+  }, [images]);
 
   const myTestOptions = useMemo(
     () => myTests.map((t) => ({ value: String(t.id), label: t.title })),
@@ -156,26 +207,106 @@ export default function KidsTeacherTestsPage() {
     };
   }, [uploadPreviewItems]);
 
-  function appendImages(newFiles: File[]) {
+  async function appendUploadFiles(newFiles: File[]) {
     if (newFiles.length === 0) return;
-    const valid = newFiles.filter((f) => f.size > 0 && f.size <= MAX_IMAGE_BYTES);
-    if (valid.length !== newFiles.length) {
+    const imageFiles: File[] = [];
+    const pdfFiles: File[] = [];
+    for (const f of newFiles) {
+      const ty = (f.type || '').toLowerCase();
+      const nm = f.name.toLowerCase();
+      if (ty === 'application/pdf' || nm.endsWith('.pdf')) {
+        pdfFiles.push(f);
+      } else if (ty.startsWith('image/')) {
+        imageFiles.push(f);
+      }
+    }
+    if (imageFiles.length === 0 && pdfFiles.length === 0) {
+      toast.error(t('tests.teacherMain.unsupportedFileType'));
+      return;
+    }
+
+    let next = [...imagesRef.current];
+
+    const validImgs = imageFiles.filter((f) => f.size > 0 && f.size <= MAX_IMAGE_BYTES);
+    if (validImgs.length !== imageFiles.length) {
       toast.error(t('tests.teacherMain.imageSizeError'));
     }
-    setImages((prev) => [...prev, ...valid].slice(0, 10));
+    for (const f of validImgs) {
+      if (next.length >= MAX_SOURCE_PAGES) break;
+      next.push(f);
+    }
+
+    for (const pdf of pdfFiles) {
+      if (next.length >= MAX_SOURCE_PAGES) {
+        toast.error(t('tests.teacherMain.maxSourcePagesReached'));
+        break;
+      }
+      if (pdf.size > MAX_PDF_BYTES) {
+        toast.error(t('tests.teacherMain.pdfTooLarge'));
+        continue;
+      }
+      setPdfConverting(true);
+      try {
+        const room = MAX_SOURCE_PAGES - next.length;
+        const pngs = await kidsPdfFileToPngFiles(pdf, { maxPages: room });
+        for (const p of pngs) {
+          if (p.size > MAX_IMAGE_BYTES) continue;
+          if (next.length >= MAX_SOURCE_PAGES) break;
+          next.push(p);
+        }
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : t('tests.teacherMain.pdfConvertFailed'));
+      } finally {
+        setPdfConverting(false);
+      }
+    }
+
+    setImages(next.slice(0, MAX_SOURCE_PAGES));
   }
 
   function onUploadDrop(e: React.DragEvent) {
     e.preventDefault();
     setUploadDragActive(false);
-    const picked = Array.from(e.dataTransfer.files || []).filter((f) => (f.type || '').startsWith('image/'));
-    appendImages(picked);
+    const all = Array.from(e.dataTransfer.files || []);
+    void appendUploadFiles(all);
   }
 
   function setQuestionField(index: number, patch: Partial<DraftQuestion>) {
     setQuestions((prev) => {
       const next = [...prev];
       next[index] = { ...next[index], ...patch };
+      return next;
+    });
+  }
+
+  const MC_MAX_CHOICES = 5;
+  const MC_MIN_CHOICES = 2;
+
+  function addMcChoice(qIdx: number) {
+    setQuestions((prev) => {
+      const q = prev[qIdx];
+      if (!q || q.question_format !== 'multiple_choice') return prev;
+      if (q.choices.length >= MC_MAX_CHOICES) return prev;
+      const nextKey = String.fromCharCode(65 + q.choices.length);
+      const next = [...prev];
+      next[qIdx] = { ...q, choices: [...q.choices, { key: nextKey, text: '' }] };
+      return next;
+    });
+  }
+
+  function removeLastMcChoice(qIdx: number) {
+    setQuestions((prev) => {
+      const q = prev[qIdx];
+      if (!q || q.question_format !== 'multiple_choice') return prev;
+      if (q.choices.length <= MC_MIN_CHOICES) return prev;
+      const dropped = q.choices[q.choices.length - 1]!;
+      const nextChoices = q.choices.slice(0, -1);
+      let correct_choice_key = q.correct_choice_key;
+      if ((correct_choice_key || '').trim().toUpperCase() === dropped.key) {
+        correct_choice_key = '';
+      }
+      const next = [...prev];
+      next[qIdx] = { ...q, choices: nextChoices, correct_choice_key };
       return next;
     });
   }
@@ -219,6 +350,8 @@ export default function KidsTeacherTestsPage() {
           stem: '',
           topic: '',
           subtopic: '',
+          question_format: 'multiple_choice',
+          constructed_answer: '',
           choices: [
             { key: 'A', text: '' },
             { key: 'B', text: '' },
@@ -228,6 +361,9 @@ export default function KidsTeacherTestsPage() {
           points: 1,
           source_page_order: 1,
           reading_passage_id: onlyPassageId,
+          illustration_url: null,
+          illustration_file: null,
+          illustration_cleared: false,
         },
       ];
     });
@@ -264,24 +400,33 @@ export default function KidsTeacherTestsPage() {
     );
     const idByOrder = new Map(plist.map((p) => [p.order, `db-${p.id}`]));
     setQuestions(
-      (row.questions || []).map((q, idx) => ({
-        order: q.order || idx + 1,
-        stem: q.stem || '',
-        topic: q.topic || '',
-        subtopic: q.subtopic || '',
-        choices: (q.choices || []).map((c, cIdx) => ({
-          key: c.key || String.fromCharCode(65 + cIdx),
-          text: c.text || '',
-        })),
-        correct_choice_key: q.correct_choice_key || '',
-        points: q.points || 1,
-        source_page_order: q.source_page_order ?? 1,
-        reading_passage_id: (() => {
-          const po = q.reading_passage_order;
-          if (po == null) return null;
-          return idByOrder.get(po) ?? null;
-        })(),
-      })),
+      (row.questions || []).map((q, idx) => {
+        const fmt: KidsTestQuestionFormat =
+          q.question_format === 'constructed' ? 'constructed' : 'multiple_choice';
+        return {
+          order: q.order || idx + 1,
+          stem: q.stem || '',
+          topic: q.topic || '',
+          subtopic: q.subtopic || '',
+          question_format: fmt,
+          constructed_answer: (q.constructed_answer_display || '').trim(),
+          choices: (q.choices || []).map((c, cIdx) => ({
+            key: c.key || String.fromCharCode(65 + cIdx),
+            text: c.text || '',
+          })),
+          correct_choice_key: q.correct_choice_key || '',
+          points: q.points || 1,
+          source_page_order: q.source_page_order ?? 1,
+          reading_passage_id: (() => {
+            const po = q.reading_passage_order;
+            if (po == null) return null;
+            return idByOrder.get(po) ?? null;
+          })(),
+          illustration_url: q.illustration_url ?? null,
+          illustration_file: null,
+          illustration_cleared: false,
+        };
+      }),
     );
   }
 
@@ -399,11 +544,16 @@ export default function KidsTeacherTestsPage() {
           let link: string | null = null;
           if (ro != null) link = orderToId.get(ro) ?? null;
           if (link == null && builtPassages.length === 1) link = builtPassages[0]!.id;
+          const fmt: KidsTestQuestionFormat =
+            q.question_format === 'constructed' ? 'constructed' : 'multiple_choice';
+          const ca = (q.constructed_answer || '').trim();
           return {
             order: q.order || idx + 1,
             stem: q.stem || '',
             topic: q.topic || '',
             subtopic: q.subtopic || '',
+            question_format: fmt,
+            constructed_answer: ca,
             choices: (q.choices || []).map((c, cIdx) => ({
               key: c.key || String.fromCharCode(65 + cIdx),
               text: c.text || '',
@@ -412,6 +562,9 @@ export default function KidsTeacherTestsPage() {
             points: q.points || 1,
             source_page_order: typeof q.source_page_order === 'number' && q.source_page_order >= 1 ? q.source_page_order : 1,
             reading_passage_id: link,
+            illustration_url: null,
+            illustration_file: null,
+            illustration_cleared: false,
           };
         }),
       );
@@ -432,7 +585,11 @@ export default function KidsTeacherTestsPage() {
       toast.error(t('tests.teacherMain.needAtLeastOneQuestion'));
       return;
     }
-    const hasInvalid = questions.some((q) => !q.stem.trim() || q.choices.length < 2 || !q.correct_choice_key);
+    const hasInvalid = questions.some((q) => {
+      if (!q.stem.trim()) return true;
+      if (q.question_format === 'constructed') return !q.constructed_answer.trim();
+      return q.choices.length < 2 || !q.correct_choice_key;
+    });
     if (hasInvalid) {
       toast.error(t('tests.teacherMain.invalidQuestions'));
       return;
@@ -451,6 +608,8 @@ export default function KidsTeacherTestsPage() {
           stem: string;
           topic: string;
           subtopic: string;
+          question_format: KidsTestQuestionFormat;
+          constructed_answer?: string;
           choices: { key: string; text: string }[];
           correct_choice_key: string;
           points: number;
@@ -461,13 +620,17 @@ export default function KidsTeacherTestsPage() {
           stem: q.stem.trim(),
           topic: q.topic.trim(),
           subtopic: q.subtopic.trim(),
-          choices: q.choices.map((c, cIdx) => ({
+          question_format: q.question_format,
+          choices: q.question_format === 'constructed' ? [] : q.choices.map((c, cIdx) => ({
             key: c.key || String.fromCharCode(65 + cIdx),
             text: c.text.trim(),
           })),
-          correct_choice_key: q.correct_choice_key,
+          correct_choice_key: q.question_format === 'constructed' ? '' : q.correct_choice_key,
           points: q.points || 1,
         };
+        if (q.question_format === 'constructed') {
+          piece.constructed_answer = q.constructed_answer.trim();
+        }
         const rp = q.reading_passage_id ? passageIdToOrder.get(q.reading_passage_id) : undefined;
         if (rp != null) piece.reading_passage_order = rp;
         if (sourcePageCount > 1) {
@@ -482,10 +645,24 @@ export default function KidsTeacherTestsPage() {
         passages: passagesPayload,
         questions: questionsPayload,
       };
+      const questionIllustrationFiles = questions
+        .map((q, idx) => ({ order: idx + 1, file: q.illustration_file }))
+        .filter((x): x is { order: number; file: File } => x.file != null);
+      const questionIllustrationClearOrders = questions.reduce<number[]>((acc, q, idx) => {
+        if (q.illustration_cleared && !q.illustration_file && Boolean(q.illustration_url)) acc.push(idx + 1);
+        return acc;
+      }, []);
+      const illustrationFileOpts =
+        questionIllustrationFiles.length > 0 || questionIllustrationClearOrders.length > 0
+          ? {
+              questionIllustrations: questionIllustrationFiles,
+              questionIllustrationClearOrders,
+            }
+          : undefined;
       const editingTestId = Number(workFromTestId);
       const isEditing = Number.isFinite(editingTestId) && editingTestId > 0;
       if (isEditing) {
-        const updated = await kidsPatchTest(editingTestId, payload);
+        const updated = await kidsPatchTest(editingTestId, payload, illustrationFileOpts);
         toast.success(t('tests.teacherMain.updated'));
         setMyTests((prev) => [updated, ...prev.filter((x) => x.id !== updated.id)]);
         setWorkFromTestId(String(updated.id));
@@ -493,6 +670,8 @@ export default function KidsTeacherTestsPage() {
         const created = await kidsCreateStandaloneTest({
           ...payload,
           source_images: images,
+          questionIllustrationFiles:
+            questionIllustrationFiles.length > 0 ? questionIllustrationFiles : undefined,
         });
         toast.success(t('tests.teacherMain.savedAndCanDistribute'));
         setMyTests((prev) => [created, ...prev.filter((x) => x.id !== created.id)]);
@@ -609,11 +788,11 @@ export default function KidsTeacherTestsPage() {
             <input
               ref={fileInputRef}
               type="file"
-              accept="image/*"
+              accept="image/*,application/pdf"
               multiple
               className="hidden"
               onChange={(e) => {
-                appendImages(Array.from(e.target.files || []));
+                void appendUploadFiles(Array.from(e.target.files || []));
                 e.currentTarget.value = '';
               }}
             />
@@ -711,9 +890,14 @@ export default function KidsTeacherTestsPage() {
                 </div>
               </div>
             ) : null}
+            {pdfConverting ? (
+              <p className="mt-3 text-center text-xs font-semibold text-violet-800 dark:text-violet-200">
+                {t('tests.teacherMain.pdfConverting')}
+              </p>
+            ) : null}
             <button
               type="button"
-              disabled={extracting || images.length === 0}
+              disabled={extracting || pdfConverting || images.length === 0}
               onClick={() => void onExtract()}
               className="mt-4 w-full rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-4 py-3 text-sm font-bold text-white shadow-md shadow-violet-500/25 transition hover:from-violet-500 hover:to-fuchsia-500 disabled:opacity-50"
             >
@@ -835,53 +1019,181 @@ export default function KidsTeacherTestsPage() {
                       {t('tests.teacherMain.deleteQuestion')}
                     </button>
                   </div>
+                  <div className="ml-12 mt-2 w-[calc(100%-3rem)] max-w-xl">
+                    <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      {t('tests.teacherMain.questionIllustrationLabel')}
+                    </p>
+                    <QuestionStemIllustrationPreview
+                      file={q.illustration_file}
+                      url={q.illustration_url}
+                      cleared={q.illustration_cleared}
+                    />
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <input
+                        id={`q-ill-${qIdx}`}
+                        type="file"
+                        accept="image/*"
+                        className="sr-only"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          e.target.value = '';
+                          if (!f) return;
+                          if (f.size > QUESTION_ILLUSTRATION_MAX_BYTES) {
+                            toast.error(t('tests.teacherMain.questionIllustrationTooBig'));
+                            return;
+                          }
+                          setQuestionField(qIdx, { illustration_file: f, illustration_cleared: false });
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => document.getElementById(`q-ill-${qIdx}`)?.click()}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-violet-300 bg-violet-50 px-3 py-1 text-xs font-bold text-violet-900 shadow-sm transition hover:bg-violet-100 dark:border-violet-600 dark:bg-violet-950/40 dark:text-violet-100 dark:hover:bg-violet-900/50"
+                      >
+                        <ImagePlus className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                        {t('tests.teacherMain.pickQuestionIllustration')}
+                      </button>
+                      {q.illustration_file || (q.illustration_url && !q.illustration_cleared) ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setQuestions((prev) =>
+                              prev.map((qq, i) => {
+                                if (i !== qIdx) return qq;
+                                if (qq.illustration_file) return { ...qq, illustration_file: null };
+                                if (qq.illustration_url) return { ...qq, illustration_cleared: true };
+                                return qq;
+                              }),
+                            );
+                          }}
+                          className="rounded-full border border-zinc-300 bg-white px-3 py-1 text-xs font-bold text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-600 dark:bg-gray-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                        >
+                          {t('tests.teacherMain.removeQuestionIllustration')}
+                        </button>
+                      ) : null}
+                    </div>
+                    <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                      {t('tests.teacherMain.questionIllustrationHint')}
+                    </p>
+                  </div>
                   <textarea
                     value={q.stem}
                     onChange={(e) => setQuestionField(qIdx, { stem: e.target.value })}
                     rows={2}
                     className="ml-12 mt-2 w-[calc(100%-3rem)] rounded-xl border border-violet-200 bg-white px-3 py-2 text-sm dark:border-violet-700 dark:bg-gray-800"
                   />
-                  <div className="ml-12 mt-3 grid gap-2 md:grid-cols-2">
-                    {q.choices.map((c, cIdx) => (
-                      <div
-                        key={`${qIdx}-${cIdx}`}
-                        className={`rounded-xl border-2 bg-white px-3 py-2 transition dark:bg-gray-900/80 ${
-                          q.correct_choice_key === c.key
-                            ? 'border-violet-500 shadow-[0_0_0_3px_rgba(139,92,246,0.2)] dark:border-violet-400'
-                            : 'border-zinc-200 dark:border-zinc-700'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-800 dark:bg-violet-900/60 dark:text-violet-200">
-                            {c.key}
-                          </span>
-                          <input
-                            value={c.text}
-                            onChange={(e) => {
-                              const nextChoices = [...q.choices];
-                              nextChoices[cIdx] = { ...nextChoices[cIdx], text: e.target.value };
-                              setQuestionField(qIdx, { choices: nextChoices });
-                            }}
-                            className="min-w-0 flex-1 border-0 bg-transparent py-1 text-sm text-slate-900 outline-none ring-0 focus:ring-0 dark:text-slate-100"
+                  <div className="ml-12 mt-3 w-full max-w-md">
+                    <p className="mb-1 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      {t('tests.teacherMain.questionFormatLabel')}
+                    </p>
+                    <KidsSelect
+                      value={q.question_format}
+                      onChange={(next) => {
+                        const nf = (next === 'constructed' ? 'constructed' : 'multiple_choice') as KidsTestQuestionFormat;
+                        if (nf === 'constructed') {
+                          setQuestionField(qIdx, { question_format: 'constructed', correct_choice_key: '' });
+                        } else {
+                          setQuestionField(qIdx, {
+                            question_format: 'multiple_choice',
+                            choices:
+                              q.choices.length >= 2
+                                ? q.choices
+                                : [
+                                    { key: 'A', text: '' },
+                                    { key: 'B', text: '' },
+                                    { key: 'C', text: '' },
+                                  ],
+                          });
+                        }
+                      }}
+                      options={[
+                        { value: 'multiple_choice', label: t('tests.teacherMain.formatMc') },
+                        { value: 'constructed', label: t('tests.teacherMain.formatConstructed') },
+                      ]}
+                      searchable={false}
+                    />
+                  </div>
+                  {q.question_format === 'constructed' ? (
+                    <label className="ml-12 mt-3 block w-[calc(100%-3rem)] max-w-xl">
+                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        {t('tests.teacherMain.constructedAnswerLabel')}
+                      </span>
+                      <input
+                        value={q.constructed_answer}
+                        onChange={(e) => setQuestionField(qIdx, { constructed_answer: e.target.value })}
+                        className="mt-1 w-full rounded-xl border border-violet-200 bg-white px-3 py-2 text-sm dark:border-violet-700 dark:bg-gray-800"
+                        placeholder="ör. 30"
+                      />
+                      <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                        {t('tests.teacherMain.constructedAnswerHint')}
+                      </p>
+                    </label>
+                  ) : (
+                    <>
+                      <div className="ml-12 mt-3 grid gap-2 md:grid-cols-2">
+                        {q.choices.map((c, cIdx) => (
+                          <div
+                            key={`${qIdx}-${c.key}`}
+                            className={`rounded-xl border-2 bg-white px-3 py-2 transition dark:bg-gray-900/80 ${
+                              q.correct_choice_key === c.key
+                                ? 'border-violet-500 shadow-[0_0_0_3px_rgba(139,92,246,0.2)] dark:border-violet-400'
+                                : 'border-zinc-200 dark:border-zinc-700'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-800 dark:bg-violet-900/60 dark:text-violet-200">
+                                {c.key}
+                              </span>
+                              <input
+                                value={c.text}
+                                onChange={(e) => {
+                                  const nextChoices = [...q.choices];
+                                  nextChoices[cIdx] = { ...nextChoices[cIdx], text: e.target.value };
+                                  setQuestionField(qIdx, { choices: nextChoices });
+                                }}
+                                className="min-w-0 flex-1 border-0 bg-transparent py-1 text-sm text-slate-900 outline-none ring-0 focus:ring-0 dark:text-slate-100"
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="ml-12 mt-2 flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={q.choices.length >= MC_MAX_CHOICES}
+                          onClick={() => addMcChoice(qIdx)}
+                          className="rounded-full border border-violet-300 bg-violet-50 px-3 py-1 text-xs font-bold text-violet-900 transition hover:bg-violet-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-violet-600 dark:bg-violet-950/40 dark:text-violet-100 dark:hover:bg-violet-900/50"
+                        >
+                          {t('tests.teacherMain.addMcChoice')}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={q.choices.length <= MC_MIN_CHOICES}
+                          onClick={() => removeLastMcChoice(qIdx)}
+                          className="rounded-full border border-zinc-300 bg-white px-3 py-1 text-xs font-bold text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                        >
+                          {t('tests.teacherMain.removeLastMcChoice')}
+                        </button>
+                        <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                          {t('tests.teacherMain.mcChoiceCountHint').replace('{n}', String(q.choices.length))}
+                        </span>
+                      </div>
+                      <div className="ml-12 mt-3 flex flex-wrap items-center gap-2 text-sm">
+                        <span className="text-slate-600 dark:text-slate-400">{t('tests.teacherMain.correctChoice')}:</span>
+                        <div className="w-28">
+                          <KidsSelect
+                            value={q.correct_choice_key || ''}
+                            onChange={(next) => setQuestionField(qIdx, { correct_choice_key: next })}
+                            options={[
+                              { value: '', label: t('tests.teacherMain.select') },
+                              ...q.choices.map((c) => ({ value: c.key, label: c.key })),
+                            ]}
+                            searchable={false}
                           />
                         </div>
                       </div>
-                    ))}
-                  </div>
-                  <div className="ml-12 mt-3 flex flex-wrap items-center gap-2 text-sm">
-                    <span className="text-slate-600 dark:text-slate-400">{t('tests.teacherMain.correctChoice')}:</span>
-                    <div className="w-28">
-                      <KidsSelect
-                        value={q.correct_choice_key || ''}
-                        onChange={(next) => setQuestionField(qIdx, { correct_choice_key: next })}
-                        options={[
-                          { value: '', label: t('tests.teacherMain.select') },
-                          ...q.choices.map((c) => ({ value: c.key, label: c.key })),
-                        ]}
-                        searchable={false}
-                      />
-                    </div>
-                  </div>
+                    </>
+                  )}
                   {passages.length > 0 ? (
                     <div className="ml-12 mt-2">
                       <p className="text-xs text-slate-600 dark:text-slate-400">{t('tests.teacherMain.linkQuestionToPassage')}</p>

@@ -149,7 +149,11 @@ export default async function RootLayout({
         <QueryProvider>
           <RootLayoutShell useSidebar={USE_SIDEBAR}>{children}</RootLayoutShell>
         </QueryProvider>
-        <Toaster position="top-center" toastOptions={{ duration: 3000 }} />
+        <Toaster
+          position="top-center"
+          toastOptions={{ duration: 3000 }}
+          containerStyle={{ zIndex: 200000 }}
+        />
       </body>
     </html>
   );

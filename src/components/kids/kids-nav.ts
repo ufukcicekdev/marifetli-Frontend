@@ -23,6 +23,7 @@ export function kidsNavLinks(
       { href: KIDS_SITE_MANAGEMENT_HREF, labelKey: 'nav.admin', icon: 'admin' },
       { href: `${p}/ogretmen/panel`, labelKey: 'nav.teacherPanel', icon: 'teacher' },
       { href: `${p}/ogretmen/odevler`, labelKey: 'nav.homeworks', icon: 'homework' },
+      { href: `${p}/ogretmen/dokumanlar`, labelKey: 'nav.lessonDocuments', icon: 'documents' },
       { href: `${p}/ogretmen/testler`, labelKey: 'nav.tests', icon: 'tests' },
       { href: `${p}/mesajlar`, labelKey: 'nav.messages', icon: 'messages' },
       { href: `${p}/duyurular`, labelKey: 'nav.announcements', icon: 'announce' },
@@ -41,11 +42,13 @@ export function kidsNavLinks(
   if (role === 'teacher') {
     items.push({ href: `${p}/ogretmen/panel`, labelKey: 'nav.teacherPanel', icon: 'teacher' });
     items.push({ href: `${p}/ogretmen/odevler`, labelKey: 'nav.homeworks', icon: 'homework' });
+    items.push({ href: `${p}/ogretmen/dokumanlar`, labelKey: 'nav.lessonDocuments', icon: 'documents' });
     items.push({ href: `${p}/ogretmen/testler`, labelKey: 'nav.tests', icon: 'tests' });
   }
   if (role === 'student') {
     items.push({ href: `${p}/ogrenci/panel`, labelKey: 'nav.studentPanel', icon: 'student' });
     items.push({ href: `${p}/ogrenci/odevler`, labelKey: 'nav.homeworks', icon: 'homework' });
+    items.push({ href: `${p}/ogrenci/dokumanlar`, labelKey: 'nav.myDocuments', icon: 'documents' });
     items.push({ href: `${p}/ogrenci/testler`, labelKey: 'nav.tests', icon: 'tests' });
     items.push({ href: `${p}/ogrenci/projeler`, labelKey: 'nav.challenges', icon: 'challenge' });
     items.push({ href: `${p}/ogrenci/yarismalar`, labelKey: 'nav.competitions', icon: 'trophy' });

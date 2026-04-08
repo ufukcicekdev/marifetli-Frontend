@@ -568,7 +568,8 @@ export function KidsCenteredModal({
   useLayoutEffect(() => {
     const el = dialogRef.current;
     if (!el) return;
-    if (!el.open) el.showModal();
+    /* showModal() → top layer; toast (react-hot-toast) üstte görünmez. show() ile normal stacking + globals.css z-index. */
+    if (!el.open) el.show();
     return () => {
       el.close();
     };
@@ -604,9 +605,16 @@ export function KidsCenteredModal({
     <dialog
       ref={dialogRef}
       className="kids-dialog-overlay bg-transparent"
+      aria-modal="true"
       onCancel={(e) => {
         e.preventDefault();
         onClose();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          onClose();
+        }
       }}
     >
       <KidsModalDropdownPortalContext.Provider value={dropdownPortalEl}>

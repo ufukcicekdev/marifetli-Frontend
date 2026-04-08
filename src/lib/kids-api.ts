@@ -201,6 +201,52 @@ export type KidsSchool = {
   updated_at: string;
 };
 
+/** Sınıf içi ders dökümanı klasörü. */
+export type KidsClassDocumentFolder = {
+  id: number;
+  parent_id?: number | null;
+  name: string;
+  document_count: number;
+  subfolder_count?: number;
+};
+
+/** Öğretmen paneli: aynı klasör adı farklı sınıflarda birleştirilmiş özet. */
+export type KidsTeacherFolderGrouped = {
+  name: string;
+  document_count: number;
+  total_size_bytes: number;
+  class_names: string[];
+};
+
+export type KidsTeacherFolderFlat = {
+  id: number;
+  kids_class_id: number;
+  parent_id?: number | null;
+  class_name: string;
+  name: string;
+  document_count: number;
+  total_size_bytes: number;
+};
+
+/** Öğretmenin sınıfa dağıttığı ders dökümanı (PDF / DOCX / görsel). */
+export type KidsClassDocument = {
+  id: number;
+  kids_class: number;
+  class_name: string;
+  folder_id: number | null;
+  folder_name: string;
+  folder_path?: string;
+  title: string;
+  description: string;
+  file_url: string;
+  original_name: string;
+  content_type: string;
+  size_bytes: number;
+  file_kind: string;
+  created_at: string;
+  updated_at: string;
+};
+
 /** Okul öncesi (`anasinifi`) ve eski kayıtlar (`kindergarten`): günlük devam / yemek / uyku (aynı API). */
 export type KidsClassKind = 'standard' | 'kindergarten' | 'anasinifi';
 
@@ -1542,6 +1588,143 @@ export async function kidsListClasses(): Promise<KidsClass[]> {
   const res = await kidsAuthorizedFetch('/classes/', { method: 'GET' });
   if (!res.ok) throw new Error('Sınıflar yüklenemedi');
   return res.json() as Promise<KidsClass[]>;
+}
+
+const DOC_MAX_BYTES = 20 * 1024 * 1024;
+
+export async function kidsDistributeClassDocuments(body: {
+  title: string;
+  description?: string;
+  class_ids: number[];
+  file: File;
+  /** Örn. "Matematik/Ünite 1" — her sınıfta zincir oluşturulur. */
+  folder_path?: string;
+  /** @deprecated folder_path kullanın; tek segment için de olur. */
+  folder_name?: string;
+}): Promise<KidsClassDocument[]> {
+  if (!body.file || body.file.size <= 0) throw new Error('Dosya seçin.');
+  if (body.file.size > DOC_MAX_BYTES) throw new Error('Dosya en fazla 20 MB olabilir.');
+  if (!body.class_ids.length) throw new Error('En az bir sınıf seçin.');
+  const fd = new FormData();
+  fd.append('title', body.title.trim());
+  fd.append('description', (body.description ?? '').trim());
+  fd.append('class_ids', JSON.stringify(body.class_ids));
+  const path = (body.folder_path ?? body.folder_name ?? '').trim();
+  if (path) fd.append('folder_path', path);
+  fd.append('file', body.file);
+  const res = await kidsAuthorizedFetch('/teacher/documents/distribute/', { method: 'POST', body: fd });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Döküman dağıtılamadı');
+  return data as KidsClassDocument[];
+}
+
+export async function kidsTeacherRecentDocuments(limit = 30): Promise<KidsClassDocument[]> {
+  const res = await kidsAuthorizedFetch(`/teacher/documents/recent/?limit=${limit}`, { method: 'GET' });
+  if (!res.ok) throw new Error('Dökümanlar yüklenemedi');
+  return res.json() as Promise<KidsClassDocument[]>;
+}
+
+export async function kidsTeacherFoldersOverview(): Promise<{
+  grouped: KidsTeacherFolderGrouped[];
+  flat: KidsTeacherFolderFlat[];
+}> {
+  const res = await kidsAuthorizedFetch('/teacher/documents/folder-overview/', { method: 'GET' });
+  if (!res.ok) throw new Error('Klasör özeti yüklenemedi');
+  return res.json() as Promise<{ grouped: KidsTeacherFolderGrouped[]; flat: KidsTeacherFolderFlat[] }>;
+}
+
+export async function kidsCreateClassDocumentFolder(
+  classId: number,
+  name: string,
+  options?: { parentId?: number | null },
+): Promise<KidsClassDocumentFolder> {
+  const body: { name: string; parent_id?: number } = { name: name.trim() };
+  if (options?.parentId != null) body.parent_id = options.parentId;
+  const res = await kidsAuthorizedFetch(`/classes/${classId}/document-folders/`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Klasör oluşturulamadı');
+  return data as KidsClassDocumentFolder;
+}
+
+export async function kidsDeleteClassDocumentFolder(
+  classId: number,
+  folderId: number,
+  options?: { cascade?: boolean },
+): Promise<void> {
+  const qs = options?.cascade ? '?cascade=1' : '';
+  const res = await kidsAuthorizedFetch(`/classes/${classId}/document-folders/${folderId}/${qs}`, {
+    method: 'DELETE',
+  });
+  if (res.status === 204) return;
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Klasör silinemedi');
+}
+
+export async function kidsListClassDocumentFolders(classId: number): Promise<KidsClassDocumentFolder[]> {
+  const res = await kidsAuthorizedFetch(`/classes/${classId}/document-folders/`, { method: 'GET' });
+  if (!res.ok) throw new Error('Klasörler yüklenemedi');
+  return res.json() as Promise<KidsClassDocumentFolder[]>;
+}
+
+export type KidsClassDocumentBrowseRow = {
+  id: number;
+  name: string;
+  document_count: number;
+  subfolder_count: number;
+};
+
+export async function kidsBrowseClassDocuments(
+  classId: number,
+  folderId?: number | null,
+): Promise<{
+  breadcrumbs: { id: number | null; name: string }[];
+  current_folder_id: number | null;
+  folders: KidsClassDocumentBrowseRow[];
+  documents: KidsClassDocument[];
+}> {
+  const q = folderId != null ? `?folder_id=${folderId}` : '';
+  const res = await kidsAuthorizedFetch(`/classes/${classId}/document-folders/browse${q}`, {
+    method: 'GET',
+  });
+  if (!res.ok) throw new Error('Klasör içeriği yüklenemedi');
+  return res.json() as Promise<{
+    breadcrumbs: { id: number | null; name: string }[];
+    current_folder_id: number | null;
+    folders: KidsClassDocumentBrowseRow[];
+    documents: KidsClassDocument[];
+  }>;
+}
+
+export async function kidsStudentListDocuments(): Promise<KidsClassDocument[]> {
+  const res = await kidsAuthorizedFetch('/student/documents/', { method: 'GET' });
+  if (!res.ok) throw new Error('Dökümanlar yüklenemedi');
+  return res.json() as Promise<KidsClassDocument[]>;
+}
+
+export async function kidsPatchClassDocument(
+  classId: number,
+  documentId: number,
+  body: { title?: string; description?: string; folder_id?: number | null; folder_name?: string },
+): Promise<KidsClassDocument> {
+  const res = await kidsAuthorizedFetch(`/classes/${classId}/documents/${documentId}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Güncellenemedi');
+  return data as KidsClassDocument;
+}
+
+export async function kidsDeleteClassDocument(classId: number, documentId: number): Promise<void> {
+  const res = await kidsAuthorizedFetch(`/classes/${classId}/documents/${documentId}/`, {
+    method: 'DELETE',
+  });
+  if (res.status === 204) return;
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Silinemedi');
 }
 
 export async function kidsListSchools(): Promise<KidsSchool[]> {
@@ -3038,6 +3221,8 @@ export type KidsTestReadingPassage = {
   updated_at?: string;
 };
 
+export type KidsTestQuestionFormat = 'multiple_choice' | 'constructed';
+
 export type KidsTestQuestion = {
   id: number;
   order: number;
@@ -3052,7 +3237,13 @@ export type KidsTestQuestion = {
   /** Kaynak görsel sayfa sırası (1-based), yoksa tek sayfa veya eşleşme yok. */
   source_page_order?: number | null;
   source_image_url?: string | null;
+  /** Soru metninin üstünde gösterilen isteğe bağlı görsel. */
+  illustration_url?: string | null;
   source_meta?: Record<string, unknown>;
+  /** API okuma: `source_meta.question_format` ile uyumlu. */
+  question_format?: KidsTestQuestionFormat;
+  /** Yapılandırılmış cevap sorularında öğretmenin girdiği / AI metni (gösterim). */
+  constructed_answer_display?: string;
 };
 
 export type KidsTest = {
@@ -3204,7 +3395,10 @@ export async function kidsListAnnouncements(
   return Array.isArray(data) ? (data as KidsAnnouncement[]) : [];
 }
 
-export async function kidsExtractTestQuestions(images: File[]): Promise<{
+export async function kidsExtractTestQuestions(
+  images: File[],
+  pdfFile?: File | null,
+): Promise<{
   title: string;
   instructions: string;
   passages: { order: number; title: string; body: string }[];
@@ -3213,6 +3407,8 @@ export async function kidsExtractTestQuestions(images: File[]): Promise<{
     stem: string;
     topic?: string;
     subtopic?: string;
+    question_format?: KidsTestQuestionFormat;
+    constructed_answer?: string;
     choices: { key: string; text: string }[];
     correct_choice_key: string;
     points: number;
@@ -3222,6 +3418,7 @@ export async function kidsExtractTestQuestions(images: File[]): Promise<{
 }> {
   const fd = new FormData();
   for (const image of images) fd.append('images', image);
+  if (pdfFile) fd.append('pdf', pdfFile);
   const res = await kidsAuthorizedFetch('/tests/extract/', {
     method: 'POST',
     body: fd,
@@ -3237,6 +3434,8 @@ export async function kidsExtractTestQuestions(images: File[]): Promise<{
       stem: string;
       topic?: string;
       subtopic?: string;
+      question_format?: KidsTestQuestionFormat;
+      constructed_answer?: string;
       choices: { key: string; text: string }[];
       correct_choice_key: string;
       points: number;
@@ -3259,6 +3458,8 @@ export async function kidsCreateClassTest(
       stem: string;
       topic?: string;
       subtopic?: string;
+      question_format?: KidsTestQuestionFormat;
+      constructed_answer?: string;
       choices: { key: string; text: string }[];
       correct_choice_key: string;
       points?: number;
@@ -3297,6 +3498,8 @@ export async function kidsCreateStandaloneTest(body: {
     stem: string;
     topic?: string;
     subtopic?: string;
+    question_format?: KidsTestQuestionFormat;
+    constructed_answer?: string;
     choices: { key: string; text: string }[];
     correct_choice_key: string;
     points?: number;
@@ -3304,6 +3507,8 @@ export async function kidsCreateStandaloneTest(body: {
     reading_passage_order?: number | null;
   }[];
   source_images?: File[];
+  /** Soru sırası (1-based) ile eşleşen görsel dosyaları */
+  questionIllustrationFiles?: { order: number; file: File }[];
 }): Promise<KidsTest> {
   const fd = new FormData();
   fd.append('title', body.title);
@@ -3313,6 +3518,9 @@ export async function kidsCreateStandaloneTest(body: {
   fd.append('passages', JSON.stringify(body.passages ?? []));
   fd.append('questions', JSON.stringify(body.questions));
   for (const image of body.source_images ?? []) fd.append('source_images', image);
+  for (const { order, file } of body.questionIllustrationFiles ?? []) {
+    fd.append(`question_illustration_${order}`, file);
+  }
   const res = await kidsAuthorizedFetch('/tests/create/', {
     method: 'POST',
     body: fd,
@@ -3382,6 +3590,8 @@ export async function kidsPatchTest(
       stem: string;
       topic?: string;
       subtopic?: string;
+      question_format?: KidsTestQuestionFormat;
+      constructed_answer?: string;
       choices: { key: string; text: string }[];
       correct_choice_key: string;
       points?: number;
@@ -3389,10 +3599,41 @@ export async function kidsPatchTest(
       reading_passage_order?: number | null;
     }[];
   }>,
+  fileOpts?: {
+    questionIllustrations?: { order: number; file: File }[];
+    questionIllustrationClearOrders?: number[];
+  },
 ): Promise<KidsTest> {
+  const useMultipart =
+    (fileOpts?.questionIllustrations?.length ?? 0) > 0 ||
+    (fileOpts?.questionIllustrationClearOrders?.length ?? 0) > 0;
+  if (!useMultipart) {
+    const res = await kidsAuthorizedFetch(`/tests/${testId}/`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Test güncellenemedi');
+    return data as KidsTest;
+  }
+  const fd = new FormData();
+  if (body.title != null) fd.append('title', body.title);
+  if (body.instructions != null) fd.append('instructions', body.instructions);
+  if (body.duration_minutes !== undefined) {
+    fd.append('duration_minutes', body.duration_minutes == null ? '' : String(body.duration_minutes));
+  }
+  if (body.status != null) fd.append('status', body.status);
+  if (body.passages != null) fd.append('passages', JSON.stringify(body.passages));
+  if (body.questions != null) fd.append('questions', JSON.stringify(body.questions));
+  for (const { order, file } of fileOpts?.questionIllustrations ?? []) {
+    fd.append(`question_illustration_${order}`, file);
+  }
+  for (const o of fileOpts?.questionIllustrationClearOrders ?? []) {
+    fd.append(`question_illustration_clear_${o}`, '1');
+  }
   const res = await kidsAuthorizedFetch(`/tests/${testId}/`, {
     method: 'PATCH',
-    body: JSON.stringify(body),
+    body: fd,
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Test güncellenemedi');
@@ -3431,10 +3672,14 @@ export async function kidsStudentGetTest(testId: number): Promise<{
     reading_passage_order?: number | null;
     source_image_url?: string | null;
     source_page_order?: number | null;
-    /** Teslim sonrası: öğrencinin işaretlediği şık (A–E). */
+    illustration_url?: string | null;
+    question_format?: KidsTestQuestionFormat;
+    /** Teslim sonrası: çoktan seçmelide şık (A–E); yazılı cevapta metin. */
     selected_choice_key?: string;
     is_correct?: boolean;
     correct_choice_key?: string | null;
+    /** Teslim sonrası inceleme: beklenen cevap metni (yazılı sorular). */
+    constructed_correct_display?: string;
   }[];
   attempt: KidsTestAttempt | null;
 }> {
@@ -3459,9 +3704,12 @@ export async function kidsStudentGetTest(testId: number): Promise<{
       reading_passage_order?: number | null;
       source_image_url?: string | null;
       source_page_order?: number | null;
+      question_format?: KidsTestQuestionFormat;
+      illustration_url?: string | null;
       selected_choice_key?: string;
       is_correct?: boolean;
       correct_choice_key?: string | null;
+      constructed_correct_display?: string;
     }[];
     attempt: KidsTestAttempt | null;
   };

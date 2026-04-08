@@ -200,71 +200,121 @@ export default function KidsStudentTestSolvePage() {
 
   const renderQuestionCard = useCallback(
     (q: StudentTestQuestion) => {
-      const chosen =
+      const isConstructed = q.question_format === 'constructed';
+      let chosenRaw =
         submitted && q.selected_choice_key !== undefined
-          ? (q.selected_choice_key || '').trim().toUpperCase()
-          : (answers[String(q.id)] || '').trim().toUpperCase();
+          ? (q.selected_choice_key || '').trim()
+          : (answers[String(q.id)] || '').trim();
+      if (!isConstructed) {
+        chosenRaw = chosenRaw.toUpperCase();
+      }
+      const chosen = chosenRaw;
       const correctKey = (q.correct_choice_key || '').trim().toUpperCase();
-      const reviewMode = submitted && correctKey !== '';
+      const correctConstructed = (q.constructed_correct_display || '').trim();
+      const reviewMode = submitted && (isConstructed ? Boolean(correctConstructed) : correctKey !== '');
       const correctChoiceRow = correctKey
         ? q.choices.find((c) => (c.key || '').trim().toUpperCase() === correctKey)
         : undefined;
       const correctText = (correctChoiceRow?.text || '').trim();
       return (
         <div key={q.id} className="rounded-xl border border-violet-200 bg-white p-3 dark:border-violet-800 dark:bg-gray-900/70">
+          {q.source_image_url ? (
+            <img
+              src={q.source_image_url}
+              alt=""
+              className="mb-2 max-h-64 w-full rounded-lg border border-slate-200 object-contain dark:border-slate-600"
+            />
+          ) : null}
+          {q.illustration_url ? (
+            <img
+              src={q.illustration_url}
+              alt=""
+              className="mb-2 max-h-52 w-full rounded-lg border border-violet-200 object-contain dark:border-violet-700"
+            />
+          ) : null}
           <p className="mb-2 text-sm font-semibold">
             {q.order}. {kidsStripTrailingParenTopicSuffix(q.stem)}
           </p>
           {submitted && !chosen ? (
             <p className="mb-2 text-xs font-medium text-amber-800 dark:text-amber-200">{t('tests.studentSolve.noAnswer')}</p>
           ) : null}
-          <div className="space-y-1">
-            {q.choices.map((c) => {
-              const keyU = (c.key || '').trim().toUpperCase();
-              const isPicked = chosen === keyU;
-              const isCorrectOption = Boolean(correctKey && keyU === correctKey);
-              let rowClass = 'flex items-start gap-2 rounded-lg border border-transparent px-2 py-1.5 text-sm';
-              if (reviewMode) {
-                if (isCorrectOption) {
-                  rowClass += ' border-emerald-300 bg-emerald-50/90 dark:border-emerald-700 dark:bg-emerald-950/40';
+          {isConstructed ? (
+            <div className="space-y-2">
+              <input
+                type="text"
+                name={`q-${q.id}`}
+                value={submitted ? chosen : answers[String(q.id)] ?? ''}
+                disabled={submitted}
+                onChange={(e) => setAnswers((prev) => ({ ...prev, [String(q.id)]: e.target.value }))}
+                placeholder={t('tests.studentSolve.answerPlaceholder')}
+                className={`w-full rounded-lg border px-3 py-2 text-sm dark:bg-gray-900/80 ${
+                  reviewMode && q.is_correct
+                    ? 'border-emerald-400 bg-emerald-50/90 dark:border-emerald-600 dark:bg-emerald-950/35'
+                    : reviewMode && chosen && !q.is_correct
+                      ? 'border-rose-300 bg-rose-50/80 dark:border-rose-600 dark:bg-rose-950/30'
+                      : 'border-violet-200 dark:border-violet-700'
+                }`}
+              />
+              {submitted && chosen ? (
+                <p className="text-xs text-violet-800 dark:text-violet-200">
+                  <span className="font-semibold">{t('tests.studentSolve.yourChoice')}:</span> {chosen}
+                </p>
+              ) : null}
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {q.choices.map((c) => {
+                const keyU = (c.key || '').trim().toUpperCase();
+                const isPicked = chosen === keyU;
+                const isCorrectOption = Boolean(correctKey && keyU === correctKey);
+                let rowClass = 'flex items-start gap-2 rounded-lg border border-transparent px-2 py-1.5 text-sm';
+                if (reviewMode) {
+                  if (isCorrectOption) {
+                    rowClass += ' border-emerald-300 bg-emerald-50/90 dark:border-emerald-700 dark:bg-emerald-950/40';
+                  }
+                  if (isPicked && !q.is_correct && !isCorrectOption) {
+                    rowClass =
+                      'flex items-start gap-2 rounded-lg border border-rose-300 bg-rose-50/90 px-2 py-1.5 text-sm dark:border-rose-700 dark:bg-rose-950/35';
+                  }
+                  if (isPicked && q.is_correct) {
+                    rowClass += ' ring-1 ring-emerald-400 dark:ring-emerald-600';
+                  }
                 }
-                if (isPicked && !q.is_correct && !isCorrectOption) {
-                  rowClass =
-                    'flex items-start gap-2 rounded-lg border border-rose-300 bg-rose-50/90 px-2 py-1.5 text-sm dark:border-rose-700 dark:bg-rose-950/35';
-                }
-                if (isPicked && q.is_correct) {
-                  rowClass += ' ring-1 ring-emerald-400 dark:ring-emerald-600';
-                }
-              }
-              return (
-                <label key={`${q.id}-${c.key}`} className={rowClass}>
-                  <input
-                    type="radio"
-                    name={`q-${q.id}`}
-                    value={c.key}
-                    disabled={submitted}
-                    checked={isPicked}
-                    onChange={(e) => setAnswers((prev) => ({ ...prev, [String(q.id)]: e.target.value }))}
-                    className="mt-0.5"
-                  />
-                  <span>
-                    {c.key}) {c.text}
-                    {submitted && isPicked ? (
-                      <span className="ml-2 text-xs font-bold text-violet-700 dark:text-violet-300">
-                        ({t('tests.studentSolve.yourChoice')})
-                      </span>
-                    ) : null}
-                    {reviewMode && isCorrectOption ? (
-                      <span className="ml-2 text-xs font-bold text-emerald-800 dark:text-emerald-200">
-                        ({t('tests.studentSolve.correctChoice')})
-                      </span>
-                    ) : null}
-                  </span>
-                </label>
-              );
-            })}
-          </div>
-          {submitted && correctKey ? (
+                return (
+                  <label key={`${q.id}-${c.key}`} className={rowClass}>
+                    <input
+                      type="radio"
+                      name={`q-${q.id}`}
+                      value={c.key}
+                      disabled={submitted}
+                      checked={isPicked}
+                      onChange={(e) => setAnswers((prev) => ({ ...prev, [String(q.id)]: e.target.value }))}
+                      className="mt-0.5"
+                    />
+                    <span>
+                      {c.key}) {c.text}
+                      {submitted && isPicked ? (
+                        <span className="ml-2 text-xs font-bold text-violet-700 dark:text-violet-300">
+                          ({t('tests.studentSolve.yourChoice')})
+                        </span>
+                      ) : null}
+                      {reviewMode && isCorrectOption ? (
+                        <span className="ml-2 text-xs font-bold text-emerald-800 dark:text-emerald-200">
+                          ({t('tests.studentSolve.correctChoice')})
+                        </span>
+                      ) : null}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+          {submitted && isConstructed && correctConstructed ? (
+            <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/90 px-3 py-2 text-sm font-semibold leading-snug text-emerald-950 dark:border-emerald-800 dark:bg-emerald-950/45 dark:text-emerald-50">
+              {t('tests.studentSolve.correctConstructedLine').replace('{text}', correctConstructed)}
+            </p>
+          ) : null}
+          {submitted && !isConstructed && correctKey ? (
             <p className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50/90 px-3 py-2 text-sm font-semibold leading-snug text-emerald-950 dark:border-emerald-800 dark:bg-emerald-950/45 dark:text-emerald-50">
               {correctText
                 ? t('tests.studentSolve.correctAnswerLine').replace('{key}', correctKey).replace('{text}', correctText)

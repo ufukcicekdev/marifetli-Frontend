@@ -142,7 +142,7 @@ body::before {
   75% { transform: translate(0.8%, 0.5%) scale(1.01); opacity: 0.99; }
 }
 
-/* Kids: <dialog showModal()> — top layer; inset=viewport (100vw iOS’ta yatay kaydırmaya sebep olabilir) */
+/* Kids: <dialog> — show() ile top layer dışı; toast vb. üstte kalabilsin (z-index Toaster’dan düşük). */
 dialog.kids-dialog-overlay {
   position: fixed !important;
   inset: 0 !important;
@@ -156,6 +156,7 @@ dialog.kids-dialog-overlay {
   min-height: 100dvh !important;
   max-height: none !important;
   overflow: hidden;
+  z-index: 60000;
 }
 
 /* Viewport dolusu katman; hizalama burada (dialog kutusu küçük kaldığında da doğru çalışır) */
