@@ -4,6 +4,8 @@ FROM node:20-alpine AS base
 FROM base AS deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
+# postinstall: node scripts/copy-pdf-worker.cjs — dosya npm ci öncesi imajda olmalı
+COPY scripts/copy-pdf-worker.cjs scripts/copy-pdf-worker.cjs
 RUN npm ci
 
 # Builder
