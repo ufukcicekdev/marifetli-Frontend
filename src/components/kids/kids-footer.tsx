@@ -14,6 +14,7 @@ function KidsFooterBrandLink({ homeHref }: { homeHref: string }) {
   return (
     <Link
       href={homeHref}
+      prefetch={false}
       className="font-logo inline-flex max-w-full items-center gap-0 whitespace-nowrap text-lg font-semibold tracking-tight text-gray-900 hover:opacity-90 dark:text-white sm:text-xl md:text-2xl"
     >
       <Image

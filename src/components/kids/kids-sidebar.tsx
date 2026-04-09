@@ -168,6 +168,7 @@ export function KidsSidebar({ pathPrefix }: KidsSidebarProps) {
 
             <Link
               href="/"
+              prefetch={false}
               className={`mt-2 flex w-full items-center rounded-xl border border-zinc-200/90 text-sm font-medium text-zinc-600 transition-colors hover:bg-white dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900/80 ${
                 isOpen ? 'gap-3 px-3 py-2.5' : 'justify-center p-2.5'
               }`}
@@ -187,24 +188,28 @@ export function KidsSidebar({ pathPrefix }: KidsSidebarProps) {
               <div className="flex flex-col gap-1 text-xs text-gray-500 dark:text-gray-400">
                 <Link
                   href={marifetliKidsLegalPathOnKidsPortal(pathPrefix, 'terms')}
+                  prefetch={false}
                   className="hover:text-brand hover:underline dark:hover:text-brand"
                 >
                   {t('sidebar.legal.terms')}
                 </Link>
                 <Link
                   href={marifetliKidsLegalPathOnKidsPortal(pathPrefix, 'privacy')}
+                  prefetch={false}
                   className="hover:text-brand hover:underline dark:hover:text-brand"
                 >
                   {t('sidebar.legal.privacy')}
                 </Link>
                 <Link
                   href={marifetliKidsLegalPathOnKidsPortal(pathPrefix, 'kvkk')}
+                  prefetch={false}
                   className="hover:text-brand hover:underline dark:hover:text-brand"
                 >
                   {t('sidebar.legal.kvkk')}
                 </Link>
                 <Link
                   href={marifetliKidsLegalPathOnKidsPortal(pathPrefix, 'cookies')}
+                  prefetch={false}
                   className="hover:text-brand hover:underline dark:hover:text-brand"
                 >
                   {t('sidebar.legal.cookies')}
@@ -212,12 +217,14 @@ export function KidsSidebar({ pathPrefix }: KidsSidebarProps) {
                 <span className="my-1 block text-[10px] text-gray-400 dark:text-gray-500">{t('sidebar.mainSite')}</span>
                 <Link
                   href="/gizlilik-politikasi"
+                  prefetch={false}
                   className="hover:text-brand hover:underline dark:hover:text-brand"
                 >
                   {t('sidebar.legal.privacyGeneral')}
                 </Link>
                 <Link
                   href="/kullanim-sartlari"
+                  prefetch={false}
                   className="hover:text-brand hover:underline dark:hover:text-brand"
                 >
                   {t('sidebar.legal.termsGeneral')}

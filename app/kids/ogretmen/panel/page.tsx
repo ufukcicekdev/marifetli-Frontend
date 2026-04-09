@@ -655,6 +655,7 @@ export default function KidsTeacherPanelPage() {
           </div>
           <Link
             href={`${pathPrefix}/ogretmen/okullar`}
+            prefetch={false}
             className="text-sm font-semibold text-violet-600 hover:text-violet-500 dark:text-violet-400 dark:hover:text-violet-300"
           >
             {t('teacher.panel.viewAll')}
@@ -746,12 +747,14 @@ export default function KidsTeacherPanelPage() {
                       <div className="mt-5 flex gap-2.5">
                         <Link
                           href={classHref}
+                          prefetch={false}
                           className="inline-flex min-h-11 min-w-0 flex-1 items-center justify-center rounded-full bg-zinc-100 px-4 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:bg-zinc-700"
                         >
                           {t('teacher.panel.detail')}
                         </Link>
                         <Link
                           href={classHref}
+                          prefetch={false}
                           className="inline-flex min-h-11 min-w-0 flex-1 items-center justify-center rounded-full bg-violet-600 px-4 text-sm font-bold text-white shadow-md shadow-violet-600/25 transition hover:bg-violet-700 dark:bg-violet-500 dark:hover:bg-violet-400"
                         >
                           {t('teacher.panel.manage')}
@@ -803,6 +806,7 @@ export default function KidsTeacherPanelPage() {
                   <li key={row.key}>
                     <Link
                       href={row.href}
+                      prefetch={false}
                       className="flex gap-3 rounded-2xl border border-zinc-200/90 bg-zinc-50/50 p-3 transition hover:border-violet-300/80 hover:bg-violet-50/40 dark:border-zinc-700 dark:bg-zinc-900/30 dark:hover:border-violet-700/50 dark:hover:bg-violet-950/25"
                     >
                       <span
@@ -842,6 +846,7 @@ export default function KidsTeacherPanelPage() {
             <p className="mt-2 max-w-md text-sm leading-relaxed text-white/90">{t('teacher.panel.communityDesc')}</p>
             <Link
               href="/topluluklar"
+              prefetch={false}
               className="mt-6 inline-flex min-h-12 items-center justify-center rounded-full bg-white px-8 text-sm font-bold text-violet-700 shadow-md transition hover:bg-zinc-50"
             >
               {t('teacher.panel.communityCta')}

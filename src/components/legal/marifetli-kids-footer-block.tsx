@@ -52,7 +52,7 @@ export function MarifetliKidsFooterBlock({
       );
     }
     return (
-      <Link href={href} className={linkClass}>
+      <Link href={href} className={linkClass} prefetch={false}>
         {children}
       </Link>
     );
@@ -121,11 +121,11 @@ export function MarifetliKidsFooterBlock({
     variant === 'main' ? (
       <p className="text-[0.7rem] text-gray-500 dark:text-gray-500">
         Marifetli ana site metinleri:{' '}
-        <Link href="/kullanim-sartlari" className={linkClass}>
+        <Link href="/kullanim-sartlari" className={linkClass} prefetch={false}>
           Kullanım Şartları
         </Link>
         {' · '}
-        <Link href="/gizlilik-politikasi" className={linkClass}>
+        <Link href="/gizlilik-politikasi" className={linkClass} prefetch={false}>
           Gizlilik Politikası
         </Link>
       </p>

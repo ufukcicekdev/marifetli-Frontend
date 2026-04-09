@@ -146,6 +146,7 @@ export function KidsNavMegaMenu({ pathPrefix }: KidsNavMegaMenuProps) {
 
               <Link
                 href="/"
+                prefetch={false}
                 onClick={close}
                 className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-violet-200/80 p-4 font-medium text-violet-800 dark:border-violet-800 dark:text-violet-200 md:hidden"
               >
@@ -169,6 +170,7 @@ export function KidsNavMegaMenu({ pathPrefix }: KidsNavMegaMenuProps) {
                 <li>
                   <Link
                     href={marifetliKidsLegalPathOnKidsPortal(pathPrefix, 'terms')}
+                    prefetch={false}
                     onClick={close}
                     className="block rounded-lg px-3 py-2 text-gray-800 hover:bg-white/80 dark:text-gray-200 dark:hover:bg-gray-700/50"
                   >
@@ -178,6 +180,7 @@ export function KidsNavMegaMenu({ pathPrefix }: KidsNavMegaMenuProps) {
                 <li>
                   <Link
                     href={marifetliKidsLegalPathOnKidsPortal(pathPrefix, 'privacy')}
+                    prefetch={false}
                     onClick={close}
                     className="block rounded-lg px-3 py-2 text-gray-800 hover:bg-white/80 dark:text-gray-200 dark:hover:bg-gray-700/50"
                   >
@@ -187,6 +190,7 @@ export function KidsNavMegaMenu({ pathPrefix }: KidsNavMegaMenuProps) {
                 <li>
                   <Link
                     href={marifetliKidsLegalPathOnKidsPortal(pathPrefix, 'kvkk')}
+                    prefetch={false}
                     onClick={close}
                     className="block rounded-lg px-3 py-2 text-gray-800 hover:bg-white/80 dark:text-gray-200 dark:hover:bg-gray-700/50"
                   >
@@ -196,6 +200,7 @@ export function KidsNavMegaMenu({ pathPrefix }: KidsNavMegaMenuProps) {
                 <li>
                   <Link
                     href={marifetliKidsLegalPathOnKidsPortal(pathPrefix, 'cookies')}
+                    prefetch={false}
                     onClick={close}
                     className="block rounded-lg px-3 py-2 text-gray-800 hover:bg-white/80 dark:text-gray-200 dark:hover:bg-gray-700/50"
                   >
@@ -205,6 +210,7 @@ export function KidsNavMegaMenu({ pathPrefix }: KidsNavMegaMenuProps) {
               </ul>
               <Link
                 href="/"
+                prefetch={false}
                 onClick={close}
                 className="mt-4 shrink-0 rounded-xl border border-violet-200/80 px-3 py-2.5 text-center text-sm font-medium text-violet-800 hover:bg-white/60 dark:border-violet-800 dark:text-violet-200 dark:hover:bg-gray-800/50"
               >
@@ -218,6 +224,7 @@ export function KidsNavMegaMenu({ pathPrefix }: KidsNavMegaMenuProps) {
           <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
             <Link
               href={marifetliKidsLegalPathOnKidsPortal(pathPrefix, 'terms')}
+              prefetch={false}
               onClick={close}
               className="hover:text-violet-600 dark:hover:text-fuchsia-400"
             >
@@ -225,6 +232,7 @@ export function KidsNavMegaMenu({ pathPrefix }: KidsNavMegaMenuProps) {
             </Link>
             <Link
               href={marifetliKidsLegalPathOnKidsPortal(pathPrefix, 'privacy')}
+              prefetch={false}
               onClick={close}
               className="hover:text-violet-600 dark:hover:text-fuchsia-400"
             >
