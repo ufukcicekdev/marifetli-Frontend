@@ -3,6 +3,9 @@ import { KidsHomeLanding } from '@/src/components/kids/kids-home-landing';
 import { kidsPathPrefixFromHost } from '@/src/lib/kids-config';
 import tr from '@/language/tr.json';
 
+/** Build-time statik HTML / CDN’de eski kabuk kalmasın; her istekte üret. */
+export const dynamic = 'force-dynamic';
+
 export default function KidsHomePage() {
   const host = '';
   const prefix = kidsPathPrefixFromHost(host);
