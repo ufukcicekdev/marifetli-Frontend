@@ -178,6 +178,7 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
 
             {/* Bento — serbest kurs + rozet yolu */}
             <section className="px-1 pb-2 md:px-0 md:pb-4">
+              
               <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 md:grid-cols-3">
                 <div className="group relative overflow-hidden rounded-2xl border border-slate-100 bg-white p-8 shadow-md transition-all duration-500 hover:shadow-xl dark:border-zinc-700 dark:bg-zinc-900 md:col-span-2 md:p-10">
                   <div
