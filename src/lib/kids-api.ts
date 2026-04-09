@@ -122,6 +122,8 @@ export type KidsParentChildOverview = {
   classes: {
     id: number;
     name: string;
+    /** Anaokulu / anasınıfı günlükleri için; yoksa sınıf adından çıkarım. */
+    class_kind?: 'standard' | 'kindergarten' | 'anasinifi';
     school_name: string;
     teacher_user_id: number;
     teacher_display: string;

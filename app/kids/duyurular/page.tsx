@@ -508,6 +508,17 @@ export default function KidsAnnouncementsPage() {
     return <KidsStudentAnnouncementsView pathPrefix={pathPrefix} />;
   }
 
+  if (user.role === 'parent') {
+    return (
+      <KidsStudentAnnouncementsView
+        pathPrefix={pathPrefix}
+        backHref={`${pathPrefix}/veli/panel`}
+        backLabelKey="nav.parentPanel"
+        pageSubtitleKey="parent.announcements.pageSubtitle"
+      />
+    );
+  }
+
   return (
     <div className="mx-auto max-w-7xl space-y-8 px-2 pb-10 sm:px-4">
       <header>

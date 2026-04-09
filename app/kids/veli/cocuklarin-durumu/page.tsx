@@ -7,13 +7,18 @@ import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 import {
   kidsDeleteParentHomeworkSubmissionAttachment,
+  KIDS_CLASS_SPECIAL_GRADE,
+  kidsParseStandardClassName,
   kidsParentChildrenOverview,
   kidsParentKindergartenRecords,
   kidsParentReviewHomeworkSubmission,
   type KidsKindergartenDailyRecordRow,
   type KidsParentChildOverview,
 } from '@/src/lib/kids-api';
-import { KidsCard, KidsCenteredModal, KidsPanelMax, KidsPrimaryButton, KidsSecondaryButton, KidsSelect } from '@/src/components/kids/kids-ui';
+import { BookOpen, Calendar, ClipboardList, Gamepad2, Sparkles, Sun } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { KidsCenteredModal, KidsPanelMax, KidsPrimaryButton, KidsSecondaryButton } from '@/src/components/kids/kids-ui';
+import { ChildStatusSummaryCard, LearningAnalyticsSection } from './child-status-summary-card';
 import { MediaSlider } from '@/src/components/media-slider';
 import type { MediaItem } from '@/src/lib/extract-media';
 import { useKidsI18n } from '@/src/providers/kids-language-provider';
@@ -67,6 +72,27 @@ function filePlaceholderUrl(fileName: string, label: string): string {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
+/** Veli özeti: sınıf adı Anaokulu-X / Anasınıfı-X vb. ise günlük tablosu gösterilir. */
+function childIsPreschoolProgram(c: KidsParentChildOverview): boolean {
+  return (c.classes ?? []).some((cl) => {
+    const k = cl.class_kind;
+    if (k === 'anasinifi' || k === 'kindergarten') return true;
+    const p = kidsParseStandardClassName(cl.name);
+    return p?.grade === KIDS_CLASS_SPECIAL_GRADE.PRE_PRIMARY;
+  });
+}
+
+function DetailPanelEmpty({ icon: Icon, message }: { icon: LucideIcon; message: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-violet-200/70 bg-gradient-to-b from-violet-50/60 to-transparent py-14 px-6 text-center dark:border-violet-800/50 dark:from-violet-950/30">
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-100/90 text-violet-500 shadow-inner dark:bg-violet-900/55 dark:text-violet-300">
+        <Icon className="h-7 w-7" strokeWidth={1.5} aria-hidden />
+      </div>
+      <p className="max-w-sm text-sm font-medium leading-relaxed text-slate-600 dark:text-zinc-400">{message}</p>
+    </div>
+  );
+}
+
 export default function KidsParentChildrenStatusPage() {
   const router = useRouter();
   const { user, loading, pathPrefix } = useKidsAuth();
@@ -83,6 +109,7 @@ export default function KidsParentChildrenStatusPage() {
     currentAttachmentCount?: number;
   } | null>(null);
   const [selectedChildId, setSelectedChildId] = useState<string>('');
+  const [detailModalChildId, setDetailModalChildId] = useState<number | null>(null);
   const [openPendingDetailId, setOpenPendingDetailId] = useState<number | null>(null);
   const [activityTab, setActivityTab] = useState<'challenges' | 'homework' | 'tests' | 'preschool'>('challenges');
   const activityTabsId = useId();
@@ -221,62 +248,128 @@ export default function KidsParentChildrenStatusPage() {
   }
 
   const childrenList = overview ?? [];
-  const selectedChild =
-    childrenList.find((c) => String(c.id) === selectedChildId) ?? childrenList[0] ?? null;
+  const modalChild =
+    detailModalChildId != null
+      ? (childrenList.find((x) => x.id === detailModalChildId) ?? null)
+      : null;
+  const todayLabel = new Date().toLocaleDateString(
+    language === 'en' ? 'en-US' : language === 'ge' ? 'de-DE' : 'tr-TR',
+    { weekday: 'long', day: 'numeric', month: 'long' },
+  );
+
   return (
-    <KidsPanelMax>
-      <div className="mb-6 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="font-logo text-2xl font-bold text-slate-900 dark:text-white">{t('parent.panel.childrenStatusTitle')}</h1>
-          <p className="mt-2 text-sm text-slate-600 dark:text-gray-400">
-            {t('childrenStatus.subtitle')}
-          </p>
-        </div>
-        <KidsSecondaryButton type="button" onClick={() => void loadOverview()} disabled={overviewLoading}>
-          {overviewLoading ? t('parent.panel.refreshing') : t('parent.panel.refresh')}
-        </KidsSecondaryButton>
-      </div>
-
-      {childrenList.length > 1 ? (
-        <div className="mb-4 max-w-sm">
-          <p className="mb-1 text-xs font-semibold text-slate-700 dark:text-slate-300">{t('childrenStatus.selectChild')}</p>
-          <KidsSelect
-            value={selectedChild ? String(selectedChild.id) : ''}
-            onChange={setSelectedChildId}
-            options={childrenList.map((c) => ({
-              value: String(c.id),
-              label: `${c.first_name} ${c.last_name}`.trim() || `${t('childrenStatus.child')} #${c.id}`,
-            }))}
-          />
-        </div>
-      ) : null}
-
-      {overviewError ? (
-        <p className="mb-4 rounded-xl border border-amber-300/80 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100">
-          {overviewError}
-        </p>
-      ) : null}
-
-      <div className="space-y-6">
-        {selectedChild ? (
-          (() => {
-            const c = selectedChild;
-            return (
-          <KidsCard key={c.id} tone="amber" className="border-2 border-amber-200/90 dark:border-amber-800/60">
-            <h2 className="font-logo text-xl font-bold text-slate-900 dark:text-white">
-              {c.first_name} {c.last_name}
-            </h2>
-            <p className="mt-1 text-sm text-amber-900/90 dark:text-amber-100/85">
-              {t('parent.panel.growthPoints')}:{' '}
-              <strong className="text-amber-950 dark:text-amber-50">{Number(c.growth_points ?? 0)}</strong>
-              {c.growth_stage ? (
-                <>
-                  {' '}
-                  · <span className="font-semibold">{c.growth_stage.title}</span>
-                  <span className="text-amber-800/90 dark:text-amber-200/80"> — {c.growth_stage.subtitle}</span>
-                </>
-              ) : null}
+    <KidsPanelMax className="max-w-7xl">
+      <main className="space-y-12 pb-12">
+        <section className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
+          <div className="max-w-2xl space-y-2">
+            <span className="text-xs font-bold uppercase tracking-[0.2em] text-violet-600 dark:text-violet-400">
+              {t('childrenStatus.mockupEyebrow')}
+            </span>
+            <h1 className="font-logo text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white lg:text-5xl xl:text-6xl">
+              {t('parent.panel.childrenStatusTitle')}
+            </h1>
+            <p className="max-w-xl text-lg text-slate-600 dark:text-zinc-400">
+              {t('childrenStatus.mockupHeroSubtitle')}
             </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-4 rounded-2xl bg-slate-100/90 p-5 shadow-inner dark:bg-zinc-800/80">
+              <div className="rounded-xl bg-amber-100 p-3 text-amber-800 dark:bg-amber-900/50 dark:text-amber-200">
+                <Calendar className="h-6 w-6" strokeWidth={2} />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-slate-500 dark:text-zinc-400">{t('childrenStatus.mockupToday')}</p>
+                <p className="font-bold capitalize text-slate-900 dark:text-white">{todayLabel}</p>
+              </div>
+            </div>
+            <KidsSecondaryButton type="button" onClick={() => void loadOverview()} disabled={overviewLoading}>
+              {overviewLoading ? t('parent.panel.refreshing') : t('parent.panel.refresh')}
+            </KidsSecondaryButton>
+          </div>
+        </section>
+
+        {overviewError ? (
+          <p className="rounded-xl border border-amber-300/80 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100">
+            {overviewError}
+          </p>
+        ) : null}
+
+        <section className="grid grid-cols-1 gap-10 lg:grid-cols-2">
+          {overviewLoading && childrenList.length === 0 ? (
+            <div className="col-span-full py-16 text-center text-slate-500 dark:text-zinc-400">{t('common.loading')}</div>
+          ) : null}
+          {!overviewLoading && childrenList.length === 0 ? (
+            <div className="col-span-full py-16 text-center text-slate-500 dark:text-zinc-400">
+              {t('childrenStatus.noChildToDisplay')}
+            </div>
+          ) : null}
+          {childrenList.map((c, index) => (
+            <ChildStatusSummaryCard
+              key={c.id}
+              child={c}
+              index={index}
+              t={t}
+              challengeStatusLabel={challengeStatusLabel}
+              homeworkStatusLabel={homeworkStatusLabel}
+              hasPreschool={childIsPreschoolProgram(c)}
+              onOpenDetail={() => {
+                setSelectedChildId(String(c.id));
+                setExpandedHomeworkSubmissionId(null);
+                setOpenPendingDetailId(null);
+                setDetailModalChildId(c.id);
+                setActivityTab((tab) =>
+                  tab === 'preschool' && !childIsPreschoolProgram(c) ? 'challenges' : tab,
+                );
+              }}
+            />
+          ))}
+        </section>
+
+        {childrenList.length > 0 ? (
+          <LearningAnalyticsSection childrenList={childrenList} pathPrefix={pathPrefix} t={t} />
+        ) : null}
+
+      {detailModalChildId != null && modalChild ? (
+        <KidsCenteredModal
+          title={`${modalChild.first_name} ${modalChild.last_name}`}
+          onClose={() => setDetailModalChildId(null)}
+          maxWidthClass="max-w-4xl"
+          panelClassName="ring-2 ring-violet-200/50 shadow-[0_32px_80px_-20px_rgba(109,40,217,0.32)] dark:ring-violet-700/35 dark:shadow-[0_32px_80px_-20px_rgba(0,0,0,0.55)]"
+        >
+          {(() => {
+            const c = modalChild;
+            return (
+          <div
+            key={c.id}
+            className="relative overflow-hidden rounded-3xl border border-violet-200/55 bg-gradient-to-br from-white via-violet-50/40 to-fuchsia-50/25 p-5 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.65)] dark:border-violet-800/45 dark:from-zinc-900 dark:via-violet-950/30 dark:to-fuchsia-950/15 sm:p-6"
+          >
+            <div
+              className="pointer-events-none absolute -right-20 -top-20 h-48 w-48 rounded-full bg-violet-400/15 blur-3xl dark:bg-violet-600/15"
+              aria-hidden
+            />
+            <div className="relative space-y-5">
+            <div className="flex gap-4 rounded-2xl border border-violet-100/90 bg-white/70 p-4 backdrop-blur-sm dark:border-violet-900/40 dark:bg-violet-950/35">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-600 to-fuchsia-600 text-white shadow-lg shadow-violet-600/30">
+                <Sparkles className="h-7 w-7" strokeWidth={2} aria-hidden />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm leading-snug text-slate-800 dark:text-slate-100">
+                  <span className="font-bold text-violet-800 dark:text-violet-200">{t('parent.panel.growthPoints')}:</span>{' '}
+                  <span className="text-xl font-black tabular-nums text-slate-900 dark:text-white">
+                    {Number(c.growth_points ?? 0)}
+                  </span>
+                  {c.growth_stage ? (
+                    <>
+                      <span className="text-slate-400 dark:text-slate-500"> · </span>
+                      <span className="font-bold text-slate-900 dark:text-white">{c.growth_stage.title}</span>
+                    </>
+                  ) : null}
+                </p>
+                {c.growth_stage?.subtitle ? (
+                  <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-zinc-400">{c.growth_stage.subtitle}</p>
+                ) : null}
+              </div>
+            </div>
 
             {(c.pending_parent_actions ?? []).length > 0 ? (
               <div className="mt-4 rounded-xl border border-violet-200 bg-violet-50/80 px-3 py-2 dark:border-violet-800 dark:bg-violet-950/40">
@@ -393,9 +486,15 @@ export default function KidsParentChildrenStatusPage() {
 
             <div className="mt-5">
               <div
-                className="grid grid-cols-2 gap-1 rounded-xl border border-amber-200/80 bg-amber-50/50 p-1 lg:grid-cols-4 dark:border-amber-800/50 dark:bg-amber-950/30"
+                className={`grid gap-1.5 rounded-2xl border border-slate-200/90 bg-slate-100/90 p-1.5 shadow-inner dark:border-zinc-700/80 dark:bg-zinc-800/90 ${
+                  childIsPreschoolProgram(c) ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3'
+                }`}
                 role="tablist"
-                aria-label={`${t('childrenStatus.challengeHistory')}, ${t('childrenStatus.homeworkHistory')}, ${t('childrenStatus.testResultsTab')}, ${t('childrenStatus.preschoolTab')}`}
+                aria-label={
+                  childIsPreschoolProgram(c)
+                    ? `${t('childrenStatus.challengeHistory')}, ${t('childrenStatus.homeworkHistory')}, ${t('childrenStatus.testResultsTab')}, ${t('childrenStatus.preschoolTab')}`
+                    : `${t('childrenStatus.challengeHistory')}, ${t('childrenStatus.homeworkHistory')}, ${t('childrenStatus.testResultsTab')}`
+                }
               >
                 <button
                   type="button"
@@ -404,13 +503,14 @@ export default function KidsParentChildrenStatusPage() {
                   aria-selected={activityTab === 'challenges'}
                   aria-controls={`${activityTabsId}-panel-challenges`}
                   onClick={() => setActivityTab('challenges')}
-                  className={`min-h-10 rounded-lg px-2 py-2 text-xs font-bold transition-colors sm:text-sm ${
+                  className={`flex min-h-11 items-center justify-center gap-2 rounded-xl px-2 py-2 text-xs font-bold transition-all sm:text-sm ${
                     activityTab === 'challenges'
-                      ? 'bg-white text-amber-950 shadow-sm dark:bg-amber-900/80 dark:text-amber-50'
-                      : 'text-amber-800/90 hover:bg-white/60 dark:text-amber-200/90 dark:hover:bg-amber-900/40'
+                      ? 'bg-white text-violet-800 shadow-md ring-1 ring-violet-200/80 dark:bg-violet-950 dark:text-violet-50 dark:ring-violet-700/50'
+                      : 'text-slate-600 hover:bg-white/80 dark:text-zinc-400 dark:hover:bg-zinc-700/60'
                   }`}
                 >
-                  {t('childrenStatus.challengeHistory')}
+                  <Gamepad2 className="h-4 w-4 shrink-0 opacity-85" aria-hidden />
+                  <span className="text-center leading-tight">{t('childrenStatus.challengeHistory')}</span>
                 </button>
                 <button
                   type="button"
@@ -419,13 +519,14 @@ export default function KidsParentChildrenStatusPage() {
                   aria-selected={activityTab === 'homework'}
                   aria-controls={`${activityTabsId}-panel-homework`}
                   onClick={() => setActivityTab('homework')}
-                  className={`min-h-10 rounded-lg px-2 py-2 text-xs font-bold transition-colors sm:text-sm ${
+                  className={`flex min-h-11 items-center justify-center gap-2 rounded-xl px-2 py-2 text-xs font-bold transition-all sm:text-sm ${
                     activityTab === 'homework'
-                      ? 'bg-white text-amber-950 shadow-sm dark:bg-amber-900/80 dark:text-amber-50'
-                      : 'text-amber-800/90 hover:bg-white/60 dark:text-amber-200/90 dark:hover:bg-amber-900/40'
+                      ? 'bg-white text-violet-800 shadow-md ring-1 ring-violet-200/80 dark:bg-violet-950 dark:text-violet-50 dark:ring-violet-700/50'
+                      : 'text-slate-600 hover:bg-white/80 dark:text-zinc-400 dark:hover:bg-zinc-700/60'
                   }`}
                 >
-                  {t('childrenStatus.homeworkHistory')}
+                  <BookOpen className="h-4 w-4 shrink-0 opacity-85" aria-hidden />
+                  <span className="text-center leading-tight">{t('childrenStatus.homeworkHistory')}</span>
                 </button>
                 <button
                   type="button"
@@ -434,29 +535,33 @@ export default function KidsParentChildrenStatusPage() {
                   aria-selected={activityTab === 'tests'}
                   aria-controls={`${activityTabsId}-panel-tests`}
                   onClick={() => setActivityTab('tests')}
-                  className={`min-h-10 rounded-lg px-2 py-2 text-xs font-bold transition-colors sm:text-sm ${
+                  className={`flex min-h-11 items-center justify-center gap-2 rounded-xl px-2 py-2 text-xs font-bold transition-all sm:text-sm ${
                     activityTab === 'tests'
-                      ? 'bg-white text-amber-950 shadow-sm dark:bg-amber-900/80 dark:text-amber-50'
-                      : 'text-amber-800/90 hover:bg-white/60 dark:text-amber-200/90 dark:hover:bg-amber-900/40'
+                      ? 'bg-white text-violet-800 shadow-md ring-1 ring-violet-200/80 dark:bg-violet-950 dark:text-violet-50 dark:ring-violet-700/50'
+                      : 'text-slate-600 hover:bg-white/80 dark:text-zinc-400 dark:hover:bg-zinc-700/60'
                   }`}
                 >
-                  {t('childrenStatus.testResultsTab')}
+                  <ClipboardList className="h-4 w-4 shrink-0 opacity-85" aria-hidden />
+                  <span className="text-center leading-tight">{t('childrenStatus.testResultsTab')}</span>
                 </button>
-                <button
-                  type="button"
-                  role="tab"
-                  id={`${activityTabsId}-preschool`}
-                  aria-selected={activityTab === 'preschool'}
-                  aria-controls={`${activityTabsId}-panel-preschool`}
-                  onClick={() => setActivityTab('preschool')}
-                  className={`min-h-10 rounded-lg px-2 py-2 text-xs font-bold transition-colors sm:text-sm ${
-                    activityTab === 'preschool'
-                      ? 'bg-white text-amber-950 shadow-sm dark:bg-amber-900/80 dark:text-amber-50'
-                      : 'text-amber-800/90 hover:bg-white/60 dark:text-amber-200/90 dark:hover:bg-amber-900/40'
-                  }`}
-                >
-                  {t('childrenStatus.preschoolTab')}
-                </button>
+                {childIsPreschoolProgram(c) ? (
+                  <button
+                    type="button"
+                    role="tab"
+                    id={`${activityTabsId}-preschool`}
+                    aria-selected={activityTab === 'preschool'}
+                    aria-controls={`${activityTabsId}-panel-preschool`}
+                    onClick={() => setActivityTab('preschool')}
+                    className={`flex min-h-11 items-center justify-center gap-2 rounded-xl px-2 py-2 text-xs font-bold transition-all sm:text-sm ${
+                      activityTab === 'preschool'
+                        ? 'bg-white text-violet-800 shadow-md ring-1 ring-violet-200/80 dark:bg-violet-950 dark:text-violet-50 dark:ring-violet-700/50'
+                        : 'text-slate-600 hover:bg-white/80 dark:text-zinc-400 dark:hover:bg-zinc-700/60'
+                    }`}
+                  >
+                    <Sun className="h-4 w-4 shrink-0 opacity-85" aria-hidden />
+                    <span className="text-center leading-tight">{t('childrenStatus.preschoolTab')}</span>
+                  </button>
+                ) : null}
               </div>
 
               {activityTab === 'challenges' ? (
@@ -467,13 +572,13 @@ export default function KidsParentChildrenStatusPage() {
                   className="mt-3"
                 >
                   {(c.challenges ?? []).length === 0 ? (
-                    <p className="text-sm text-amber-900/75 dark:text-amber-100/70">{t('childrenStatus.noChallengeRecord')}</p>
+                    <DetailPanelEmpty icon={Gamepad2} message={t('childrenStatus.noChallengeRecord')} />
                   ) : (
                     <ul className="space-y-2">
                       {(c.challenges ?? []).map((ch, idx) => (
                         <li
                           key={`${ch.id ?? ch.title}-${idx}`}
-                          className="rounded-xl border border-amber-200/70 bg-white/85 px-3 py-2 dark:border-amber-800/50 dark:bg-gray-900/50"
+                          className="rounded-2xl border border-violet-100/90 bg-white/90 px-3 py-2.5 shadow-sm dark:border-violet-900/40 dark:bg-zinc-900/60"
                         >
                           <p className="font-semibold text-slate-900 dark:text-white">{ch.title}</p>
                           <p className="text-xs text-slate-600 dark:text-gray-400">
@@ -494,7 +599,7 @@ export default function KidsParentChildrenStatusPage() {
                   className="mt-3"
                 >
                   {(c.homework_history ?? []).length === 0 ? (
-                    <p className="text-sm text-amber-900/75 dark:text-amber-100/70">{t('childrenStatus.noHomeworkRecord')}</p>
+                    <DetailPanelEmpty icon={BookOpen} message={t('childrenStatus.noHomeworkRecord')} />
                   ) : (
                     <ul className="space-y-2">
                       {(c.homework_history ?? []).map((hw) => {
@@ -645,7 +750,7 @@ export default function KidsParentChildrenStatusPage() {
                   className="mt-3"
                 >
                   {(c.test_attempts_history ?? []).length === 0 ? (
-                    <p className="text-sm text-amber-900/75 dark:text-amber-100/70">{t('childrenStatus.noTestResults')}</p>
+                    <DetailPanelEmpty icon={ClipboardList} message={t('childrenStatus.noTestResults')} />
                   ) : (
                     <ul className="space-y-2">
                       {(c.test_attempts_history ?? []).map((row) => (
@@ -722,7 +827,7 @@ export default function KidsParentChildrenStatusPage() {
                     <p className="text-sm text-amber-900/75 dark:text-amber-100/70">{t('common.loading')}</p>
                   ) : null}
                   {!kgRecordsLoading && kgRecords.length === 0 && !kgRecordsError ? (
-                    <p className="text-sm text-amber-900/75 dark:text-amber-100/70">{t('childrenStatus.preschoolEmpty')}</p>
+                    <DetailPanelEmpty icon={Sun} message={t('childrenStatus.preschoolEmpty')} />
                   ) : null}
                   {kgRecords.length > 0 ? (
                     <div className="overflow-x-auto rounded-xl border border-emerald-200/70 dark:border-emerald-900/40">
@@ -794,15 +899,13 @@ export default function KidsParentChildrenStatusPage() {
                 </div>
               ) : null}
             </div>
-          </KidsCard>
+            </div>
+          </div>
             );
-          })()
-        ) : (
-          <KidsCard tone="amber">
-            <p className="text-sm text-amber-900/80 dark:text-amber-100/80">{t('childrenStatus.noChildToDisplay')}</p>
-          </KidsCard>
-        )}
-      </div>
+          })()}
+        </KidsCenteredModal>
+      ) : null}
+      </main>
       {pendingDelete ? (
         <KidsCenteredModal
           title="Gorsel silme onayi"

@@ -4,15 +4,18 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { Gamepad2, Rocket, Settings, Sparkles, UserRound } from 'lucide-react';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import {
   kidsCreateConversation,
   kidsDeleteParentHomeworkSubmissionAttachment,
+  kidsGetParentGamePolicy,
   kidsParentChildrenOverview,
   kidsParentReviewHomeworkSubmission,
   kidsParentSwitchToStudent,
   kidsParentVerifyPassword,
   type KidsParentChildOverview,
+  type KidsParentGamePolicy,
 } from '@/src/lib/kids-api';
 import {
   KidsCard,
@@ -36,6 +39,12 @@ function filePlaceholderUrl(fileName: string, label: string): string {
   const ext = (fileName.split('.').pop() || 'DOSYA').toUpperCase().slice(0, 6);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540"><rect width="960" height="540" fill="#FEF3C7"/><rect x="360" y="120" width="240" height="300" rx="24" fill="#FDE68A"/><path d="M520 120v76c0 13 11 24 24 24h56" fill="#FCD34D"/><path d="M520 120l80 100" stroke="#F59E0B" stroke-width="10"/><text x="480" y="300" text-anchor="middle" font-family="Arial, sans-serif" font-size="40" font-weight="700" fill="#92400E">${ext}</text><text x="480" y="345" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#B45309">${label}</text></svg>`;
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
+function childInitials(first: string, last: string): string {
+  const a = (first[0] || '?').toUpperCase();
+  const b = (last[0] || first[1] || '?').toUpperCase();
+  return `${a}${b}`;
 }
 
 export default function KidsParentPanelPage() {
@@ -66,6 +75,7 @@ export default function KidsParentPanelPage() {
     currentAttachmentCount?: number;
   } | null>(null);
   const [openPendingDetailId, setOpenPendingDetailId] = useState<number | null>(null);
+  const [gamePolicy, setGamePolicy] = useState<KidsParentGamePolicy | null>(null);
 
   const loadOverview = useCallback(async () => {
     setOverviewLoading(true);
@@ -73,9 +83,20 @@ export default function KidsParentPanelPage() {
     try {
       const { children } = await kidsParentChildrenOverview();
       setOverview(children);
+      setGamePolicy(null);
+      const firstId = children[0]?.id;
+      if (firstId) {
+        try {
+          const p = await kidsGetParentGamePolicy(firstId);
+          setGamePolicy(p);
+        } catch {
+          setGamePolicy(null);
+        }
+      }
     } catch (e) {
       setOverviewError(e instanceof Error ? e.message : t('parent.panel.summaryError'));
       setOverview(null);
+      setGamePolicy(null);
     } finally {
       setOverviewLoading(false);
     }
@@ -189,6 +210,8 @@ export default function KidsParentPanelPage() {
     }
   }
 
+  const childrenList = overview ?? [];
+
   if (loading || !user || user.role !== 'parent') {
     return (
       <KidsPanelMax>
@@ -197,60 +220,211 @@ export default function KidsParentPanelPage() {
     );
   }
 
-  const childrenList = overview ?? [];
   const showFromMeFallback = overview === null && overviewError && (user.linked_students?.length ?? 0) > 0;
+  const displayName = [user.first_name, user.last_name].filter(Boolean).join(' ').trim() || user.email || '';
+  const policyWindow =
+    gamePolicy?.allowed_start_time && gamePolicy?.allowed_end_time
+      ? `${gamePolicy.allowed_start_time.slice(0, 5)} – ${gamePolicy.allowed_end_time.slice(0, 5)}`
+      : '—';
 
   return (
-    <KidsPanelMax>
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="font-logo text-2xl font-bold text-slate-900 dark:text-white">{t('parent.panel.title')}</h1>
-          <p className="mt-2 max-w-2xl text-sm text-slate-600 dark:text-gray-400">
-            {t('parent.panel.subtitle')}
+    <KidsPanelMax className="max-w-7xl space-y-10 pb-12">
+      <KidsSecondaryButton
+        type="button"
+        disabled={overviewLoading}
+        className="w-full sm:w-auto"
+        onClick={() => {
+          void loadOverview();
+        }}
+      >
+        {overviewLoading ? t('parent.panel.refreshing') : t('parent.panel.refresh')}
+      </KidsSecondaryButton>
+
+      {/* Hero */}
+      <section className="relative flex min-h-[280px] flex-col overflow-hidden rounded-3xl border border-violet-200/70 bg-gradient-to-br from-violet-50/90 via-white to-fuchsia-50/80 p-8 shadow-lg dark:border-violet-900/50 dark:from-violet-950/40 dark:via-zinc-900 dark:to-fuchsia-950/30 md:min-h-[320px] md:flex-row md:items-center md:p-12">
+        <div className="pointer-events-none absolute inset-0" aria-hidden>
+          <div className="absolute -right-10 -top-10 h-72 w-72 rounded-full bg-purple-400/25 blur-[80px] dark:bg-purple-500/15" />
+          <div className="absolute -bottom-16 -left-10 h-64 w-64 rounded-full bg-pink-400/20 blur-[80px] dark:bg-pink-500/10" />
+        </div>
+        <div className="relative z-10 max-w-2xl flex-1">
+          <h1 className="font-logo text-3xl font-black leading-tight text-slate-900 dark:text-white md:text-4xl">
+            {t('parent.panel.dashboardWelcome').replace('{name}', user.first_name || displayName || '…')}
+          </h1>
+          <p className="mt-3 text-base font-medium leading-relaxed text-slate-600 dark:text-zinc-300 md:text-lg">
+            {t('parent.panel.dashboardHeroSubtitle')}
           </p>
         </div>
-        <KidsSecondaryButton
-          type="button"
-          disabled={overviewLoading}
-          onClick={() => {
-            void loadOverview();
-          }}
-        >
-          {overviewLoading ? t('parent.panel.refreshing') : t('parent.panel.refresh')}
-        </KidsSecondaryButton>
+        <div className="relative z-10 mt-8 flex flex-1 justify-center md:mt-0 md:justify-end">
+          <div className="flex h-44 w-44 items-center justify-center rounded-3xl bg-white/60 shadow-inner dark:bg-zinc-800/50 md:h-52 md:w-52">
+            <Sparkles className="h-24 w-24 text-violet-400 dark:text-violet-500" strokeWidth={1.25} aria-hidden />
+          </div>
+        </div>
+      </section>
+
+      {/* Bento */}
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+        <div className="flex flex-col gap-8 lg:col-span-1">
+          <div className="flex h-full flex-col rounded-3xl border border-zinc-200/80 bg-white p-8 shadow-md transition hover:shadow-lg dark:border-zinc-700 dark:bg-zinc-900/90">
+            <div className="mb-6 flex items-center justify-between">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-50 text-violet-600 dark:bg-violet-950/50 dark:text-violet-300">
+                <Gamepad2 className="h-8 w-8" strokeWidth={2} />
+              </div>
+              <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">
+                {t('parent.panel.dashboardActiveBadge')}
+              </span>
+            </div>
+            <h2 className="font-logo text-xl font-bold text-slate-900 dark:text-white">{t('parent.panel.gameControlTitle')}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-zinc-400">{t('parent.panel.gameControlBody')}</p>
+            <div className="mt-6 space-y-3">
+              <div className="flex items-center justify-between rounded-xl bg-violet-50/80 px-4 py-3 dark:bg-violet-950/30">
+                <span className="text-sm font-bold text-slate-700 dark:text-zinc-200">{t('parent.panel.dashboardDailyLimit')}</span>
+                <span className="text-sm font-black text-violet-600 dark:text-violet-300">
+                  {gamePolicy ? `${gamePolicy.daily_minutes_limit} dk` : '—'}
+                </span>
+              </div>
+              <div className="flex items-center justify-between rounded-xl bg-fuchsia-50/80 px-4 py-3 dark:bg-fuchsia-950/20">
+                <span className="text-sm font-bold text-slate-700 dark:text-zinc-200">{t('parent.panel.dashboardPlayWindow')}</span>
+                <span className="text-sm font-black text-pink-600 dark:text-pink-300">{policyWindow}</span>
+              </div>
+            </div>
+            <Link
+              href={`${pathPrefix}/veli/ebeveyn-kontrolleri`}
+              className="mt-auto flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 py-4 text-sm font-bold text-white shadow-lg shadow-violet-500/30 transition hover:from-violet-500 hover:to-fuchsia-500"
+            >
+              <Settings className="h-5 w-5" strokeWidth={2} />
+              {t('parent.panel.parentControls')}
+            </Link>
+          </div>
+        </div>
+
+        <div className="lg:col-span-2">
+          <div className="h-full rounded-3xl border border-zinc-200/80 bg-white p-8 shadow-md dark:border-zinc-700 dark:bg-zinc-900/90">
+            <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
+              <h2 className="font-logo text-xl font-bold text-slate-900 dark:text-white">{t('parent.panel.childrenStatusTitle')}</h2>
+              <Link
+                href={`${pathPrefix}/veli/cocuklarin-durumu`}
+                className="text-sm font-bold text-violet-600 hover:underline dark:text-violet-400"
+              >
+                {t('parent.panel.dashboardSeeAll')}
+              </Link>
+            </div>
+            {overviewLoading && childrenList.length === 0 ? (
+              <p className="text-center text-sm text-slate-500 dark:text-zinc-400">{t('parent.panel.childrenSummaryLoading')}</p>
+            ) : childrenList.length === 0 ? (
+              <p className="rounded-2xl border border-dashed border-zinc-200 py-12 text-center text-sm text-slate-500 dark:border-zinc-700 dark:text-zinc-400">
+                {t('parent.panel.noChildSummary')}
+              </p>
+            ) : (
+              <div className="space-y-4">
+                {childrenList.slice(0, 6).map((c) => {
+                  const tests = c.test_attempts_history ?? [];
+                  const lastTest = tests[0];
+                  const testPct =
+                    lastTest && lastTest.total_questions > 0
+                      ? Math.round((lastTest.total_correct / lastTest.total_questions) * 100)
+                      : null;
+                  let subR = 0;
+                  let totR = 0;
+                  for (const a of c.assignments_recent) {
+                    subR += a.rounds_submitted;
+                    totR += Math.max(1, a.submission_rounds);
+                  }
+                  const hwList = c.homework_history ?? [];
+                  const hwAwaitingParent = (c.pending_parent_actions?.length ?? 0) > 0;
+                  const homeworkCell =
+                    totR > 0
+                      ? `${subR}/${totR}`
+                      : hwList.length > 0
+                        ? hwAwaitingParent
+                          ? t('parent.panel.dashboardHomeworkPending').replace(
+                              '{n}',
+                              String(c.pending_parent_actions?.length ?? 0),
+                            )
+                          : t('parent.panel.dashboardHomeworkCount').replace('{n}', String(hwList.length))
+                        : '—';
+                  const pending = hwAwaitingParent;
+                  const statusOk = !pending && (testPct == null || testPct >= 70);
+                  const primaryClass = c.classes[0]?.name ?? '—';
+                  return (
+                    <div
+                      key={c.id}
+                      className="group flex flex-col gap-4 rounded-2xl bg-zinc-50/90 p-5 transition hover:bg-white hover:shadow-xl dark:bg-zinc-800/50 dark:hover:bg-zinc-800 md:flex-row md:items-center"
+                    >
+                      <div className="flex min-w-0 items-center gap-4 md:w-[220px] md:shrink-0">
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-400 to-fuchsia-500 text-lg font-black text-white shadow-md">
+                          {childInitials(c.first_name, c.last_name)}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate font-bold text-slate-900 dark:text-white">
+                            {c.first_name} {c.last_name}
+                          </p>
+                          <p className="truncate text-xs text-slate-500 dark:text-zinc-400">{primaryClass}</p>
+                        </div>
+                      </div>
+                      <div className="grid flex-1 grid-cols-1 gap-3 sm:grid-cols-3">
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t('parent.panel.dashboardColTest')}</p>
+                          <p className="text-lg font-black text-violet-600 dark:text-violet-300">
+                            {testPct != null ? `%${testPct}` : '—'}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t('parent.panel.dashboardColHomework')}</p>
+                          <p className="text-lg font-black text-slate-900 dark:text-white">{homeworkCell}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t('parent.panel.dashboardColStatus')}</p>
+                          <p className="mt-1 flex items-center gap-1.5 text-sm font-bold text-slate-800 dark:text-zinc-200">
+                            <span
+                              className={`inline-flex h-2 w-2 rounded-full ${statusOk ? 'bg-emerald-500' : pending ? 'bg-amber-500' : 'bg-zinc-400'}`}
+                            />
+                            {pending
+                              ? t('parent.panel.dashboardStatusWatch')
+                              : statusOk
+                                ? t('parent.panel.dashboardStatusGreat')
+                                : t('parent.panel.dashboardStatusNeutral')}
+                          </p>
+                        </div>
+                      </div>
+                      <Link
+                        href={`#parent-child-${c.id}`}
+                        className="inline-flex shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-white px-5 py-2.5 text-xs font-bold text-slate-900 shadow-sm transition group-hover:border-violet-300 group-hover:bg-violet-600 group-hover:text-white dark:border-zinc-600 dark:bg-zinc-900 dark:text-white dark:group-hover:bg-violet-600"
+                      >
+                        {t('parent.panel.dashboardDetails')}
+                      </Link>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
-      <KidsCard tone="emerald" className="mt-4">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="font-logo text-base font-bold text-emerald-950 dark:text-emerald-50">{t('parent.panel.gameControlTitle')}</h2>
-            <p className="mt-2 text-sm text-emerald-900/85 dark:text-emerald-100/85">
-              {t('parent.panel.gameControlBody')}
-            </p>
+
+      {/* Hızlı erişim */}
+      <section>
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 to-violet-900 p-10 text-white shadow-2xl">
+          <div className="relative z-10 max-w-lg">
+            <h3 className="font-logo text-2xl font-black">{t('parent.panel.dashboardSwitchTitle')}</h3>
+            <p className="mt-2 text-sm font-medium text-indigo-100/90">{t('parent.panel.dashboardSwitchSubtitle')}</p>
+            <div className="mt-6 flex flex-wrap gap-2">
+              {childrenList.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  disabled={switchingId !== null}
+                  onClick={() => void goToChildPanel(c.id)}
+                  className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-black text-indigo-700 shadow-md transition hover:bg-indigo-50 disabled:opacity-50"
+                >
+                  <UserRound className="h-4 w-4" />
+                  {switchingId === c.id ? '…' : `${c.first_name}`}
+                </button>
+              ))}
+            </div>
           </div>
-          <Link
-            href={`${pathPrefix}/veli/ebeveyn-kontrolleri`}
-            className="inline-flex min-h-12 w-full shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 px-8 text-sm font-bold text-white shadow-lg transition hover:from-emerald-500 hover:to-teal-500 sm:w-auto"
-          >
-            {t('parent.panel.parentControls')}
-          </Link>
+          <Rocket className="pointer-events-none absolute -bottom-4 -right-4 h-40 w-40 text-white/15 md:h-48 md:w-48" strokeWidth={1} aria-hidden />
         </div>
-      </KidsCard>
-      <KidsCard tone="sky" className="mt-4">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="font-logo text-base font-bold text-sky-950 dark:text-sky-50">{t('parent.panel.childrenStatusTitle')}</h2>
-            <p className="mt-2 text-sm text-sky-900/85 dark:text-sky-100/85">
-              {t('childrenStatus.subtitle')}
-            </p>
-          </div>
-          <Link
-            href={`${pathPrefix}/veli/cocuklarin-durumu`}
-            className="inline-flex min-h-12 w-full shrink-0 items-center justify-center rounded-full bg-linear-to-r from-sky-600 to-indigo-600 px-8 text-sm font-bold text-white shadow-lg transition hover:from-sky-500 hover:to-indigo-500 sm:w-auto"
-          >
-            {t('parent.panel.childrenStatusTitle')}
-          </Link>
-        </div>
-      </KidsCard>
+      </section>
 
       {overviewError ? (
         <p className="mt-4 rounded-xl border border-amber-300/80 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100">
@@ -293,11 +467,13 @@ export default function KidsParentPanelPage() {
         </KidsCard>
       ) : null}
 
-      <div className="mt-8 space-y-8">
+      <div className="mt-12 space-y-8">
+        <h2 className="font-logo text-lg font-bold text-slate-800 dark:text-zinc-200">{t('parent.panel.detailSectionTitle')}</h2>
         {childrenList.map((c) => {
           const pendingActions = c.pending_parent_actions ?? [];
           return (
-            <KidsCard key={c.id} tone="amber" className="border-2 border-amber-200/90 dark:border-amber-800/60">
+            <div key={c.id} id={`parent-child-${c.id}`} className="scroll-mt-28">
+            <KidsCard tone="amber" className="border-2 border-amber-200/90 dark:border-amber-800/60">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                 <div>
                   <h2 className="font-logo text-xl font-bold text-slate-900 dark:text-white">
@@ -579,6 +755,7 @@ export default function KidsParentPanelPage() {
               </div>
 
             </KidsCard>
+            </div>
           );
         })}
       </div>
