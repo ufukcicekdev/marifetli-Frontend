@@ -86,7 +86,7 @@ Eğer Xcode klasör açıyorsa, workspace’i doğrudan aç: `npm run cap:open:i
 
 | Komut | Açıklama |
 |-------|----------|
-| `npm run build:mobile` | Sadece mobil static export (`out/`) |
+| `npm run build:mobile` | Sadece mobil static export (`.next-mobile/`) |
 | `npm run cap:sync` | Mobil build + `cap sync` |
 | `npm run cap:android` | Sync + Android’de çalıştır |
 | `npm run cap:ios` | Sync + iOS’ta çalıştır |
@@ -115,29 +115,8 @@ Web asset'ler kopyalandıktan sonra sadece `pod install` fail oluyorsa Android t
 ## Notlar
 
 - Web deploy (Vercel vb.) **normal** `next build` ve `next.config.ts` ile yapılır; Capacitor sadece mobil build’i etkiler.
-- API adresi mobil uygulamada da `NEXT_PUBLIC_API_BASE_URL` / `NEXT_PUBLIC_SITE_URL` ile aynı production URL’lere gider; mobil build sırasında bu env’lerin doğru olması gerekir.
+- API adresi mobil uygulamada da `NEXT_PUBLIC_API_BASE_URL` / `NEXT_PUBLIC_SITE_URL` ile production URL’lere gider. Bu değerler `.env.production` dosyasında tanımlıdır; `npm run build:mobile` çalıştırıldığında Next.js otomatik olarak bu dosyayı yükler.
+- `.env.production` hassas veriler içerebileceği için git’e commit edilmemelidir (`.gitignore`’a ekle).
 
 
 
-
-
-
-lk mobil build ve sync
-
-cd marifetli/frontend
-npm run cap:sync
-Bu, önce out/ üretir, sonra bu çıktıyı android ve ios projelerine kopyalar. İlk seferde “missing out directory” uyarısı artık oluşmaz.
-
-Android’de çalıştırmak
-
-Android Studio kuruluysa: npm run cap:open:android ile projeyi aç, Run’a bas.
-Veya: npm run cap:android (emülatör/cihaz gerekir).
-iOS’ta çalıştırmak (sadece macOS)
-
-Xcode kuruluysa: npm run cap:open:ios ile projeyi aç, simulator veya cihaz seçip Run’a bas.
-Veya: npm run cap:ios.
-Store’a çıkış
-
-Android: Android Studio → Build → Generate Signed Bundle/APK → Play Console.
-iOS: Xcode → Signing & Capabilities → Archive → App Store Connect.
-Detaylı adımlar ve notlar frontend/CAPACITOR.md dosyasında. Web deploy (Vercel vb.) için hâlâ normal npm run build ve next.config.ts kullanıyorsun; Capacitor sadece mobil build’i etkiler.

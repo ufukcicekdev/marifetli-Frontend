@@ -6,9 +6,10 @@ const config: CapacitorConfig = {
   // Mobil build distDir: ".next-mobile" kullandığı için export oraya yazılıyor (Next.js 16)
   webDir: '.next-mobile',
   server: {
-    // Canlı site yerine yerel build kullan (out klasörü). Geliştirme için live URL kullanmak istersen:
-    // url: 'https://www.marifetli.com.tr',
-    // cleartext: true,
+    // Production: canlı siteyi WebView'da yükle.
+    // Local test için: url: 'http://localhost:3000', cleartext: true
+    url: 'https://www.marifetli.com.tr',
+    cleartext: false,
   },
   android: {
     allowMixedContent: true,

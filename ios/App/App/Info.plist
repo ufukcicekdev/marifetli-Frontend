@@ -45,5 +45,30 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+
+	<!-- Kamera ve fotoğraf kütüphanesi (tasarım yükleme) -->
+	<key>NSCameraUsageDescription</key>
+	<string>Fotoğraf çekmek ve tasarım yüklemek için kamera erişimi gerekiyor.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Galeri'den fotoğraf seçip tasarım paylaşmak için erişim gerekiyor.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Fotoğrafları kütüphaneye kaydetmek için erişim gerekiyor.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Video kaydetmek için mikrofon erişimi gerekiyor.</string>
+
+	<!-- App Transport Security: production HTTPS zorunlu; localhost geliştirme için istisna -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>localhost</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
 </dict>
 </plist>

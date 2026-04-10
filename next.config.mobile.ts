@@ -18,6 +18,8 @@ const nextConfigMobile: NextConfig = {
       { protocol: "https", hostname: "fra1.digitaloceanspaces.com", pathname: "/**" },
       { protocol: "https", hostname: "*.digitaloceanspaces.com", pathname: "/**" },
       { protocol: "http", hostname: "localhost", pathname: "/**", port: "8000" },
+      /** Kids landing mockup / AIDA önizleme görselleri */
+      { protocol: "https", hostname: "lh3.googleusercontent.com", pathname: "/**" },
     ],
   },
   turbopack: {

@@ -31,15 +31,17 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files - .env.local ve gizli dosyalar ignore; .env.production commit edilebilir (NEXT_PUBLIC_* client'ta zaten görünür)
+# env files — hiçbir env dosyası GitHub'a gitmesin
 .env
-.env.local
-.env.development.local
-.env.test.local
+.env.*
 .env*.local
 
 # Firebase SW: .env.local'den generate edilir (predev/prebuild)
 /public/firebase-messaging-sw.js
+
+# Firebase native credentials — her geliştirici kendi dosyasını Firebase Console'dan indirir
+ios/App/App/GoogleService-Info.plist
+android/app/google-services.json
 
 # vercel
 .vercel

@@ -9,12 +9,25 @@ import {
   canRequestPush,
   ensureFirebaseApp,
   setupForegroundMessageHandler,
+  setupNativeNotificationTapHandler,
   getFCMTokenIfGranted,
 } from '@/src/lib/firebase-messaging';
 
+function isNativePlatform(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { Capacitor } = require('@capacitor/core') as typeof import('@capacitor/core');
+    return Capacitor.isNativePlatform();
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Giriş yapmış kullanıcı için: FCM foreground toast + izin zaten verildiyse bu cihazın token'ını sessizce kaydeder.
- * Bildirim tıklanınca SW'dan gelen NAVIGATE mesajına göre sayfaya yönlendirir.
+ * Giriş yapmış kullanıcı için FCM kurulumu:
+ * - Web: SW mesajını dinle + foreground toast + token kaydet
+ * - Native (iOS/Android): bildirim tap yönlendirmesi + foreground toast + token kaydet
  */
 export function FirebasePushHandler() {
   const router = useRouter();
@@ -22,13 +35,16 @@ export function FirebasePushHandler() {
   const setupDone = useRef(false);
   const tokenRegisterAttempted = useRef(false);
 
-  // Bildirim tıklanınca (uygulama açıkken) SW'dan gelen NAVIGATE ile ilgili sayfaya git
+  // --- Web: Service Worker'dan NAVIGATE mesajını dinle ---
   useEffect(() => {
+    if (isNativePlatform()) return;
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
     const onMessage = (event: MessageEvent) => {
       const data = event.data;
       if (data?.type === 'NAVIGATE' && typeof data.url === 'string' && data.url) {
-        const path = data.url.startsWith('http') ? new URL(data.url).pathname + (new URL(data.url).hash || '') : data.url;
+        const path = data.url.startsWith('http')
+          ? new URL(data.url).pathname + (new URL(data.url).hash || '')
+          : data.url;
         router.push(path || '/bildirimler');
       }
     };
@@ -36,6 +52,19 @@ export function FirebasePushHandler() {
     return () => navigator.serviceWorker.removeEventListener('message', onMessage);
   }, [router]);
 
+  // --- Native: bildirime tıklanınca yönlendir ---
+  useEffect(() => {
+    if (!isNativePlatform()) return;
+    const cleanup = setupNativeNotificationTapHandler((url) => {
+      const path = url.startsWith('http')
+        ? new URL(url).pathname + (new URL(url).hash || '')
+        : url;
+      router.push(path || '/bildirimler');
+    });
+    return cleanup;
+  }, [router]);
+
+  // --- Foreground mesaj handler (web + native) ---
   useEffect(() => {
     if (!isAuthenticated || !canRequestPush() || setupDone.current) return;
     setupDone.current = true;
@@ -48,16 +77,21 @@ export function FirebasePushHandler() {
     })();
   }, [isAuthenticated]);
 
-  // İzin zaten verildiyse bu cihazın token'ını kaydet (telefon/PC fark etmez, her cihazda token olsun)
+  // --- Token kaydı: izin zaten verilmişse sessizce kaydet ---
   useEffect(() => {
     if (!isAuthenticated || !canRequestPush() || tokenRegisterAttempted.current) return;
-    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+    // Web: izin kontrolü burada; native: her zaman dene (pop-up çıkmaz)
+    if (!isNativePlatform()) {
+      if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+    }
     tokenRegisterAttempted.current = true;
-    getFCMTokenIfGranted((token, deviceName) => api.registerFCMToken(token, deviceName)).then((result) => {
-      if (!result.ok && result.reason !== 'İzin yok') {
-        tokenRegisterAttempted.current = false;
-      }
-    });
+    getFCMTokenIfGranted((token, deviceName) => api.registerFCMToken(token, deviceName)).then(
+      (result) => {
+        if (!result.ok && result.reason !== 'İzin yok') {
+          tokenRegisterAttempted.current = false;
+        }
+      },
+    );
   }, [isAuthenticated]);
 
   return null;

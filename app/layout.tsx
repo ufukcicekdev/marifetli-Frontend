@@ -4,6 +4,7 @@ import { Inter, Outfit } from 'next/font/google';
 import { Toaster } from 'react-hot-toast';
 import { QueryProvider } from '@/src/providers/query-provider';
 import { RootLayoutShell } from '@/src/components/root-layout-shell';
+import { CapacitorSplashHide } from '@/src/components/capacitor-splash-hide';
 
 // Canlıda NEXT_PUBLIC_SITE_URL deploy ortamında tanımlı olsun; yoksa production URL fallback
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.marifetli.com.tr';
@@ -146,6 +147,7 @@ export default async function RootLayout({
         <link rel="dns-prefetch" href="https://cekfisi.fra1.digitaloceanspaces.com" />
       </head>
       <body className={`${inter.className} ${outfit.variable}`}>
+        <CapacitorSplashHide />
         <QueryProvider>
           <RootLayoutShell useSidebar={USE_SIDEBAR}>{children}</RootLayoutShell>
         </QueryProvider>

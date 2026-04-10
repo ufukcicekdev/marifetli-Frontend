@@ -1,5 +1,39 @@
 import { app } from '@/src/lib/firebase';
 import { getMessaging, getToken, onMessage } from 'firebase/messaging';
+import { FirebaseMessaging } from '@capacitor-firebase/messaging';
+
+/* ------------------------------------------------------------------ */
+/* Platform detection                                                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Capacitor native ortamında (iOS/Android) mı çalışıyor?
+ * SSR sırasında false döner.
+ */
+function isNative(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { Capacitor } = require('@capacitor/core') as typeof import('@capacitor/core');
+    return Capacitor.isNativePlatform();
+  } catch {
+    return false;
+  }
+}
+
+function getNativePlatformName(): string {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { Capacitor } = require('@capacitor/core') as typeof import('@capacitor/core');
+    return Capacitor.getPlatform() === 'ios' ? 'iOS' : 'Android';
+  } catch {
+    return 'Mobile';
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Error helpers                                                        */
+/* ------------------------------------------------------------------ */
 
 const FCM_401_MESSAGE =
   "Google Cloud'da Web API anahtarı veya FCM API ayarı gerekli. API anahtarında HTTP referanslara localhost ekleyin, API kısıtlamalarına \"Firebase Cloud Messaging API\" ekleyin veya FCM API'yi etkinleştirin.";
@@ -16,14 +50,88 @@ function normalizeFCMError(msg: string): string {
   return msg;
 }
 
+/* ------------------------------------------------------------------ */
+/* Native (Capacitor) push — @capacitor-firebase/messaging             */
+/* ------------------------------------------------------------------ */
+
+async function getNativeFCMToken(): Promise<string | null> {
+  try {
+    const { receive } = await FirebaseMessaging.requestPermissions();
+    if (receive !== 'granted') return null;
+    const { token } = await FirebaseMessaging.getToken();
+    return token ?? null;
+  } catch (e) {
+    console.warn('[FCM native] token alınamadı:', e);
+    return null;
+  }
+}
+
 /**
- * Tarayıcıda FCM token alıp backend'e kaydetmek için.
- * firebase.ts ile tek app kullanılır; config SW'e oradan gönderilir.
+ * Native foreground mesaj dinleyici.
+ * Uygulama açıkken gelen push'ları yakalar; geri dönen fonksiyon dinleyiciyi kaldırır.
+ */
+export function setupNativeForegroundHandler(
+  onMessageCb: (title: string, body: string) => void,
+): () => void {
+  if (!isNative()) return () => {};
+  let cancelled = false;
+  FirebaseMessaging.addListener('notificationReceived', (event) => {
+    if (cancelled) return;
+    const title = event.notification.title ?? 'Marifetli';
+    const body = event.notification.body ?? '';
+    onMessageCb(title, body);
+  }).catch((e) => console.warn('[FCM native] foreground handler kurulamadı:', e));
+  return () => { cancelled = true; };
+}
+
+/**
+ * Native bildirim tıklanma dinleyicisi.
+ * Uygulama arka plandayken açılınca URL/path yönlendirmesi için.
+ */
+export function setupNativeNotificationTapHandler(
+  onTapCb: (url: string) => void,
+): () => void {
+  if (!isNative()) return () => {};
+  let cancelled = false;
+  FirebaseMessaging.addListener('notificationActionPerformed', (event) => {
+    if (cancelled) return;
+    const url =
+      (event.notification.data as Record<string, string> | undefined)?.url ?? '/bildirimler';
+    onTapCb(url);
+  }).catch((e) => console.warn('[FCM native] tap handler kurulamadı:', e));
+  return () => { cancelled = true; };
+}
+
+/* ------------------------------------------------------------------ */
+/* Unified public API — web + native                                   */
+/* ------------------------------------------------------------------ */
+
+export function canRequestPush(): boolean {
+  if (typeof window === 'undefined') return false;
+  if (isNative()) return true;
+  const vapid = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY?.trim();
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim();
+  return Boolean(vapid && projectId);
+}
+
+/**
+ * FCM token al + backend'e kaydet.
+ * Native'de @capacitor-firebase/messaging, web'de Firebase Web SDK kullanır.
  */
 export async function getFCMTokenAndRegister(
   registerToken: (token: string, deviceName?: string) => Promise<unknown>,
 ): Promise<{ ok: true; token: string } | { ok: false; reason: string }> {
   if (typeof window === 'undefined') return { ok: false, reason: 'SSR' };
+
+  // --- Native (iOS / Android) ---
+  if (isNative()) {
+    const token = await getNativeFCMToken();
+    if (!token) return { ok: false, reason: 'Native token alınamadı veya izin verilmedi' };
+    await registerToken(token, getNativePlatformName());
+    return { ok: true, token };
+  }
+
+  // --- Web ---
   const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY?.trim();
   const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim();
   const appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID?.trim();
@@ -48,54 +156,44 @@ export async function getFCMTokenAndRegister(
   }
 }
 
-export function canRequestPush(): boolean {
-  if (typeof window === 'undefined') return false;
-  const vapid = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY?.trim();
-  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim();
-  return Boolean(vapid && projectId);
-}
-
 /**
- * İzin zaten "granted" ise token alıp kaydeder; istemez, sadece kayıt yapar.
- * Her cihazda (telefon, PC) token'ın kayıtlı olması için uygulama açıldığında çağrılabilir.
+ * İzin zaten "granted" ise token alıp sessizce kaydeder.
+ * Uygulama her açıldığında çağrılabilir.
  */
 export async function getFCMTokenIfGranted(
   registerToken: (token: string, deviceName?: string) => Promise<unknown>,
 ): Promise<{ ok: true; token: string } | { ok: false; reason: string }> {
   if (typeof window === 'undefined') return { ok: false, reason: 'SSR' };
-  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return { ok: false, reason: 'İzin yok' };
-  const vapidKey = process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY?.trim();
-  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID?.trim();
-  const appId = process.env.NEXT_PUBLIC_FIREBASE_APP_ID?.trim();
-  if (!vapidKey || !projectId || !appId) return { ok: false, reason: 'Firebase config yok' };
-  try {
-    const messaging = getMessaging(app);
-    const token = await getToken(messaging, { vapidKey });
-    if (!token) return { ok: false, reason: 'Token alınamadı' };
-    await registerToken(token, 'Web');
-    return { ok: true, token };
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    return { ok: false, reason: normalizeFCMError(msg) };
+
+  if (isNative()) {
+    return getFCMTokenAndRegister(registerToken);
   }
+
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') {
+    return { ok: false, reason: 'İzin yok' };
+  }
+  return getFCMTokenAndRegister(registerToken);
 }
 
 /**
- * FCM foreground handler için app hazır mı? firebase.ts zaten app'i oluşturur.
+ * Firebase app'i doğrular (web için).
  */
 export async function ensureFirebaseApp(): Promise<boolean> {
   if (typeof window === 'undefined' || !canRequestPush()) return false;
+  if (isNative()) return true;
   return Boolean(app);
 }
 
 /**
- * Sekme açıkken gelen push'u göstermek için (ön planda FCM sistem bildirimi çıkmaz, toast kullanıyoruz).
- * firebase.ts'teki app ile messaging kullanılır.
+ * Foreground mesaj handler — web sekmesi açıkken (native için setupNativeForegroundHandler'a yönlendirir).
  */
 export function setupForegroundMessageHandler(
   onMessageCb: (title: string, body: string) => void,
 ): () => void {
-  if (typeof window === 'undefined' || !canRequestPush() || !app) return () => {};
+  if (typeof window === 'undefined' || !canRequestPush()) return () => {};
+  if (isNative()) return setupNativeForegroundHandler(onMessageCb);
+  if (!app) return () => {};
+
   let cancelled = false;
   try {
     const messaging = getMessaging(app);
