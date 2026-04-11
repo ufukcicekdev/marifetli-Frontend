@@ -17,6 +17,13 @@ import {
   TrendingUp,
   ChevronRight,
   Rocket,
+  Award,
+  ThumbsUp,
+  BookOpen,
+  Cpu,
+  Palette,
+  FlaskConical,
+  Scissors,
 } from 'lucide-react';
 import api from '@/src/lib/api';
 import { UzmanFullPageLink } from '@/src/components/uzman-full-page-link';
@@ -29,57 +36,6 @@ import type { Question } from '@/src/types';
 /* Config                                                               */
 /* ------------------------------------------------------------------ */
 
-const VALUE_ITEMS: {
-  title: string;
-  description: string;
-  href: string;
-  icon: NavIconName;
-  iconBg: string;
-  cardBorder: string;
-  cardBg: string;
-  accentColor: string;
-}[] = [
-  {
-    title: 'Soru sor',
-    description: 'Merak ettiğin her şeyi topluluğa sor, uzmanlardan cevap al.',
-    href: '/soru-sor',
-    icon: 'questions',
-    iconBg: 'bg-sky-500',
-    cardBg: 'bg-sky-50 dark:bg-sky-950/20',
-    cardBorder: 'border-sky-200 dark:border-sky-900/50',
-    accentColor: 'text-sky-600 dark:text-sky-400',
-  },
-  {
-    title: 'Cevapla',
-    description: 'Bildiklerini paylaş, bilgiyle başkalarına yol göster.',
-    href: '/sorular',
-    icon: 'popular',
-    iconBg: 'bg-orange-500',
-    cardBg: 'bg-orange-50 dark:bg-orange-950/20',
-    cardBorder: 'border-orange-200 dark:border-orange-900/50',
-    accentColor: 'text-orange-600 dark:text-orange-400',
-  },
-  {
-    title: 'Topluluklar',
-    description: 'El işleri, yemek, müzik, sanat… İlgi alanına göre katıl.',
-    href: '/topluluklar',
-    icon: 'discover',
-    iconBg: 'bg-cyan-500',
-    cardBg: 'bg-cyan-50 dark:bg-cyan-950/20',
-    cardBorder: 'border-cyan-200 dark:border-cyan-900/50',
-    accentColor: 'text-cyan-600 dark:text-cyan-400',
-  },
-  {
-    title: 'Tasarım paylaş',
-    description: 'El emeği ürünlerini sergilediğin açık galeri.',
-    href: '/tasarimlar',
-    icon: 'designs',
-    iconBg: 'bg-fuchsia-500',
-    cardBg: 'bg-fuchsia-50 dark:bg-fuchsia-950/20',
-    cardBorder: 'border-fuchsia-200 dark:border-fuchsia-900/50',
-    accentColor: 'text-fuchsia-600 dark:text-fuchsia-400',
-  },
-];
 
 const CATEGORY_ACCENT: Record<string, { icon: NavIconName; bg: string; border: string; text: string }> = {
   'el-isleri':         { icon: 'designs',    bg: 'bg-rose-50 dark:bg-rose-950/30',       border: 'border-rose-200 dark:border-rose-800',     text: 'text-rose-700 dark:text-rose-300' },
@@ -260,6 +216,115 @@ function TrendingQuestionsPreview() {
   );
 }
 
+function FeedTabs() {
+  const [activeTab, setActiveTab] = useState<'recent' | 'trending' | 'solved'>('recent');
+
+  const ordering = activeTab === 'trending' ? '-hot_score' : '-created_at';
+  const filters = activeTab === 'solved' ? { is_resolved: true, ordering: '-created_at' } : { ordering };
+
+  const { data, isLoading } = useQuestions({ ...filters, page_size: 5 });
+  const raw = data?.results;
+  const questions = (
+    Array.isArray(raw)
+      ? (raw as unknown[]).filter(
+          (q): q is Question =>
+            q != null && typeof (q as { id?: unknown }).id === 'number',
+        )
+      : []
+  ).slice(0, 5);
+
+  const tabs = [
+    { key: 'recent' as const, label: 'Son Tartışmalar' },
+    { key: 'trending' as const, label: 'Trend' },
+    { key: 'solved' as const, label: 'Çözüldü' },
+  ];
+
+  return (
+    <div className="rounded-2xl border border-gray-200/80 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden shadow-sm">
+      {/* Sekmeler */}
+      <div className="flex gap-1 border-b border-gray-100 dark:border-gray-800 px-5 pt-4">
+        {tabs.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            className={`px-4 py-2 text-sm font-bold rounded-t-lg transition-colors ${
+              activeTab === tab.key
+                ? 'text-brand border-b-2 border-brand'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Kartlar */}
+      <div className="divide-y divide-gray-100 dark:divide-gray-800">
+        {isLoading &&
+          [1, 2, 3].map((i) => (
+            <div key={i} className="p-6 animate-pulse">
+              <div className="h-4 bg-gray-100 dark:bg-gray-800 rounded w-3/4 mb-2" />
+              <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded w-1/2" />
+            </div>
+          ))}
+        {!isLoading && questions.length === 0 && (
+          <p className="p-6 text-sm text-gray-400 text-center">Henüz içerik yok.</p>
+        )}
+        {!isLoading &&
+          questions.map((q) => (
+            <div key={q.id} className="group relative p-5 sm:p-6 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors overflow-hidden">
+              {/* Sol hover çizgisi */}
+              <div className="absolute top-0 left-0 w-1 h-full bg-brand opacity-0 group-hover:opacity-100 transition-opacity" aria-hidden />
+
+              <div className="flex gap-4">
+                {/* Oy sayısı */}
+                <div className="hidden sm:flex flex-col items-center gap-0.5 shrink-0 pt-1">
+                  <ThumbsUp className="h-4 w-4 text-gray-300 dark:text-gray-600" aria-hidden />
+                  <span className="text-xs font-bold text-gray-500 dark:text-gray-400">{q.like_count}</span>
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <Link
+                    href={`/soru/${q.slug}`}
+                    className="text-base font-bold text-gray-900 dark:text-white hover:text-brand dark:hover:text-brand transition-colors line-clamp-2 leading-snug"
+                  >
+                    {q.title}
+                  </Link>
+                  <div className="flex items-center gap-4 mt-2">
+                    <span className="flex items-center gap-1 text-xs text-gray-400 dark:text-gray-500">
+                      <MessageCircle className="h-3.5 w-3.5" aria-hidden />
+                      {q.answer_count} cevap
+                    </span>
+                    {q.is_resolved && (
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-2 py-0.5 rounded-full">
+                        <CheckCircle2 className="h-3 w-3" aria-hidden />
+                        Çözüldü
+                      </span>
+                    )}
+                    {q.tags?.[0] && (
+                      <span className="text-xs font-bold text-brand bg-brand/10 px-2 py-0.5 rounded-full">
+                        {q.tags[0].name}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+      </div>
+
+      <div className="p-4 border-t border-gray-100 dark:border-gray-800">
+        <Link
+          href="/sorular"
+          className="flex w-full items-center justify-center py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+        >
+          Tüm soruları keşfet
+        </Link>
+      </div>
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /* Main export                                                          */
 /* ------------------------------------------------------------------ */
@@ -357,196 +422,171 @@ export function HomeHero() {
       </div>
 
       {/* ============================================================ */}
-      {/* HERO BLOCK                                                    */}
+      {/* HERO BLOCK — glass card üzerinde gradient arka plan          */}
       {/* ============================================================ */}
-      <div className="relative overflow-hidden rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-md">
-        {/* Background gradient */}
-        <div
-          className="absolute inset-0 bg-gradient-to-br from-brand-pink via-white to-sky-50 dark:from-gray-800/95 dark:via-gray-800/80 dark:to-gray-900/90 pointer-events-none"
-          aria-hidden
-        />
-        {/* Decorative blobs */}
-        <div
-          className="absolute -top-20 -right-20 w-72 h-72 rounded-full bg-brand/8 dark:bg-brand/5 blur-3xl pointer-events-none"
-          aria-hidden
-        />
-        <div
-          className="absolute -bottom-12 -left-12 w-56 h-56 rounded-full bg-sky-300/20 dark:bg-sky-800/15 blur-3xl pointer-events-none"
-          aria-hidden
-        />
-        <div
-          className="absolute top-1/2 right-1/4 w-32 h-32 rounded-full bg-fuchsia-300/10 dark:bg-fuchsia-800/10 blur-2xl pointer-events-none"
-          aria-hidden
-        />
-
-        <div className="relative px-5 sm:px-8 py-8 sm:py-12">
-          {/* Üst rozet */}
-          <div className="mb-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-brand/10 dark:bg-brand/15 border border-brand/20 dark:border-brand/30 text-brand dark:text-brand text-xs font-semibold tracking-wide">
-            <Sparkles className="h-3.5 w-3.5" aria-hidden />
-            Türkiye&apos;nin el işleri ve hobi topluluğu
+      <div className="relative h-80 sm:h-96 rounded-2xl overflow-hidden shadow-2xl shadow-brand/10">
+        {/* Arka plan gradyan */}
+        <div className="absolute inset-0 bg-gradient-to-br from-violet-600 via-brand to-pink-500 dark:from-violet-900 dark:via-indigo-900 dark:to-slate-900" aria-hidden />
+        {/* Dekoratif blob'lar */}
+        <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full bg-pink-400/30 blur-3xl pointer-events-none" aria-hidden />
+        <div className="absolute bottom-0 left-1/3 w-60 h-60 rounded-full bg-cyan-400/20 blur-3xl pointer-events-none" aria-hidden />
+        {/* Sağda yarı saydam dekoratif şekil */}
+        <div className="absolute right-0 inset-y-0 w-1/2 bg-gradient-to-l from-transparent to-transparent pointer-events-none hidden sm:block" aria-hidden>
+          <div className="absolute right-8 top-1/2 -translate-y-1/2 opacity-10">
+            <Sparkles className="h-56 w-56 text-white" />
           </div>
-
-          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3 max-w-2xl leading-tight">
-            El emeğinin, merakın ve{' '}
-            <span className="text-brand relative">
-              bilginin
-              <span className="absolute -bottom-0.5 left-0 right-0 h-0.5 bg-brand/30 rounded-full" aria-hidden />
-            </span>
-            {' '}buluşma noktası
-          </h1>
-          <p className="text-base sm:text-lg text-gray-600 dark:text-gray-300 max-w-xl mb-6 leading-relaxed">
-            Örgü, dikiş, yemek, müzik, sanat, fotoğraf ve daha fazlası.
-            Topluluğuna sor, cevapla, paylaş — birlikte öğreniyoruz.
-          </p>
-
-          {/* Search bar */}
-          <div className="mb-6">
-            <HeroSearch />
-          </div>
-
-          {/* CTA buttons */}
-          <div className="flex flex-wrap items-center gap-2.5 mb-6">
-            <Link
-              href="/soru-sor"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-brand hover:bg-brand-hover text-white transition-colors shadow-sm"
-            >
-              <span aria-hidden>+</span>
-              Soru sor
-            </Link>
-            <UzmanFullPageLink className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-gradient-to-r from-violet-600 to-brand hover:opacity-95 text-white shadow-sm transition-opacity">
-              <NavIcon name="expert" className="h-4 w-4 text-white" />
-              Uzmana sor
-            </UzmanFullPageLink>
-            <Link
-              href="/topluluklar"
-              className="inline-flex items-center px-5 py-2.5 rounded-xl text-sm font-medium border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-white/80 dark:hover:bg-gray-800 transition-colors"
-            >
-              Topluluklar
-            </Link>
-            <Link
-              href="/tasarimlar"
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium text-fuchsia-700 dark:text-fuchsia-400 border border-fuchsia-200 dark:border-fuchsia-800/50 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-950/30 transition-colors"
-            >
-              Tasarımlar
-              <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-            </Link>
-            <Link
-              href={SITE_KIDS_HREF}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-sky-700 dark:text-sky-300 border border-sky-300 dark:border-sky-700 bg-sky-50 dark:bg-sky-950/30 hover:bg-sky-100 dark:hover:bg-sky-900/40 transition-colors"
-            >
-              <NavIcon name="student" className="h-4 w-4" />
-              Kids
-            </Link>
-          </div>
-
-          {/* Live stats */}
-          <LiveStats />
         </div>
-      </div>
 
-      {/* ============================================================ */}
-      {/* VALUE CARDS                                                   */}
-      {/* ============================================================ */}
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
-        {VALUE_ITEMS.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={`group relative rounded-xl border p-4 sm:p-5 transition-all duration-200 hover:shadow-lg hover:-translate-y-1 ${item.cardBg} ${item.cardBorder}`}
-          >
-            <span
-              className={`mb-3 inline-flex h-10 w-10 items-center justify-center rounded-xl ${item.iconBg} text-white shadow-sm group-hover:scale-110 transition-transform duration-200`}
-              aria-hidden
-            >
-              <NavIcon name={item.icon} className="h-5 w-5 text-white" />
-            </span>
-            <h2 className={`text-sm font-bold text-gray-900 dark:text-white group-hover:${item.accentColor.split(' ')[0]} transition-colors`}>
-              {item.title}
-            </h2>
-            <p className="mt-1 line-clamp-2 text-xs text-gray-500 dark:text-gray-400 leading-snug">
-              {item.description}
+        {/* Glass kart */}
+        <div className="absolute inset-0 flex items-center px-6 sm:px-12">
+          <div className="bg-white/10 dark:bg-black/20 backdrop-blur-2xl border border-white/30 rounded-2xl p-6 sm:p-10 max-w-xl shadow-xl">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-white mb-3 tracking-tight leading-tight">
+              El emeğinin, merakın ve bilginin
+              <br />
+              <span className="bg-gradient-to-r from-yellow-300 to-pink-300 bg-clip-text text-transparent">
+                buluşma noktası.
+              </span>
+            </h1>
+            <p className="text-sm sm:text-base text-white/80 mb-5 font-medium leading-relaxed">
+              50.000+ üyeyle birlikte soru sor, cevapla, paylaş — birlikte öğreniyoruz.
             </p>
-            <span
-              className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity"
-              aria-hidden
-            >
-              <ArrowRight className={`h-3.5 w-3.5 ${item.accentColor}`} />
-            </span>
-          </Link>
-        ))}
-      </div>
-
-      {/* ============================================================ */}
-      {/* TRENDING QUESTIONS                                            */}
-      {/* ============================================================ */}
-      <div className="rounded-2xl border border-gray-200/80 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden shadow-sm">
-        {/* Top accent bar */}
-        <div className="h-1 w-full bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-300" aria-hidden />
-        <div className="p-5 sm:p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="flex items-center gap-2 font-bold text-gray-900 dark:text-white">
-              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-950/50">
-                <Flame className="h-4 w-4 text-orange-500" aria-hidden />
-              </span>
-              Popüler sorular
-              <span className="ml-1 inline-flex items-center gap-1 text-xs font-medium text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/40 border border-orange-200 dark:border-orange-800/60 px-2 py-0.5 rounded-full">
-                <TrendingUp className="h-3 w-3" aria-hidden />
-                Gündem
-              </span>
-            </h2>
-            <Link
-              href="/sorular"
-              className="inline-flex items-center gap-1 text-sm font-medium text-brand hover:text-brand-hover transition-colors"
-            >
-              Tüm sorular
-              <ArrowRight className="h-3.5 w-3.5" aria-hidden />
-            </Link>
-          </div>
-          <TrendingQuestionsPreview />
-        </div>
-      </div>
-
-      {/* ============================================================ */}
-      {/* CATEGORIES                                                    */}
-      {/* ============================================================ */}
-      {topCategories.length > 0 && (
-        <div className="rounded-2xl border border-gray-200/80 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden shadow-sm">
-          <div className="p-5 sm:p-6">
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-              <h2 className="flex items-center gap-2 font-bold text-gray-900 dark:text-white">
-                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-pink dark:bg-brand/10">
-                  <NavIcon name="categories" className="h-4 w-4 text-brand" />
-                </span>
-                Kategorileri keşfet
-              </h2>
+            <div className="mb-5">
+              <HeroSearch />
+            </div>
+            <div className="flex flex-wrap gap-3">
               <Link
-                href="/kategoriler"
-                className="inline-flex items-center gap-1 text-sm font-medium text-brand hover:text-brand-hover transition-colors"
+                href="/soru-sor"
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-brand to-violet-600 text-white px-7 py-3.5 rounded-full font-bold shadow-lg shadow-brand/30 hover:scale-105 transition-transform text-sm"
               >
-                Tümünü gör
-                <ArrowRight className="h-3.5 w-3.5" aria-hidden />
+                Soru Sor
+              </Link>
+              <Link
+                href="/sorular?ordering=-hot_score"
+                className="inline-flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white px-7 py-3.5 rounded-full font-bold transition-all text-sm border border-white/20"
+              >
+                <TrendingUp className="h-4 w-4" aria-hidden />
+                Trendler
               </Link>
             </div>
-            <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-              {topCategories.map((c) => {
-                const style = getCategoryAccent(c.slug);
-                return (
-                  <Link
-                    key={c.id}
-                    href={`/t/${c.slug}`}
-                    className={`flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl text-center text-xs font-medium border transition-all hover:shadow-sm hover:scale-[1.03] hover:border-brand/40 ${style.bg} ${style.border}`}
-                  >
-                    <span className={`flex h-8 w-8 items-center justify-center rounded-lg bg-white/70 dark:bg-gray-900/50 shadow-sm`} aria-hidden>
-                      <NavIcon name={style.icon} className={`h-4 w-4 ${style.text}`} />
-                    </span>
-                    <span className={`leading-tight ${style.text}`}>{c.name}</span>
-                  </Link>
-                );
-              })}
-            </div>
           </div>
         </div>
-      )}
+      </div>
+
+      {/* ============================================================ */}
+      {/* KATEGORİLERİ KEŞFET — bento grid                            */}
+      {/* ============================================================ */}
+      <div className="space-y-4">
+        <div className="flex items-end justify-between">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+              Kategorileri Keşfet
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Uzmanlaşmış öğrenme alanlarına dal</p>
+          </div>
+          <Link
+            href="/kategoriler"
+            className="inline-flex items-center gap-1 text-sm font-bold text-brand hover:text-brand-hover transition-colors"
+          >
+            Tüm konular
+            <ArrowRight className="h-4 w-4" aria-hidden />
+          </Link>
+        </div>
+
+        {topCategories.length > 0 ? (
+          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3 sm:gap-5">
+            {topCategories.map((c) => {
+              const style = getCategoryAccent(c.slug);
+              return (
+                <Link
+                  key={c.id}
+                  href={`/t/${c.slug}`}
+                  className={`group flex flex-col items-center text-center p-4 sm:p-6 rounded-2xl border shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-300 ${style.bg} ${style.border}`}
+                >
+                  <span className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-white/70 dark:bg-gray-900/50 shadow-sm mb-3 group-hover:scale-110 transition-transform`} aria-hidden>
+                    <NavIcon name={style.icon} className={`h-7 w-7 ${style.text}`} />
+                  </span>
+                  <h3 className={`font-bold text-sm leading-snug ${style.text}`}>{c.name}</h3>
+                </Link>
+              );
+            })}
+          </div>
+        ) : (
+          /* Fallback statik kategoriler */
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-3 sm:gap-5">
+            {[
+              { label: 'El İşleri', icon: <Scissors className="h-7 w-7 text-rose-600" />, bg: 'bg-rose-50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-800', href: '/t/el-isleri' },
+              { label: 'Deneyler', icon: <FlaskConical className="h-7 w-7 text-emerald-600" />, bg: 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800', href: '/sorular?q=deney' },
+              { label: 'Kodlama', icon: <Cpu className="h-7 w-7 text-violet-600" />, bg: 'bg-violet-50 dark:bg-violet-950/20 border-violet-200 dark:border-violet-800', href: '/sorular?q=kodlama' },
+              { label: 'Tasarım', icon: <Palette className="h-7 w-7 text-pink-600" />, bg: 'bg-pink-50 dark:bg-pink-950/20 border-pink-200 dark:border-pink-800', href: '/tasarimlar' },
+              { label: 'Hobi', icon: <BookOpen className="h-7 w-7 text-amber-600" />, bg: 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800', href: '/sorular?q=hobi' },
+            ].map((item) => (
+              <Link key={item.label} href={item.href} className={`group flex flex-col items-center text-center p-5 rounded-2xl border shadow-sm hover:shadow-xl hover:-translate-y-2 transition-all duration-300 ${item.bg}`}>
+                <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/70 dark:bg-gray-900/50 shadow-sm mb-3 group-hover:scale-110 transition-transform" aria-hidden>{item.icon}</span>
+                <h3 className="font-bold text-sm text-gray-800 dark:text-gray-200">{item.label}</h3>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ============================================================ */}
+      {/* TOPLULUK AKIŞI + SIDEBAR                                     */}
+      {/* ============================================================ */}
+      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
+        {/* Sol: Feed */}
+        <div className="flex-1 min-w-0 space-y-4">
+          {/* Sekmeler */}
+          <FeedTabs />
+        </div>
+
+        {/* Sağ: Sidebar */}
+        <aside className="w-full lg:w-80 xl:w-96 shrink-0 space-y-5">
+          {/* İstatistikler */}
+          <div className="rounded-2xl border border-gray-200/80 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm">
+            <h3 className="font-extrabold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-pink dark:bg-brand/10">
+                <Award className="h-4 w-4 text-brand" aria-hidden />
+              </span>
+              Topluluk İstatistikleri
+            </h3>
+            <LiveStats />
+          </div>
+
+          {/* Uzman köşesi */}
+          <div className="rounded-2xl border border-gray-200/80 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm">
+            <h3 className="font-extrabold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-violet-100 dark:bg-violet-950/40">
+                <NavIcon name="expert" className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+              </span>
+              Uzman Cevapları
+            </h3>
+            <UzmanFullPageLink className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-brand text-white font-bold text-sm hover:opacity-90 transition-opacity shadow-sm">
+              <NavIcon name="expert" className="h-4 w-4 text-white" />
+              Uzmana Sor
+            </UzmanFullPageLink>
+          </div>
+
+          {/* Popüler sorular */}
+          <div className="rounded-2xl border border-gray-200/80 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden shadow-sm">
+            <div className="h-1 w-full bg-gradient-to-r from-orange-500 via-amber-400 to-yellow-300" aria-hidden />
+            <div className="p-5">
+              <h3 className="font-extrabold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-100 dark:bg-orange-950/50">
+                  <Flame className="h-4 w-4 text-orange-500" aria-hidden />
+                </span>
+                Popüler Şu An
+              </h3>
+              <TrendingQuestionsPreview />
+              <Link
+                href="/sorular"
+                className="mt-4 flex w-full items-center justify-center py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-sm font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                Tüm soruları keşfet
+              </Link>
+            </div>
+          </div>
+        </aside>
+      </div>
 
     </section>
   );
