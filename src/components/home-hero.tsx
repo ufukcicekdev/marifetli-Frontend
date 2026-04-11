@@ -16,7 +16,6 @@ import {
   MessageSquare,
   TrendingUp,
   Trophy,
-  GraduationCap,
   Star,
   ChevronRight,
   LayoutDashboard,
@@ -340,37 +339,21 @@ export function HomeHero() {
             Kendi yolunu çiz, becerilerini geliştir ve topluluğun bir parçası ol.
           </p>
 
-          {/* Aksiyon kartları */}
-          <div className="flex flex-wrap gap-4">
+          {/* CTA */}
+          <div className="flex flex-wrap items-center gap-3">
             <Link
-              href={`${SITE_KIDS_HREF}/giris?role=student`}
-              className="group relative bg-white/10 backdrop-blur-xl border border-white/20 p-5 rounded-xl text-left w-56 hover:bg-white/20 transition-all hover:shadow-lg hover:shadow-violet-500/20"
+              href={SITE_KIDS_HREF}
+              className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-gradient-to-r from-cyan-400 to-violet-500 text-white font-bold text-base shadow-lg shadow-violet-500/30 hover:shadow-violet-500/50 hover:scale-105 transition-all"
             >
-              <div className="w-11 h-11 bg-violet-600 rounded-xl mb-3 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-violet-600/40">
-                <NavIcon name="student" className="h-6 w-6 text-white" />
-              </div>
-              <h3 className="text-base font-bold text-white mb-1">Öğrenci Girişi</h3>
-              <p className="text-xs text-slate-400">Atölyelere katıl ve rozetleri topla!</p>
+              <Sparkles className="h-5 w-5" aria-hidden />
+              Keşfet
             </Link>
             <Link
-              href={`${SITE_KIDS_HREF}/giris?role=teacher`}
-              className="group relative bg-white/10 backdrop-blur-xl border border-white/20 p-5 rounded-xl text-left w-56 hover:bg-white/20 transition-all hover:shadow-lg hover:shadow-cyan-500/20"
+              href={SITE_KIDS_HREF}
+              className="inline-flex items-center gap-1.5 px-5 py-3.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-white font-semibold text-sm hover:bg-white/20 transition-all"
             >
-              <div className="w-11 h-11 bg-cyan-600 rounded-xl mb-3 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-cyan-600/40">
-                <GraduationCap className="h-6 w-6 text-white" />
-              </div>
-              <h3 className="text-base font-bold text-white mb-1">Öğretmen Girişi</h3>
-              <p className="text-xs text-slate-400">Öğrencilerine ilham ver, paneli yönet.</p>
-            </Link>
-            <Link
-              href={`${SITE_KIDS_HREF}/giris?role=parent`}
-              className="group relative bg-white/10 backdrop-blur-xl border border-white/20 p-5 rounded-xl text-left w-56 hover:bg-white/20 transition-all hover:shadow-lg hover:shadow-lime-500/20"
-            >
-              <div className="w-11 h-11 bg-lime-600 rounded-xl mb-3 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-lime-600/40">
-                <Users className="h-6 w-6 text-white" />
-              </div>
-              <h3 className="text-base font-bold text-white mb-1">Veli Girişi</h3>
-              <p className="text-xs text-slate-400">Çocuğunun gelişimini takip et.</p>
+              Daha fazla bilgi
+              <ChevronRight className="h-4 w-4" aria-hidden />
             </Link>
           </div>
         </div>
