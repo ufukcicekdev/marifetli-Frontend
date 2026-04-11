@@ -25,22 +25,6 @@ export function CapacitorUrlHandler() {
   const router = useRouter();
   const { setAuth } = useAuthStore();
 
-  // Google Auth'u uygulama açılırken bir kez initialize et
-  useEffect(() => {
-    if (!isNativePlatform()) return;
-    (async () => {
-      try {
-        const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
-        await GoogleAuth.initialize({
-          clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '',
-          scopes: ['profile', 'email'],
-          grantOfflineAccess: true,
-        });
-      } catch {
-        // sessizce geç
-      }
-    })();
-  }, []);
 
   useEffect(() => {
     if (!isNativePlatform()) return;
