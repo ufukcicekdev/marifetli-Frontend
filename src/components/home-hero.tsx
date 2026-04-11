@@ -15,10 +15,7 @@ import {
   HelpCircle,
   MessageSquare,
   TrendingUp,
-  Trophy,
-  Star,
   ChevronRight,
-  LayoutDashboard,
   Rocket,
 } from 'lucide-react';
 import api from '@/src/lib/api';
@@ -355,89 +352,6 @@ export function HomeHero() {
               Daha fazla bilgi
               <ChevronRight className="h-4 w-4" aria-hidden />
             </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* ============================================================ */}
-      {/* KIDS ÖZEL BÖLÜMÜ — BENTO CARDS                              */}
-      {/* ============================================================ */}
-      <div className="space-y-4">
-        <div className="flex items-end justify-between">
-          <div>
-            <h3 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-              Kids Özel Bölümü
-            </h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Sana özel hazırlanan en yeni maceralar.</p>
-          </div>
-          <Link
-            href={SITE_KIDS_HREF}
-            className="inline-flex items-center gap-1.5 text-sm font-bold text-violet-600 dark:text-violet-400 hover:gap-2.5 transition-all"
-          >
-            Tümünü Gör
-            <ArrowRight className="h-4 w-4" aria-hidden />
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-          {/* Kart 1: Okul Challenge'ları */}
-          <div className="group relative bg-white dark:bg-gray-900 p-7 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500 pointer-events-none" aria-hidden />
-            <div className="relative space-y-4">
-              <div className="w-14 h-14 bg-violet-100 dark:bg-violet-950/50 rounded-2xl flex items-center justify-center">
-                <Trophy className="h-7 w-7 text-violet-600 dark:text-violet-400" aria-hidden />
-              </div>
-              <h4 className="text-xl font-bold text-gray-900 dark:text-white">Okul Challenge&apos;ları</h4>
-              <p className="text-gray-500 dark:text-gray-400 leading-relaxed text-sm">
-                Bu hafta fen projelerinde en yüksek puanı kim alacak? Hemen katıl!
-              </p>
-              <div className="pt-2">
-                <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2">
-                  <div className="bg-violet-600 h-2 rounded-full" style={{ width: '75%' }} />
-                </div>
-                <p className="text-xs font-bold text-violet-600 dark:text-violet-400 mt-2">75% Katılım Tamamlandı</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Kart 2: Rozet Yolu — gradient */}
-          <div className="group bg-gradient-to-br from-fuchsia-600 to-pink-500 p-7 rounded-2xl text-white shadow-lg hover:shadow-pink-300/40 dark:hover:shadow-pink-900/40 transition-all duration-300">
-            <div className="space-y-4">
-              <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center">
-                <Star className="h-7 w-7 text-white" aria-hidden />
-              </div>
-              <h4 className="text-xl font-bold">Rozet Yolu</h4>
-              <p className="text-white/80 leading-relaxed text-sm">
-                Kazandığın her beceri seni yeni bir seviyeye taşır. Sıradaki rozetin: Uzay Gezgini.
-              </p>
-              <Link
-                href={`${SITE_KIDS_HREF}/giris?role=student`}
-                className="inline-flex items-center gap-1.5 mt-2 bg-white text-fuchsia-600 px-5 py-2 rounded-full font-bold text-sm shadow-md hover:bg-fuchsia-50 transition-colors"
-              >
-                Yoluna Devam Et
-                <ChevronRight className="h-4 w-4" aria-hidden />
-              </Link>
-            </div>
-          </div>
-
-          {/* Kart 3: Öğretmen Paneli */}
-          <div className="group bg-gray-50 dark:bg-gray-800/60 p-7 rounded-2xl border border-gray-100 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800 transition-all duration-300">
-            <div className="space-y-4">
-              <div className="w-14 h-14 bg-cyan-100 dark:bg-cyan-900/40 rounded-2xl flex items-center justify-center">
-                <LayoutDashboard className="h-7 w-7 text-cyan-600 dark:text-cyan-400" aria-hidden />
-              </div>
-              <h4 className="text-xl font-bold text-gray-900 dark:text-white">Öğretmen Paneli</h4>
-              <p className="text-gray-500 dark:text-gray-400 leading-relaxed text-sm">
-                Öğrencilerinle iletişime geç, geri bildirimlerini incele ve projelerini paylaş.
-              </p>
-              <Link
-                href={`${SITE_KIDS_HREF}/giris?role=teacher`}
-                className="inline-flex items-center gap-1.5 text-sm font-bold text-cyan-600 dark:text-cyan-400 hover:gap-2 transition-all"
-              >
-                Panele git
-                <ArrowRight className="h-4 w-4" aria-hidden />
-              </Link>
-            </div>
           </div>
         </div>
       </div>
