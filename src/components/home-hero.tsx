@@ -82,7 +82,7 @@ function HeroSearch() {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Örgü desenleri, yemek tarifleri, müzik dersleri..."
+          placeholder="Topluluğa sor, cevapla, paylaş..."
           aria-label="Soru ara"
           className="w-full pl-11 pr-4 py-3 text-sm rounded-2xl border border-white/60 dark:border-gray-600 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand transition-all shadow-md"
         />
