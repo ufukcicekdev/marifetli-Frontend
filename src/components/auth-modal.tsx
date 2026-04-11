@@ -34,6 +34,8 @@ function isNativePlatform(): boolean {
   }
 }
 
+let googleAuthInitialized = false;
+
 async function nativeGoogleLogin(
   setAuth: (user: import('../stores/auth-store').User, token: string) => void,
   onSuccess: () => void,
@@ -41,11 +43,14 @@ async function nativeGoogleLogin(
 ) {
   try {
     const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
-    await GoogleAuth.initialize({
-      clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '',
-      scopes: ['profile', 'email'],
-      grantOfflineAccess: true,
-    });
+    if (!googleAuthInitialized) {
+      await GoogleAuth.initialize({
+        clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '',
+        scopes: ['profile', 'email'],
+        grantOfflineAccess: true,
+      });
+      googleAuthInitialized = true;
+    }
     const googleUser = await GoogleAuth.signIn();
     const idToken = googleUser.authentication?.idToken;
     if (!idToken) { onError('Google token alınamadı'); return; }
