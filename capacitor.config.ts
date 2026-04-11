@@ -22,6 +22,11 @@ const config: CapacitorConfig = {
       launchShowDuration: 2000,
       launchAutoHide: true,
     },
+    GoogleAuth: {
+      scopes: ['profile', 'email'],
+      serverClientId: '1078906448846-cpn5chvv09jacu2dmktqt5hbjcth938u.apps.googleusercontent.com',
+      forceCodeForRefreshToken: true,
+    },
   },
 };
 

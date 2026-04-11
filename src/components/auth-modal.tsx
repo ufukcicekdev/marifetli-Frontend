@@ -34,13 +34,41 @@ function isNativePlatform(): boolean {
   }
 }
 
-function getNativePlatform(): string {
+async function nativeGoogleLogin(
+  setAuth: (user: import('../stores/auth-store').User, token: string) => void,
+  onSuccess: () => void,
+  onError: (msg: string) => void,
+) {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { Capacitor } = require('@capacitor/core') as typeof import('@capacitor/core');
-    return Capacitor.getPlatform(); // 'android' | 'ios'
-  } catch {
-    return 'android';
+    const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
+    await GoogleAuth.initialize();
+    const googleUser = await GoogleAuth.signIn();
+    const idToken = googleUser.authentication?.idToken;
+    if (!idToken) { onError('Google token alınamadı'); return; }
+
+    const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
+    const resp = await fetch(`${apiBase}/auth/google-native-login/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idToken }),
+    });
+    const data = await resp.json();
+    if (!resp.ok) { onError(data.error || 'Giriş başarısız'); return; }
+
+    if (data.refresh) localStorage.setItem('refresh_token', data.refresh);
+    localStorage.setItem('access_token', data.access);
+
+    const { default: api } = await import('../lib/api');
+    try {
+      const { data: user } = await api.getCurrentUser();
+      setAuth(user, data.access);
+    } catch {
+      setAuth({ id: 0, email: '', username: '' } as import('../stores/auth-store').User, data.access);
+    }
+    onSuccess();
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (!msg.includes('cancel') && !msg.includes('Cancel')) onError('Google ile giriş başarısız');
   }
 }
 
@@ -384,14 +412,11 @@ export function AuthModal() {
                 onClick={async () => {
                   useAuthStore.getState().logout();
                   if (isNativePlatform()) {
-                    const platform = getNativePlatform();
-                    const url = `${GOOGLE_LOGIN_URL}?platform=${platform}`;
-                    try {
-                      const { Browser } = await import('@capacitor/browser');
-                      await Browser.open({ url });
-                    } catch {
-                      window.location.href = url;
-                    }
+                    await nativeGoogleLogin(
+                      useAuthStore.getState().setAuth,
+                      () => { close(); toast.success('Google ile giriş başarılı'); router.replace('/'); },
+                      (msg) => setError(msg),
+                    );
                   } else {
                     window.location.href = GOOGLE_LOGIN_URL;
                   }
@@ -494,14 +519,11 @@ export function AuthModal() {
                 onClick={async () => {
                   useAuthStore.getState().logout();
                   if (isNativePlatform()) {
-                    const platform = getNativePlatform();
-                    const url = `${GOOGLE_LOGIN_URL}?platform=${platform}`;
-                    try {
-                      const { Browser } = await import('@capacitor/browser');
-                      await Browser.open({ url });
-                    } catch {
-                      window.location.href = url;
-                    }
+                    await nativeGoogleLogin(
+                      useAuthStore.getState().setAuth,
+                      () => { close(); toast.success('Google ile giriş başarılı'); router.replace('/'); },
+                      (msg) => setError(msg),
+                    );
                   } else {
                     window.location.href = GOOGLE_LOGIN_URL;
                   }
