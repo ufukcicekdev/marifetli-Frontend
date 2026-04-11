@@ -284,13 +284,13 @@ export function AuthModal() {
 
         <div className="flex-1 flex flex-col min-w-0 max-h-[90vh] overflow-y-auto">
           <div className="relative flex items-center justify-center p-4 md:p-6 border-b border-gray-100 dark:border-gray-800 shrink-0 md:justify-end">
-            <Link href="/" className="font-logo flex items-center gap-1.5 text-gray-900 dark:text-white md:hidden">
+            <Link href="/" className="font-logo flex items-center gap-0 text-gray-900 dark:text-white md:hidden text-xl font-semibold tracking-tight">
               {logoUrl ? (
-                <Image src={logoUrl} alt="Marifetli" width={28} height={28} className="shrink-0 w-7 h-7 object-contain" />
+                <Image src={logoUrl} alt="" width={32} height={32} className="shrink-0 w-8 h-8 object-contain -mr-1.5" />
               ) : (
-                <Image src="/logo.png" alt="Marifetli" width={28} height={28} className="shrink-0 w-7 h-7 object-contain" />
+                <Image src="/logo.png" alt="" width={32} height={32} className="shrink-0 w-8 h-8 object-contain -mr-1.5" />
               )}
-              <span className="text-lg font-bold">Marifetli</span>
+              <span>arifetli</span>
             </Link>
             <button type="button" onClick={close} className="absolute right-4 md:static p-2 rounded-full text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 dark:text-gray-300" aria-label="Kapat">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
