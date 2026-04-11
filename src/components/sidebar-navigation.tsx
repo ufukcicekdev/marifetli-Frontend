@@ -9,6 +9,7 @@ import { useAuthModalStore } from '../stores/auth-modal-store';
 import { ThemeToggle } from './theme-toggle';
 import { UzmanFullPageLink } from './uzman-full-page-link';
 import { NavIcon, type NavIconName } from './nav-icon';
+import { SITE_KIDS_HREF } from '../lib/site-kids';
 
 function normalizePath(p: string) {
   if (p.length > 1 && p.endsWith('/')) return p.slice(0, -1);
@@ -30,6 +31,7 @@ type SidebarNavItem = { href: string; label: string; icon: NavIconName };
 
 const SIDEBAR_NAV_BASE: SidebarNavItem[] = [
   { href: '/', label: 'Anasayfa', icon: 'home' },
+  { href: '/kids', label: 'Marifetli Kids', icon: 'student' },
   { href: '/sorular', label: 'Sorular', icon: 'questions' },
   { href: '/kategoriler', label: 'Kategoriler', icon: 'categories' },
   { href: '/blog', label: 'Blog', icon: 'blog' },

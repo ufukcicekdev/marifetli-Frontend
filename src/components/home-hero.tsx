@@ -359,6 +359,13 @@ export function HomeHero() {
               Tasarımlar
               <ArrowRight className="h-3.5 w-3.5" aria-hidden />
             </Link>
+            <Link
+              href={SITE_KIDS_HREF}
+              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold text-sky-700 dark:text-sky-300 border border-sky-300 dark:border-sky-700 bg-sky-50 dark:bg-sky-950/30 hover:bg-sky-100 dark:hover:bg-sky-900/40 transition-colors"
+            >
+              <NavIcon name="student" className="h-4 w-4" />
+              Kids
+            </Link>
           </div>
 
           {/* Live stats */}
