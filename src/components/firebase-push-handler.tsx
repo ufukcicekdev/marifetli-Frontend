@@ -11,6 +11,10 @@ import {
   setupForegroundMessageHandler,
   setupNativeNotificationTapHandler,
   getFCMTokenIfGranted,
+  getPendingNotificationUrl,
+  clearPendingNotificationUrl,
+  getAndClearLaunchNotificationUrl,
+  notificationUrlToPath,
 } from '@/src/lib/firebase-messaging';
 
 function isNativePlatform(): boolean {
@@ -42,10 +46,7 @@ export function FirebasePushHandler() {
     const onMessage = (event: MessageEvent) => {
       const data = event.data;
       if (data?.type === 'NAVIGATE' && typeof data.url === 'string' && data.url) {
-        const path = data.url.startsWith('http')
-          ? new URL(data.url).pathname + (new URL(data.url).hash || '')
-          : data.url;
-        router.push(path || '/bildirimler');
+        router.push(notificationUrlToPath(data.url));
       }
     };
     navigator.serviceWorker.addEventListener('message', onMessage);
@@ -55,14 +56,30 @@ export function FirebasePushHandler() {
   // --- Native: bildirime tıklanınca yönlendir ---
   useEffect(() => {
     if (!isNativePlatform()) return;
-    const cleanup = setupNativeNotificationTapHandler((url) => {
-      const path = url.startsWith('http')
-        ? new URL(url).pathname + (new URL(url).hash || '')
-        : url;
+    const cleanup = setupNativeNotificationTapHandler((path) => {
       router.push(path || '/bildirimler');
     });
     return cleanup;
   }, [router]);
+
+  // --- Native: uygulama kapalıyken bildirime tıklanıp açıldıysa yönlendir ---
+  useEffect(() => {
+    if (!isNativePlatform()) return;
+
+    // 1. Handler kurulmadan önce yakalanan tap var mı?
+    const pending = getPendingNotificationUrl();
+    if (pending) {
+      clearPendingNotificationUrl();
+      router.push(pending);
+      return;
+    }
+
+    // 2. Delivered notifications içinde bekleyen var mı? (uygulama soğuk başlatma)
+    getAndClearLaunchNotificationUrl().then((path) => {
+      if (path) router.push(path);
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // sadece mount'ta çalışsın
 
   // --- Foreground mesaj handler (web + native) ---
   useEffect(() => {
@@ -80,7 +97,6 @@ export function FirebasePushHandler() {
   // --- Token kaydı: izin zaten verilmişse sessizce kaydet ---
   useEffect(() => {
     if (!isAuthenticated || !canRequestPush() || tokenRegisterAttempted.current) return;
-    // Web: izin kontrolü burada; native: her zaman dene (pop-up çıkmaz)
     if (!isNativePlatform()) {
       if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
     }

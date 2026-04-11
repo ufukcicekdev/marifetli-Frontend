@@ -264,10 +264,10 @@ export function KidsStudentAnnouncementsView({
   return (
     <div className="mx-auto min-h-screen max-w-6xl space-y-8 px-3 pb-16 pt-4 sm:px-4">
       <Link
-        href={`${pathPrefix}/ogrenci/panel`}
+        href={backHref}
         className="inline-flex text-sm font-bold text-violet-700 hover:underline dark:text-violet-300"
       >
-        ← {t('nav.studentPanel')}
+        ← {t(backLabelKey)}
       </Link>
 
       <header className="space-y-2">
@@ -336,12 +336,12 @@ export function KidsStudentAnnouncementsView({
 
       {detail ? (
         <div
-          className="fixed inset-0 z-[80] flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
+          className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50 p-4"
           role="dialog"
           aria-modal="true"
           aria-labelledby="student-announcement-detail-title"
         >
-          <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-white shadow-2xl dark:bg-zinc-900 sm:rounded-3xl">
+          <div className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white shadow-2xl dark:bg-zinc-900">
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-zinc-100 bg-white/95 px-5 py-4 backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/95">
               <p id="student-announcement-detail-title" className="font-logo text-sm font-black text-violet-600 dark:text-violet-400">
                 {t('student.announcements.detailTitle')}

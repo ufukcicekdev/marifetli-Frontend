@@ -51,6 +51,24 @@ function normalizeFCMError(msg: string): string {
 }
 
 /* ------------------------------------------------------------------ */
+/* Pending navigation — uygulama kapalıyken bildirim tıklaması        */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Uygulama henüz mount olmadan önce gelen bildirim tap URL'ini saklar.
+ * FirebasePushHandler mount olunca bunu okuyup navigation yapar.
+ */
+let _pendingNotificationUrl: string | null = null;
+
+export function getPendingNotificationUrl(): string | null {
+  return _pendingNotificationUrl;
+}
+
+export function clearPendingNotificationUrl(): void {
+  _pendingNotificationUrl = null;
+}
+
+/* ------------------------------------------------------------------ */
 /* Native (Capacitor) push — @capacitor-firebase/messaging             */
 /* ------------------------------------------------------------------ */
 
@@ -85,21 +103,75 @@ export function setupNativeForegroundHandler(
 }
 
 /**
- * Native bildirim tıklanma dinleyicisi.
- * Uygulama arka plandayken açılınca URL/path yönlendirmesi için.
+ * Bildirim datasından hedef URL'i çıkarır.
+ * Ana bildirimler `url`, Kids bildirimleri `click_url` alanı kullanır.
+ */
+export function extractNotificationUrl(data: Record<string, string> | undefined): string {
+  return data?.url || data?.click_url || '';
+}
+
+/**
+ * URL'den path çıkarır (tam URL veya path kabul eder).
+ */
+export function notificationUrlToPath(url: string): string {
+  if (!url) return '/bildirimler';
+  try {
+    if (url.startsWith('http')) {
+      const parsed = new URL(url);
+      return parsed.pathname + parsed.search + parsed.hash;
+    }
+    return url;
+  } catch {
+    return '/bildirimler';
+  }
+}
+
+/**
+ * Native bildirim tıklanma dinleyicisini mümkün olan en erken an kurar.
+ * Uygulama kapalıyken gelen tap URL'ini _pendingNotificationUrl'de saklar.
+ * FirebasePushHandler mount olunca bu URL'i okur.
  */
 export function setupNativeNotificationTapHandler(
   onTapCb: (url: string) => void,
 ): () => void {
   if (!isNative()) return () => {};
   let cancelled = false;
+
   FirebaseMessaging.addListener('notificationActionPerformed', (event) => {
-    if (cancelled) return;
-    const url =
-      (event.notification.data as Record<string, string> | undefined)?.url ?? '/bildirimler';
-    onTapCb(url);
+    const url = extractNotificationUrl(
+      event.notification.data as Record<string, string> | undefined,
+    );
+    const path = notificationUrlToPath(url);
+    if (cancelled) {
+      // Handler henüz hazır değil — sakla, mount olunca işlenecek
+      _pendingNotificationUrl = path;
+      return;
+    }
+    onTapCb(path);
   }).catch((e) => console.warn('[FCM native] tap handler kurulamadı:', e));
+
   return () => { cancelled = true; };
+}
+
+/**
+ * Uygulama başlarken kaydedilmiş bekleyen bildirim URL'ini başlatır.
+ * Uygulama kapalıyken bildirime tıklanıp açıldıysa bu fonksiyon URL'i döner.
+ */
+export async function getAndClearLaunchNotificationUrl(): Promise<string | null> {
+  if (!isNative()) return null;
+  try {
+    const { notifications } = await FirebaseMessaging.getDeliveredNotifications();
+    if (notifications?.length) {
+      const last = notifications[notifications.length - 1];
+      const url = extractNotificationUrl(last?.data as Record<string, string> | undefined);
+      const path = url ? notificationUrlToPath(url) : null;
+      await FirebaseMessaging.removeAllDeliveredNotifications().catch(() => {});
+      return path;
+    }
+  } catch {
+    // getDeliveredNotifications desteklenmeyebilir
+  }
+  return null;
 }
 
 /* ------------------------------------------------------------------ */
