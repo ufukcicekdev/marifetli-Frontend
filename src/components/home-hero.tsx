@@ -19,6 +19,8 @@ import {
   GraduationCap,
   Star,
   ChevronRight,
+  LayoutDashboard,
+  Rocket,
 } from 'lucide-react';
 import api from '@/src/lib/api';
 import { UzmanFullPageLink } from '@/src/components/uzman-full-page-link';
@@ -286,93 +288,171 @@ export function HomeHero() {
     <section className="mb-6 sm:mb-8 space-y-4 sm:space-y-5">
 
       {/* ============================================================ */}
-      {/* MARIFETLI KIDS — FEATURED HERO                               */}
+      {/* MARIFETLI KIDS — HERO (mockup: dark space theme)            */}
       {/* ============================================================ */}
-      <div className="relative overflow-hidden rounded-2xl border-2 border-sky-300 dark:border-sky-700 shadow-xl">
-        {/* Arka plan */}
-        <div
-          className="absolute inset-0 bg-gradient-to-br from-sky-400 via-cyan-400 to-lime-300 dark:from-sky-800 dark:via-cyan-900 dark:to-lime-900 pointer-events-none"
-          aria-hidden
-        />
-        {/* Dekoratif blob'lar */}
-        <div className="absolute -top-16 -right-16 w-72 h-72 rounded-full bg-white/20 blur-3xl pointer-events-none" aria-hidden />
-        <div className="absolute -bottom-12 -left-12 w-56 h-56 rounded-full bg-lime-200/30 blur-2xl pointer-events-none" aria-hidden />
-        <div className="absolute top-1/2 left-1/3 w-40 h-40 rounded-full bg-cyan-200/20 blur-2xl pointer-events-none" aria-hidden />
+      <div className="relative min-h-[420px] sm:min-h-[480px] rounded-2xl overflow-hidden bg-slate-900 flex flex-col justify-center shadow-2xl">
+        {/* Arka plan gradyan + yıldız efekti */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 pointer-events-none" aria-hidden />
+        {/* Nebula blob'ları */}
+        <div className="absolute top-0 right-0 w-96 h-96 rounded-full bg-violet-600/20 blur-3xl pointer-events-none" aria-hidden />
+        <div className="absolute bottom-0 left-0 w-72 h-72 rounded-full bg-cyan-500/15 blur-3xl pointer-events-none" aria-hidden />
+        <div className="absolute top-1/3 right-1/4 w-48 h-48 rounded-full bg-indigo-500/10 blur-2xl pointer-events-none" aria-hidden />
+        {/* Küçük yıldız noktaları */}
+        <div className="absolute inset-0 pointer-events-none" aria-hidden>
+          {[...Array(18)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute rounded-full bg-white"
+              style={{
+                width: i % 3 === 0 ? 3 : 2,
+                height: i % 3 === 0 ? 3 : 2,
+                top: `${5 + (i * 17) % 85}%`,
+                left: `${(i * 23 + 10) % 95}%`,
+                opacity: 0.3 + (i % 4) * 0.15,
+              }}
+            />
+          ))}
+        </div>
+        {/* Sağ taraf büyük parlayan roket ikonu */}
+        <div className="absolute right-8 sm:right-16 top-1/2 -translate-y-1/2 hidden sm:flex items-center justify-center opacity-10 pointer-events-none" aria-hidden>
+          <Rocket className="h-64 w-64 text-cyan-300" />
+        </div>
 
-        <div className="relative px-5 sm:px-10 py-8 sm:py-12">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-6 sm:gap-10">
-            {/* Sol: ikon + metin */}
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="flex h-14 w-14 sm:h-16 sm:w-16 shrink-0 items-center justify-center rounded-2xl bg-white/30 backdrop-blur-sm shadow-lg border border-white/40">
-                  <NavIcon name="student" className="h-8 w-8 sm:h-9 sm:w-9 text-white" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-2xl sm:text-3xl font-extrabold text-white drop-shadow-sm">
-                      Marifetli Kids
-                    </h2>
-                    <span className="inline-flex items-center gap-1 text-xs font-bold text-sky-800 dark:text-sky-100 bg-white/80 dark:bg-sky-900/70 px-2.5 py-1 rounded-full shadow-sm">
-                      <Sparkles className="h-3 w-3" aria-hidden />
-                      Yeni
-                    </span>
-                  </div>
-                  <p className="text-sm sm:text-base text-white/90 font-medium mt-0.5">
-                    Öğretmenler, öğrenciler ve veliler için güvenli okul platformu
-                  </p>
-                </div>
+        <div className="relative px-6 sm:px-12 py-10 sm:py-16 max-w-2xl">
+          {/* Rozet */}
+          <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-full border border-white/20 mb-6">
+            <span className="w-2 h-2 rounded-full bg-cyan-400 animate-pulse" aria-hidden />
+            <span className="text-xs font-bold tracking-widest uppercase text-white/90">Yeni Macera Başlıyor</span>
+          </div>
+
+          {/* Başlık */}
+          <h2 className="text-4xl sm:text-5xl md:text-6xl font-extrabold leading-[1.1] tracking-tight text-white mb-5">
+            Marifetli Kids{' '}
+            <br />
+            <span className="bg-gradient-to-r from-cyan-400 to-violet-400 bg-clip-text text-transparent">
+              Dünyasına Hoş Geldin
+            </span>
+          </h2>
+
+          {/* Açıklama */}
+          <p className="text-base sm:text-lg text-slate-300 font-medium leading-relaxed max-w-lg mb-8">
+            Geleceğin mucitleri, sanatçıları ve kâşifleri burada buluşuyor.
+            Kendi yolunu çiz, becerilerini geliştir ve topluluğun bir parçası ol.
+          </p>
+
+          {/* Aksiyon kartları */}
+          <div className="flex flex-wrap gap-4">
+            <Link
+              href={`${SITE_KIDS_HREF}/giris?role=student`}
+              className="group relative bg-white/10 backdrop-blur-xl border border-white/20 p-5 rounded-xl text-left w-56 hover:bg-white/20 transition-all hover:shadow-lg hover:shadow-violet-500/20"
+            >
+              <div className="w-11 h-11 bg-violet-600 rounded-xl mb-3 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-violet-600/40">
+                <NavIcon name="student" className="h-6 w-6 text-white" />
               </div>
-
-              {/* Özellikler */}
-              <div className="flex flex-wrap gap-2 mb-5">
-                {[
-                  { icon: <Trophy className="h-3.5 w-3.5" />, label: 'Okul Challenge\'ları' },
-                  { icon: <Star className="h-3.5 w-3.5" />, label: 'Rozet Yolu' },
-                  { icon: <Users className="h-3.5 w-3.5" />, label: 'Öğretmen Paneli' },
-                  { icon: <GraduationCap className="h-3.5 w-3.5" />, label: 'Veli Takibi' },
-                ].map((f) => (
-                  <span key={f.label} className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-900 dark:text-white bg-white/30 dark:bg-white/10 backdrop-blur-sm border border-white/40 px-3 py-1.5 rounded-full">
-                    {f.icon}
-                    {f.label}
-                  </span>
-                ))}
+              <h3 className="text-base font-bold text-white mb-1">Öğrenci Girişi</h3>
+              <p className="text-xs text-slate-400">Atölyelere katıl ve rozetleri topla!</p>
+            </Link>
+            <Link
+              href={`${SITE_KIDS_HREF}/giris?role=teacher`}
+              className="group relative bg-white/10 backdrop-blur-xl border border-white/20 p-5 rounded-xl text-left w-56 hover:bg-white/20 transition-all hover:shadow-lg hover:shadow-cyan-500/20"
+            >
+              <div className="w-11 h-11 bg-cyan-600 rounded-xl mb-3 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-cyan-600/40">
+                <GraduationCap className="h-6 w-6 text-white" />
               </div>
+              <h3 className="text-base font-bold text-white mb-1">Öğretmen Girişi</h3>
+              <p className="text-xs text-slate-400">Öğrencilerine ilham ver, paneli yönet.</p>
+            </Link>
+            <Link
+              href={`${SITE_KIDS_HREF}/giris?role=parent`}
+              className="group relative bg-white/10 backdrop-blur-xl border border-white/20 p-5 rounded-xl text-left w-56 hover:bg-white/20 transition-all hover:shadow-lg hover:shadow-lime-500/20"
+            >
+              <div className="w-11 h-11 bg-lime-600 rounded-xl mb-3 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-lime-600/40">
+                <Users className="h-6 w-6 text-white" />
+              </div>
+              <h3 className="text-base font-bold text-white mb-1">Veli Girişi</h3>
+              <p className="text-xs text-slate-400">Çocuğunun gelişimini takip et.</p>
+            </Link>
+          </div>
+        </div>
+      </div>
 
-              {/* CTA butonları */}
-              <div className="flex flex-wrap items-center gap-2.5">
-                <Link
-                  href={`${SITE_KIDS_HREF}/giris?role=teacher`}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-sky-700 font-bold text-sm shadow-lg hover:bg-sky-50 transition-colors"
-                >
-                  <GraduationCap className="h-4 w-4" aria-hidden />
-                  Öğretmen girişi
-                </Link>
-                <Link
-                  href={`${SITE_KIDS_HREF}/giris?role=student`}
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white/20 backdrop-blur-sm border-2 border-white/60 text-white font-bold text-sm hover:bg-white/30 transition-colors"
-                >
-                  Öğrenci girişi
-                </Link>
-                <Link
-                  href={`${SITE_KIDS_HREF}/giris?role=parent`}
-                  className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white/10 border border-white/40 text-white/90 font-semibold text-sm hover:bg-white/20 transition-colors"
-                >
-                  Veli girişi
-                </Link>
+      {/* ============================================================ */}
+      {/* KIDS ÖZEL BÖLÜMÜ — BENTO CARDS                              */}
+      {/* ============================================================ */}
+      <div className="space-y-4">
+        <div className="flex items-end justify-between">
+          <div>
+            <h3 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+              Kids Özel Bölümü
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Sana özel hazırlanan en yeni maceralar.</p>
+          </div>
+          <Link
+            href={SITE_KIDS_HREF}
+            className="inline-flex items-center gap-1.5 text-sm font-bold text-violet-600 dark:text-violet-400 hover:gap-2.5 transition-all"
+          >
+            Tümünü Gör
+            <ArrowRight className="h-4 w-4" aria-hidden />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+          {/* Kart 1: Okul Challenge'ları */}
+          <div className="group relative bg-white dark:bg-gray-900 p-7 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500 pointer-events-none" aria-hidden />
+            <div className="relative space-y-4">
+              <div className="w-14 h-14 bg-violet-100 dark:bg-violet-950/50 rounded-2xl flex items-center justify-center">
+                <Trophy className="h-7 w-7 text-violet-600 dark:text-violet-400" aria-hidden />
+              </div>
+              <h4 className="text-xl font-bold text-gray-900 dark:text-white">Okul Challenge&apos;ları</h4>
+              <p className="text-gray-500 dark:text-gray-400 leading-relaxed text-sm">
+                Bu hafta fen projelerinde en yüksek puanı kim alacak? Hemen katıl!
+              </p>
+              <div className="pt-2">
+                <div className="w-full bg-gray-100 dark:bg-gray-800 rounded-full h-2">
+                  <div className="bg-violet-600 h-2 rounded-full" style={{ width: '75%' }} />
+                </div>
+                <p className="text-xs font-bold text-violet-600 dark:text-violet-400 mt-2">75% Katılım Tamamlandı</p>
               </div>
             </div>
+          </div>
 
-            {/* Sağ: büyük ikon (dekoratif) */}
-            <div className="hidden sm:flex shrink-0 flex-col items-center justify-center gap-3">
-              <div className="flex h-28 w-28 items-center justify-center rounded-3xl bg-white/20 backdrop-blur-sm border-2 border-white/30 shadow-xl">
-                <NavIcon name="student" className="h-16 w-16 text-white drop-shadow" />
+          {/* Kart 2: Rozet Yolu — gradient */}
+          <div className="group bg-gradient-to-br from-fuchsia-600 to-pink-500 p-7 rounded-2xl text-white shadow-lg hover:shadow-pink-300/40 dark:hover:shadow-pink-900/40 transition-all duration-300">
+            <div className="space-y-4">
+              <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center">
+                <Star className="h-7 w-7 text-white" aria-hidden />
               </div>
+              <h4 className="text-xl font-bold">Rozet Yolu</h4>
+              <p className="text-white/80 leading-relaxed text-sm">
+                Kazandığın her beceri seni yeni bir seviyeye taşır. Sıradaki rozetin: Uzay Gezgini.
+              </p>
               <Link
-                href={SITE_KIDS_HREF}
-                className="inline-flex items-center gap-1 text-sm font-semibold text-white/90 hover:text-white transition-colors underline underline-offset-2"
+                href={`${SITE_KIDS_HREF}/giris?role=student`}
+                className="inline-flex items-center gap-1.5 mt-2 bg-white text-fuchsia-600 px-5 py-2 rounded-full font-bold text-sm shadow-md hover:bg-fuchsia-50 transition-colors"
               >
-                Daha fazla bilgi
+                Yoluna Devam Et
                 <ChevronRight className="h-4 w-4" aria-hidden />
+              </Link>
+            </div>
+          </div>
+
+          {/* Kart 3: Öğretmen Paneli */}
+          <div className="group bg-gray-50 dark:bg-gray-800/60 p-7 rounded-2xl border border-gray-100 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800 transition-all duration-300">
+            <div className="space-y-4">
+              <div className="w-14 h-14 bg-cyan-100 dark:bg-cyan-900/40 rounded-2xl flex items-center justify-center">
+                <LayoutDashboard className="h-7 w-7 text-cyan-600 dark:text-cyan-400" aria-hidden />
+              </div>
+              <h4 className="text-xl font-bold text-gray-900 dark:text-white">Öğretmen Paneli</h4>
+              <p className="text-gray-500 dark:text-gray-400 leading-relaxed text-sm">
+                Öğrencilerinle iletişime geç, geri bildirimlerini incele ve projelerini paylaş.
+              </p>
+              <Link
+                href={`${SITE_KIDS_HREF}/giris?role=teacher`}
+                className="inline-flex items-center gap-1.5 text-sm font-bold text-cyan-600 dark:text-cyan-400 hover:gap-2 transition-all"
+              >
+                Panele git
+                <ArrowRight className="h-4 w-4" aria-hidden />
               </Link>
             </div>
           </div>
