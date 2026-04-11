@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import api from '@/src/lib/api';
 import { UzmanFullPageLink } from '@/src/components/uzman-full-page-link';
-import { SITE_KIDS_BTN_PRIMARY, SITE_KIDS_HREF } from '@/src/lib/site-kids';
+import { SITE_KIDS_HREF } from '@/src/lib/site-kids';
 import { NavIcon, type NavIconName } from '@/src/components/nav-icon';
 import { useQuestions } from '@/src/hooks/use-questions';
 import type { Question } from '@/src/types';
@@ -286,6 +286,100 @@ export function HomeHero() {
     <section className="mb-6 sm:mb-8 space-y-4 sm:space-y-5">
 
       {/* ============================================================ */}
+      {/* MARIFETLI KIDS — FEATURED HERO                               */}
+      {/* ============================================================ */}
+      <div className="relative overflow-hidden rounded-2xl border-2 border-sky-300 dark:border-sky-700 shadow-xl">
+        {/* Arka plan */}
+        <div
+          className="absolute inset-0 bg-gradient-to-br from-sky-400 via-cyan-400 to-lime-300 dark:from-sky-800 dark:via-cyan-900 dark:to-lime-900 pointer-events-none"
+          aria-hidden
+        />
+        {/* Dekoratif blob'lar */}
+        <div className="absolute -top-16 -right-16 w-72 h-72 rounded-full bg-white/20 blur-3xl pointer-events-none" aria-hidden />
+        <div className="absolute -bottom-12 -left-12 w-56 h-56 rounded-full bg-lime-200/30 blur-2xl pointer-events-none" aria-hidden />
+        <div className="absolute top-1/2 left-1/3 w-40 h-40 rounded-full bg-cyan-200/20 blur-2xl pointer-events-none" aria-hidden />
+
+        <div className="relative px-5 sm:px-10 py-8 sm:py-12">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-6 sm:gap-10">
+            {/* Sol: ikon + metin */}
+            <div className="flex-1">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="flex h-14 w-14 sm:h-16 sm:w-16 shrink-0 items-center justify-center rounded-2xl bg-white/30 backdrop-blur-sm shadow-lg border border-white/40">
+                  <NavIcon name="student" className="h-8 w-8 sm:h-9 sm:w-9 text-white" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-2xl sm:text-3xl font-extrabold text-white drop-shadow-sm">
+                      Marifetli Kids
+                    </h2>
+                    <span className="inline-flex items-center gap-1 text-xs font-bold text-sky-800 dark:text-sky-100 bg-white/80 dark:bg-sky-900/70 px-2.5 py-1 rounded-full shadow-sm">
+                      <Sparkles className="h-3 w-3" aria-hidden />
+                      Yeni
+                    </span>
+                  </div>
+                  <p className="text-sm sm:text-base text-white/90 font-medium mt-0.5">
+                    Öğretmenler, öğrenciler ve veliler için güvenli okul platformu
+                  </p>
+                </div>
+              </div>
+
+              {/* Özellikler */}
+              <div className="flex flex-wrap gap-2 mb-5">
+                {[
+                  { icon: <Trophy className="h-3.5 w-3.5" />, label: 'Okul Challenge\'ları' },
+                  { icon: <Star className="h-3.5 w-3.5" />, label: 'Rozet Yolu' },
+                  { icon: <Users className="h-3.5 w-3.5" />, label: 'Öğretmen Paneli' },
+                  { icon: <GraduationCap className="h-3.5 w-3.5" />, label: 'Veli Takibi' },
+                ].map((f) => (
+                  <span key={f.label} className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-900 dark:text-white bg-white/30 dark:bg-white/10 backdrop-blur-sm border border-white/40 px-3 py-1.5 rounded-full">
+                    {f.icon}
+                    {f.label}
+                  </span>
+                ))}
+              </div>
+
+              {/* CTA butonları */}
+              <div className="flex flex-wrap items-center gap-2.5">
+                <Link
+                  href={`${SITE_KIDS_HREF}/giris?role=teacher`}
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white text-sky-700 font-bold text-sm shadow-lg hover:bg-sky-50 transition-colors"
+                >
+                  <GraduationCap className="h-4 w-4" aria-hidden />
+                  Öğretmen girişi
+                </Link>
+                <Link
+                  href={`${SITE_KIDS_HREF}/giris?role=student`}
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white/20 backdrop-blur-sm border-2 border-white/60 text-white font-bold text-sm hover:bg-white/30 transition-colors"
+                >
+                  Öğrenci girişi
+                </Link>
+                <Link
+                  href={`${SITE_KIDS_HREF}/giris?role=parent`}
+                  className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-white/10 border border-white/40 text-white/90 font-semibold text-sm hover:bg-white/20 transition-colors"
+                >
+                  Veli girişi
+                </Link>
+              </div>
+            </div>
+
+            {/* Sağ: büyük ikon (dekoratif) */}
+            <div className="hidden sm:flex shrink-0 flex-col items-center justify-center gap-3">
+              <div className="flex h-28 w-28 items-center justify-center rounded-3xl bg-white/20 backdrop-blur-sm border-2 border-white/30 shadow-xl">
+                <NavIcon name="student" className="h-16 w-16 text-white drop-shadow" />
+              </div>
+              <Link
+                href={SITE_KIDS_HREF}
+                className="inline-flex items-center gap-1 text-sm font-semibold text-white/90 hover:text-white transition-colors underline underline-offset-2"
+              >
+                Daha fazla bilgi
+                <ChevronRight className="h-4 w-4" aria-hidden />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ============================================================ */}
       {/* HERO BLOCK                                                    */}
       {/* ============================================================ */}
       <div className="relative overflow-hidden rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-md">
@@ -370,120 +464,6 @@ export function HomeHero() {
 
           {/* Live stats */}
           <LiveStats />
-        </div>
-      </div>
-
-      {/* ============================================================ */}
-      {/* MARIFETLI KIDS SHOWCASE                                       */}
-      {/* ============================================================ */}
-      <div className="relative overflow-hidden rounded-2xl border-2 border-sky-200 dark:border-sky-800/70 shadow-md">
-        {/* Arka plan */}
-        <div
-          className="absolute inset-0 bg-gradient-to-br from-sky-50 via-white to-lime-50 dark:from-sky-950/50 dark:via-gray-900 dark:to-lime-950/30 pointer-events-none"
-          aria-hidden
-        />
-        {/* Dekoratif blob'lar */}
-        <div className="absolute -top-12 -right-12 w-56 h-56 rounded-full bg-sky-300/20 dark:bg-sky-500/10 blur-3xl pointer-events-none" aria-hidden />
-        <div className="absolute -bottom-8 -left-8 w-40 h-40 rounded-full bg-lime-300/20 dark:bg-lime-500/10 blur-2xl pointer-events-none" aria-hidden />
-        {/* Üst renkli şerit */}
-        <div className="h-1 w-full bg-gradient-to-r from-sky-400 via-cyan-400 to-lime-400" aria-hidden />
-
-        <div className="relative px-5 sm:px-8 py-6 sm:py-8">
-          {/* Başlık satırı */}
-          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-6">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 sm:h-14 sm:w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-400 to-cyan-500 shadow-md">
-                <NavIcon name="student" className="h-7 w-7 sm:h-8 sm:w-8 text-white" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-0.5">
-                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                    Marifetli Kids
-                  </h2>
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-sky-700 dark:text-sky-300 bg-sky-100 dark:bg-sky-900/50 border border-sky-200 dark:border-sky-700 px-2 py-0.5 rounded-full">
-                    <Sparkles className="h-3 w-3" aria-hidden />
-                    Yeni
-                  </span>
-                </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Öğretmenler ve öğrenciler için güvenli okul platformu
-                </p>
-              </div>
-            </div>
-
-            {/* CTA butonları — büyük ekranda sağda */}
-            <div className="hidden sm:flex items-center gap-2 shrink-0">
-              <Link
-                href={`${SITE_KIDS_HREF}/giris?role=student`}
-                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white dark:bg-gray-800 border border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-300 text-sm font-semibold shadow-sm hover:bg-sky-50 dark:hover:bg-sky-950/50 transition-colors"
-              >
-                <GraduationCap className="h-4 w-4" aria-hidden />
-                Öğrenci girişi
-              </Link>
-              <Link
-                href={`${SITE_KIDS_HREF}/giris?role=teacher`}
-                className={`${SITE_KIDS_BTN_PRIMARY} !py-2.5`}
-              >
-                Öğretmen girişi
-                <ChevronRight className="h-4 w-4" aria-hidden />
-              </Link>
-            </div>
-          </div>
-
-          {/* Özellik kartları */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
-            <div className="flex items-start gap-3 p-3.5 rounded-xl bg-white/70 dark:bg-gray-800/50 border border-sky-100 dark:border-sky-900/50">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-100 dark:bg-sky-900/60 border border-sky-200 dark:border-sky-800">
-                <Trophy className="h-5 w-5 text-sky-600 dark:text-sky-400" aria-hidden />
-              </span>
-              <div>
-                <p className="text-sm font-bold text-gray-900 dark:text-white">Okul Challenge'ları</p>
-                <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400 leading-snug">
-                  Öğretmenin atadığı görevleri tamamla, puan kazan.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3 p-3.5 rounded-xl bg-white/70 dark:bg-gray-800/50 border border-lime-100 dark:border-lime-900/50">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-lime-100 dark:bg-lime-900/60 border border-lime-200 dark:border-lime-800">
-                <Star className="h-5 w-5 text-lime-600 dark:text-lime-400" aria-hidden />
-              </span>
-              <div>
-                <p className="text-sm font-bold text-gray-900 dark:text-white">Rozet Yolu</p>
-                <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400 leading-snug">
-                  Başarıları rozetlere dönüştür, portfolyon büyüsün.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3 p-3.5 rounded-xl bg-white/70 dark:bg-gray-800/50 border border-cyan-100 dark:border-cyan-900/50">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cyan-100 dark:bg-cyan-900/60 border border-cyan-200 dark:border-cyan-800">
-                <Users className="h-5 w-5 text-cyan-600 dark:text-cyan-400" aria-hidden />
-              </span>
-              <div>
-                <p className="text-sm font-bold text-gray-900 dark:text-white">Öğretmen Paneli</p>
-                <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400 leading-snug">
-                  Sınıfını yönet, ödevleri takip et, raporları gör.
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* CTA butonları — küçük ekranda altta */}
-          <div className="flex sm:hidden items-center gap-2 flex-wrap">
-            <Link
-              href={`${SITE_KIDS_HREF}/giris?role=student`}
-              className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-white dark:bg-gray-800 border border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-300 text-sm font-semibold shadow-sm hover:bg-sky-50 dark:hover:bg-sky-950/50 transition-colors"
-            >
-              <GraduationCap className="h-4 w-4" aria-hidden />
-              Öğrenci girişi
-            </Link>
-            <Link
-              href={`${SITE_KIDS_HREF}/giris?role=teacher`}
-              className={`${SITE_KIDS_BTN_PRIMARY} !py-2.5`}
-            >
-              Öğretmen girişi
-              <ChevronRight className="h-4 w-4" aria-hidden />
-            </Link>
-          </div>
         </div>
       </div>
 
