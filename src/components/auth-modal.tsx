@@ -43,16 +43,21 @@ async function nativeGoogleLogin(
     const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
     // Her signIn öncesi initialize — WebView reload sonrası client null olabiliyor
     // Aynı config ile tekrar initialize etmek güvenli
+    console.log('[GoogleAuth] clientId:', process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID);
+    console.log('[GoogleAuth] initialize başlıyor...');
     try {
       await GoogleAuth.initialize({
         clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '',
         scopes: ['profile', 'email'],
         grantOfflineAccess: true,
       });
-    } catch {
-      // zaten initialize edilmiş olabilir
+      console.log('[GoogleAuth] initialize tamam');
+    } catch (initErr) {
+      console.error('[GoogleAuth] initialize hatası:', initErr);
     }
+    console.log('[GoogleAuth] signIn başlıyor...');
     const googleUser = await GoogleAuth.signIn();
+    console.log('[GoogleAuth] signIn sonucu:', JSON.stringify(googleUser));
     const idToken = googleUser.authentication?.idToken;
     if (!idToken) { onError('Google token alınamadı'); return; }
 
