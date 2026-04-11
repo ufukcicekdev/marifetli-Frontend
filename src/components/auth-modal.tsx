@@ -41,7 +41,11 @@ async function nativeGoogleLogin(
 ) {
   try {
     const { GoogleAuth } = await import('@codetrix-studio/capacitor-google-auth');
-    await GoogleAuth.initialize();
+    await GoogleAuth.initialize({
+      clientId: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '',
+      scopes: ['profile', 'email'],
+      grantOfflineAccess: true,
+    });
     const googleUser = await GoogleAuth.signIn();
     const idToken = googleUser.authentication?.idToken;
     if (!idToken) { onError('Google token alınamadı'); return; }
@@ -68,7 +72,8 @@ async function nativeGoogleLogin(
     onSuccess();
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    if (!msg.includes('cancel') && !msg.includes('Cancel')) onError('Google ile giriş başarısız');
+    console.error('[GoogleAuth] hata:', msg);
+    if (!msg.includes('cancel') && !msg.includes('Cancel')) onError(`Google hatası: ${msg}`);
   }
 }
 
