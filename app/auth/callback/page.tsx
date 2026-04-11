@@ -6,6 +6,15 @@ import { useAuthStore, type User } from '@/src/stores/auth-store';
 import api from '@/src/lib/api';
 import toast from 'react-hot-toast';
 
+async function closeInAppBrowser() {
+  try {
+    const { Browser } = await import('@capacitor/browser');
+    await Browser.close();
+  } catch {
+    // Web'de veya plugin yoksa sessizce geç
+  }
+}
+
 function AuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -39,6 +48,7 @@ function AuthCallbackContent() {
     if (refresh) localStorage.setItem('refresh_token', refresh);
     localStorage.setItem('access_token', access);
     (async () => {
+      await closeInAppBrowser();
       try {
         const { data: user } = await api.getCurrentUser();
         setAuth(user, access);

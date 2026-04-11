@@ -23,6 +23,27 @@ const LOGIN_REGISTER_IMAGES = {
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
 const GOOGLE_LOGIN_URL = `${API_BASE}/auth/start-google-login/`;
 
+function isNativePlatform(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { Capacitor } = require('@capacitor/core') as typeof import('@capacitor/core');
+    return Capacitor.isNativePlatform();
+  } catch {
+    return false;
+  }
+}
+
+async function openGoogleLoginNative() {
+  try {
+    const { Browser } = await import('@capacitor/browser');
+    await Browser.open({ url: GOOGLE_LOGIN_URL, windowName: '_self' });
+  } catch {
+    // Fallback: web yönlendirmesi
+    window.location.href = GOOGLE_LOGIN_URL;
+  }
+}
+
 const inputClass =
   'w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/50 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand transition-colors text-sm';
 
@@ -356,9 +377,16 @@ export function AuthModal() {
                 <span className="text-xs font-medium text-gray-400 dark:text-gray-500">VEYA</span>
                 <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
               </div>
-              <a
-                href={GOOGLE_LOGIN_URL}
-                onClick={() => useAuthStore.getState().logout()}
+              <button
+                type="button"
+                onClick={() => {
+                  useAuthStore.getState().logout();
+                  if (isNativePlatform()) {
+                    openGoogleLoginNative();
+                  } else {
+                    window.location.href = GOOGLE_LOGIN_URL;
+                  }
+                }}
                 className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/80 transition-colors text-sm font-medium text-gray-700 dark:text-gray-200"
               >
                 <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
@@ -368,7 +396,7 @@ export function AuthModal() {
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                 </svg>
                 Google ile giriş yap
-              </a>
+              </button>
               <p className="mt-5 text-center text-sm text-gray-500 dark:text-gray-400">
                 Hesabın yok mu?{' '}
                 <button type="button" onClick={() => resetAndSwitch('register')} className="w-full py-3 rounded-full border-2 border-brand text-brand hover:bg-brand-pink/50 dark:hover:bg-brand/10 font-semibold text-sm transition-colors">
@@ -452,9 +480,16 @@ export function AuthModal() {
                 <span className="text-xs font-medium text-gray-400 dark:text-gray-500">VEYA</span>
                 <div className="flex-1 h-px bg-gray-200 dark:bg-gray-700" />
               </div>
-              <a
-                href={GOOGLE_LOGIN_URL}
-                onClick={() => useAuthStore.getState().logout()}
+              <button
+                type="button"
+                onClick={() => {
+                  useAuthStore.getState().logout();
+                  if (isNativePlatform()) {
+                    openGoogleLoginNative();
+                  } else {
+                    window.location.href = GOOGLE_LOGIN_URL;
+                  }
+                }}
                 className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/80 transition-colors text-sm font-medium text-gray-700 dark:text-gray-200"
               >
                 <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
@@ -464,7 +499,7 @@ export function AuthModal() {
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                 </svg>
                 Google ile üye ol
-              </a>
+              </button>
               <p className="mt-5 text-center text-sm text-gray-500 dark:text-gray-400">
                 Zaten hesabın var mı?{' '}
                 <button type="button" onClick={() => resetAndSwitch('login')} className="font-medium text-brand hover:text-brand-hover dark:text-brand">
