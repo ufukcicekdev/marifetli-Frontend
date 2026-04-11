@@ -23,26 +23,7 @@ const LOGIN_REGISTER_IMAGES = {
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api';
 const GOOGLE_LOGIN_URL = `${API_BASE}/auth/start-google-login/`;
 
-function isNativePlatform(): boolean {
-  if (typeof window === 'undefined') return false;
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { Capacitor } = require('@capacitor/core') as typeof import('@capacitor/core');
-    return Capacitor.isNativePlatform();
-  } catch {
-    return false;
-  }
-}
 
-async function openGoogleLoginNative() {
-  try {
-    const { Browser } = await import('@capacitor/browser');
-    await Browser.open({ url: GOOGLE_LOGIN_URL, windowName: '_self' });
-  } catch {
-    // Fallback: web yönlendirmesi
-    window.location.href = GOOGLE_LOGIN_URL;
-  }
-}
 
 const inputClass =
   'w-full px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-gray-50/50 dark:bg-gray-800/50 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-brand/50 focus:border-brand transition-colors text-sm';
@@ -381,11 +362,7 @@ export function AuthModal() {
                 type="button"
                 onClick={() => {
                   useAuthStore.getState().logout();
-                  if (isNativePlatform()) {
-                    openGoogleLoginNative();
-                  } else {
-                    window.location.href = GOOGLE_LOGIN_URL;
-                  }
+                  window.location.href = GOOGLE_LOGIN_URL;
                 }}
                 className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/80 transition-colors text-sm font-medium text-gray-700 dark:text-gray-200"
               >
@@ -484,11 +461,7 @@ export function AuthModal() {
                 type="button"
                 onClick={() => {
                   useAuthStore.getState().logout();
-                  if (isNativePlatform()) {
-                    openGoogleLoginNative();
-                  } else {
-                    window.location.href = GOOGLE_LOGIN_URL;
-                  }
+                  window.location.href = GOOGLE_LOGIN_URL;
                 }}
                 className="w-full flex items-center justify-center gap-3 py-3 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700/80 transition-colors text-sm font-medium text-gray-700 dark:text-gray-200"
               >
