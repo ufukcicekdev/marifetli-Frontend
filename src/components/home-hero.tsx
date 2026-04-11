@@ -441,14 +441,14 @@ export function HomeHero() {
         <div className="absolute inset-0 flex items-center px-6 sm:px-12">
           <div className="bg-white/10 dark:bg-black/20 backdrop-blur-2xl border border-white/30 rounded-2xl p-6 sm:p-10 max-w-xl shadow-xl">
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-white mb-3 tracking-tight leading-tight">
-              El emeğinin, merakın ve bilginin
+              Türkiye&apos;nin aile boyu
               <br />
               <span className="bg-gradient-to-r from-yellow-300 to-pink-300 bg-clip-text text-transparent">
-                buluşma noktası.
+                ilgi alanı ve gelişim noktası.
               </span>
             </h1>
             <p className="text-sm sm:text-base text-white/80 mb-5 font-medium leading-relaxed">
-              50.000+ üyeyle birlikte soru sor, cevapla, paylaş — birlikte öğreniyoruz.
+              Öğren, paylaş, ödüller kazan — tüm aile birlikte büyüsün.
             </p>
             <div className="mb-5">
               <HeroSearch />
