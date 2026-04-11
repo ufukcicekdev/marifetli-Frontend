@@ -424,50 +424,44 @@ export function HomeHero() {
       {/* ============================================================ */}
       {/* HERO BLOCK — glass card üzerinde gradient arka plan          */}
       {/* ============================================================ */}
-      <div className="relative h-80 sm:h-96 rounded-2xl overflow-hidden shadow-2xl shadow-brand/10">
+      <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-brand/10">
         {/* Arka plan gradyan */}
         <div className="absolute inset-0 bg-gradient-to-br from-violet-600 via-brand to-pink-500 dark:from-violet-900 dark:via-indigo-900 dark:to-slate-900" aria-hidden />
         {/* Dekoratif blob'lar */}
         <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full bg-pink-400/30 blur-3xl pointer-events-none" aria-hidden />
         <div className="absolute bottom-0 left-1/3 w-60 h-60 rounded-full bg-cyan-400/20 blur-3xl pointer-events-none" aria-hidden />
-        {/* Sağda yarı saydam dekoratif şekil */}
-        <div className="absolute right-0 inset-y-0 w-1/2 bg-gradient-to-l from-transparent to-transparent pointer-events-none hidden sm:block" aria-hidden>
-          <div className="absolute right-8 top-1/2 -translate-y-1/2 opacity-10">
-            <Sparkles className="h-56 w-56 text-white" />
-          </div>
+        <div className="absolute right-6 top-1/2 -translate-y-1/2 opacity-10 pointer-events-none hidden sm:block" aria-hidden>
+          <Sparkles className="h-40 w-40 text-white" />
         </div>
 
-        {/* Glass kart */}
-        <div className="absolute inset-0 flex items-center px-6 sm:px-12">
-          <div className="bg-white/10 dark:bg-black/20 backdrop-blur-2xl border border-white/30 rounded-2xl p-6 sm:p-10 max-w-xl shadow-xl">
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-white mb-3 tracking-tight leading-tight">
-              Türkiye&apos;nin aile boyu
-              <br />
-              <span className="bg-gradient-to-r from-yellow-300 to-pink-300 bg-clip-text text-transparent">
-                ilgi alanı ve gelişim noktası.
-              </span>
-            </h1>
-            <p className="text-sm sm:text-base text-white/80 mb-5 font-medium leading-relaxed">
-              Öğren, paylaş, ödüller kazan — tüm aile birlikte büyüsün.
-            </p>
-            <div className="mb-5">
-              <HeroSearch />
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <Link
-                href="/soru-sor"
-                className="inline-flex items-center gap-2 bg-gradient-to-r from-brand to-violet-600 text-white px-7 py-3.5 rounded-full font-bold shadow-lg shadow-brand/30 hover:scale-105 transition-transform text-sm"
-              >
-                Soru Sor
-              </Link>
-              <Link
-                href="/sorular?ordering=-hot_score"
-                className="inline-flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white px-7 py-3.5 rounded-full font-bold transition-all text-sm border border-white/20"
-              >
-                <TrendingUp className="h-4 w-4" aria-hidden />
-                Trendler
-              </Link>
-            </div>
+        {/* İçerik — sabit yükseklik yerine padding ile */}
+        <div className="relative px-5 sm:px-10 py-8 sm:py-12">
+          <h1 className="text-2xl sm:text-4xl md:text-5xl font-black text-white mb-3 tracking-tight leading-tight max-w-lg">
+            Türkiye&apos;nin aile boyu{' '}
+            <span className="bg-gradient-to-r from-yellow-300 to-pink-300 bg-clip-text text-transparent">
+              ilgi alanı ve gelişim noktası.
+            </span>
+          </h1>
+          <p className="text-sm sm:text-base text-white/80 mb-5 font-medium leading-relaxed max-w-md">
+            Öğren, paylaş, ödüller kazan — tüm aile birlikte büyüsün.
+          </p>
+          <div className="mb-5 max-w-md">
+            <HeroSearch />
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href="/soru-sor"
+              className="inline-flex items-center gap-2 bg-white text-brand px-6 py-3 rounded-full font-bold shadow-lg hover:scale-105 transition-transform text-sm"
+            >
+              Soru Sor
+            </Link>
+            <Link
+              href="/sorular?ordering=-hot_score"
+              className="inline-flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white px-6 py-3 rounded-full font-bold transition-all text-sm border border-white/20"
+            >
+              <TrendingUp className="h-4 w-4" aria-hidden />
+              Trendler
+            </Link>
           </div>
         </div>
       </div>
