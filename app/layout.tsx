@@ -34,8 +34,10 @@ function getSiteStructuredData() {
       '@id': `${SITE_URL}/#organization`,
       name: 'Marifetli',
       url: SITE_URL,
-      description: 'İlgi alanlarının buluşma noktası.. Sor .Cevapla .Öğren. En marifetli rozetini kazan.',
-      sameAs: [],
+      description: 'Türkiye\'nin aile boyu ilgi alanı ve gelişim noktası. Öğren, paylaş, ödüller kazan.',
+      sameAs: [
+        'https://www.instagram.com/marifetlicom',
+      ],
     },
     {
       '@context': 'https://schema.org',
@@ -43,7 +45,7 @@ function getSiteStructuredData() {
       '@id': `${SITE_URL}/#website`,
       name: 'Marifetli',
       url: SITE_URL,
-      description: 'İlgi alanlarının buluşma noktası.. Sor .Cevapla .Öğren. En marifetli rozetini kazan.',
+      description: 'Türkiye\'nin aile boyu ilgi alanı ve gelişim noktası. Öğren, paylaş, ödüller kazan.',
       inLanguage: 'tr-TR',
       publisher: { '@id': `${SITE_URL}/#organization` },
       // Arama URL’si: sitelinks’te arama kutusu çıkma ihtimali + site yapısının anlaşılması
@@ -84,29 +86,34 @@ export const viewport: Viewport = {
   ],
 };
 
+const OG_IMAGE = { url: '/og-default.png', width: 1376, height: 768, alt: 'Marifetli - İlgi Alanları Topluluğu' };
+const META_DESCRIPTION = 'Türkiye\'nin aile boyu ilgi alanı ve gelişim noktası. Öğren, paylaş, ödüller kazan — tüm aile birlikte büyüsün.';
+const META_TITLE = 'Marifetli - İlgi Alanları ve Hobi Topluluğu';
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'Marifetli - İlgi Alanları Topluluğu',
+    default: META_TITLE,
     template: '%s | Marifetli',
   },
-  description: 'İlgi alanlarının buluşma noktası.. Sor .Cevapla .Öğren. En marifetli rozetini kazan.',
+  description: META_DESCRIPTION,
+  keywords: ['el işleri', 'hobi', 'örgü', 'dikiş', 'yemek tarifleri', 'müzik', 'topluluk', 'Marifetli', 'Marifetli Kids', 'çocuk eğitim'],
   openGraph: {
     type: 'website',
     locale: 'tr_TR',
     url: SITE_URL,
     siteName: 'Marifetli',
-    title: 'Marifetli - İlgi Alanları Topluluğu',
-    description: 'İlgi alanlarının buluşma noktası.. Sor .Cevapla .Öğren. En marifetli rozetini kazan.',
-    images: [{ url: '/android-chrome-512x512.png', width: 1200, height: 630, alt: 'Marifetli' }],
+    title: META_TITLE,
+    description: META_DESCRIPTION,
+    images: [OG_IMAGE],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Marifetli - İlgi Alanları Topluluğu',
-    description: 'İlgi alanlarının buluşma noktası.. Sor .Cevapla .Öğren. En marifetli rozetini kazan.',
+    title: META_TITLE,
+    description: META_DESCRIPTION,
+    images: [OG_IMAGE.url],
   },
   alternates: { canonical: SITE_URL },
-  // Mutlak URL kullan ki Google/Vercel kendi favicon'unu göstermesin (site:marifetli.com.tr aramasında)
   icons: {
     icon: [
       { url: `${SITE_URL}/favicon.ico`, sizes: 'any' },
