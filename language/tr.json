@@ -2515,5 +2515,62 @@
   "invite.phoneHint": "Yalnizca rakam; +90 ile baslarsan otomatik duzenlenir. Istege bagli.",
   "schools.neighborhood": "Mahalle",
   "schools.addModalTeacherBody": "Okul MEB listesinde yoksa buradan ekleyebilirsin. Il ve ilce sistemdeki MEB verisinden secilir.",
-  "schools.shortNamePlaceholder": "Resmi veya kullandigin kisa ad"
+  "schools.shortNamePlaceholder": "Resmi veya kullandigin kisa ad",
+
+  "marfi.loginWelcome.title": "Tekrar hosgeldin!",
+  "marfi.loginWelcome.body0": "Bugun harika seyler ogrenecegiz, hazir misin?",
+  "marfi.loginWelcome.body1": "Seni gormek cok guzel! Hangi gorevden baslayalim?",
+  "marfi.loginWelcome.body2": "Hos geldin! Puanlarin seni bekliyor, haydi basla!",
+  "marfi.loginWelcome.body3": "Super! Bugun yeni bir basari elde etmeye ne dersin?",
+  "marfi.loginWelcome.btn": "Hadi baslayalim!",
+
+  "marfi.dashboard.morning0": "Gunaydın! Yeni bir gun, yeni bir sans — haydi basla!",
+  "marfi.dashboard.morning1": "Sabah erken baslamak cesaret ister. Sen yapabilirsin!",
+  "marfi.dashboard.afternoon0": "Ogleye kadar ne kadar cok yaptın! Devam et!",
+  "marfi.dashboard.afternoon1": "Ogleden sonra molasi bitti, hadi tekrar baslayalim!",
+  "marfi.dashboard.evening0": "Aksam calisanlari her zaman bir adim onde olur!",
+  "marfi.dashboard.evening1": "Bugun bitmeden bir gorev daha tamamlayabilirsin!",
+
+  "marfi.dashboard.noHomework": "Bugun odevi yok — ama challenges seni bekliyor!",
+  "marfi.dashboard.pendingHomework": "Bekleyen odevlerin var, onlari tamamlarsan puan kazanacaksın!",
+  "marfi.dashboard.allDone": "Tum gorevlerini tamamlamissın! Mukemmelsin!",
+  "marfi.dashboard.newBadge": "Yeni bir rozet kazanmak icin az kaldi, dur durma!",
+  "marfi.dashboard.highScore": "Puanlarin mucitmesel boyuta ulasiyor! Harika gidiyorsun!",
+
+  "marfi.bubble.tip0": "Her gun biraz calismak, sonunda cok buyuk basarilara goturuyor!",
+  "marfi.bubble.tip1": "Merak et, soru sor, ogren — bunlar en guzel yolculuktur!",
+  "marfi.bubble.tip2": "Bir hatadan ogrenilen ders, en degerli derstir!",
+  "marfi.bubble.tip3": "Bugunku calisma yarinin basarisini hazirliyor!",
+  "marfi.bubble.tip4": "Sen dusundugundan cok daha yeteneklisin!",
+
+  "marfi.roadmap.locked": "Daha fazla puan kazanirsan bu rozeti acabilirsin!",
+  "marfi.roadmap.current": "Bu senin hedefin! Hadi ona dogru yuruyum!",
+  "marfi.roadmap.done": "Muhtesem! Bu rozeti sen kazandin!",
+  "marfi.roadmap.noStars": "Ogretmeninden yildiz almak icin challangeri tamamla!",
+
+  "marfi.dismiss": "Tamam!",
+
+  "marfi.homework.allDone": "Tum odevleri tamamlamissın! Sen bir sampiyonsun!",
+  "marfi.homework.hasPending": "Bekleyen odevlerin var! Hepsini bitirince puan kazanacaksın.",
+  "marfi.homework.noHomework": "Su an odev yok — bu zamanı iyi kullan!",
+  "marfi.homework.encourageStart": "Bir odev baslamak, yarısını bitirmek gibidir. Haydi!",
+
+  "marfi.tests.ready": "Testler seni bekliyor! Her soru yeni bir fırsat.",
+  "marfi.tests.hasPending": "Henuz tamamlanmamis testlerin var. Hazır olunca basla!",
+  "marfi.tests.allDone": "Tum testleri tamamladın! Mukemmel bir performans!",
+  "marfi.tests.goodLuck": "Odaklan, dikkatlice oku ve en iyisini yap!",
+
+  "marfi.challenges.welcome": "Challenges seni geliştirir! Hangi maceradan başlayalım?",
+  "marfi.challenges.inProgress": "Devam eden challengelerin var, dur durma!",
+  "marfi.challenges.allDone": "Tum challengeleri tamamladın — inanılmaz!",
+  "marfi.challenges.tryNew": "Yeni bir challenge dene ve yeteneklerini keşfet!",
+
+  "marfi.proje.welcome": "Bu challenge'da harika şeyler öğreneceksin!",
+  "marfi.proje.keepGoing": "Her adım seni hedefe daha da yaklaştırıyor!",
+  "marfi.proje.almostDone": "Neredeyse bitti! Son bir gayret, haydi!",
+  "marfi.proje.submitTip": "Calismanı dikkatlice kontrol et, sonra gönder!",
+
+  "marfi.odev.due": "Bu odev yakında teslim edilmeli, hazır mısın?",
+  "marfi.odev.submitted": "Odevi gönderdın! Harika iş, gurur duyuyorum!",
+  "marfi.odev.notStarted": "Henuz başlamadın — küçük bir adımla başla!"
 }

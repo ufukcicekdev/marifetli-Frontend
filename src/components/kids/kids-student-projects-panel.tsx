@@ -32,6 +32,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { useKidsI18n } from '@/src/providers/kids-language-provider';
+import { KidsMascotBubble } from '@/src/components/kids/kids-mascot-bubble';
 
 /** Mockup (AIDA) görselleri — next.config.ts içinde lh3.googleusercontent.com izli */
 const HERO_COSMIC_BG =
@@ -427,8 +428,26 @@ export function KidsStudentProjectsPanel({
 
   const doneThisWeek = useMemo(() => countDoneAssignmentsInLocalIsoWeek(done), [done]);
 
+  const marfiChallengeMsg = done.length > 0 && ongoing.length === 0
+    ? t('marfi.challenges.allDone')
+    : ongoing.length > 0
+      ? t('marfi.challenges.inProgress')
+      : t('marfi.challenges.welcome');
+  const marfiChallengeMood = done.length > 0 && ongoing.length === 0
+    ? 'excited' as const
+    : ongoing.length > 0 ? 'proud' as const : 'happy' as const;
+
   return (
     <div className="mx-auto min-w-0 max-w-6xl space-y-8 px-1 sm:px-0">
+      {/* Marfi motivasyon balonu */}
+      <KidsMascotBubble
+        mood={marfiChallengeMood}
+        message={marfiChallengeMsg}
+        dismissible
+        storageKey={`marfi-challenges-${new Date().toDateString()}`}
+        placement="left"
+        mascotSize={90}
+      />
       {showBackToPanel ? (
         <Link
           href={`${pathPrefix}/ogrenci/panel`}

@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { Sparkles as SparklesIcon, Star } from 'lucide-react';
 import { KidsCenteredModal, KidsPrimaryButton } from '@/src/components/kids/kids-ui';
+import { KidsMascot } from '@/src/components/kids/kids-mascot';
 import type { KidsLanguageCode } from '@/src/lib/kids-api';
 import { useKidsI18n } from '@/src/providers/kids-language-provider';
 
@@ -107,6 +108,16 @@ export function KidsHomeworkMarkDoneCelebrationModal({
     >
       <div className="relative px-1 pb-2 text-center">
         <Sparkles />
+        {/* Marfi maskotu */}
+        <div className="relative mx-auto mb-2 flex justify-center">
+          <div className="relative">
+            <div
+              className="absolute inset-0 -m-4 rounded-full bg-gradient-to-br from-amber-300/40 to-violet-400/30 blur-2xl"
+              aria-hidden
+            />
+            <KidsMascot mood="proud" size={120} />
+          </div>
+        </div>
         <p className="relative mt-1 text-sm font-semibold leading-relaxed text-slate-700 dark:text-gray-200">
           {t('homework.celebration.sent')}
         </p>

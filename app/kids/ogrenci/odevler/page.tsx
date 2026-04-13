@@ -20,6 +20,7 @@ import {
   Users,
 } from 'lucide-react';
 import { KidsHomeworkMarkDoneCelebrationModal, kidsPickHomeworkCelebrationMotivate } from '@/src/components/kids/kids-homework-mark-done-celebration-modal';
+import { KidsMascotBubble } from '@/src/components/kids/kids-mascot-bubble';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 import {
@@ -363,8 +364,26 @@ export default function KidsStudentHomeworksPage() {
     return <p className="text-center text-gray-600 dark:text-gray-400">{t('common.loading')}</p>;
   }
 
+  /* Marfi mesaj secimi */
+  const marfiHomeworkMsg = (() => {
+    if (incomingItems.length === 0 && doneItems.length > 0) return t('marfi.homework.allDone');
+    if (incomingItems.length > 0) return t('marfi.homework.hasPending');
+    return t('marfi.homework.noHomework');
+  })();
+  const marfiHomeworkMood = incomingItems.length === 0 && doneItems.length > 0 ? 'excited' as const : incomingItems.length > 0 ? 'thinking' as const : 'happy' as const;
+
   return (
     <KidsPanelMax className="max-w-7xl px-1 pb-12 sm:px-3 lg:px-6">
+      {/* Marfi motivasyon balonu */}
+      <KidsMascotBubble
+        mood={marfiHomeworkMood}
+        message={marfiHomeworkMsg}
+        dismissible
+        storageKey={`marfi-hw-${new Date().toDateString()}-${incomingItems.length}`}
+        placement="left"
+        mascotSize={90}
+        className="mb-6"
+      />
       <header className="mb-8 flex flex-col justify-between gap-6 md:mb-10 md:flex-row md:items-center">
         <div>
           <div className="mb-2 flex flex-wrap items-center gap-3">

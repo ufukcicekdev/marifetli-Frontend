@@ -17,7 +17,9 @@ import {
   Trophy,
   type LucideIcon,
 } from 'lucide-react';
-import { KidsPanelMax } from '@/src/components/kids/kids-ui';
+import { KidsCenteredModal, KidsPanelMax, KidsPrimaryButton } from '@/src/components/kids/kids-ui';
+import { KidsMascot } from '@/src/components/kids/kids-mascot';
+import { KidsMascotBubble } from '@/src/components/kids/kids-mascot-bubble';
 import { kidsStudentGetTest, kidsStudentStartTest, kidsStudentSubmitTest, type KidsTestAttempt } from '@/src/lib/kids-api';
 import {
   kidsLocalizedReadingAnswerIntro,
@@ -79,6 +81,7 @@ export default function KidsStudentTestSolvePage() {
   const [remainingSec, setRemainingSec] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
   const autoSubmitRef = useRef(false);
 
   const submitted = Boolean(attempt?.submitted_at);
@@ -336,7 +339,7 @@ export default function KidsStudentTestSolvePage() {
       const refreshed = await kidsStudentGetTest(detail.id);
       setDetail(refreshed);
       if (refreshed.attempt) setAttempt(refreshed.attempt);
-      toast.success(auto ? t('tests.studentSolve.autoSubmitted') : t('tests.studentSolve.submitted'));
+      setShowCelebration(true);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : t('tests.studentSolve.submitError'));
     } finally {
@@ -371,6 +374,53 @@ export default function KidsStudentTestSolvePage() {
 
   return (
     <KidsPanelMax className="max-w-4xl space-y-6 px-1 pb-12 pt-2 sm:px-3 lg:px-6">
+      {/* Marfi — test baslamadan once motivasyon, tamamlandiysa yok */}
+      {!submitted && (
+        <KidsMascotBubble
+          mood="happy"
+          messageKey="marfi.tests.goodLuck"
+          dismissible
+          storageKey={`marfi-test-solve-${testId}-${new Date().toDateString()}`}
+          placement="left"
+          mascotSize={82}
+        />
+      )}
+      {/* ─── Teslim Kutlama Modali ─── */}
+      {showCelebration && (
+        <KidsCenteredModal
+          title={
+            <span className="flex items-center gap-2">
+              <Trophy className="h-4 w-4 text-amber-500" aria-hidden />
+              {t('tests.studentSolve.celebrationTitle') || 'Testi Tamamladın!'}
+            </span>
+          }
+          onClose={() => setShowCelebration(false)}
+          maxWidthClass="max-w-sm"
+          footer={
+            <KidsPrimaryButton
+              type="button"
+              className="w-full"
+              onClick={() => setShowCelebration(false)}
+            >
+              {t('tests.studentSolve.celebrationContinue') || 'Sonuçlara Bak'}
+            </KidsPrimaryButton>
+          }
+        >
+          <div className="relative pb-2 text-center">
+            <div className="relative mx-auto flex justify-center">
+              <div className="absolute inset-0 -m-6 rounded-full bg-gradient-to-br from-amber-300/30 to-violet-400/25 blur-2xl" aria-hidden />
+              <KidsMascot mood="excited" size={150} />
+            </div>
+            <p className="relative mt-3 font-logo text-xl font-black text-violet-950 dark:text-violet-100">
+              {t('tests.studentSolve.celebrationHeadline') || 'Harika iş çıkardın! 🎉'}
+            </p>
+            <p className="relative mt-2 text-sm font-semibold leading-relaxed text-slate-600 dark:text-gray-300">
+              {t('tests.studentSolve.celebrationBody') || 'Cevapların kaydedildi. Sonuçlarını aşağıda görebilirsin.'}
+            </p>
+          </div>
+        </KidsCenteredModal>
+      )}
+
       <Link
         href={`${pathPrefix}/ogrenci/testler`}
         className="inline-flex rounded-full border border-violet-200/80 bg-white/60 px-4 py-2 text-xs font-bold text-violet-800 shadow-sm backdrop-blur-sm transition hover:bg-violet-50 dark:border-violet-800 dark:bg-zinc-900/60 dark:text-violet-200 dark:hover:bg-violet-950/40"

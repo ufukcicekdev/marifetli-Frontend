@@ -2512,5 +2512,62 @@
   "invite.phoneHint": "Nur Ziffern; mit +90 wird normalisiert. Optional.",
   "schools.neighborhood": "Stadtteil",
   "schools.addModalTeacherBody": "Fehlt die Schule in der MEB-Liste, fuegen Sie sie hier hinzu. Provinz und Bezirk stammen aus den MEB-Daten.",
-  "schools.shortNamePlaceholder": "Offizieller oder Kurzname"
+  "schools.shortNamePlaceholder": "Offizieller oder Kurzname",
+
+  "marfi.loginWelcome.title": "Willkommen zurueck!",
+  "marfi.loginWelcome.body0": "Heute lernen wir tolle Dinge, bist du bereit?",
+  "marfi.loginWelcome.body1": "Schoen dich zu sehen! Womit sollen wir anfangen?",
+  "marfi.loginWelcome.body2": "Willkommen! Deine Punkte warten, lass uns loslegen!",
+  "marfi.loginWelcome.body3": "Super! Moechtest du heute eine neue Errungenschaft erreichen?",
+  "marfi.loginWelcome.btn": "Los geht's!",
+
+  "marfi.dashboard.morning0": "Guten Morgen! Ein neuer Tag, eine neue Chance!",
+  "marfi.dashboard.morning1": "Fruh anfangen braucht Mut. Du schaffst das!",
+  "marfi.dashboard.afternoon0": "Sieh mal, wie viel du schon gemacht hast! Weiter so!",
+  "marfi.dashboard.afternoon1": "Mittagspause vorbei, wieder an die Arbeit!",
+  "marfi.dashboard.evening0": "Abendarbeiter sind immer einen Schritt voraus!",
+  "marfi.dashboard.evening1": "Du kannst noch eine Aufgabe erledigen, bevor der Tag endet!",
+
+  "marfi.dashboard.noHomework": "Heute keine Hausaufgaben — aber Challenges warten!",
+  "marfi.dashboard.pendingHomework": "Du hast ausstehende Hausaufgaben, Punkte warten auf dich!",
+  "marfi.dashboard.allDone": "Alle Aufgaben erledigt! Du bist fantastisch!",
+  "marfi.dashboard.newBadge": "Du bist nah an einem neuen Abzeichen, nicht aufhoeren!",
+  "marfi.dashboard.highScore": "Deine Punkte erreichen legendaere Hoehen!",
+
+  "marfi.bubble.tip0": "Ein bisschen ueben jeden Tag fuehrt zu grossen Erfolgen!",
+  "marfi.bubble.tip1": "Sei neugierig, stelle Fragen, lerne — das ist die beste Reise!",
+  "marfi.bubble.tip2": "Eine Lektion aus einem Fehler ist die wertvollste Lektion!",
+  "marfi.bubble.tip3": "Die heutige Arbeit bereitet den morgigen Erfolg vor!",
+  "marfi.bubble.tip4": "Du bist viel talentierter als du denkst!",
+
+  "marfi.roadmap.locked": "Verdiene mehr Punkte, um dieses Abzeichen freizuschalten!",
+  "marfi.roadmap.current": "Das ist dein Ziel! Lass uns darauf zugehen!",
+  "marfi.roadmap.done": "Fantastisch! Du hast dieses Abzeichen verdient!",
+  "marfi.roadmap.noStars": "Schliesse Challenges ab, um Sterne vom Lehrer zu bekommen!",
+
+  "marfi.dismiss": "Verstanden!",
+
+  "marfi.homework.allDone": "Alle Hausaufgaben erledigt! Du bist ein Champion!",
+  "marfi.homework.hasPending": "Du hast ausstehende Hausaufgaben! Punkte warten auf dich.",
+  "marfi.homework.noHomework": "Gerade keine Hausaufgaben — nutze diese Zeit gut!",
+  "marfi.homework.encourageStart": "Eine Aufgabe anzufangen ist wie die Haelfte zu erledigen. Los!",
+
+  "marfi.tests.ready": "Tests warten! Jede Frage ist eine neue Chance.",
+  "marfi.tests.hasPending": "Du hast unfertige Tests. Fang an wenn du bereit bist!",
+  "marfi.tests.allDone": "Alle Tests abgeschlossen! Hervorragende Leistung!",
+  "marfi.tests.goodLuck": "Konzentriere dich, lies sorgfaeltig und gib dein Bestes!",
+
+  "marfi.challenges.welcome": "Challenges lassen dich wachsen! Welches Abenteuer soll es sein?",
+  "marfi.challenges.inProgress": "Du hast laufende Challenges, nicht aufhoeren!",
+  "marfi.challenges.allDone": "Alle Challenges abgeschlossen — unglaublich!",
+  "marfi.challenges.tryNew": "Probiere eine neue Challenge und entdecke deine Talente!",
+
+  "marfi.proje.welcome": "Du wirst in dieser Challenge tolle Dinge lernen!",
+  "marfi.proje.keepGoing": "Jeder Schritt bringt dich naeher ans Ziel!",
+  "marfi.proje.almostDone": "Fast fertig! Noch ein letzter Effort, los!",
+  "marfi.proje.submitTip": "Pruefe deine Arbeit sorgfaeltig, dann abschicken!",
+
+  "marfi.odev.due": "Diese Hausaufgabe ist bald faellig, bist du bereit?",
+  "marfi.odev.submitted": "Hausaufgabe abgegeben! Tolle Arbeit, ich bin stolz auf dich!",
+  "marfi.odev.notStarted": "Du hast noch nicht angefangen — starte mit einem kleinen Schritt!"
 }

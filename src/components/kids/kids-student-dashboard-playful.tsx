@@ -1,7 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import NextImage from 'next/image';
+import { KidsMascot } from '@/src/components/kids/kids-mascot';
+import {
+  KidsMarfiLoginWelcome,
+  KidsMascotBubble,
+  pickMarfiDashboardMessage,
+  pickMarfiTip,
+} from '@/src/components/kids/kids-mascot-bubble';
 import { jsPDF } from 'jspdf';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -62,9 +68,7 @@ function growthNextHint(points: number, t: (key: string) => string): string {
   return t('student.dashboard.growthHint6');
 }
 
-/** Karşılama kartı sağındaki koç illüstrasyonu (Kids landing hero ile uyumlu). */
-const PANEL_COACH_IMAGE =
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuDx9WDdHS0xLIjAHeEctnK7HhAwn-6oZDcy1cLNaETqoHpERPTrcpy4MO1tG6UmZDIeIsCVZVWsWtCUsuEYzUmfjMPVj92IiqYvmNoKPn_XytVf73-uqs9eX9Nc_dQE8G6ZhviQAsf1yv27PFVGXvwM_gN8_I07kQb_zIuRXTu539sqp_ndjsZhANonJDIX4wZfBFUSxH6eMX1sxjIQwFlGl_Pz2A6428GNdYUBtHl8JipofcaeGtGu9JiniM4YCzwiu_KowGQQiwq4';
+
 
 function xpTierDisplay(gp: number): { cur: number; max: number } {
   const p = Math.max(0, gp || 0);
@@ -410,7 +414,26 @@ export function KidsStudentDashboardPlayful({
   const mm = secLeft !== null ? String(Math.floor((secLeft % 3600) / 60)).padStart(2, '0') : '--';
   const ss = secLeft !== null ? String(secLeft % 60).padStart(2, '0') : '--';
 
+  /* Marfi mesajlari — ilk render'da hesapla */
+  const [marfiWelcomeDone, setMarfiWelcomeDone] = useState(false);
+  const dashboardMsg = useMemo(() => pickMarfiDashboardMessage(t), [t]);
+  const tipMsg = useMemo(() => pickMarfiTip(t), [t]);
+
+  /* Bekleyen odev sayisi */
+  const pendingCount = useMemo(
+    () => assignments.filter((a) => a.is_published && !a.my_submission).length,
+    [assignments],
+  );
+
   return (
+    <>
+    {/* Giris karsilama modali — her session'da bir kez */}
+    {!marfiWelcomeDone && (
+      <KidsMarfiLoginWelcome
+        userName={user.first_name || undefined}
+        onContinue={() => setMarfiWelcomeDone(true)}
+      />
+    )}
     <div className="mx-auto max-w-7xl space-y-10 px-1 pb-8 sm:px-2">
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8">
         <div className="relative overflow-hidden rounded-3xl border border-slate-200/90 bg-white p-6 shadow-md dark:border-zinc-800 dark:bg-zinc-900/90 md:p-8 lg:col-span-8">
@@ -453,15 +476,14 @@ export function KidsStudentDashboardPlayful({
               </p>
             </div>
           </div>
-          <div className="relative z-0 mt-8 flex justify-center md:absolute md:right-4 md:top-1/2 md:mt-0 md:w-[42%] md:-translate-y-1/2 md:justify-end">
-            <div className="relative h-48 w-full max-w-[220px] overflow-hidden rounded-2xl bg-slate-900 shadow-inner md:h-56 md:max-w-none">
-              <NextImage
-                src={PANEL_COACH_IMAGE}
-                alt=""
-                fill
-                className="object-cover object-top"
-                sizes="(max-width: 1024px) 220px, 280px"
+          <div className="relative z-0 mt-6 flex justify-center md:absolute md:right-2 md:top-1/2 md:mt-0 md:-translate-y-1/2 md:justify-end">
+            <div className="relative flex items-center justify-center">
+              {/* Parlama halesi */}
+              <div
+                className="absolute inset-0 -m-6 rounded-full bg-gradient-to-br from-violet-400/30 to-fuchsia-300/20 blur-2xl"
+                aria-hidden
               />
+              <KidsMascot mood="idle" size={180} className="drop-shadow-xl" />
             </div>
           </div>
         </div>
@@ -636,6 +658,30 @@ export function KidsStudentDashboardPlayful({
           <Backpack className="mr-2 h-4 w-4" aria-hidden /> {t('student.dashboard.challengesTitle')}
         </Link>
       </div>
+
+      {/* Marfi motivasyon balonu — gun saatine gore mesaj */}
+      <KidsMascotBubble
+        mood={pendingCount > 0 ? 'thinking' : 'happy'}
+        message={pendingCount > 0 ? t('marfi.dashboard.pendingHomework') : dashboardMsg}
+        dismissible
+        storageKey={`marfi-dash-msg-${new Date().toDateString()}`}
+        placement="left"
+        mascotSize={88}
+        className="mt-2"
+      />
+
+      {/* Gunluk ipucu — sadece bir kez gosterilir */}
+      <KidsMascotBubble
+        mood="idle"
+        titleKey="marfi.bubble.tip0"
+        message={tipMsg}
+        dismissible
+        storageKey={`marfi-tip-${new Date().toDateString()}`}
+        placement="right"
+        mascotSize={72}
+      />
+
     </div>
+    </>
   );
 }

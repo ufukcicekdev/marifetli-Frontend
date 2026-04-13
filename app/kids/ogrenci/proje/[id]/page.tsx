@@ -44,6 +44,7 @@ import {
   KidsStudentStepMotivationModal,
   kidsPickStepMotivationMessage,
 } from '@/src/components/kids/kids-student-step-motivation';
+import { KidsMascotBubble } from '@/src/components/kids/kids-mascot-bubble';
 
 const BUDDY_EXPLORER_IMG =
   'https://lh3.googleusercontent.com/aida-public/AB6AXuA3b5ooINhscRadwZNiztlFoBih9iIRudM1GrYYa4GVPyf8pfjQza8uFzBexu_OG5FxpPmcbygWO_mXRzqxKzn5RQ2q7DGtwy14dtQkriIrlYR7nP5oKIa7ORSMBhaQ-3U2vWMJMnUpqljdKb22cB47Kp8-HgvKDRgISV8U3tcbLL08NqI31zdzCa55p3LHNE1Cfhq6QjkPxVVPtZjidHL8BT8V5gGhh7FPiwQEV4RfQQTU7EbzSJvyF9G-TxabQ9LQA9tMWf7xxRur';
@@ -775,6 +776,11 @@ export default function KidsStudentAssignmentPage() {
       ? kidsSubmissionReviewHintLines(existingSubmission, t)
       : null;
 
+  const marfiBubbProjeMsg = existingSubmission
+    ? t('marfi.odev.submitted')
+    : t('marfi.proje.welcome');
+  const marfiBubbleProjeMood = existingSubmission ? 'proud' as const : 'happy' as const;
+
   return (
     <div className="mx-auto max-w-5xl space-y-10 px-1 pb-16 sm:px-0">
       <Link
@@ -783,6 +789,16 @@ export default function KidsStudentAssignmentPage() {
       >
         ← {t('projectDetail.backChallenges')}
       </Link>
+
+      {/* Marfi karşılama balonu — her gün bir kez */}
+      <KidsMascotBubble
+        mood={marfiBubbleProjeMood}
+        message={marfiBubbProjeMsg}
+        dismissible
+        storageKey={`marfi-proje-${assignment?.id}-${new Date().toDateString()}`}
+        placement="right"
+        mascotSize={82}
+      />
 
       {heroSection}
 

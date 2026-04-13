@@ -2515,5 +2515,62 @@
   "invite.phoneHint": "Digits only; if you start with +90 it will be normalized. Optional.",
   "schools.neighborhood": "Neighborhood",
   "schools.addModalTeacherBody": "If the school is not in the MEB list, add it here. Province and district are taken from MEB data in the system.",
-  "schools.shortNamePlaceholder": "Official or short name you use"
+  "schools.shortNamePlaceholder": "Official or short name you use",
+
+  "marfi.loginWelcome.title": "Welcome back!",
+  "marfi.loginWelcome.body0": "We will learn great things today, are you ready?",
+  "marfi.loginWelcome.body1": "So happy to see you! Where shall we start?",
+  "marfi.loginWelcome.body2": "Welcome! Your points are waiting, let's go!",
+  "marfi.loginWelcome.body3": "Awesome! Want to get a new achievement today?",
+  "marfi.loginWelcome.btn": "Let's get started!",
+
+  "marfi.dashboard.morning0": "Good morning! A new day, a new chance — let's go!",
+  "marfi.dashboard.morning1": "Starting early takes courage. You can do it!",
+  "marfi.dashboard.afternoon0": "Look how much you've done already! Keep it up!",
+  "marfi.dashboard.afternoon1": "Afternoon break is over, let's get back to it!",
+  "marfi.dashboard.evening0": "Evening workers are always one step ahead!",
+  "marfi.dashboard.evening1": "You can finish one more task before today ends!",
+
+  "marfi.dashboard.noHomework": "No homework today — but challenges are waiting!",
+  "marfi.dashboard.pendingHomework": "You have pending homework, finishing them will earn you points!",
+  "marfi.dashboard.allDone": "All tasks complete! You are amazing!",
+  "marfi.dashboard.newBadge": "You're close to a new badge, keep going!",
+  "marfi.dashboard.highScore": "Your points are reaching legendary levels! Awesome!",
+
+  "marfi.bubble.tip0": "A little practice every day leads to great achievements!",
+  "marfi.bubble.tip1": "Be curious, ask questions, learn — that's the best journey!",
+  "marfi.bubble.tip2": "A lesson learned from a mistake is the most valuable lesson!",
+  "marfi.bubble.tip3": "Today's work prepares tomorrow's success!",
+  "marfi.bubble.tip4": "You are much more talented than you think!",
+
+  "marfi.roadmap.locked": "Earn more points to unlock this badge!",
+  "marfi.roadmap.current": "This is your goal! Let's walk toward it!",
+  "marfi.roadmap.done": "Amazing! You earned this badge!",
+  "marfi.roadmap.noStars": "Complete challenges to get stars from your teacher!",
+
+  "marfi.dismiss": "Got it!",
+
+  "marfi.homework.allDone": "All homework done! You are a champion!",
+  "marfi.homework.hasPending": "You have pending homework! You will earn points when done.",
+  "marfi.homework.noHomework": "No homework right now — use this time wisely!",
+  "marfi.homework.encourageStart": "Starting a task is like finishing half of it. Go!",
+
+  "marfi.tests.ready": "Tests are waiting! Every question is a new opportunity.",
+  "marfi.tests.hasPending": "You have unfinished tests. Start when you are ready!",
+  "marfi.tests.allDone": "All tests completed! Outstanding performance!",
+  "marfi.tests.goodLuck": "Focus, read carefully and do your best!",
+
+  "marfi.challenges.welcome": "Challenges make you grow! Which adventure shall we start?",
+  "marfi.challenges.inProgress": "You have ongoing challenges, keep going!",
+  "marfi.challenges.allDone": "All challenges done — incredible!",
+  "marfi.challenges.tryNew": "Try a new challenge and discover your talents!",
+
+  "marfi.proje.welcome": "You will learn amazing things in this challenge!",
+  "marfi.proje.keepGoing": "Every step brings you closer to the goal!",
+  "marfi.proje.almostDone": "Almost done! One last push, let's go!",
+  "marfi.proje.submitTip": "Check your work carefully, then submit!",
+
+  "marfi.odev.due": "This homework is due soon, are you ready?",
+  "marfi.odev.submitted": "Homework submitted! Great job, I am proud of you!",
+  "marfi.odev.notStarted": "You haven't started yet — begin with a small step!"
 }

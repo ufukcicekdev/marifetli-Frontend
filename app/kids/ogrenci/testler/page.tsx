@@ -23,6 +23,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { KidsPanelMax } from '@/src/components/kids/kids-ui';
+import { KidsMascotBubble } from '@/src/components/kids/kids-mascot-bubble';
 import {
   kidsGetBadgeRoadmap,
   kidsStudentListTests,
@@ -195,8 +196,26 @@ export default function KidsStudentTestsPage() {
     return <p className="text-center text-sm text-slate-600 dark:text-zinc-400">{t('common.redirecting')}</p>;
   }
 
+  const marfiTestMsg = counts.submitted === rows.length && rows.length > 0
+    ? t('marfi.tests.allDone')
+    : counts.pending > 0
+      ? t('marfi.tests.hasPending')
+      : t('marfi.tests.ready');
+  const marfiTestMood = counts.submitted === rows.length && rows.length > 0
+    ? 'excited' as const
+    : counts.pending > 0 ? 'thinking' as const : 'happy' as const;
+
   return (
     <KidsPanelMax className="max-w-6xl space-y-10 px-1 pb-12 pt-2 sm:px-3 lg:px-6">
+      {/* Marfi motivasyon balonu */}
+      <KidsMascotBubble
+        mood={marfiTestMood}
+        message={marfiTestMsg}
+        dismissible
+        storageKey={`marfi-tests-${new Date().toDateString()}`}
+        placement="right"
+        mascotSize={90}
+      />
       {/* Stats + streak */}
       <section className="grid grid-cols-1 gap-6 md:grid-cols-3">
         <div className="relative flex flex-col justify-between overflow-hidden rounded-2xl border border-white/50 bg-white/75 p-8 shadow-xl shadow-violet-200/40 backdrop-blur-md dark:border-white/10 dark:bg-zinc-900/65 dark:shadow-none md:col-span-2 md:flex-row md:items-center">

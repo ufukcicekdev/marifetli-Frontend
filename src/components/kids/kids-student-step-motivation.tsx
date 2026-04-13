@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { Sparkles as SparklesIcon, Sprout } from 'lucide-react';
 import { KidsCenteredModal, KidsPrimaryButton } from '@/src/components/kids/kids-ui';
+import { KidsMascot } from '@/src/components/kids/kids-mascot';
 import { useKidsI18n } from '@/src/providers/kids-language-provider';
 
 const MID_MOTIVATION_KEYS = [
@@ -94,14 +95,13 @@ export function KidsStudentStepMotivationModal({ open, message, isFinalStep, onC
       <div className="relative px-1 pb-2 text-center">
         <Sparkles />
         <div className="relative mx-auto mt-2 flex justify-center">
-          <div className="kids-mascot-pop relative">
+          <div className="relative">
+            {/* Arka parca parlama halesi */}
             <div
-              className="absolute inset-0 rounded-full bg-gradient-to-br from-fuchsia-400/50 to-amber-300/40 blur-2xl"
+              className="absolute inset-0 -m-4 rounded-full bg-gradient-to-br from-fuchsia-400/40 to-violet-400/30 blur-2xl"
               aria-hidden
             />
-            <div className="kids-mascot-wiggle relative flex h-28 w-28 items-center justify-center rounded-full bg-gradient-to-br from-violet-400 via-fuchsia-400 to-amber-300 shadow-xl ring-4 ring-white/90 dark:ring-violet-950/80 sm:h-32 sm:w-32">
-              <Sprout className="h-14 w-14 text-white sm:h-16 sm:w-16" aria-hidden />
-            </div>
+            <KidsMascot mood={isFinalStep ? 'excited' : 'happy'} size={130} />
           </div>
         </div>
         <p className="font-logo mt-6 text-xl font-black text-violet-950 dark:text-violet-100">
