@@ -520,13 +520,13 @@ export default function KidsAnnouncementsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-8 px-2 pb-10 sm:px-4">
+    <div className="mx-auto max-w-7xl space-y-8 px-3 pb-16 sm:px-4">
       <header>
         <h1 className="font-logo text-3xl font-bold text-slate-900 dark:text-white">{t('announcements.title')}</h1>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600 dark:text-slate-400">{t('announcements.pageSubtitle')}</p>
       </header>
 
-      <div className={`grid gap-8 ${canCreate ? 'lg:grid-cols-3' : 'grid-cols-1'}`}>
+      <div className={`grid gap-6 ${canCreate ? 'lg:grid-cols-3' : 'grid-cols-1'}`}>
         {canCreate ? (
           <div className="lg:col-span-1">
             <div className="rounded-3xl border border-zinc-200/80 bg-white p-6 shadow-lg dark:border-zinc-800 dark:bg-zinc-900 lg:sticky lg:top-24">
@@ -724,10 +724,10 @@ export default function KidsAnnouncementsPage() {
           return (
             <li
               key={a.id}
-              className="relative rounded-3xl border border-zinc-200/90 bg-white p-5 shadow-md dark:border-zinc-800 dark:bg-zinc-900/80"
+              className="relative rounded-2xl border border-zinc-200/90 bg-white p-4 sm:p-5 shadow-md dark:border-zinc-800 dark:bg-zinc-900/80"
             >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-start justify-between gap-2">
+                <div className="flex min-w-0 flex-wrap items-center gap-1.5 sm:gap-2">
                   {a.is_pinned ? (
                     <span
                       className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-amber-900 ring-1 ring-amber-200/80 dark:bg-amber-950/50 dark:text-amber-100 dark:ring-amber-800/60"
@@ -800,7 +800,7 @@ export default function KidsAnnouncementsPage() {
               </div>
 
               {openAnnouncementId === a.id && editingId === a.id ? (
-              <div className="mt-3 space-y-2 rounded-xl border border-violet-200/80 bg-violet-50/40 p-3 dark:border-violet-800/60 dark:bg-violet-950/25">
+              <div className="mt-3 space-y-3 rounded-xl border border-violet-200/80 bg-violet-50/40 p-3 sm:p-4 dark:border-violet-800/60 dark:bg-violet-950/25">
                 <input
                   value={editTitle}
                   onChange={(e) => setEditTitle(e.target.value)}
@@ -849,7 +849,7 @@ export default function KidsAnnouncementsPage() {
                                   <button
                                     type="button"
                                     title={t('announcements.openLightbox')}
-                                    className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg ring-2 ring-violet-200/80 ring-offset-2 ring-offset-white transition hover:opacity-95 focus:outline-none focus-visible:ring-violet-500 dark:ring-violet-700 dark:ring-offset-slate-900"
+                                    className="relative h-16 w-16 sm:h-20 sm:w-20 shrink-0 overflow-hidden rounded-lg ring-2 ring-violet-200/80 ring-offset-2 ring-offset-white transition hover:opacity-95 focus:outline-none focus-visible:ring-violet-500 dark:ring-violet-700 dark:ring-offset-slate-900"
                                     onClick={() =>
                                       setAnnouncementEditLightbox({ announcementId: a.id, startIndex: imgIdx })
                                     }
@@ -860,7 +860,7 @@ export default function KidsAnnouncementsPage() {
                                       className="h-full w-full object-cover"
                                     />
                                   </button>
-                                  <div className="flex min-w-0 flex-1 flex-col justify-center gap-2 text-xs">
+                                  <div className="flex min-w-0 flex-1 flex-col justify-center gap-2 text-xs overflow-hidden">
                                     <span className="truncate font-medium text-slate-700 dark:text-slate-200">
                                       {att.original_name || t('messageDetail.file')}
                                       {att.size_bytes ? ` (${formatFileSize(att.size_bytes)})` : ''}
@@ -941,12 +941,12 @@ export default function KidsAnnouncementsPage() {
                     <span className="text-[11px] text-slate-500 dark:text-slate-400">{t('announcements.attachmentHintShort')}</span>
                   </div>
                 </div>
-                <div className="flex justify-end gap-2">
+                <div className="flex flex-wrap justify-end gap-2 pt-1">
                   <button
                     type="button"
                     onClick={cancelEdit}
                     disabled={editSaving}
-                    className="rounded-full border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+                    className="flex-1 sm:flex-none rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                   >
                     {t('common.cancel')}
                   </button>
@@ -954,6 +954,7 @@ export default function KidsAnnouncementsPage() {
                     type="button"
                     onClick={() => void onSaveEdit()}
                     disabled={editSaving || !editTitle.trim() || !editBody.trim()}
+                    className="flex-1 sm:flex-none"
                   >
                     {editSaving ? t('profile.saving') : t('profile.save')}
                   </KidsPrimaryButton>
