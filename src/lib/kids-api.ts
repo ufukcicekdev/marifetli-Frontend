@@ -3449,6 +3449,39 @@ export async function kidsExtractTestQuestions(
   };
 }
 
+export async function kidsGenerateTestFromDocument(
+  file: File | File[],
+  questionCount: number = 10,
+): Promise<{
+  title: string;
+  instructions: string;
+  passages: { order: number; title: string; body: string }[];
+  questions: {
+    order: number;
+    stem: string;
+    topic?: string;
+    subtopic?: string;
+    question_format?: KidsTestQuestionFormat;
+    constructed_answer?: string;
+    choices: { key: string; text: string }[];
+    correct_choice_key: string;
+    points: number;
+    reading_passage_order?: number | null;
+  }[];
+}> {
+  const fd = new FormData();
+  const files = Array.isArray(file) ? file : [file];
+  files.forEach((f) => fd.append('files', f));
+  fd.append('question_count', String(questionCount));
+  const res = await kidsAuthorizedFetch('/tests/generate-from-document/', {
+    method: 'POST',
+    body: fd,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Döküman\'dan soru üretilemedi');
+  return data as ReturnType<typeof kidsGenerateTestFromDocument> extends Promise<infer T> ? T : never;
+}
+
 export async function kidsCreateClassTest(
   classId: number,
   body: {

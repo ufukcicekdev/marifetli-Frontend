@@ -11,6 +11,7 @@ import {
   kidsDeleteTest,
   kidsDistributeTestToClasses,
   kidsExtractTestQuestions,
+  kidsGenerateTestFromDocument,
   kidsListClasses,
   kidsListMyCreatedTests,
   kidsPatchTest,
@@ -95,7 +96,7 @@ type DraftQuestion = {
 
 const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
 const MAX_PDF_BYTES = 30 * 1024 * 1024;
-const MAX_SOURCE_PAGES = 10;
+const MAX_SOURCE_PAGES = 3;
 
 export default function KidsTeacherTestsPage() {
   const router = useRouter();
@@ -125,6 +126,15 @@ export default function KidsTeacherTestsPage() {
   const [uploadDragActive, setUploadDragActive] = useState(false);
   const [pdfConverting, setPdfConverting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // --- Döküman tab state ---
+  const [activeTab, setActiveTab] = useState<'scan' | 'generate'>('scan');
+  const [docFiles, setDocFiles] = useState<File[]>([]);
+  const [docQuestionCount, setDocQuestionCount] = useState<string>('10');
+  const [docDragActive, setDocDragActive] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const docFileInputRef = useRef<HTMLInputElement | null>(null);
+  const MAX_DOC_FILES = 3;
   const imagesRef = useRef<File[]>([]);
 
   useEffect(() => {
@@ -367,6 +377,95 @@ export default function KidsTeacherTestsPage() {
         },
       ];
     });
+  }
+
+  const MAX_DOC_BYTES = 20 * 1024 * 1024;
+
+  function handleDocFiles(incoming: File[]) {
+    const valid: File[] = [];
+    for (const file of incoming) {
+      const mime = (file.type || '').toLowerCase();
+      const name = file.name.toLowerCase();
+      const isOk =
+        mime === 'application/pdf' || name.endsWith('.pdf') ||
+        mime === 'text/plain' || name.endsWith('.txt') || name.endsWith('.md') ||
+        mime.startsWith('image/') || name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.png') || name.endsWith('.webp');
+      if (!isOk) { toast.error(t('tests.teacherMain.generateUnsupportedType')); continue; }
+      if (file.size > MAX_DOC_BYTES) { toast.error(t('tests.teacherMain.generateFileTooLarge')); continue; }
+      valid.push(file);
+    }
+    if (!valid.length) return;
+    setDocFiles((prev) => {
+      const remaining = MAX_DOC_FILES - prev.length;
+      if (remaining <= 0) {
+        toast.error(t('tests.teacherMain.generateMaxFiles'));
+        return prev;
+      }
+      if (valid.length > remaining) {
+        toast.error(t('tests.teacherMain.generateMaxFiles'));
+      }
+      return [...prev, ...valid.slice(0, remaining)];
+    });
+  }
+
+  async function onGenerate() {
+    if (docFiles.length === 0) {
+      toast.error(t('tests.teacherMain.generateUnsupportedType'));
+      return;
+    }
+    const count = Math.min(50, Math.max(1, Number(docQuestionCount.replace(/\D+/g, '') || '10') || 10));
+    setGenerating(true);
+    try {
+      const out = await kidsGenerateTestFromDocument(docFiles, count);
+      setTitle((out.title || t('tests.teacherMain.newTestTitle')).trim());
+      setInstructions((out.instructions || '').trim());
+      const rawPassages = [...(out.passages || [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+      const builtPassages: DraftPassage[] = rawPassages.map((p) => ({
+        id: newPassageLocalId(),
+        title: (p.title || '').trim(),
+        body: (p.body || '').trim(),
+      }));
+      const orderToId = new Map<number, string>();
+      rawPassages.forEach((p, idx) => {
+        const card = builtPassages[idx];
+        if (card) orderToId.set(typeof p.order === 'number' ? p.order : idx + 1, card.id);
+      });
+      setPassages(builtPassages);
+      setQuestions(
+        out.questions.map((q, idx) => {
+          const ro = q.reading_passage_order;
+          let link: string | null = null;
+          if (ro != null) link = orderToId.get(ro) ?? null;
+          if (link == null && builtPassages.length === 1) link = builtPassages[0]!.id;
+          const fmt: KidsTestQuestionFormat = q.question_format === 'constructed' ? 'constructed' : 'multiple_choice';
+          return {
+            order: q.order || idx + 1,
+            stem: q.stem || '',
+            topic: q.topic || '',
+            subtopic: q.subtopic || '',
+            question_format: fmt,
+            constructed_answer: (q.constructed_answer || '').trim(),
+            choices: (q.choices || []).map((c, cIdx) => ({
+              key: c.key || String.fromCharCode(65 + cIdx),
+              text: c.text || '',
+            })),
+            correct_choice_key: q.correct_choice_key || '',
+            points: q.points || 1,
+            source_page_order: 1,
+            reading_passage_id: link,
+            illustration_url: null,
+            illustration_file: null,
+            illustration_cleared: false,
+          };
+        }),
+      );
+      toast.success(t('tests.teacherMain.generateSuccess').replace('{n}', String(out.questions.length)));
+      setActiveTab('scan');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : t('tests.teacherMain.generateFailed'));
+    } finally {
+      setGenerating(false);
+    }
   }
 
   function resetDraftForm() {
@@ -784,6 +883,129 @@ export default function KidsTeacherTestsPage() {
           </section>
 
           <section className="rounded-3xl border border-violet-200/90 bg-white p-6 shadow-sm dark:border-violet-800 dark:bg-gray-900/70">
+            {/* Tab switcher */}
+            <div className="mb-5 flex rounded-2xl border border-violet-200 bg-violet-50/60 p-1 dark:border-violet-800 dark:bg-violet-950/30">
+              <button
+                type="button"
+                onClick={() => setActiveTab('scan')}
+                className={`flex-1 rounded-xl py-2 text-sm font-bold transition ${
+                  activeTab === 'scan'
+                    ? 'bg-white text-violet-900 shadow-sm dark:bg-gray-800 dark:text-violet-100'
+                    : 'text-slate-600 hover:text-violet-800 dark:text-slate-400 dark:hover:text-violet-200'
+                }`}
+              >
+                {t('tests.teacherMain.tabScan')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab('generate')}
+                className={`flex-1 rounded-xl py-2 text-sm font-bold transition ${
+                  activeTab === 'generate'
+                    ? 'bg-white text-violet-900 shadow-sm dark:bg-gray-800 dark:text-violet-100'
+                    : 'text-slate-600 hover:text-violet-800 dark:text-slate-400 dark:hover:text-violet-200'
+                }`}
+              >
+                {t('tests.teacherMain.tabGenerate')}
+              </button>
+            </div>
+
+            {/* --- Generate from document tab --- */}
+            {activeTab === 'generate' ? (
+              <div>
+                <h2 className="text-lg font-bold text-violet-950 dark:text-violet-50">{t('tests.teacherMain.generateTitle')}</h2>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t('tests.teacherMain.generateSubtitle')}</p>
+
+                <input
+                  ref={docFileInputRef}
+                  type="file"
+                  accept="application/pdf,.pdf,text/plain,.txt,.md,image/*,.jpg,.jpeg,.png,.webp"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    handleDocFiles(Array.from(e.target.files || []));
+                    e.currentTarget.value = '';
+                  }}
+                />
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); docFileInputRef.current?.click(); } }}
+                  onDragEnter={(e) => { e.preventDefault(); setDocDragActive(true); }}
+                  onDragOver={(e) => { e.preventDefault(); setDocDragActive(true); }}
+                  onDragLeave={(e) => { e.preventDefault(); const rel = e.relatedTarget as Node | null; if (rel && e.currentTarget.contains(rel)) return; setDocDragActive(false); }}
+                  onDrop={(e) => { e.preventDefault(); setDocDragActive(false); handleDocFiles(Array.from(e.dataTransfer.files || [])); }}
+                  onClick={() => docFileInputRef.current?.click()}
+                  className={`mt-4 flex cursor-pointer flex-col items-center rounded-3xl border-2 border-dashed px-6 py-10 text-center transition dark:bg-violet-950/10 ${
+                    docDragActive
+                      ? 'border-violet-500 bg-violet-100/80 dark:border-violet-400 dark:bg-violet-900/40'
+                      : docFiles.length >= MAX_DOC_FILES
+                        ? 'cursor-not-allowed border-slate-200 bg-slate-50/60 dark:border-slate-700'
+                        : 'border-violet-300 bg-violet-50/70 hover:border-fuchsia-400 hover:bg-violet-50 dark:border-violet-700'
+                  }`}
+                >
+                  <FileUp className="mb-3 h-12 w-12 text-violet-500 dark:text-violet-400" strokeWidth={1.25} />
+                  <p className="text-sm font-bold text-violet-950 dark:text-violet-100">{t('tests.teacherMain.generateDropzone')}</p>
+                  <p className="mt-2 max-w-sm text-xs text-slate-600 dark:text-slate-400">{t('tests.teacherMain.generateDropzoneSub')}</p>
+                  {docFiles.length < MAX_DOC_FILES ? (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); docFileInputRef.current?.click(); }}
+                      className="mt-5 rounded-full border-2 border-violet-500 bg-white px-5 py-2 text-sm font-bold text-violet-700 shadow-sm transition hover:bg-violet-50 dark:border-violet-500 dark:bg-violet-950/50 dark:text-violet-200 dark:hover:bg-violet-900/40"
+                    >
+                      {t('tests.teacherMain.generateBrowse')}
+                    </button>
+                  ) : (
+                    <p className="mt-4 text-xs font-semibold text-slate-500 dark:text-slate-400">{t('tests.teacherMain.generateMaxFiles')}</p>
+                  )}
+                </div>
+
+                {docFiles.length > 0 ? (
+                  <ul className="mt-3 space-y-1.5">
+                    {docFiles.map((f, i) => (
+                      <li key={i} className="flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50/60 px-3 py-2 text-xs dark:border-violet-800 dark:bg-violet-950/20">
+                        <span className="min-w-0 flex-1 truncate font-semibold text-violet-900 dark:text-violet-100">{f.name}</span>
+                        <button
+                          type="button"
+                          onClick={() => setDocFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                          className="shrink-0 rounded-full border border-zinc-300 px-2 py-0.5 font-bold text-zinc-700 dark:border-zinc-600 dark:text-zinc-200"
+                        >
+                          {t('tests.teacherMain.generateRemoveFile')}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+
+                <label className="mt-4 block text-sm font-semibold text-slate-800 dark:text-slate-200">
+                  {t('tests.teacherMain.generateQuestionCount')}
+                  <input
+                    type="number"
+                    min={1}
+                    max={50}
+                    step={1}
+                    value={docQuestionCount}
+                    onChange={(e) => setDocQuestionCount(e.target.value.replace(/\D+/g, ''))}
+                    inputMode="numeric"
+                    className="mt-1 w-32 rounded-xl border border-violet-200 bg-white px-3 py-2 text-sm dark:border-violet-700 dark:bg-gray-800"
+                    placeholder="10"
+                  />
+                </label>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{t('tests.teacherMain.generateQuestionCountHint')}</p>
+
+                <button
+                  type="button"
+                  disabled={generating || docFiles.length === 0}
+                  onClick={() => void onGenerate()}
+                  className="mt-5 w-full rounded-2xl bg-gradient-to-r from-violet-600 to-fuchsia-600 px-4 py-3 text-sm font-bold text-white shadow-md shadow-violet-500/25 transition hover:from-violet-500 hover:to-fuchsia-500 disabled:opacity-50"
+                >
+                  {generating ? t('tests.teacherMain.generating') : t('tests.teacherMain.generateBtn')}
+                </button>
+              </div>
+            ) : null}
+
+            {/* --- Scan tab (mevcut) --- */}
+            {activeTab === 'scan' ? (
+              <>
             <h2 className="text-lg font-bold text-violet-950 dark:text-violet-50">{t('tests.teacherMain.workflowStep2Title')}</h2>
             <input
               ref={fileInputRef}
@@ -903,6 +1125,8 @@ export default function KidsTeacherTestsPage() {
             >
               {extracting ? t('tests.teacherMain.aiRunning') : t('tests.teacherMain.step2')}
             </button>
+              </>
+            ) : null}
           </section>
         </div>
 
