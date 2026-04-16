@@ -432,6 +432,7 @@ export type KidsAssignment = {
   /** Öğretmen listesinde kart üst bandı / etiket teması; boşsa istemci id’ye göre renk seçer. */
   challenge_card_theme?: 'art' | 'science' | 'motion' | 'music' | null;
   is_published: boolean;
+  peer_submissions_visible?: boolean;
   /** Öğrencilere “yeni challenge” bildiriminin gittiği zaman (planlı challenge’larda başlangıçtan sonra dolur). */
   students_notified_at?: string | null;
   /** Boş veya null: yayınlandığı andan itibaren teslim (başlangıç kısıtı yok). ISO 8601. */
@@ -2394,6 +2395,7 @@ export async function kidsCreateAssignment(
       late_penalty_percent: body.late_penalty_percent ?? 0,
       rubric_schema: body.rubric_schema ?? [],
       is_published: body.is_published ?? true,
+      peer_submissions_visible: body.peer_submissions_visible ?? false,
       submission_opens_at: body.submission_opens_at,
       submission_closes_at: body.submission_closes_at,
     }),
@@ -3966,4 +3968,48 @@ export async function kidsRegisterFCMToken(token: string, deviceName?: string): 
     body: JSON.stringify({ token, device_name: deviceName ?? '' }),
   });
   if (!res.ok) throw new Error('Bildirim kaydı başarısız');
+}
+
+export async function kidsOgretmenAiChat(
+  message: string,
+  opts?: { sinif_adi?: string; ders_adi?: string; egitim_yili?: string },
+): Promise<string> {
+  const res = await kidsAuthorizedFetch('/ogretmen-ai/chat/', {
+    method: 'POST',
+    body: JSON.stringify({ message, ...opts }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as { error?: string }).error || 'AI yanıt vermedi');
+  return (data as { reply: string }).reply || '';
+}
+
+export type KidsPeerSubmission = {
+  id: number;
+  student_name: string;
+  student_avatar: string | null;
+  kind: string;
+  steps_payload: unknown;
+  video_url: string | null;
+  caption: string;
+  created_at: string;
+  is_teacher_pick: boolean;
+};
+
+export async function kidsGetPeerSubmissions(assignmentId: number): Promise<KidsPeerSubmission[]> {
+  const res = await kidsAuthorizedFetch(`/assignments/${assignmentId}/peer-submissions/`);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error('Peer teslimler alınamadı');
+  return (data as { submissions: KidsPeerSubmission[] }).submissions ?? [];
+}
+
+export async function kidsOgretmenAiDersler(
+  classId: number,
+  egitimYili = '2025/2026',
+): Promise<{ sinif_adi: string | null; dersler: string[] }> {
+  const res = await kidsAuthorizedFetch(
+    `/classes/${classId}/ogretmen-ai/dersler/?egitim_yili=${encodeURIComponent(egitimYili)}`,
+  );
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error('Dersler alınamadı');
+  return data as { sinif_adi: string | null; dersler: string[] };
 }

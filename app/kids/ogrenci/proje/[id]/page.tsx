@@ -17,6 +17,7 @@ import {
   Rocket,
   Sparkles,
   Upload,
+  Users,
   Zap,
 } from 'lucide-react';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
@@ -29,8 +30,10 @@ import {
   kidsStudentAssignmentAllRoundsSubmitted,
   kidsStudentDashboard,
   kidsUploadSubmissionImage,
+  kidsGetPeerSubmissions,
   type KidsAssignment,
   type KidsAssignmentRoundSlot,
+  type KidsPeerSubmission,
   type KidsSubmissionRecord,
 } from '@/src/lib/kids-api';
 import { kidsSubmissionReviewHintLines } from '@/src/lib/kids-submission-review-hint-i18n';
@@ -1228,6 +1231,107 @@ export default function KidsStudentAssignmentPage() {
         isFinalStep={motivationIsFinal}
         onContinue={closeMotivationAndNavigate}
       />
+
+      {assignment?.peer_submissions_visible && (
+        <PeerSubmissionsSection assignmentId={assignment.id} />
+      )}
+    </div>
+  );
+}
+
+// ── Sınıfın Çalışmaları ────────────────────────────────────────────────────────
+
+function PeerSubmissionsSection({ assignmentId }: { assignmentId: number }) {
+  const [submissions, setSubmissions] = useState<KidsPeerSubmission[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    kidsGetPeerSubmissions(assignmentId)
+      .then(setSubmissions)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [assignmentId]);
+
+  if (loading) {
+    return (
+      <section className="mt-12 space-y-4">
+        <div className="h-6 w-48 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-700" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="h-48 animate-pulse rounded-2xl bg-zinc-200 dark:bg-zinc-700" />
+          ))}
+        </div>
+      </section>
+    );
+  }
+
+  if (submissions.length === 0) return null;
+
+  return (
+    <section className="mt-12">
+      <div className="mb-5 flex items-center gap-2">
+        <Users className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+        <h2 className="font-logo text-xl font-bold text-slate-900 dark:text-white">
+          Sınıfın Çalışmaları
+        </h2>
+        <span className="rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-bold text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
+          {submissions.length}
+        </span>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {submissions.map((sub) => (
+          <PeerSubmissionCard key={sub.id} sub={sub} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function PeerSubmissionCard({ sub }: { sub: KidsPeerSubmission }) {
+  const images: string[] = Array.isArray((sub.steps_payload as { images?: string[] })?.images)
+    ? ((sub.steps_payload as { images: string[] }).images)
+    : [];
+  const firstImage = images[0] ?? null;
+
+  return (
+    <div className="overflow-hidden rounded-2xl border border-zinc-100 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-800/60">
+      {firstImage ? (
+        <div className="relative aspect-video w-full overflow-hidden bg-zinc-100 dark:bg-zinc-700">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={firstImage} alt="" className="h-full w-full object-cover" />
+          {sub.is_teacher_pick && (
+            <span className="absolute left-2 top-2 rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-black text-amber-950">
+              ⭐ Öğretmen Seçimi
+            </span>
+          )}
+        </div>
+      ) : sub.video_url ? (
+        <div className="flex aspect-video w-full items-center justify-center bg-zinc-100 dark:bg-zinc-700">
+          <span className="text-3xl">🎬</span>
+        </div>
+      ) : (
+        <div className="flex aspect-video w-full items-center justify-center bg-zinc-100 dark:bg-zinc-700">
+          <span className="text-3xl">📄</span>
+        </div>
+      )}
+
+      <div className="px-4 py-3">
+        <div className="flex items-center gap-2">
+          {sub.student_avatar ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={sub.student_avatar} alt="" className="h-7 w-7 rounded-full object-cover" />
+          ) : (
+            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-violet-100 text-xs font-bold text-violet-700 dark:bg-violet-900/40 dark:text-violet-300">
+              {sub.student_name.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <span className="text-sm font-bold text-slate-800 dark:text-zinc-100">{sub.student_name}</span>
+        </div>
+        {sub.caption ? (
+          <p className="mt-2 line-clamp-2 text-xs text-zinc-500 dark:text-zinc-400">{sub.caption}</p>
+        ) : null}
+      </div>
     </div>
   );
 }

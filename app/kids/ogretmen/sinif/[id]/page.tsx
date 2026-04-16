@@ -36,6 +36,9 @@ import {
   UserPlus,
   Users,
   X,
+  BookOpen,
+  Send,
+  Bot,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
@@ -75,6 +78,8 @@ import {
   kidsPatchKindergartenDailyRecord,
   kidsPostKindergartenBulk,
   kidsPutKindergartenDayPlan,
+  kidsOgretmenAiChat,
+  kidsOgretmenAiDersler,
   type KidsAssignment,
   type KidsClass,
   type KidsClassKind,
@@ -109,7 +114,7 @@ const VIDEO_DURATION_VALUES = [60, 120, 180] as const;
 const SUBMISSION_ROUNDS_VALUES = [1, 2, 3, 4, 5] as const;
 const INVITE_DAYS_VALUES = [3, 7, 14, 30] as const;
 
-type TabId = 'general' | 'invite' | 'students' | 'kindergarten' | 'assignments' | 'peer' | 'stars';
+type TabId = 'general' | 'invite' | 'students' | 'kindergarten' | 'assignments' | 'peer' | 'stars' | 'ogretmen-ai';
 
 const TEACHER_CLASS_TAB_IDS: TabId[] = [
   'general',
@@ -119,6 +124,7 @@ const TEACHER_CLASS_TAB_IDS: TabId[] = [
   'assignments',
   'peer',
   'stars',
+  'ogretmen-ai',
 ];
 
 function tabFromSearchParam(raw: string | null): TabId | null {
@@ -133,6 +139,7 @@ const BASE_TEACHER_TABS: { id: TabId; labelKey: string; icon: LucideIcon }[] = [
   { id: 'assignments', labelKey: 'teacherClass.tabs.challenges', icon: Rocket },
   { id: 'peer', labelKey: 'teacherClass.tabs.competitions', icon: Trophy },
   { id: 'stars', labelKey: 'teacherClass.tabs.star', icon: Star },
+  { id: 'ogretmen-ai', labelKey: 'teacherClass.tabs.ogretmenAi', icon: Bot },
 ];
 
 const PRESCHOOL_DAILY_TAB = {
@@ -150,6 +157,7 @@ const TEACHER_TAB_ICON_CLASS: Record<TabId, string> = {
   assignments: 'text-fuchsia-600 dark:text-fuchsia-400',
   peer: 'text-orange-600 dark:text-orange-400',
   stars: 'text-yellow-500 dark:text-yellow-400',
+  'ogretmen-ai': 'text-indigo-600 dark:text-indigo-400',
 };
 
 type ChallengeFormThemeId = 'art' | 'science' | 'motion' | 'music';
@@ -423,6 +431,7 @@ function KidsTeacherClassPageContent() {
   const [asgSubmissionRounds, setAsgSubmissionRounds] = useState<1 | 2 | 3 | 4 | 5>(1);
   /** Ogrenci teslim turu: gorsel/adim adim veya video (ikisi birden degil). */
   const [asgMediaType, setAsgMediaType] = useState<'image' | 'video'>('image');
+  const [asgPeerVisible, setAsgPeerVisible] = useState(false);
   /** Teslime baslangic (zorunlu), `YYYY-MM-DDTHH:mm` */
   const [asgOpenAt, setAsgOpenAt] = useState('');
   /** Son teslim (zorunlu), `YYYY-MM-DDTHH:mm` */
@@ -1043,6 +1052,7 @@ function KidsTeacherClassPageContent() {
         require_video: asgMediaType === 'video',
         submission_rounds: asgSubmissionRounds,
         challenge_card_theme: asgChallengeTheme,
+        peer_submissions_visible: asgPeerVisible,
         is_published: true,
         submission_opens_at: openIso,
         submission_closes_at: closeIso,
@@ -1058,6 +1068,7 @@ function KidsTeacherClassPageContent() {
       setAsgCloseAt(kidsDatetimeLocalDefaultClose(7));
       setAsgMediaType('image');
       setAsgSubmissionRounds(1);
+      setAsgPeerVisible(false);
       setAsgVideoSec(120);
       const plannedLater = new Date(openIso).getTime() > Date.now();
       toast.success(
@@ -2107,6 +2118,29 @@ function KidsTeacherClassPageContent() {
                       />
                     </div>
                   </fieldset>
+                  {/* Peer görünürlük toggle */}
+                  <button
+                    type="button"
+                    onClick={() => setAsgPeerVisible((v) => !v)}
+                    className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-sm transition ${
+                      asgPeerVisible
+                        ? 'border-violet-300 bg-violet-50 dark:border-violet-700 dark:bg-violet-950/40'
+                        : 'border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800/40'
+                    }`}
+                  >
+                    <div className="text-left">
+                      <p className={`font-bold ${asgPeerVisible ? 'text-violet-700 dark:text-violet-300' : 'text-zinc-700 dark:text-zinc-300'}`}>
+                        Öğrenciler birbirinin çalışmalarını görebilsin
+                      </p>
+                      <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+                        Açıksa öğrenciler sınıf arkadaşlarının teslimlerini görebilir
+                      </p>
+                    </div>
+                    <div className={`ml-4 flex h-6 w-11 shrink-0 items-center rounded-full px-0.5 transition-colors ${asgPeerVisible ? 'bg-violet-600' : 'bg-zinc-300 dark:bg-zinc-600'}`}>
+                      <span className={`h-5 w-5 rounded-full bg-white shadow transition-transform ${asgPeerVisible ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </div>
+                  </button>
+
                   <button
                     type="submit"
                     disabled={asgSaving}
@@ -2793,6 +2827,8 @@ function KidsTeacherClassPageContent() {
         </div>
       )}
 
+      {tab === 'ogretmen-ai' && cls && <OgretmenAiTab classId={cls.id} className={cls.name} />}
+
       {deleteClassModalOpen && cls ? (
         <KidsCenteredModal
           variant="danger"
@@ -3056,5 +3092,193 @@ export default function KidsTeacherClassPage() {
     <Suspense fallback={<p className="text-center text-sm text-violet-800 dark:text-violet-200">{'Loading...'}</p>}>
       <KidsTeacherClassPageContent />
     </Suspense>
+  );
+}
+
+// ── Öğretmen AI Tab ────────────────────────────────────────────────────────────
+
+type ChatMessage = { role: 'user' | 'ai'; text: string };
+
+function OgretmenAiTab({ classId, className }: { classId: number; className: string }) {
+  const [sinifAdi, setSinifAdi] = useState<string | null>(null);
+  const [dersler, setDersler] = useState<string[]>([]);
+  const [secilenDers, setSecilenDers] = useState<string | null>(null);
+  const [derslerLoading, setDerslerLoading] = useState(true);
+
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  // Ders listesini yükle
+  useEffect(() => {
+    setDerslerLoading(true);
+    kidsOgretmenAiDersler(classId)
+      .then(({ sinif_adi, dersler: d }) => {
+        setSinifAdi(sinif_adi);
+        setDersler(d);
+      })
+      .catch(() => {})
+      .finally(() => setDerslerLoading(false));
+  }, [classId]);
+
+  async function sendMessage(text: string) {
+    const msg = text.trim();
+    if (!msg || loading) return;
+    setInput('');
+    setMessages((prev) => [...prev, { role: 'user', text: msg }]);
+    setLoading(true);
+    try {
+      const reply = await kidsOgretmenAiChat(msg, {
+        sinif_adi: sinifAdi ?? className,
+        ders_adi: secilenDers ?? undefined,
+        egitim_yili: '2025/2026',
+      });
+      setMessages((prev) => [...prev, { role: 'ai', text: reply || 'Yanıt alınamadı.' }]);
+    } catch {
+      setMessages((prev) => [...prev, { role: 'ai', text: 'Bağlantı hatası. Tekrar deneyin.' }]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const quickPrompts = secilenDers
+    ? [
+        `${secilenDers} dersinin kazanımları neler?`,
+        `${secilenDers} için ilgi çekici bir challenge fikri ver.`,
+        `${secilenDers} dersinde öğrencileri zorlayan konular hangileri?`,
+      ]
+    : [`Bu sınıfın öğretim programında hangi dersler var?`];
+
+  return (
+    <div className="flex flex-col gap-5">
+      <div>
+        <h2 className="font-logo text-2xl font-bold text-slate-900 dark:text-white sm:text-3xl">
+          Öğretmen AI
+        </h2>
+        <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
+          MEB öğretim programına dayalı sorularınızı sorun.
+        </p>
+      </div>
+
+      {/* Ders seçimi */}
+      {derslerLoading ? (
+        <div className="flex flex-wrap gap-2">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-8 w-24 animate-pulse rounded-full bg-zinc-200 dark:bg-zinc-700" />
+          ))}
+        </div>
+      ) : dersler.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => { setSecilenDers(null); }}
+            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+              secilenDers === null
+                ? 'border-indigo-500 bg-indigo-600 text-white'
+                : 'border-zinc-200 bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'
+            }`}
+          >
+            Tüm Dersler
+          </button>
+          {dersler.map((ders) => (
+            <button
+              key={ders}
+              type="button"
+              onClick={() => { setSecilenDers(ders); }}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                secilenDers === ders
+                  ? 'border-indigo-500 bg-indigo-600 text-white'
+                  : 'border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 dark:border-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-900/50'
+              }`}
+            >
+              <BookOpen className="h-3 w-3 shrink-0" />
+              {ders.replace(/ Dersi$/, '')}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
+          Bu sınıf için MEB öğretim programı bulunamadı.
+        </p>
+      )}
+
+      {/* Hızlı sorular */}
+      {messages.length === 0 && (
+        <div className="flex flex-wrap gap-2">
+          {quickPrompts.map((q) => (
+            <button
+              key={q}
+              type="button"
+              onClick={() => void sendMessage(q)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-medium text-zinc-700 shadow-sm transition hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+            >
+              {q}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Mesajlar */}
+      {messages.length > 0 && (
+        <div className="flex max-h-[55vh] flex-col gap-3 overflow-y-auto rounded-2xl border border-zinc-100 bg-zinc-50/60 p-4 dark:border-zinc-700 dark:bg-zinc-800/30">
+          {messages.map((m, i) => (
+            <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              {m.role === 'ai' && (
+                <div className="mr-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900">
+                  <Bot className="h-4 w-4 text-indigo-600 dark:text-indigo-300" />
+                </div>
+              )}
+              <div
+                className={`max-w-[80%] whitespace-pre-wrap rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                  m.role === 'user'
+                    ? 'bg-indigo-600 text-white'
+                    : 'border border-zinc-200 bg-white text-slate-800 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100'
+                }`}
+              >
+                {m.text}
+              </div>
+            </div>
+          ))}
+          {loading && (
+            <div className="flex justify-start">
+              <div className="mr-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900">
+                <Bot className="h-4 w-4 text-indigo-600 dark:text-indigo-300" />
+              </div>
+              <div className="rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 dark:border-zinc-700 dark:bg-zinc-800">
+                <span className="flex gap-1">
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-zinc-400 [animation-delay:0ms]" />
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-zinc-400 [animation-delay:150ms]" />
+                  <span className="h-2 w-2 animate-bounce rounded-full bg-zinc-400 [animation-delay:300ms]" />
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Input */}
+      <form
+        onSubmit={(e) => { e.preventDefault(); void sendMessage(input); }}
+        className="flex items-end gap-2"
+      >
+        <textarea
+          rows={2}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendMessage(input); }
+          }}
+          placeholder={secilenDers ? `${secilenDers.replace(/ Dersi$/, '')} hakkında sorun...` : 'Öğretim programı hakkında sorun...'}
+          className="flex-1 resize-none rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-slate-800 placeholder-zinc-400 shadow-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder-zinc-500 dark:focus:border-indigo-600 dark:focus:ring-indigo-900/40"
+        />
+        <button
+          type="submit"
+          disabled={!input.trim() || loading}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-indigo-600 text-white shadow-sm transition hover:bg-indigo-700 disabled:opacity-40"
+        >
+          <Send className="h-4 w-4" />
+        </button>
+      </form>
+    </div>
   );
 }
