@@ -936,7 +936,16 @@ async function speakTurkish(text: string) {
     const { Capacitor } = (await import('@capacitor/core')) as any;
     if (Capacitor?.isNativePlatform?.()) {
       const { TextToSpeech } = await import('@capacitor-community/text-to-speech');
-      await TextToSpeech.speak({ text, lang: 'tr-TR', rate: 0.8, pitch: 1.0, volume: 1.0, category: 'ambient' });
+      // Try tr-TR first, fallback to tr, then no lang (device default)
+      const langs = ['tr-TR', 'tr', ''];
+      for (const lang of langs) {
+        try {
+          await TextToSpeech.speak({ text, lang: lang || undefined, rate: 0.8, pitch: 1.0, volume: 1.0, category: 'ambient' });
+          return;
+        } catch {
+          // try next lang
+        }
+      }
       return;
     }
   } catch {
