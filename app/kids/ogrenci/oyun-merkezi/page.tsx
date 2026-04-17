@@ -1005,7 +1005,7 @@ function ReadingWordLevel({
   const currentWord = words[wordIdx] ?? '';
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  function getSpeechRec(): any {
+  function getWebSpeechRec(): any {
     if (typeof window === 'undefined') return null;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const w = window as any;
@@ -1013,7 +1013,20 @@ function ReadingWordLevel({
   }
 
   useEffect(() => {
-    setHasSpeechRec(!!getSpeechRec());
+    async function checkSpeechRec() {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { Capacitor } = (await import('@capacitor/core')) as any;
+        if (Capacitor?.isNativePlatform?.()) {
+          const { SpeechRecognition } = await import('@capacitor-community/speech-recognition');
+          const { available } = await SpeechRecognition.available();
+          setHasSpeechRec(available);
+          return;
+        }
+      } catch { /* ignore */ }
+      setHasSpeechRec(!!getWebSpeechRec());
+    }
+    void checkSpeechRec();
   }, []);
 
   useEffect(() => {
@@ -1027,14 +1040,49 @@ function ReadingWordLevel({
     speakTurkish(currentWord);
   }
 
-  function handleSpeak() {
+  async function handleSpeak() {
     if (!hasSpeechRec) {
       const others = words.filter((_, i) => i !== wordIdx);
       const distractors = shuffle(others).slice(0, 2);
       setNoMicChoice(shuffle([currentWord, ...distractors]));
       return;
     }
-    const SpeechRec = getSpeechRec();
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { Capacitor } = (await import('@capacitor/core')) as any;
+      if (Capacitor?.isNativePlatform?.()) {
+        const { SpeechRecognition } = await import('@capacitor-community/speech-recognition');
+        await SpeechRecognition.requestPermissions();
+        setListening(true);
+        await SpeechRecognition.start({
+          language: 'tr-TR',
+          maxResults: 3,
+          popup: false,
+          partialResults: false,
+        });
+        SpeechRecognition.addListener('partialResults', () => {});
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const handler = (data: any) => {
+          void SpeechRecognition.removeAllListeners();
+          setListening(false);
+          const results: string[] = (data.matches || []).map((r: string) => r.trim().toUpperCase());
+          const matched = results.some((r) => r === currentWord || r.includes(currentWord) || currentWord.includes(r));
+          handleWordResult(matched);
+        };
+        SpeechRecognition.addListener('listeningState', (state: { status: string }) => {
+          if (state.status === 'stopped') setListening(false);
+        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (SpeechRecognition as any).addListener('results', handler);
+        return;
+      }
+    } catch {
+      setListening(false);
+    }
+
+    // Web fallback
+    const SpeechRec = getWebSpeechRec();
     if (!SpeechRec) return;
     const rec = new SpeechRec();
     rec.lang = 'tr-TR';
@@ -1123,17 +1171,18 @@ function ReadingWordLevel({
         <div className="pointer-events-none absolute -top-10 -right-10 h-40 w-40 rounded-full bg-cyan-300/25 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-10 -left-10 h-40 w-40 rounded-full bg-blue-300/20 blur-3xl" />
 
-        <div className="relative p-6 sm:p-8">
+        <div className="relative p-4 sm:p-6">
           {phase === 'listen' ? (
-            <div className="flex flex-col items-center gap-6">
+            <div className="flex flex-col items-center gap-4">
               <div className="flex items-center gap-2">
-                <span className="text-2xl">👂</span>
-                <p className="text-sm font-black uppercase tracking-widest text-cyan-600 dark:text-cyan-400">{t('gameCenter.reading.listenTitle')}</p>
+                <span className="text-xl">👂</span>
+                <p className="text-xs font-black uppercase tracking-widest text-cyan-600 dark:text-cyan-400">{t('gameCenter.reading.listenTitle')}</p>
               </div>
 
               {/* word display */}
-              <div className="flex items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 px-12 py-8 shadow-xl shadow-cyan-400/40">
-                <span className="font-logo text-6xl font-black tracking-[0.2em] text-white drop-shadow-lg md:text-7xl">
+              <div className="flex w-full items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 px-4 py-6 shadow-xl shadow-cyan-400/40">
+                <span className="font-logo break-all text-center font-black tracking-[0.1em] text-white drop-shadow-lg"
+                  style={{ fontSize: `clamp(2rem, ${Math.max(2, 6 - currentWord.length * 0.3)}rem, 3.5rem)` }}>
                   {currentWord}
                 </span>
               </div>
@@ -1142,10 +1191,10 @@ function ReadingWordLevel({
               <button
                 type="button"
                 onClick={handleListen}
-                className="group flex items-center gap-3 rounded-2xl bg-white px-7 py-4 font-black text-cyan-700 shadow-lg ring-2 ring-cyan-200 transition hover:-translate-y-0.5 hover:shadow-cyan-300/60 active:scale-95 dark:bg-slate-800 dark:text-cyan-300 dark:ring-cyan-700"
+                className="group flex items-center gap-3 rounded-2xl bg-white px-6 py-3 font-black text-cyan-700 shadow-lg ring-2 ring-cyan-200 transition hover:-translate-y-0.5 hover:shadow-cyan-300/60 active:scale-95 dark:bg-slate-800 dark:text-cyan-300 dark:ring-cyan-700"
               >
-                <span className="text-3xl transition group-hover:scale-110">🔊</span>
-                <span>{t('gameCenter.reading.listenHint')}</span>
+                <span className="text-2xl transition group-hover:scale-110">🔊</span>
+                <span className="text-sm">{t('gameCenter.reading.listenHint')}</span>
               </button>
 
               <button
@@ -1181,14 +1230,15 @@ function ReadingWordLevel({
             </div>
 
           ) : (
-            <div className="flex flex-col items-center gap-6">
+            <div className="flex flex-col items-center gap-4">
               <div className="flex items-center gap-2">
-                <span className="text-2xl">🎤</span>
-                <p className="text-sm font-black uppercase tracking-widest text-cyan-600 dark:text-cyan-400">{t('gameCenter.reading.speakTitle')}</p>
+                <span className="text-xl">🎤</span>
+                <p className="text-xs font-black uppercase tracking-widest text-cyan-600 dark:text-cyan-400">{t('gameCenter.reading.speakTitle')}</p>
               </div>
 
-              <div className="flex items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 px-12 py-8 shadow-xl shadow-cyan-400/40">
-                <span className="font-logo text-6xl font-black tracking-[0.2em] text-white drop-shadow-lg md:text-7xl">
+              <div className="flex w-full items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 px-4 py-6 shadow-xl shadow-cyan-400/40">
+                <span className="font-logo break-all text-center font-black tracking-[0.1em] text-white drop-shadow-lg"
+                  style={{ fontSize: `clamp(2rem, ${Math.max(2, 6 - currentWord.length * 0.3)}rem, 3.5rem)` }}>
                   {currentWord}
                 </span>
               </div>

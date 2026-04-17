@@ -63,4 +63,8 @@
     <!-- Kamera (fotoğraf çekme için, isteğe bağlı kullanım) -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+
+    <!-- Mikrofon (kelime okuma oyunu - ses tanıma) -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
 </manifest>
