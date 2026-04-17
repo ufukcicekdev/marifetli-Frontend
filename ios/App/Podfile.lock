@@ -11,7 +11,7 @@ PODS:
     - Capacitor
   - CapacitorBrowser (6.0.6):
     - Capacitor
-  - CapacitorCommunityTextToSpeech (6.1.0):
+  - CapacitorCommunityTextToSpeech (5.1.0):
     - Capacitor
   - CapacitorCordova (6.2.1)
   - CapacitorFirebaseMessaging (6.3.1):
@@ -142,7 +142,7 @@ SPEC CHECKSUMS:
   Capacitor: c95400d761e376be9da6be5a05f226c0e865cebf
   CapacitorApp: a19ccb4f5f32d2534be5c6f524d5a9b614a1e8a7
   CapacitorBrowser: 825163a1d6adce944ac7b9e3cab101146b5a9df8
-  CapacitorCommunityTextToSpeech: 28e4eaf26995ce7ab710480267841c57ef5eded2
+  CapacitorCommunityTextToSpeech: ed295743e9163fd4f8370a48ab4ae144fc7127c3
   CapacitorCordova: 8d93e14982f440181be7304aa9559ca631d77fff
   CapacitorFirebaseMessaging: 05bf93285c8ae5aeaaddaa938ba1db4fda7305ad
   CapacitorKeyboard: e8cd50fd5cbdd023a5947a5c0f5cca6e5aa5a253
