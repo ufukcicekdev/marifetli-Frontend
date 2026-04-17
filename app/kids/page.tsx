@@ -4,8 +4,6 @@ import { KidsHomeLanding } from '@/src/components/kids/kids-home-landing';
 import { kidsPathPrefixFromHost } from '@/src/lib/kids-config';
 import tr from '@/language/tr.json';
 
-/** Build-time statik HTML / CDN'de eski kabuk kalmasın; her istekte üret. */
-export const dynamic = 'force-dynamic';
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.marifetli.com.tr';
 

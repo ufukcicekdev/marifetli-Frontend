@@ -374,29 +374,34 @@ function playGameSound(kind: SoundKind, enabled: boolean) {
   const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!Ctx) return;
   const ctx = new Ctx();
-  const o = ctx.createOscillator();
-  const g = ctx.createGain();
-  o.connect(g);
-  g.connect(ctx.destination);
 
-  const now = ctx.currentTime;
-  const setTone = (freq: number, dur: number, gain = 0.03) => {
-    o.frequency.setValueAtTime(freq, now);
-    g.gain.setValueAtTime(gain, now);
-    g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+  const doPlay = () => {
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g);
+    g.connect(ctx.destination);
+    const now = ctx.currentTime;
+    const setTone = (freq: number, dur: number, gain = 0.03) => {
+      o.frequency.setValueAtTime(freq, now);
+      g.gain.setValueAtTime(gain, now);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + dur);
+    };
+    if (kind === 'tap') setTone(520, 0.06, 0.02);
+    if (kind === 'success') setTone(760, 0.12, 0.035);
+    if (kind === 'error') setTone(220, 0.12, 0.03);
+    if (kind === 'levelup') setTone(980, 0.18, 0.04);
+    if (kind === 'finish') setTone(1240, 0.22, 0.045);
+    o.start(now);
+    o.stop(now + 0.24);
+    window.setTimeout(() => { void ctx.close(); }, 300);
   };
 
-  if (kind === 'tap') setTone(520, 0.06, 0.02);
-  if (kind === 'success') setTone(760, 0.12, 0.035);
-  if (kind === 'error') setTone(220, 0.12, 0.03);
-  if (kind === 'levelup') setTone(980, 0.18, 0.04);
-  if (kind === 'finish') setTone(1240, 0.22, 0.045);
-
-  o.start(now);
-  o.stop(now + 0.24);
-  window.setTimeout(() => {
-    void ctx.close();
-  }, 300);
+  // Android WebView suspends AudioContext until user gesture; resume first.
+  if (ctx.state === 'suspended') {
+    ctx.resume().then(doPlay).catch(() => {});
+  } else {
+    doPlay();
+  }
 }
 
 function MemoryLevel({
@@ -924,8 +929,20 @@ function ShapeLevel({
 
 // ─── Word Reading ─────────────────────────────────────────────────────────────
 
-function speakTurkish(text: string) {
-  if (typeof window === 'undefined' || !window.speechSynthesis) return;
+async function speakTurkish(text: string) {
+  if (typeof window === 'undefined') return;
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { Capacitor } = (await import('@capacitor/core')) as any;
+    if (Capacitor?.isNativePlatform?.()) {
+      const { TextToSpeech } = await import('@capacitor-community/text-to-speech');
+      await TextToSpeech.speak({ text, lang: 'tr-TR', rate: 0.8, pitch: 1.0, volume: 1.0, category: 'ambient' });
+      return;
+    }
+  } catch {
+    // fallthrough to Web Speech API
+  }
+  if (!window.speechSynthesis) return;
   window.speechSynthesis.cancel();
   const utt = new SpeechSynthesisUtterance(text);
   utt.lang = 'tr-TR';
