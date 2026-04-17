@@ -4097,3 +4097,7 @@ export async function kidsGetReadingStory(
   if (!res.ok) throw new Error('Hikaye yüklenemedi');
   return data as ReadingStory;
 }
+
+export function kidsTtsUrl(text: string): string {
+  return `${kidsApiUrl('/tts/')}?text=${encodeURIComponent(text)}`;
+}

@@ -929,34 +929,18 @@ function ShapeLevel({
 
 // ─── Word Reading ─────────────────────────────────────────────────────────────
 
-async function speakTurkish(text: string) {
-  if (typeof window === 'undefined') return;
+async function speakTurkish(text: string): Promise<boolean> {
+  if (typeof window === 'undefined') return false;
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { Capacitor } = (await import('@capacitor/core')) as any;
-    if (Capacitor?.isNativePlatform?.()) {
-      const { TextToSpeech } = await import('@capacitor-community/text-to-speech');
-      // Try tr-TR first, fallback to tr, then no lang (device default)
-      const langs = ['tr-TR', 'tr', ''];
-      for (const lang of langs) {
-        try {
-          await TextToSpeech.speak({ text, lang: lang || undefined, rate: 0.8, pitch: 1.0, volume: 1.0, category: 'ambient' });
-          return;
-        } catch {
-          // try next lang
-        }
-      }
-      return;
-    }
+    const { kidsTtsUrl } = await import('@/src/lib/kids-api');
+    const url = kidsTtsUrl(text);
+    const audio = new Audio(url);
+    audio.playbackRate = 0.9;
+    await audio.play();
+    return true;
   } catch {
-    // fallthrough to Web Speech API
+    return false;
   }
-  if (!window.speechSynthesis) return;
-  window.speechSynthesis.cancel();
-  const utt = new SpeechSynthesisUtterance(text);
-  utt.lang = 'tr-TR';
-  utt.rate = 0.8;
-  window.speechSynthesis.speak(utt);
 }
 
 function ReadingWordLevel({
@@ -987,6 +971,7 @@ function ReadingWordLevel({
   const [score, setScore] = useState(0);
   const [hasSpeechRec, setHasSpeechRec] = useState(false);
   const [noMicChoice, setNoMicChoice] = useState<string[] | null>(null);
+  const [showChoiceBtn, setShowChoiceBtn] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null);
 
@@ -1031,59 +1016,59 @@ function ReadingWordLevel({
 
   useEffect(() => {
     if (phase === 'listen') {
-      const timer = window.setTimeout(() => speakTurkish(currentWord), 400);
+      const timer = window.setTimeout(() => { void speakTurkish(currentWord); }, 400);
       return () => window.clearTimeout(timer);
     }
   }, [phase, currentWord, wordIdx]);
 
   function handleListen() {
-    speakTurkish(currentWord);
+    void speakTurkish(currentWord);
+  }
+
+  function openMultipleChoice() {
+    const others = words.filter((_, i) => i !== wordIdx);
+    const distractors = shuffle(others).slice(0, 2);
+    setNoMicChoice(shuffle([currentWord, ...distractors]));
+    setShowChoiceBtn(false);
   }
 
   async function handleSpeak() {
-    if (!hasSpeechRec) {
-      const others = words.filter((_, i) => i !== wordIdx);
-      const distractors = shuffle(others).slice(0, 2);
-      setNoMicChoice(shuffle([currentWord, ...distractors]));
-      return;
-    }
+    setShowChoiceBtn(false);
 
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { Capacitor } = (await import('@capacitor/core')) as any;
       if (Capacitor?.isNativePlatform?.()) {
         const { SpeechRecognition } = await import('@capacitor-community/speech-recognition');
-        await SpeechRecognition.requestPermissions();
+        const perm = await SpeechRecognition.requestPermissions();
+        if (perm.speechRecognition !== 'granted') { setShowChoiceBtn(true); return; }
+
         setListening(true);
-        await SpeechRecognition.start({
+        const result = await SpeechRecognition.start({
           language: 'tr-TR',
           maxResults: 3,
-          popup: false,
+          popup: true,
           partialResults: false,
         });
-        SpeechRecognition.addListener('partialResults', () => {});
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const handler = (data: any) => {
-          void SpeechRecognition.removeAllListeners();
-          setListening(false);
-          const results: string[] = (data.matches || []).map((r: string) => r.trim().toUpperCase());
-          const matched = results.some((r) => r === currentWord || r.includes(currentWord) || currentWord.includes(r));
-          handleWordResult(matched);
-        };
-        SpeechRecognition.addListener('listeningState', (state: { status: string }) => {
-          if (state.status === 'stopped') setListening(false);
-        });
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (SpeechRecognition as any).addListener('results', handler);
+        setListening(false);
+
+        const matches: string[] = (result.matches ?? []).map((r: string) => r.trim().toUpperCase());
+        if (matches.length === 0) { setShowChoiceBtn(true); return; }
+
+        const matched = matches.some((r) => r === currentWord || r.includes(currentWord) || currentWord.includes(r));
+        if (!matched) setShowChoiceBtn(true);
+        handleWordResult(matched);
         return;
       }
     } catch {
       setListening(false);
+      setShowChoiceBtn(true);
+      return;
     }
 
     // Web fallback
     const SpeechRec = getWebSpeechRec();
-    if (!SpeechRec) return;
+    if (!SpeechRec) { setShowChoiceBtn(true); return; }
     const rec = new SpeechRec();
     rec.lang = 'tr-TR';
     rec.interimResults = false;
@@ -1098,20 +1083,17 @@ function ReadingWordLevel({
       }
       setListening(false);
       const matched = results.some((r) => r === currentWord || r.includes(currentWord) || currentWord.includes(r));
+      if (!matched) setShowChoiceBtn(true);
       handleWordResult(matched);
     };
-    rec.onerror = () => {
-      setListening(false);
-      const others = words.filter((_, i) => i !== wordIdx);
-      const distractors = shuffle(others).slice(0, 2);
-      setNoMicChoice(shuffle([currentWord, ...distractors]));
-    };
+    rec.onerror = () => { setListening(false); setShowChoiceBtn(true); };
     rec.onend = () => setListening(false);
     rec.start();
   }
 
   function handleWordResult(correct: boolean) {
     setNoMicChoice(null);
+    setShowChoiceBtn(false);
     if (correct) {
       playGameSound('success', soundOn);
       onCorrect();
@@ -1272,6 +1254,16 @@ function ReadingWordLevel({
               >
                 🔊 {t('gameCenter.reading.listenAgain')}
               </button>
+
+              {showChoiceBtn && (
+                <button
+                  type="button"
+                  onClick={openMultipleChoice}
+                  className="flex items-center gap-2 rounded-xl bg-amber-50 px-5 py-3 text-sm font-black text-amber-700 ring-2 ring-amber-200 transition hover:bg-amber-100 active:scale-95 dark:bg-amber-900/30 dark:text-amber-300 dark:ring-amber-700"
+                >
+                  🎯 Kelimeyi seçemedim — seçenekleri göster
+                </button>
+              )}
             </div>
           )}
         </div>
