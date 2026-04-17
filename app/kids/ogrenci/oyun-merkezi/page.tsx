@@ -1014,12 +1014,8 @@ function ReadingWordLevel({
     void checkSpeechRec();
   }, []);
 
-  useEffect(() => {
-    if (phase === 'listen') {
-      const timer = window.setTimeout(() => { void speakTurkish(currentWord); }, 400);
-      return () => window.clearTimeout(timer);
-    }
-  }, [phase, currentWord, wordIdx]);
+  // Autoplay intentionally removed — mobile WebView blocks audio without user gesture.
+  // User taps the 🔊 button to hear the word.
 
   function handleListen() {
     void speakTurkish(currentWord);
@@ -1047,7 +1043,7 @@ function ReadingWordLevel({
         const result = await SpeechRecognition.start({
           language: 'tr-TR',
           maxResults: 3,
-          popup: true,
+          popup: false,
           partialResults: false,
         });
         setListening(false);
@@ -1162,21 +1158,21 @@ function ReadingWordLevel({
               </div>
 
               {/* word display */}
-              <div className="flex w-full items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 px-4 py-6 shadow-xl shadow-cyan-400/40">
-                <span className="font-logo break-all text-center font-black tracking-[0.1em] text-white drop-shadow-lg"
-                  style={{ fontSize: `clamp(2rem, ${Math.max(2, 6 - currentWord.length * 0.3)}rem, 3.5rem)` }}>
+              <div className="flex w-full items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 px-4 py-8 shadow-xl shadow-cyan-400/40">
+                <span className="font-logo whitespace-nowrap text-center font-black text-white drop-shadow-lg"
+                  style={{ fontSize: `${Math.max(1.4, Math.min(3.2, 14 / Math.max(currentWord.length, 1)))}rem`, letterSpacing: '0.05em' }}>
                   {currentWord}
                 </span>
               </div>
 
-              {/* speaker button */}
+              {/* speaker button — tap to hear, required on mobile (autoplay blocked) */}
               <button
                 type="button"
                 onClick={handleListen}
-                className="group flex items-center gap-3 rounded-2xl bg-white px-6 py-3 font-black text-cyan-700 shadow-lg ring-2 ring-cyan-200 transition hover:-translate-y-0.5 hover:shadow-cyan-300/60 active:scale-95 dark:bg-slate-800 dark:text-cyan-300 dark:ring-cyan-700"
+                className="group flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-6 py-4 font-black text-white shadow-lg shadow-cyan-400/40 transition hover:-translate-y-0.5 active:scale-95"
               >
-                <span className="text-2xl transition group-hover:scale-110">🔊</span>
-                <span className="text-sm">{t('gameCenter.reading.listenHint')}</span>
+                <span className="text-3xl transition group-hover:scale-110">🔊</span>
+                <span>Kelimeyi Dinle</span>
               </button>
 
               <button
@@ -1218,9 +1214,9 @@ function ReadingWordLevel({
                 <p className="text-xs font-black uppercase tracking-widest text-cyan-600 dark:text-cyan-400">{t('gameCenter.reading.speakTitle')}</p>
               </div>
 
-              <div className="flex w-full items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 px-4 py-6 shadow-xl shadow-cyan-400/40">
-                <span className="font-logo break-all text-center font-black tracking-[0.1em] text-white drop-shadow-lg"
-                  style={{ fontSize: `clamp(2rem, ${Math.max(2, 6 - currentWord.length * 0.3)}rem, 3.5rem)` }}>
+              <div className="flex w-full items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 px-4 py-8 shadow-xl shadow-cyan-400/40">
+                <span className="font-logo whitespace-nowrap text-center font-black text-white drop-shadow-lg"
+                  style={{ fontSize: `${Math.max(1.4, Math.min(3.2, 14 / Math.max(currentWord.length, 1)))}rem`, letterSpacing: '0.05em' }}>
                   {currentWord}
                 </span>
               </div>
@@ -1332,7 +1328,6 @@ function ReadingStoryLevel({
   }
 
   function handleStartQuestions() {
-    window.speechSynthesis?.cancel();
     setPhase('questions');
   }
 
