@@ -4046,3 +4046,54 @@ export async function kidsOgretmenAiDersler(
   if (!res.ok) throw new Error('Dersler alınamadı');
   return data as { sinif_adi: string | null; dersler: string[] };
 }
+
+// ── Reading Game API ──────────────────────────────────────────────────────────
+
+export type ReadingWord = {
+  id: number;
+  word: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  grade_level: number;
+};
+
+export type ReadingStoryQuestion = {
+  id: number;
+  question: string;
+  options: [string, string, string];
+  correct: 'a' | 'b' | 'c';
+  order: number;
+};
+
+export type ReadingStory = {
+  id: number;
+  title: string;
+  text: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  grade_level: number;
+  questions: ReadingStoryQuestion[];
+};
+
+export async function kidsGetReadingWords(
+  difficulty: 'easy' | 'medium' | 'hard',
+  gradeLevel: number,
+  count = 10,
+): Promise<ReadingWord[]> {
+  const res = await kidsAuthorizedFetch(
+    `/student/reading/words/?difficulty=${difficulty}&grade_level=${gradeLevel}&count=${count}`,
+  );
+  const data = await res.json().catch(() => []);
+  if (!res.ok) throw new Error('Kelimeler yüklenemedi');
+  return data as ReadingWord[];
+}
+
+export async function kidsGetReadingStory(
+  difficulty: 'easy' | 'medium' | 'hard',
+  gradeLevel: number,
+): Promise<ReadingStory> {
+  const res = await kidsAuthorizedFetch(
+    `/student/reading/story/?difficulty=${difficulty}&grade_level=${gradeLevel}`,
+  );
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error('Hikaye yüklenemedi');
+  return data as ReadingStory;
+}

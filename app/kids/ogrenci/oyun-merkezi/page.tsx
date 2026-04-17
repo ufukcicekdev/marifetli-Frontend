@@ -26,6 +26,8 @@ import {
 import {
   kidsCompleteGameSession,
   kidsGetBadgeRoadmap,
+  kidsGetReadingStory,
+  kidsGetReadingWords,
   kidsMyGameSessions,
   kidsStartGameSession,
   kidsStudentGamesOverview,
@@ -33,6 +35,8 @@ import {
   type KidsGame,
   type KidsGameSession,
   type KidsRoadmapMilestone,
+  type ReadingStory as ReadingStoryData,
+  type ReadingWord as ReadingWordData,
 } from '@/src/lib/kids-api';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 import { localizedKidsGameCopy } from '@/src/lib/kids-game-i18n';
@@ -69,7 +73,7 @@ function formatMmSs(totalSeconds: number): string {
 const WORD_LEVELS = ['KEDI', 'OKUL', 'SEKER', 'KALEM', 'OYUNCU'];
 const SHAPES = ['🔺', '🔵', '🟩', '🟨'];
 
-type MiniGameType = 'memory' | 'math' | 'word' | 'shape';
+type MiniGameType = 'memory' | 'math' | 'word' | 'shape' | 'reading-word' | 'reading-story';
 type SoundKind = 'tap' | 'success' | 'error' | 'levelup' | 'finish';
 type MathOperation = 'add' | 'sub' | 'mul' | 'div';
 
@@ -91,9 +95,11 @@ function gameTypeFor(game: KidsGame, idx: number): MiniGameType {
     'hizli-bolme': 'math',
     'kelime-avcisi': 'word',
     'sekil-eslestirme': 'shape',
+    'kelime-okuma': 'reading-word',
+    'hikaye-okuma': 'reading-story',
   };
   if (bySlug[game.slug]) return bySlug[game.slug];
-  const fallback: MiniGameType[] = ['memory', 'math', 'word', 'shape'];
+  const fallback: MiniGameType[] = ['memory', 'math', 'word', 'shape', 'reading-word', 'reading-story'];
   return fallback[idx % fallback.length];
 }
 
@@ -116,7 +122,7 @@ function sortGamesForHub(list: KidsGame[]): KidsGame[] {
     const ta = gameTypeFor(a, idxa >= 0 ? idxa : 0);
     const tb = gameTypeFor(b, idxb >= 0 ? idxb : 0);
     const order = (gt: MiniGameType) =>
-      gt === 'math' ? 0 : gt === 'memory' ? 1 : gt === 'word' ? 2 : 3;
+      gt === 'math' ? 0 : gt === 'memory' ? 1 : gt === 'word' ? 2 : gt === 'reading-word' ? 4 : gt === 'reading-story' ? 5 : 3;
     const oa = order(ta);
     const ob = order(tb);
     if (oa !== ob) return oa - ob;
@@ -150,6 +156,8 @@ function galaxyLabelForType(gType: MiniGameType, t: (key: string) => string): st
   if (gType === 'math') return t('gameCenter.hub.mathGalaxy');
   if (gType === 'memory') return t('gameCenter.hub.memoryGalaxy');
   if (gType === 'word') return t('gameCenter.hub.wordGalaxy');
+  if (gType === 'reading-word') return t('gameCenter.hub.readingGalaxy');
+  if (gType === 'reading-story') return t('gameCenter.hub.storyGalaxy');
   return t('gameCenter.hub.shapeGalaxy');
 }
 
@@ -157,6 +165,57 @@ function difficultyPillClass(d: 'easy' | 'medium' | 'hard'): string {
   if (d === 'easy') return 'border-emerald-500/30 bg-emerald-500/20 text-emerald-300';
   if (d === 'medium') return 'border-amber-500/30 bg-amber-500/20 text-amber-200';
   return 'border-red-500/30 bg-red-500/20 text-red-300';
+}
+
+function DifficultyPicker({
+  value,
+  onChange,
+  disabled,
+  t,
+}: {
+  value: 'easy' | 'medium' | 'hard';
+  onChange: (v: 'easy' | 'medium' | 'hard') => void;
+  disabled?: boolean;
+  t: (key: string) => string;
+}) {
+  const options: { v: 'easy' | 'medium' | 'hard'; emoji: string; active: string; idle: string }[] = [
+    {
+      v: 'easy',
+      emoji: '🌱',
+      active: 'bg-emerald-500/25 border-emerald-400/60 text-emerald-300 shadow-emerald-500/20',
+      idle:   'border-white/10 bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/70',
+    },
+    {
+      v: 'medium',
+      emoji: '⚡',
+      active: 'bg-amber-500/25 border-amber-400/60 text-amber-300 shadow-amber-500/20',
+      idle:   'border-white/10 bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/70',
+    },
+    {
+      v: 'hard',
+      emoji: '🔥',
+      active: 'bg-rose-500/25 border-rose-400/60 text-rose-300 shadow-rose-500/20',
+      idle:   'border-white/10 bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/70',
+    },
+  ];
+  return (
+    <div className="flex gap-1.5">
+      {options.map(({ v, emoji, active, idle }) => (
+        <button
+          key={v}
+          type="button"
+          disabled={disabled}
+          onClick={() => onChange(v)}
+          className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl border px-2 py-2 text-xs font-black transition disabled:pointer-events-none disabled:opacity-40 ${
+            value === v ? `${active} shadow-md` : idle
+          }`}
+        >
+          <span className="text-sm leading-none">{emoji}</span>
+          <span className="hidden sm:inline">{t(`gameCenter.difficulty.${v}`)}</span>
+        </button>
+      ))}
+    </div>
+  );
 }
 
 function BadgeShelfMilestone({
@@ -287,6 +346,20 @@ function gameVisual(type: MiniGameType): { icon: string; chip: string; cardGlow:
       icon: '🔤',
       chip: 'from-amber-500 to-orange-500',
       cardGlow: 'shadow-amber-500/25',
+    };
+  }
+  if (type === 'reading-word') {
+    return {
+      icon: '📖',
+      chip: 'from-cyan-500 to-blue-500',
+      cardGlow: 'shadow-cyan-500/25',
+    };
+  }
+  if (type === 'reading-story') {
+    return {
+      icon: '📚',
+      chip: 'from-rose-500 to-pink-500',
+      cardGlow: 'shadow-rose-500/25',
     };
   }
   return {
@@ -849,6 +922,539 @@ function ShapeLevel({
   );
 }
 
+// ─── Word Reading ─────────────────────────────────────────────────────────────
+
+function speakTurkish(text: string) {
+  if (typeof window === 'undefined' || !window.speechSynthesis) return;
+  window.speechSynthesis.cancel();
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.lang = 'tr-TR';
+  utt.rate = 0.8;
+  window.speechSynthesis.speak(utt);
+}
+
+function ReadingWordLevel({
+  level,
+  difficulty,
+  gradeLevel,
+  onLevelDone,
+  soundOn,
+  onCorrect,
+  onWrong,
+  t,
+}: {
+  level: number;
+  difficulty: 'easy' | 'medium' | 'hard';
+  gradeLevel: number;
+  onLevelDone: (scoreDelta: number) => void;
+  soundOn: boolean;
+  onCorrect: () => void;
+  onWrong: () => void;
+  t: (key: string) => string;
+}) {
+  const [words, setWords] = useState<string[]>([]);
+  const [loadingWords, setLoadingWords] = useState(true);
+  const [wordIdx, setWordIdx] = useState(0);
+  const [phase, setPhase] = useState<'listen' | 'speak'>('listen');
+  const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
+  const [listening, setListening] = useState(false);
+  const [score, setScore] = useState(0);
+  const [hasSpeechRec, setHasSpeechRec] = useState(false);
+  const [noMicChoice, setNoMicChoice] = useState<string[] | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null);
+
+  useEffect(() => {
+    setLoadingWords(true);
+    setWordIdx(0);
+    setPhase('listen');
+    setFeedback(null);
+    setScore(0);
+    kidsGetReadingWords(difficulty, gradeLevel, 10)
+      .then((data: ReadingWordData[]) => setWords(data.map((w) => w.word)))
+      .catch(() => setWords(['EV', 'TOP', 'KUŞ', 'SU', 'EL']))
+      .finally(() => setLoadingWords(false));
+  }, [difficulty, gradeLevel, level]);
+
+  const currentWord = words[wordIdx] ?? '';
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function getSpeechRec(): any {
+    if (typeof window === 'undefined') return null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const w = window as any;
+    return w.SpeechRecognition || w.webkitSpeechRecognition || null;
+  }
+
+  useEffect(() => {
+    setHasSpeechRec(!!getSpeechRec());
+  }, []);
+
+  useEffect(() => {
+    if (phase === 'listen') {
+      const timer = window.setTimeout(() => speakTurkish(currentWord), 400);
+      return () => window.clearTimeout(timer);
+    }
+  }, [phase, currentWord, wordIdx]);
+
+  function handleListen() {
+    speakTurkish(currentWord);
+  }
+
+  function handleSpeak() {
+    if (!hasSpeechRec) {
+      const others = words.filter((_, i) => i !== wordIdx);
+      const distractors = shuffle(others).slice(0, 2);
+      setNoMicChoice(shuffle([currentWord, ...distractors]));
+      return;
+    }
+    const SpeechRec = getSpeechRec();
+    if (!SpeechRec) return;
+    const rec = new SpeechRec();
+    rec.lang = 'tr-TR';
+    rec.interimResults = false;
+    rec.maxAlternatives = 3;
+    recognitionRef.current = rec;
+    setListening(true);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    rec.onresult = (e: any) => {
+      const results: string[] = [];
+      for (let i = 0; i < e.results[0].length; i++) {
+        results.push(e.results[0][i].transcript.trim().toUpperCase());
+      }
+      setListening(false);
+      const matched = results.some((r) => r === currentWord || r.includes(currentWord) || currentWord.includes(r));
+      handleWordResult(matched);
+    };
+    rec.onerror = () => {
+      setListening(false);
+      const others = words.filter((_, i) => i !== wordIdx);
+      const distractors = shuffle(others).slice(0, 2);
+      setNoMicChoice(shuffle([currentWord, ...distractors]));
+    };
+    rec.onend = () => setListening(false);
+    rec.start();
+  }
+
+  function handleWordResult(correct: boolean) {
+    setNoMicChoice(null);
+    if (correct) {
+      playGameSound('success', soundOn);
+      onCorrect();
+      setFeedback('correct');
+      setScore((s) => s + 1);
+      window.setTimeout(() => {
+        setFeedback(null);
+        if (wordIdx + 1 >= words.length) {
+          onLevelDone((score + 1) * 10 + level * 5);
+        } else {
+          setWordIdx((i) => i + 1);
+          setPhase('listen');
+        }
+      }, 900);
+    } else {
+      playGameSound('error', soundOn);
+      onWrong();
+      setFeedback('wrong');
+      window.setTimeout(() => {
+        setFeedback(null);
+        setPhase('listen');
+      }, 1200);
+    }
+  }
+
+  const progressText = t('gameCenter.reading.wordProgress')
+    .replace('{current}', String(wordIdx + 1))
+    .replace('{total}', String(words.length));
+
+  if (loadingWords) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-16">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
+        <p className="text-sm font-bold text-cyan-600 dark:text-cyan-300">{t('common.loading')}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto flex max-w-lg flex-col gap-6">
+
+      {/* ── Progress bar ── */}
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1 h-3 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+          <div
+            className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 transition-all duration-500"
+            style={{ width: `${Math.round(((wordIdx) / words.length) * 100)}%` }}
+          />
+        </div>
+        <span className="shrink-0 text-xs font-black tabular-nums text-cyan-700 dark:text-cyan-300">{progressText}</span>
+      </div>
+
+      {/* ── Main card ── */}
+      <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-cyan-50 via-white to-blue-50 shadow-2xl shadow-cyan-200/60 dark:from-cyan-950/40 dark:via-slate-900 dark:to-blue-950/40 dark:shadow-cyan-900/40">
+
+        {/* decorative blobs */}
+        <div className="pointer-events-none absolute -top-10 -right-10 h-40 w-40 rounded-full bg-cyan-300/25 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-10 -left-10 h-40 w-40 rounded-full bg-blue-300/20 blur-3xl" />
+
+        <div className="relative p-6 sm:p-8">
+          {phase === 'listen' ? (
+            <div className="flex flex-col items-center gap-6">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">👂</span>
+                <p className="text-sm font-black uppercase tracking-widest text-cyan-600 dark:text-cyan-400">{t('gameCenter.reading.listenTitle')}</p>
+              </div>
+
+              {/* word display */}
+              <div className="flex items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 px-12 py-8 shadow-xl shadow-cyan-400/40">
+                <span className="font-logo text-6xl font-black tracking-[0.2em] text-white drop-shadow-lg md:text-7xl">
+                  {currentWord}
+                </span>
+              </div>
+
+              {/* speaker button */}
+              <button
+                type="button"
+                onClick={handleListen}
+                className="group flex items-center gap-3 rounded-2xl bg-white px-7 py-4 font-black text-cyan-700 shadow-lg ring-2 ring-cyan-200 transition hover:-translate-y-0.5 hover:shadow-cyan-300/60 active:scale-95 dark:bg-slate-800 dark:text-cyan-300 dark:ring-cyan-700"
+              >
+                <span className="text-3xl transition group-hover:scale-110">🔊</span>
+                <span>{t('gameCenter.reading.listenHint')}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPhase('speak')}
+                className="w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-500 py-4 font-black text-white shadow-lg shadow-cyan-400/40 transition hover:-translate-y-0.5 hover:shadow-cyan-500/60 active:scale-[0.98]"
+              >
+                {t('gameCenter.reading.speakTitle')} →
+              </button>
+            </div>
+
+          ) : noMicChoice ? (
+            <div className="flex flex-col items-center gap-5">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🎯</span>
+                <p className="text-sm font-black uppercase tracking-widest text-cyan-600 dark:text-cyan-400">{t('gameCenter.reading.noMicTitle')}</p>
+              </div>
+              <div className="flex w-full flex-col gap-3">
+                {noMicChoice.map((w, i) => (
+                  <button
+                    key={w}
+                    type="button"
+                    onClick={() => handleWordResult(w === currentWord)}
+                    className="group flex items-center gap-4 rounded-2xl border-2 border-cyan-200 bg-white px-5 py-4 font-black text-cyan-900 shadow-sm transition hover:-translate-y-0.5 hover:border-cyan-400 hover:shadow-md active:scale-[0.98] dark:border-cyan-700 dark:bg-slate-800 dark:text-cyan-100"
+                  >
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan-100 text-sm font-black text-cyan-700 dark:bg-cyan-900 dark:text-cyan-300">
+                      {String.fromCharCode(65 + i)}
+                    </span>
+                    <span className="text-xl tracking-wider">{w}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+          ) : (
+            <div className="flex flex-col items-center gap-6">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🎤</span>
+                <p className="text-sm font-black uppercase tracking-widest text-cyan-600 dark:text-cyan-400">{t('gameCenter.reading.speakTitle')}</p>
+              </div>
+
+              <div className="flex items-center justify-center rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 px-12 py-8 shadow-xl shadow-cyan-400/40">
+                <span className="font-logo text-6xl font-black tracking-[0.2em] text-white drop-shadow-lg md:text-7xl">
+                  {currentWord}
+                </span>
+              </div>
+
+              <p className="text-center text-sm text-slate-500 dark:text-slate-400">{t('gameCenter.reading.speakHint')}</p>
+
+              {/* mic button */}
+              <button
+                type="button"
+                onClick={handleSpeak}
+                disabled={listening}
+                className={`relative flex h-24 w-24 items-center justify-center rounded-full text-4xl shadow-2xl transition active:scale-90 disabled:opacity-70 ${
+                  listening
+                    ? 'bg-red-500 shadow-red-400/50 animate-pulse'
+                    : 'bg-gradient-to-br from-cyan-400 to-blue-600 shadow-cyan-400/50 hover:scale-105'
+                }`}
+              >
+                {listening
+                  ? <span className="absolute inset-0 rounded-full bg-red-400 opacity-40 animate-ping" />
+                  : null}
+                <span className="relative">{listening ? '🎙️' : '🎤'}</span>
+              </button>
+              <p className="text-sm font-bold text-cyan-700 dark:text-cyan-300">
+                {listening ? t('gameCenter.reading.micListening') : t('gameCenter.reading.micStart')}
+              </p>
+
+              <button
+                type="button"
+                onClick={() => { setPhase('listen'); handleListen(); }}
+                className="flex items-center gap-1.5 text-sm font-bold text-cyan-600 underline decoration-dotted underline-offset-2 hover:text-cyan-800 dark:text-cyan-400 dark:hover:text-cyan-200"
+              >
+                🔊 {t('gameCenter.reading.listenAgain')}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Feedback banner ── */}
+      {feedback === 'correct' ? (
+        <div className="flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-500 py-4 shadow-lg shadow-emerald-300/50 dark:shadow-emerald-900/50">
+          <span className="text-3xl">🌟</span>
+          <span className="text-base font-black text-white">{t('gameCenter.reading.wellDone')}</span>
+        </div>
+      ) : feedback === 'wrong' ? (
+        <div className="flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-rose-400 to-pink-500 py-4 shadow-lg shadow-rose-300/50 dark:shadow-rose-900/50">
+          <span className="text-3xl">💪</span>
+          <span className="text-base font-black text-white">{t('gameCenter.reading.tryAgain')}</span>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// ─── Story Reading Data ───────────────────────────────────────────────────────
+
+function ReadingStoryLevel({
+  level,
+  difficulty,
+  gradeLevel,
+  onLevelDone,
+  soundOn,
+  onCorrect,
+  onWrong,
+  t,
+}: {
+  level: number;
+  difficulty: 'easy' | 'medium' | 'hard';
+  gradeLevel: number;
+  onLevelDone: (scoreDelta: number) => void;
+  soundOn: boolean;
+  onCorrect: () => void;
+  onWrong: () => void;
+  t: (key: string) => string;
+}) {
+  const [story, setStory] = useState<ReadingStoryData | null>(null);
+  const [loadingStory, setLoadingStory] = useState(true);
+  const [phase, setPhase] = useState<'story' | 'questions'>('story');
+  const [qIdx, setQIdx] = useState(0);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [score, setScore] = useState(0);
+  const [answered, setAnswered] = useState(false);
+
+  useEffect(() => {
+    setLoadingStory(true);
+    setPhase('story');
+    setQIdx(0);
+    setSelected(null);
+    setScore(0);
+    setAnswered(false);
+    kidsGetReadingStory(difficulty, gradeLevel)
+      .then(setStory)
+      .catch(() => setStory(null))
+      .finally(() => setLoadingStory(false));
+  }, [difficulty, gradeLevel, level]);
+
+  function handleReadStory() {
+    if (story) speakTurkish(story.text);
+  }
+
+  function handleStartQuestions() {
+    window.speechSynthesis?.cancel();
+    setPhase('questions');
+  }
+
+  function correctOptionText(q: ReadingStoryData['questions'][number]): string {
+    const idx = q.correct === 'a' ? 0 : q.correct === 'b' ? 1 : 2;
+    return q.options[idx] ?? '';
+  }
+
+  function handleAnswer(opt: string) {
+    if (answered || !story) return;
+    setSelected(opt);
+    setAnswered(true);
+    const q = story.questions[qIdx];
+    const isCorrect = opt === correctOptionText(q);
+    if (isCorrect) {
+      playGameSound('success', soundOn);
+      onCorrect();
+      setScore((s) => s + 1);
+    } else {
+      playGameSound('error', soundOn);
+      onWrong();
+    }
+  }
+
+  function handleNext() {
+    if (!story) return;
+    if (qIdx + 1 >= story.questions.length) {
+      onLevelDone(score * 15 + level * 10);
+      return;
+    }
+    setQIdx((i) => i + 1);
+    setSelected(null);
+    setAnswered(false);
+  }
+
+  if (loadingStory || !story) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-16">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-rose-400 border-t-transparent" />
+        <p className="text-sm font-bold text-rose-600 dark:text-rose-300">{t('common.loading')}</p>
+      </div>
+    );
+  }
+
+  const q = story.questions[qIdx];
+  const qProgressText = t('gameCenter.reading.questionProgress')
+    .replace('{current}', String(qIdx + 1))
+    .replace('{total}', String(story.questions.length));
+
+  if (phase === 'story') {
+    return (
+      <div className="mx-auto flex max-w-lg flex-col gap-6">
+        {/* header */}
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-400 to-pink-600 text-xl shadow-md shadow-rose-300/50">📖</div>
+          <div>
+            <p className="font-black text-slate-800 dark:text-white">{t('gameCenter.reading.storyTitle')}</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400">{t('gameCenter.reading.storyListenHint')}</p>
+          </div>
+        </div>
+
+        {/* story card */}
+        <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-rose-50 via-white to-pink-50 shadow-2xl shadow-rose-200/50 dark:from-rose-950/40 dark:via-slate-900 dark:to-pink-950/40 dark:shadow-rose-900/30">
+          <div className="pointer-events-none absolute -top-8 -right-8 h-32 w-32 rounded-full bg-rose-300/20 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-8 -left-8 h-32 w-32 rounded-full bg-pink-300/20 blur-3xl" />
+          <div className="relative p-6 sm:p-8">
+            <div className="mb-4 flex items-center gap-2">
+              <span className="text-xl">📜</span>
+              <span className="text-xs font-black uppercase tracking-widest text-rose-500">Hikaye</span>
+            </div>
+            <p className="text-lg font-semibold leading-[1.9] text-slate-700 dark:text-slate-200">
+              {story.text}
+            </p>
+          </div>
+        </div>
+
+        {/* action buttons */}
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <button
+            type="button"
+            onClick={handleReadStory}
+            className="group flex flex-1 items-center justify-center gap-3 rounded-2xl bg-white px-6 py-4 font-black text-rose-700 shadow-md ring-2 ring-rose-200 transition hover:-translate-y-0.5 hover:shadow-rose-200/60 active:scale-[0.98] dark:bg-slate-800 dark:text-rose-300 dark:ring-rose-700"
+          >
+            <span className="text-2xl transition group-hover:scale-110">🔊</span>
+            <span>{t('gameCenter.reading.readStory')}</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleStartQuestions}
+            className="flex flex-1 items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-500 px-6 py-4 font-black text-white shadow-lg shadow-rose-400/40 transition hover:-translate-y-0.5 hover:shadow-rose-500/60 active:scale-[0.98]"
+          >
+            <span className="text-2xl">❓</span>
+            <span>{t('gameCenter.reading.questionsTitle')} →</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto flex max-w-lg flex-col gap-6">
+
+      {/* ── Progress bar ── */}
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1 h-3 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+          <div
+            className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-rose-400 to-pink-500 transition-all duration-500"
+            style={{ width: `${Math.round((qIdx / story.questions.length) * 100)}%` }}
+          />
+        </div>
+        <span className="shrink-0 text-xs font-black tabular-nums text-rose-700 dark:text-rose-300">{qProgressText}</span>
+      </div>
+
+      {/* question card */}
+      <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-rose-50 via-white to-pink-50 shadow-2xl shadow-rose-200/50 dark:from-rose-950/40 dark:via-slate-900 dark:to-pink-950/40 dark:shadow-rose-900/30">
+        <div className="pointer-events-none absolute -top-8 -right-8 h-32 w-32 rounded-full bg-rose-300/20 blur-3xl" />
+        <div className="relative p-6 sm:p-8">
+          <div className="mb-4 flex items-center gap-2">
+            <span className="text-xl">🤔</span>
+            <span className="text-xs font-black uppercase tracking-widest text-rose-500">{t('gameCenter.reading.questionsTitle')}</span>
+          </div>
+          <p className="text-lg font-black leading-snug text-slate-800 dark:text-white">{q.question}</p>
+        </div>
+      </div>
+
+      {/* options */}
+      <div className="flex flex-col gap-3">
+        {q.options.map((opt, i) => {
+          const isPicked = selected === opt;
+          const correctText = correctOptionText(q);
+          const isCorrect = opt === correctText;
+          let ring = 'ring-slate-200 dark:ring-slate-700';
+          let bg = 'bg-white dark:bg-slate-800 hover:bg-rose-50 dark:hover:bg-slate-700';
+          let text = 'text-slate-800 dark:text-slate-100';
+          let icon = <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-black text-slate-600 dark:bg-slate-700 dark:text-slate-300">{String.fromCharCode(65 + i)}</span>;
+          if (answered) {
+            if (isCorrect) {
+              ring = 'ring-emerald-400';
+              bg = 'bg-emerald-50 dark:bg-emerald-900/40';
+              text = 'text-emerald-800 dark:text-emerald-200';
+              icon = <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-200 text-sm dark:bg-emerald-800">✅</span>;
+            } else if (isPicked) {
+              ring = 'ring-rose-400';
+              bg = 'bg-rose-50 dark:bg-rose-900/40';
+              text = 'text-rose-800 dark:text-rose-200';
+              icon = <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-rose-200 text-sm dark:bg-rose-800">❌</span>;
+            }
+          }
+          return (
+            <button
+              key={opt}
+              type="button"
+              disabled={answered}
+              onClick={() => handleAnswer(opt)}
+              className={`flex items-center gap-4 rounded-2xl border-0 px-5 py-4 text-left font-semibold ring-2 transition active:scale-[0.98] disabled:pointer-events-none ${ring} ${bg} ${text}`}
+            >
+              {icon}
+              <span className="text-base">{opt}</span>
+            </button>
+          );
+        })}
+      </div>
+      {answered ? (
+        <div className="flex flex-col gap-3">
+          {selected === correctOptionText(q) ? (
+            <div className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-500 px-5 py-3 shadow-lg shadow-emerald-300/40">
+              <span className="text-2xl">🌟</span>
+              <span className="font-black text-white">{t('gameCenter.reading.correctAnswer')}</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 rounded-2xl bg-gradient-to-r from-rose-400 to-pink-500 px-5 py-3 shadow-lg shadow-rose-300/40">
+              <span className="text-2xl">💡</span>
+              <span className="font-black text-white">
+                {t('gameCenter.reading.wrongAnswer').replace('{answer}', correctOptionText(q))}
+              </span>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={handleNext}
+            className="flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-rose-500 to-pink-500 px-6 py-4 font-black text-white shadow-lg shadow-rose-400/40 transition hover:-translate-y-0.5 hover:shadow-rose-500/60 active:scale-[0.98]"
+          >
+            {qIdx + 1 >= story.questions.length ? <><span>🏆</span><span>{t('gameCenter.levelCompleted').replace('{level}', '').trim()}</span></> : <><span>{t('gameCenter.reading.nextQuestion')}</span><span>→</span></>}
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function GameStage({
   activeType,
   level,
@@ -864,6 +1470,8 @@ function GameStage({
   t,
   profilePicture,
   userInitial,
+  difficulty,
+  gradeLevel,
 }: {
   activeType: MiniGameType | null;
   level: number;
@@ -879,6 +1487,8 @@ function GameStage({
   t: (key: string) => string;
   profilePicture: string | null;
   userInitial: string;
+  difficulty: 'easy' | 'medium' | 'hard';
+  gradeLevel: number;
 }) {
   const isMemory = activeType === 'memory';
   return (
@@ -948,6 +1558,12 @@ function GameStage({
           ) : null}
           {activeType === 'shape' ? (
             <ShapeLevel key={`shape-${level}`} level={level} onLevelDone={onLevelDone} soundOn={soundOn} onCorrect={onCorrect} onWrong={onWrong} t={t} />
+          ) : null}
+          {activeType === 'reading-word' ? (
+            <ReadingWordLevel key={`reading-word-${level}`} level={level} difficulty={difficulty} gradeLevel={gradeLevel} onLevelDone={onLevelDone} soundOn={soundOn} onCorrect={onCorrect} onWrong={onWrong} t={t} />
+          ) : null}
+          {activeType === 'reading-story' ? (
+            <ReadingStoryLevel key={`reading-story-${level}`} level={level} difficulty={difficulty} gradeLevel={gradeLevel} onLevelDone={onLevelDone} soundOn={soundOn} onCorrect={onCorrect} onWrong={onWrong} t={t} />
           ) : null}
         </div>
       )}
@@ -1222,6 +1838,8 @@ export default function KidsGameHubPage() {
             t={t}
             profilePicture={user.profile_picture ?? null}
             userInitial={(user.first_name || user.email || '?').trim().slice(0, 1)}
+            difficulty={activeGame ? (selectedDifficultyByGame[activeGame.id] || 'easy') : 'easy'}
+            gradeLevel={gradeLevel}
           />
         </section>
       ) : (
@@ -1345,25 +1963,15 @@ export default function KidsGameHubPage() {
                         {localizedKidsGameCopy(featuredGame, 'description', t)}
                       </p>
                       <div className="mb-4 max-w-xs">
-                        <label className="mb-1 block text-xs font-semibold text-white/50" htmlFor="hub-featured-difficulty">
-                          {t('gameCenter.difficultyMode')}
-                        </label>
-                        <select
-                          id="hub-featured-difficulty"
+                        <p className="mb-2 text-xs font-semibold text-white/50">{t('gameCenter.difficultyMode')}</p>
+                        <DifficultyPicker
                           value={featuredMeta.selectedDifficulty}
                           disabled={saving || Boolean(activeSession)}
-                          onChange={(e) =>
-                            setSelectedDifficultyByGame((prev) => ({
-                              ...prev,
-                              [featuredGame.id]: e.target.value as 'easy' | 'medium' | 'hard',
-                            }))
+                          onChange={(v) =>
+                            setSelectedDifficultyByGame((prev) => ({ ...prev, [featuredGame.id]: v }))
                           }
-                          className="h-10 w-full rounded-xl border border-white/15 bg-white/10 px-3 text-sm font-semibold text-white"
-                        >
-                          <option value="easy">{t('gameCenter.difficulty.easy')}</option>
-                          <option value="medium">{t('gameCenter.difficulty.medium')}</option>
-                          <option value="hard">{t('gameCenter.difficulty.hard')}</option>
-                        </select>
+                          t={t}
+                        />
                       </div>
                       <KidsPrimaryButton
                         type="button"
@@ -1439,21 +2047,14 @@ export default function KidsGameHubPage() {
                               {rewardValue}
                             </span>
                           </div>
-                          <select
+                          <DifficultyPicker
                             value={selectedDifficulty}
                             disabled={saving || Boolean(activeSession)}
-                            onChange={(e) =>
-                              setSelectedDifficultyByGame((prev) => ({
-                                ...prev,
-                                [g.id]: e.target.value as 'easy' | 'medium' | 'hard',
-                              }))
+                            onChange={(v) =>
+                              setSelectedDifficultyByGame((prev) => ({ ...prev, [g.id]: v }))
                             }
-                            className="h-10 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm font-semibold text-white"
-                          >
-                            <option value="easy">{t('gameCenter.difficulty.easy')}</option>
-                            <option value="medium">{t('gameCenter.difficulty.medium')}</option>
-                            <option value="hard">{t('gameCenter.difficulty.hard')}</option>
-                          </select>
+                            t={t}
+                          />
                           <button
                             type="button"
                             disabled={saving || blocked || Boolean(activeSession)}
@@ -1489,6 +2090,8 @@ export default function KidsGameHubPage() {
                         math: t('gameCenter.type.math'),
                         word: t('gameCenter.type.word'),
                         shape: t('gameCenter.type.shape'),
+                        'reading-word': t('gameCenter.type.readingWord'),
+                        'reading-story': t('gameCenter.type.readingStory'),
                       };
                       return (
                         <div
@@ -1510,21 +2113,16 @@ export default function KidsGameHubPage() {
                             {t('gameCenter.bestScore')}: {bestScoreByGame[g.id] ?? 0}
                           </p>
                           <div className="mt-3 flex flex-wrap items-end gap-2">
-                            <select
-                              value={selectedDifficulty}
-                              disabled={saving || Boolean(activeSession)}
-                              onChange={(e) =>
-                                setSelectedDifficultyByGame((prev) => ({
-                                  ...prev,
-                                  [g.id]: e.target.value as 'easy' | 'medium' | 'hard',
-                                }))
-                              }
-                              className="h-9 min-w-32 flex-1 rounded-lg border border-white/10 bg-white/5 px-2 text-sm text-white"
-                            >
-                              <option value="easy">{t('gameCenter.difficulty.easy')}</option>
-                              <option value="medium">{t('gameCenter.difficulty.medium')}</option>
-                              <option value="hard">{t('gameCenter.difficulty.hard')}</option>
-                            </select>
+                            <div className="w-full">
+                              <DifficultyPicker
+                                value={selectedDifficulty}
+                                disabled={saving || Boolean(activeSession)}
+                                onChange={(v) =>
+                                  setSelectedDifficultyByGame((prev) => ({ ...prev, [g.id]: v }))
+                                }
+                                t={t}
+                              />
+                            </div>
                             <KidsPrimaryButton
                               type="button"
                               className="min-h-10 px-5 text-xs"
