@@ -39,6 +39,7 @@ import {
   BookOpen,
   Send,
   Bot,
+  ClipboardList,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
@@ -80,6 +81,10 @@ import {
   kidsPutKindergartenDayPlan,
   kidsOgretmenAiChat,
   kidsOgretmenAiDersler,
+  kidsGetAttendanceTeacher,
+  kidsSaveAttendance,
+  type KidsAttendanceStudentRow,
+  type KidsAttendanceStatus,
   type KidsAssignment,
   type KidsClass,
   type KidsClassKind,
@@ -114,13 +119,14 @@ const VIDEO_DURATION_VALUES = [60, 120, 180] as const;
 const SUBMISSION_ROUNDS_VALUES = [1, 2, 3, 4, 5] as const;
 const INVITE_DAYS_VALUES = [3, 7, 14, 30] as const;
 
-type TabId = 'general' | 'invite' | 'students' | 'kindergarten' | 'assignments' | 'peer' | 'stars' | 'ogretmen-ai';
+type TabId = 'general' | 'invite' | 'students' | 'kindergarten' | 'yoklama' | 'assignments' | 'peer' | 'stars' | 'ogretmen-ai';
 
 const TEACHER_CLASS_TAB_IDS: TabId[] = [
   'general',
   'invite',
   'students',
   'kindergarten',
+  'yoklama',
   'assignments',
   'peer',
   'stars',
@@ -136,6 +142,7 @@ const BASE_TEACHER_TABS: { id: TabId; labelKey: string; icon: LucideIcon }[] = [
   { id: 'general', labelKey: 'teacherClass.tabs.class', icon: Layers },
   { id: 'invite', labelKey: 'teacherClass.tabs.invite', icon: UserPlus },
   { id: 'students', labelKey: 'teacherClass.tabs.students', icon: Users },
+  { id: 'yoklama', labelKey: 'teacherClass.tabs.yoklama', icon: ClipboardList },
   { id: 'assignments', labelKey: 'teacherClass.tabs.challenges', icon: Rocket },
   { id: 'peer', labelKey: 'teacherClass.tabs.competitions', icon: Trophy },
   { id: 'stars', labelKey: 'teacherClass.tabs.star', icon: Star },
@@ -154,6 +161,7 @@ const TEACHER_TAB_ICON_CLASS: Record<TabId, string> = {
   invite: 'text-sky-600 dark:text-sky-400',
   students: 'text-emerald-600 dark:text-emerald-400',
   kindergarten: 'text-amber-600 dark:text-amber-400',
+  yoklama: 'text-teal-600 dark:text-teal-400',
   assignments: 'text-fuchsia-600 dark:text-fuchsia-400',
   peer: 'text-orange-600 dark:text-orange-400',
   stars: 'text-yellow-500 dark:text-yellow-400',
@@ -465,6 +473,13 @@ function KidsTeacherClassPageContent() {
   const [kgBulkNote, setKgBulkNote] = useState('');
   const [kgBulkBusy, setKgBulkBusy] = useState(false);
 
+  // Yoklama state
+  const [attDate, setAttDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [attRows, setAttRows] = useState<KidsAttendanceStudentRow[]>([]);
+  const [attLoading, setAttLoading] = useState(false);
+  const [attSaving, setAttSaving] = useState(false);
+  const [attDraft, setAttDraft] = useState<Record<number, { status: KidsAttendanceStatus; note: string }>>({});
+
   const editNameId = useId();
   const editClassGradeId = useId();
   const editClassSectionId = useId();
@@ -558,6 +573,43 @@ function KidsTeacherClassPageContent() {
       };
     });
   }, []);
+
+  const loadAttendance = useCallback(async () => {
+    if (!Number.isFinite(classId)) return;
+    setAttLoading(true);
+    try {
+      const data = await kidsGetAttendanceTeacher(classId, attDate);
+      setAttRows(data.students);
+      const draft: Record<number, { status: KidsAttendanceStatus; note: string }> = {};
+      for (const s of data.students) {
+        draft[s.student_id] = { status: s.status ?? 'present', note: s.note ?? '' };
+      }
+      setAttDraft(draft);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Yoklama yüklenemedi');
+    } finally {
+      setAttLoading(false);
+    }
+  }, [classId, attDate]);
+
+  const saveAttendance = useCallback(async () => {
+    if (!Number.isFinite(classId)) return;
+    setAttSaving(true);
+    try {
+      const records = Object.entries(attDraft).map(([sid, v]) => ({
+        student_id: Number(sid),
+        status: v.status,
+        note: v.note,
+      }));
+      await kidsSaveAttendance(classId, attDate, records);
+      toast.success('Yoklama kaydedildi');
+      void loadAttendance();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Yoklama kaydedilemedi');
+    } finally {
+      setAttSaving(false);
+    }
+  }, [classId, attDate, attDraft, loadAttendance]);
 
   const loadKgBoard = useCallback(async () => {
     if (!Number.isFinite(classId) || !isKidsPreschoolClass(cls)) return;
@@ -662,6 +714,11 @@ function KidsTeacherClassPageContent() {
     if (tab !== 'kindergarten' || !cls || !isKidsPreschoolClass(cls)) return;
     void loadKgBoard();
   }, [tab, cls, loadKgBoard]);
+
+  useEffect(() => {
+    if (tab !== 'yoklama') return;
+    void loadAttendance();
+  }, [tab, loadAttendance]);
 
   useEffect(() => {
     const t = tabFromSearchParam(searchParams.get('tab'));
@@ -1860,6 +1917,65 @@ function KidsTeacherClassPageContent() {
             t={t}
             locale={language}
           />
+        </section>
+      )}
+
+      {tab === 'yoklama' && (
+        <section className="rounded-3xl border border-zinc-100 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 sm:p-6">
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{t('teacherClass.tabs.yoklama')}</h2>
+            <input
+              type="date"
+              value={attDate}
+              onChange={(e) => setAttDate(e.target.value)}
+              className="rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-white"
+            />
+            <button
+              onClick={() => void loadAttendance()}
+              disabled={attLoading}
+              className="rounded-xl border border-zinc-200 px-3 py-1.5 text-sm font-medium hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
+            >
+              {attLoading ? '...' : '↻'}
+            </button>
+          </div>
+          {attLoading ? (
+            <p className="py-8 text-center text-sm text-slate-400">{t('teacherClass.kindergarten.loading')}</p>
+          ) : attRows.length === 0 ? (
+            <p className="py-8 text-center text-sm text-slate-400">Sınıfta öğrenci yok.</p>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {attRows.map((row) => {
+                const draft = attDraft[row.student_id] ?? { status: 'present' as KidsAttendanceStatus, note: '' };
+                const statusColors: Record<KidsAttendanceStatus, string> = {
+                  present: 'bg-emerald-500 text-white',
+                  absent: 'bg-red-500 text-white',
+                  late: 'bg-amber-400 text-white',
+                  excused: 'bg-sky-400 text-white',
+                };
+                return (
+                  <div key={row.student_id} className="flex flex-wrap items-center gap-2 rounded-2xl border border-zinc-100 bg-zinc-50 px-3 py-2 dark:border-zinc-700 dark:bg-zinc-800">
+                    <span className="min-w-[8rem] flex-1 text-sm font-medium text-slate-900 dark:text-white">
+                      {row.student_login_name || row.student_name}
+                    </span>
+                    {(['present', 'absent', 'late', 'excused'] as KidsAttendanceStatus[]).map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => setAttDraft((d) => ({ ...d, [row.student_id]: { ...draft, status: s } }))}
+                        className={`rounded-xl px-2.5 py-1 text-xs font-bold transition-opacity ${draft.status === s ? statusColors[s] : 'bg-zinc-200 text-zinc-600 opacity-60 dark:bg-zinc-700 dark:text-zinc-300'}`}
+                      >
+                        {s === 'present' ? 'Geldi' : s === 'absent' ? 'Gelmedi' : s === 'late' ? 'Geç' : 'İzinli'}
+                      </button>
+                    ))}
+                  </div>
+                );
+              })}
+              <div className="mt-4 flex justify-end">
+                <KidsPrimaryButton onClick={() => void saveAttendance()} disabled={attSaving}>
+                  {attSaving ? t('teacherClass.kindergarten.saving') : 'Yoklamayı Kaydet'}
+                </KidsPrimaryButton>
+              </div>
+            </div>
+          )}
         </section>
       )}
 

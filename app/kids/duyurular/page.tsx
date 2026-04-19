@@ -11,12 +11,14 @@ import {
   kidsDeleteAnnouncementAttachment,
   kidsListClasses,
   kidsListAnnouncements,
+  kidsGetRSVP,
   KIDS_ANNOUNCEMENTS_PAGE_SIZE,
   kidsPatchAnnouncement,
   kidsUploadAnnouncementAttachment,
   type KidsAnnouncement,
   type KidsAnnouncementCategory,
   type KidsClass,
+  type KidsRSVPTeacherSummary,
 } from '@/src/lib/kids-api';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 import { KidsPrimaryButton, KidsSelect, kidsInputClass, kidsTextareaClass } from '@/src/components/kids/kids-ui';
@@ -119,6 +121,8 @@ export default function KidsAnnouncementsPage() {
   const [openAnnouncementId, setOpenAnnouncementId] = useState<number | null>(null);
   const [deletingAnnouncementId, setDeletingAnnouncementId] = useState<number | null>(null);
   const [announcementMenuId, setAnnouncementMenuId] = useState<number | null>(null);
+  const [rsvpSummary, setRsvpSummary] = useState<Record<number, KidsRSVPTeacherSummary | null>>({});
+  const [rsvpLoadingId, setRsvpLoadingId] = useState<number | null>(null);
   const [announcementEditLightbox, setAnnouncementEditLightbox] = useState<{
     announcementId: number;
     startIndex: number;
@@ -1040,6 +1044,46 @@ export default function KidsAnnouncementsPage() {
                     </>
                   );
                 })()}
+              </div>
+            ) : null}
+            {openAnnouncementId === a.id && editingId !== a.id && (a.category ?? 'general') === 'event' ? (
+              <div className="mt-4 rounded-2xl border border-rose-100 bg-rose-50 p-3 dark:border-rose-900/40 dark:bg-rose-950/20">
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <p className="text-xs font-black uppercase tracking-wide text-rose-700 dark:text-rose-300">
+                    {t('announcements.rsvpTitle')}
+                  </p>
+                  <button
+                    type="button"
+                    disabled={rsvpLoadingId === a.id}
+                    onClick={() => {
+                      setRsvpLoadingId(a.id);
+                      void kidsGetRSVP(a.id).then((d) => {
+                        if ('counts' in d) setRsvpSummary((prev) => ({ ...prev, [a.id]: d as KidsRSVPTeacherSummary }));
+                      }).catch(() => {}).finally(() => setRsvpLoadingId(null));
+                    }}
+                    className="rounded-full border border-rose-300 px-3 py-1 text-xs font-bold text-rose-700 hover:bg-rose-100 dark:border-rose-800 dark:text-rose-300 dark:hover:bg-rose-950/50"
+                  >
+                    {rsvpLoadingId === a.id ? '...' : t('announcements.rsvpLoad')}
+                  </button>
+                </div>
+                {rsvpSummary[a.id] ? (
+                  <div className="space-y-1 text-xs">
+                    <p className="font-semibold text-slate-700 dark:text-zinc-300">
+                      ✅ {t('announcements.rsvpYes')}: {rsvpSummary[a.id]?.counts.yes ?? 0} &nbsp;
+                      ❌ {t('announcements.rsvpNo')}: {rsvpSummary[a.id]?.counts.no ?? 0} &nbsp;
+                      🤔 {t('announcements.rsvpMaybe')}: {rsvpSummary[a.id]?.counts.maybe ?? 0}
+                    </p>
+                    {(rsvpSummary[a.id]?.details ?? []).map((d, i) => (
+                      <div key={i} className="flex items-center gap-2 text-slate-600 dark:text-zinc-400">
+                        <span>{d.student_login_name || d.student_name || `Öğrenci #${d.student_id}`}</span>
+                        <span className={`rounded-full px-2 py-0.5 font-bold ${d.response === 'yes' ? 'bg-emerald-100 text-emerald-700' : d.response === 'no' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                          {d.response === 'yes' ? t('announcements.rsvpYes') : d.response === 'no' ? t('announcements.rsvpNo') : t('announcements.rsvpMaybe')}
+                        </span>
+                        {d.note ? <span className="italic">{d.note}</span> : null}
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </li>

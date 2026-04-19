@@ -9,11 +9,13 @@ import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import {
   kidsCreateConversation,
   kidsDeleteParentHomeworkSubmissionAttachment,
+  kidsGetAttendanceParent,
   kidsGetParentGamePolicy,
   kidsParentChildrenOverview,
   kidsParentReviewHomeworkSubmission,
   kidsParentSwitchToStudent,
   kidsParentVerifyPassword,
+  type KidsAttendanceParentRecord,
   type KidsParentChildOverview,
   type KidsParentGamePolicy,
 } from '@/src/lib/kids-api';
@@ -76,6 +78,7 @@ export default function KidsParentPanelPage() {
   } | null>(null);
   const [openPendingDetailId, setOpenPendingDetailId] = useState<number | null>(null);
   const [gamePolicy, setGamePolicy] = useState<KidsParentGamePolicy | null>(null);
+  const [attendanceRecords, setAttendanceRecords] = useState<KidsAttendanceParentRecord[]>([]);
 
   const loadOverview = useCallback(async () => {
     setOverviewLoading(true);
@@ -92,6 +95,12 @@ export default function KidsParentPanelPage() {
         } catch {
           setGamePolicy(null);
         }
+      }
+      try {
+        const att = await kidsGetAttendanceParent();
+        setAttendanceRecords(att.records);
+      } catch {
+        setAttendanceRecords([]);
       }
     } catch (e) {
       setOverviewError(e instanceof Error ? e.message : t('parent.panel.summaryError'));
@@ -682,6 +691,33 @@ export default function KidsParentPanelPage() {
                   </ul>
                 </div>
               ) : null}
+
+              {(() => {
+                const childAtt = attendanceRecords.filter((r) => r.student_id === c.id).slice(0, 10);
+                if (childAtt.length === 0) return null;
+                return (
+                  <div className="mt-5">
+                    <p className="text-xs font-bold uppercase tracking-wide text-teal-800 dark:text-teal-200">{t('parent.panel.attendance')}</p>
+                    <ul className="mt-2 space-y-1">
+                      {childAtt.map((r) => (
+                        <li key={r.record_id} className="flex items-center gap-2 rounded-xl border border-teal-100 bg-white/90 px-3 py-1.5 text-xs dark:border-teal-900/40 dark:bg-teal-950/20">
+                          <span className="min-w-[6rem] font-medium text-slate-700 dark:text-zinc-300">{r.date}</span>
+                          <span className={`rounded-full px-2.5 py-0.5 font-bold ${
+                            r.status === 'present' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' :
+                            r.status === 'absent' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' :
+                            r.status === 'late' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' :
+                            'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300'
+                          }`}>
+                            {r.status === 'present' ? 'Geldi' : r.status === 'absent' ? 'Gelmedi' : r.status === 'late' ? 'Geç Geldi' : 'İzinli'}
+                          </span>
+                          <span className="text-slate-500 dark:text-zinc-500">{r.class_name}</span>
+                          {r.note ? <span className="italic text-slate-400">{r.note}</span> : null}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                );
+              })()}
 
               {c.badges.length > 0 ? (
                 <div className="mt-5">

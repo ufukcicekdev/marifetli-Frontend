@@ -4105,3 +4105,120 @@ export async function kidsGetReadingStory(
 export function kidsTtsUrl(text: string, lang: 'tr' | 'en' = 'tr'): string {
   return `${kidsApiUrl('/tts/')}?text=${encodeURIComponent(text)}&lang=${lang}`;
 }
+
+// ── Yoklama (Devam Takibi) ────────────────────────────────────────────────────
+
+export type KidsAttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
+
+export type KidsAttendanceStudentRow = {
+  student_id: number;
+  student_name: string;
+  student_login_name: string | null;
+  status: KidsAttendanceStatus | null;
+  note: string;
+  record_id: number | null;
+};
+
+export type KidsAttendanceTeacherResponse = {
+  students: KidsAttendanceStudentRow[];
+  class_id: number;
+  date: string | null;
+};
+
+export type KidsAttendanceParentRecord = {
+  record_id: number;
+  student_id: number;
+  student_name: string;
+  student_login_name: string | null;
+  class_id: number;
+  class_name: string;
+  date: string;
+  status: KidsAttendanceStatus;
+  note: string;
+};
+
+export async function kidsGetAttendanceTeacher(
+  classId: number,
+  date: string,
+): Promise<KidsAttendanceTeacherResponse> {
+  const res = await kidsAuthorizedFetch(
+    `/attendance/?class_id=${classId}&date=${date}`,
+    { method: 'GET' },
+  );
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error('Yoklama yüklenemedi');
+  return data as KidsAttendanceTeacherResponse;
+}
+
+export async function kidsGetAttendanceParent(
+  classId?: number,
+): Promise<{ records: KidsAttendanceParentRecord[] }> {
+  const q = classId ? `?class_id=${classId}` : '';
+  const res = await kidsAuthorizedFetch(`/attendance/${q}`, { method: 'GET' });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error('Yoklama yüklenemedi');
+  return data as { records: KidsAttendanceParentRecord[] };
+}
+
+export async function kidsSaveAttendance(
+  classId: number,
+  date: string,
+  records: Array<{ student_id: number; status: KidsAttendanceStatus; note?: string }>,
+): Promise<{ saved: number; date: string }> {
+  const res = await kidsAuthorizedFetch('/attendance/', {
+    method: 'POST',
+    body: JSON.stringify({ class_id: classId, date, records }),
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error('Yoklama kaydedilemedi');
+  return data as { saved: number; date: string };
+}
+
+// ── RSVP (Etkinlik Katılım) ───────────────────────────────────────────────────
+
+export type KidsRSVPResponse = 'yes' | 'no' | 'maybe';
+
+export type KidsRSVPParentEntry = {
+  student_id: number | null;
+  student_name: string | null;
+  response: KidsRSVPResponse;
+  note: string;
+  responded_at: string;
+};
+
+export type KidsRSVPTeacherSummary = {
+  counts: { yes: number; no: number; maybe: number };
+  details: Array<{
+    parent_user_id: number;
+    student_id: number | null;
+    student_name: string | null;
+    student_login_name: string | null;
+    response: KidsRSVPResponse;
+    note: string;
+    responded_at: string;
+  }>;
+};
+
+export async function kidsGetRSVP(
+  announcementId: number,
+): Promise<{ my_rsvps?: KidsRSVPParentEntry[] } & Partial<KidsRSVPTeacherSummary>> {
+  const res = await kidsAuthorizedFetch(`/announcements/${announcementId}/rsvp/`);
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error('RSVP yüklenemedi');
+  return data;
+}
+
+export async function kidsSendRSVP(
+  announcementId: number,
+  response: KidsRSVPResponse,
+  studentId?: number,
+  note?: string,
+): Promise<{ response: KidsRSVPResponse; note: string; responded_at: string; created: boolean }> {
+  const res = await kidsAuthorizedFetch(`/announcements/${announcementId}/rsvp/`, {
+    method: 'POST',
+    body: JSON.stringify({ response, student_id: studentId, note }),
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error('RSVP gönderilemedi');
+  return data;
+}

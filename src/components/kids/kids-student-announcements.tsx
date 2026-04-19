@@ -7,9 +7,13 @@ import toast from 'react-hot-toast';
 import { BookOpen, Megaphone, PartyPopper, Sparkles, X } from 'lucide-react';
 import {
   kidsListAnnouncements,
+  kidsSendRSVP,
+  kidsGetRSVP,
   KIDS_ANNOUNCEMENTS_PAGE_SIZE,
   type KidsAnnouncement,
   type KidsAnnouncementCategory,
+  type KidsRSVPResponse,
+  type KidsRSVPParentEntry,
 } from '@/src/lib/kids-api';
 import {
   effectiveAnnouncementCategory,
@@ -18,6 +22,7 @@ import {
 import { MediaSlider } from '@/src/components/media-slider';
 import type { MediaItem } from '@/src/lib/extract-media';
 import { useKidsI18n } from '@/src/providers/kids-language-provider';
+import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 
 const NEW_BADGE_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -112,6 +117,8 @@ export function KidsStudentAnnouncementsView({
   pageSubtitleKey = 'student.announcements.pageSubtitle',
 }: KidsStudentAnnouncementsViewProps) {
   const { t, language } = useKidsI18n();
+  const { user } = useKidsAuth();
+  const isParent = user?.role === 'parent';
   const backHref = backHrefProp ?? `${pathPrefix}/ogrenci/panel`;
   const [rows, setRows] = useState<KidsAnnouncement[]>([]);
   const [loading, setLoading] = useState(true);
@@ -119,6 +126,8 @@ export function KidsStudentAnnouncementsView({
   const [hasMore, setHasMore] = useState(false);
   const [filterTab, setFilterTab] = useState<FilterTab>('all');
   const [detail, setDetail] = useState<KidsAnnouncement | null>(null);
+  const [myRsvps, setMyRsvps] = useState<KidsRSVPParentEntry[]>([]);
+  const [rsvpSending, setRsvpSending] = useState(false);
 
   const filterTabs = useMemo(
     () =>
@@ -178,6 +187,12 @@ export function KidsStudentAnnouncementsView({
 
   function openDetail(a: KidsAnnouncement) {
     setDetail(a);
+    setMyRsvps([]);
+    if (isParent && (a.category ?? 'general') === 'event') {
+      void kidsGetRSVP(a.id).then((d) => {
+        if (d.my_rsvps) setMyRsvps(d.my_rsvps);
+      }).catch(() => {});
+    }
   }
 
   function renderStandardCard(a: KidsAnnouncement) {
@@ -385,6 +400,46 @@ export function KidsStudentAnnouncementsView({
                       </li>
                     ))}
                 </ul>
+              ) : null}
+
+              {isParent && (detail.category ?? 'general') === 'event' ? (
+                <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 dark:border-rose-900/40 dark:bg-rose-950/20">
+                  <p className="mb-3 text-xs font-black uppercase tracking-wide text-rose-700 dark:text-rose-300">
+                    {t('announcements.rsvpTitle')}
+                  </p>
+                  {myRsvps.length > 0 ? (
+                    <p className="mb-3 text-xs text-slate-600 dark:text-zinc-400">
+                      {t('announcements.rsvpCurrent')}: <strong>{
+                        myRsvps[0]?.response === 'yes' ? t('announcements.rsvpYes') :
+                        myRsvps[0]?.response === 'no' ? t('announcements.rsvpNo') :
+                        t('announcements.rsvpMaybe')
+                      }</strong>
+                    </p>
+                  ) : null}
+                  <div className="flex flex-wrap gap-2">
+                    {(['yes', 'no', 'maybe'] as KidsRSVPResponse[]).map((r) => {
+                      const current = myRsvps[0]?.response === r;
+                      const label = r === 'yes' ? t('announcements.rsvpYes') : r === 'no' ? t('announcements.rsvpNo') : t('announcements.rsvpMaybe');
+                      const colorOn = r === 'yes' ? 'bg-emerald-500 text-white' : r === 'no' ? 'bg-red-500 text-white' : 'bg-amber-400 text-white';
+                      return (
+                        <button
+                          key={r}
+                          disabled={rsvpSending}
+                          onClick={() => {
+                            setRsvpSending(true);
+                            kidsSendRSVP(detail.id, r).then((res) => {
+                              setMyRsvps([{ student_id: null, student_name: null, response: res.response, note: res.note, responded_at: res.responded_at }]);
+                              toast.success(t('announcements.rsvpSaved'));
+                            }).catch(() => toast.error(t('announcements.rsvpError'))).finally(() => setRsvpSending(false));
+                          }}
+                          className={`rounded-xl px-4 py-2 text-sm font-bold transition ${current ? colorOn : 'bg-white text-slate-700 ring-1 ring-zinc-200 hover:bg-zinc-50 dark:bg-zinc-800 dark:text-white dark:ring-zinc-700'}`}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               ) : null}
             </div>
           </div>
