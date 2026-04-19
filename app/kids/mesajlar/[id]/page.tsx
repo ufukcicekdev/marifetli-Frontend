@@ -366,7 +366,7 @@ export default function KidsConversationDetailPage() {
     if (!user) return '?';
     const f = (user.first_name || '').trim();
     const l = (user.last_name || '').trim();
-    return `${f.charAt(0)}${l.charAt(0)}`.toUpperCase() || user.email.charAt(0).toUpperCase() || '?';
+    return `${f.charAt(0)}${l.charAt(0)}`.toUpperCase() || (user.student_login_name || user.email).charAt(0).toUpperCase() || '?';
   }
 
   function conversationTitle(c: KidsConversation): string {

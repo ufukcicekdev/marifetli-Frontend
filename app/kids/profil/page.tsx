@@ -150,7 +150,7 @@ export default function KidsProfilPage() {
               )}
             </div>
             <div className="flex w-full flex-col gap-2 text-center sm:text-left">
-              <p className="text-sm text-violet-800/90 dark:text-violet-200/90">{user.email}</p>
+              <p className="text-sm text-violet-800/90 dark:text-violet-200/90">{user.student_login_name || user.email}</p>
               <label className="inline-flex cursor-pointer justify-center sm:justify-start">
                 <span className="rounded-xl border-2 border-violet-200 bg-white px-4 py-2 text-sm font-semibold text-violet-900 shadow-sm hover:bg-violet-50 dark:border-violet-700 dark:bg-gray-900 dark:text-violet-100 dark:hover:bg-violet-950/50">
                   {t('profile.photo.select')}

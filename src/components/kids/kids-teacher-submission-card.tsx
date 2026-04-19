@@ -12,7 +12,7 @@ import { KidsPrimaryButton, KidsSecondaryButton, kidsTextareaClass } from '@/src
 
 export function kidsTeacherSubmissionStudentLabel(s: KidsTeacherSubmission['student']): string {
   const n = [s.first_name, s.last_name].filter(Boolean).join(' ').trim();
-  return n || s.email;
+  return n || s.student_login_name || s.email;
 }
 
 export function kidsTeacherStudentInitials(s: KidsTeacherSubmission['student']): string {
@@ -20,7 +20,7 @@ export function kidsTeacherStudentInitials(s: KidsTeacherSubmission['student']):
   const l = (s.last_name || '').trim();
   if (f && l) return (f[0] + l[0]).toUpperCase();
   if (f) return f.slice(0, 2).toUpperCase();
-  const e = (s.email || '?').trim();
+  const e = (s.student_login_name || s.email || '?').trim();
   return e.slice(0, 2).toUpperCase();
 }
 

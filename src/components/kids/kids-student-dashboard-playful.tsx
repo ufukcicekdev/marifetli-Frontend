@@ -395,7 +395,7 @@ export function KidsStudentDashboardPlayful({
   const xpBarPct = Math.min(100, Math.round((xpCur / Math.max(1, xpMax)) * 100));
   const stage = user.growth_stage;
   const studentName =
-    `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email || t('student.dashboard.defaultName');
+    `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.student_login_name || user.email || t('student.dashboard.defaultName');
 
   const primaryClass = classes[0];
   const schoolLine = primaryClass ? kidsClassLocationLine(primaryClass) : null;

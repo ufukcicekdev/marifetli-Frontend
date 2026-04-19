@@ -46,7 +46,7 @@ function peerChallengeStatusTr(s: KidsPeerChallengeStatus, t: (key: string) => s
 
 function shortName(u: KidsUser) {
   const n = [u.first_name, u.last_name].filter(Boolean).join(' ').trim();
-  return n || u.email;
+  return n || u.student_login_name || u.email;
 }
 
 export default function KidsStudentPeerChallengeDetailPage() {

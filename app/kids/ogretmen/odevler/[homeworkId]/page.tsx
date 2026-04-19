@@ -161,7 +161,7 @@ export default function KidsTeacherHomeworkDetailPage() {
                   <span className="font-bold text-amber-950 dark:text-amber-50">
                     {row.student.first_name} {row.student.last_name}
                   </span>
-                  <span className="text-xs text-amber-900/80 dark:text-amber-200/90">{row.student.email}</span>
+                  <span className="text-xs text-amber-900/80 dark:text-amber-200/90">{row.student.student_login_name || row.student.email}</span>
                 </li>
               ))}
             </ul>

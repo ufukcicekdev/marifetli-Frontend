@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { getEnglishWordsByDifficulty, normalizeForMatch, type EnWord } from '@/src/lib/english-words';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -73,7 +74,7 @@ function formatMmSs(totalSeconds: number): string {
 const WORD_LEVELS = ['KEDI', 'OKUL', 'SEKER', 'KALEM', 'OYUNCU'];
 const SHAPES = ['🔺', '🔵', '🟩', '🟨'];
 
-type MiniGameType = 'memory' | 'math' | 'word' | 'shape' | 'reading-word' | 'reading-story';
+type MiniGameType = 'memory' | 'math' | 'word' | 'shape' | 'reading-word' | 'reading-story' | 'english-word';
 type SoundKind = 'tap' | 'success' | 'error' | 'levelup' | 'finish';
 type MathOperation = 'add' | 'sub' | 'mul' | 'div';
 
@@ -97,9 +98,10 @@ function gameTypeFor(game: KidsGame, idx: number): MiniGameType {
     'sekil-eslestirme': 'shape',
     'kelime-okuma': 'reading-word',
     'hikaye-okuma': 'reading-story',
+    'ingilizce-kelimeler': 'english-word',
   };
   if (bySlug[game.slug]) return bySlug[game.slug];
-  const fallback: MiniGameType[] = ['memory', 'math', 'word', 'shape', 'reading-word', 'reading-story'];
+  const fallback: MiniGameType[] = ['memory', 'math', 'word', 'shape', 'reading-word', 'reading-story', 'english-word'];
   return fallback[idx % fallback.length];
 }
 
@@ -122,7 +124,7 @@ function sortGamesForHub(list: KidsGame[]): KidsGame[] {
     const ta = gameTypeFor(a, idxa >= 0 ? idxa : 0);
     const tb = gameTypeFor(b, idxb >= 0 ? idxb : 0);
     const order = (gt: MiniGameType) =>
-      gt === 'math' ? 0 : gt === 'memory' ? 1 : gt === 'word' ? 2 : gt === 'reading-word' ? 4 : gt === 'reading-story' ? 5 : 3;
+      gt === 'math' ? 0 : gt === 'memory' ? 1 : gt === 'word' ? 2 : gt === 'reading-word' ? 4 : gt === 'reading-story' ? 5 : gt === 'english-word' ? 3 : 6;
     const oa = order(ta);
     const ob = order(tb);
     if (oa !== ob) return oa - ob;
@@ -158,6 +160,7 @@ function galaxyLabelForType(gType: MiniGameType, t: (key: string) => string): st
   if (gType === 'word') return t('gameCenter.hub.wordGalaxy');
   if (gType === 'reading-word') return t('gameCenter.hub.readingGalaxy');
   if (gType === 'reading-story') return t('gameCenter.hub.storyGalaxy');
+  if (gType === 'english-word') return t('gameCenter.hub.englishGalaxy');
   return t('gameCenter.hub.shapeGalaxy');
 }
 
@@ -360,6 +363,13 @@ function gameVisual(type: MiniGameType): { icon: string; chip: string; cardGlow:
       icon: '📚',
       chip: 'from-rose-500 to-pink-500',
       cardGlow: 'shadow-rose-500/25',
+    };
+  }
+  if (type === 'english-word') {
+    return {
+      icon: '🇬🇧',
+      chip: 'from-green-500 to-emerald-600',
+      cardGlow: 'shadow-green-500/25',
     };
   }
   return {
@@ -934,6 +944,26 @@ async function speakTurkish(text: string): Promise<boolean> {
   try {
     const { kidsTtsUrl } = await import('@/src/lib/kids-api');
     const url = kidsTtsUrl(text);
+
+    // Native Capacitor: fetch MP3 via authorized fetch (handles CORS/origin issues)
+    // then play as blob URL so the WebView can access it locally.
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { Capacitor } = (await import('@capacitor/core')) as any;
+      if (Capacitor?.isNativePlatform?.()) {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('tts fetch failed');
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const audio = new Audio(blobUrl);
+        audio.playbackRate = 0.9;
+        await audio.play();
+        audio.onended = () => URL.revokeObjectURL(blobUrl);
+        return true;
+      }
+    } catch { /* fall through to web path */ }
+
+    // Web: direct Audio element
     const audio = new Audio(url);
     audio.playbackRate = 0.9;
     await audio.play();
@@ -941,6 +971,43 @@ async function speakTurkish(text: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+async function speakEnglish(text: string): Promise<void> {
+  if (typeof window === 'undefined') return;
+  try {
+    const { kidsTtsUrl } = await import('@/src/lib/kids-api');
+    const url = kidsTtsUrl(text, 'en');
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { Capacitor } = (await import('@capacitor/core')) as any;
+      if (Capacitor?.isNativePlatform?.()) {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('tts fetch failed');
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const audio = new Audio(blobUrl);
+        audio.playbackRate = 0.9;
+        await audio.play();
+        audio.onended = () => URL.revokeObjectURL(blobUrl);
+        return;
+      }
+    } catch { /* fall through to web path */ }
+
+    // Web: try backend MP3 first, fallback to speechSynthesis
+    try {
+      const audio = new Audio(url);
+      audio.playbackRate = 0.9;
+      await audio.play();
+    } catch {
+      window.speechSynthesis?.cancel();
+      const utt = new SpeechSynthesisUtterance(text);
+      utt.lang = 'en-US';
+      utt.rate = 0.82;
+      window.speechSynthesis?.speak(utt);
+    }
+  } catch { /* ignore */ }
 }
 
 function ReadingWordLevel({
@@ -1052,8 +1119,8 @@ function ReadingWordLevel({
         if (matches.length === 0) { setShowChoiceBtn(true); return; }
 
         const matched = matches.some((r) => r === currentWord || r.includes(currentWord) || currentWord.includes(r));
-        if (!matched) setShowChoiceBtn(true);
-        handleWordResult(matched);
+        if (!matched) { setShowChoiceBtn(true); return; }
+        handleWordResult(true);
         return;
       }
     } catch {
@@ -1079,8 +1146,8 @@ function ReadingWordLevel({
       }
       setListening(false);
       const matched = results.some((r) => r === currentWord || r.includes(currentWord) || currentWord.includes(r));
-      if (!matched) setShowChoiceBtn(true);
-      handleWordResult(matched);
+      if (!matched) { setShowChoiceBtn(true); return; }
+      handleWordResult(true);
     };
     rec.onerror = () => { setListening(false); setShowChoiceBtn(true); };
     rec.onend = () => setListening(false);
@@ -1275,6 +1342,383 @@ function ReadingWordLevel({
         <div className="flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-rose-400 to-pink-500 py-4 shadow-lg shadow-rose-300/50 dark:shadow-rose-900/50">
           <span className="text-3xl">💪</span>
           <span className="text-base font-black text-white">{t('gameCenter.reading.tryAgain')}</span>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// ─── English Word Game ────────────────────────────────────────────────────────
+
+const ENGLISH_WORDS_PER_ROUND = 8;
+
+function EnglishWordLevel({
+  level,
+  difficulty,
+  onLevelDone,
+  soundOn,
+  onCorrect,
+  onWrong,
+}: {
+  level: number;
+  difficulty: 'easy' | 'medium' | 'hard';
+  onLevelDone: (scoreDelta: number) => void;
+  soundOn: boolean;
+  onCorrect: () => void;
+  onWrong: () => void;
+  t: (key: string) => string;
+}) {
+  // easy = see English → say/pick Turkish
+  // medium = see Turkish → say/pick English
+  // hard = hear English (no visual) → repeat English
+  const mode = difficulty === 'easy' ? 'en-tr' : difficulty === 'medium' ? 'tr-en' : 'en-en';
+
+  const [words, setWords] = useState<EnWord[]>([]);
+  const [wordIdx, setWordIdx] = useState(0);
+  const [phase, setPhase] = useState<'question' | 'speak'>('question');
+  const [feedback, setFeedback] = useState<'correct' | 'wrong' | null>(null);
+  const [listening, setListening] = useState(false);
+  const [score, setScore] = useState(0);
+  const [hasSpeechRec, setHasSpeechRec] = useState(false);
+  const [choices, setChoices] = useState<string[] | null>(null);
+  const [showChoiceBtn, setShowChoiceBtn] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null);
+
+  useEffect(() => {
+    const pool = getEnglishWordsByDifficulty(difficulty);
+    setWords(shuffle(pool).slice(0, ENGLISH_WORDS_PER_ROUND));
+    setWordIdx(0);
+    setPhase('question');
+    setFeedback(null);
+    setScore(0);
+    setChoices(null);
+    setShowChoiceBtn(false);
+  }, [difficulty, level]);
+
+  // hard mode: auto-speak English when word changes
+  useEffect(() => {
+    if (mode === 'en-en' && words.length > 0 && words[wordIdx]) {
+      const timer = window.setTimeout(() => speakEnglish(words[wordIdx].en), 500);
+      return () => window.clearTimeout(timer);
+    }
+  }, [wordIdx, words, mode]);
+
+  const currentWord = words[wordIdx];
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  function getWebSpeechRec(): any {
+    if (typeof window === 'undefined') return null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const w = window as any;
+    return w.SpeechRecognition || w.webkitSpeechRecognition || null;
+  }
+
+  useEffect(() => {
+    async function checkSpeechRec() {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { Capacitor } = (await import('@capacitor/core')) as any;
+        if (Capacitor?.isNativePlatform?.()) {
+          const { SpeechRecognition } = await import('@capacitor-community/speech-recognition');
+          const { available } = await SpeechRecognition.available();
+          setHasSpeechRec(available);
+          return;
+        }
+      } catch { /* ignore */ }
+      setHasSpeechRec(!!getWebSpeechRec());
+    }
+    void checkSpeechRec();
+  }, []);
+
+  function openChoices() {
+    if (!currentWord) return;
+    const pool = getEnglishWordsByDifficulty(difficulty);
+    const key = mode === 'en-tr' ? 'tr' : 'en';
+    const correct = currentWord[key];
+    const distractors = shuffle(pool.filter((w) => w[key] !== correct)).slice(0, 3).map((w) => w[key]);
+    setChoices(shuffle([correct, ...distractors]));
+    setShowChoiceBtn(false);
+  }
+
+  function handleResult(correct: boolean) {
+    setChoices(null);
+    setShowChoiceBtn(false);
+    recognitionRef.current?.stop?.();
+    if (correct) {
+      playGameSound('success', soundOn);
+      onCorrect();
+      setFeedback('correct');
+      setScore((s) => s + 1);
+      window.setTimeout(() => {
+        setFeedback(null);
+        if (wordIdx + 1 >= words.length) {
+          onLevelDone((score + 1) * 10 + level * 5);
+        } else {
+          setWordIdx((i) => i + 1);
+          setPhase('question');
+        }
+      }, 900);
+    } else {
+      playGameSound('error', soundOn);
+      onWrong();
+      setFeedback('wrong');
+      window.setTimeout(() => {
+        setFeedback(null);
+        setPhase('question');
+      }, 1200);
+    }
+  }
+
+  async function handleSpeak() {
+    if (!currentWord) return;
+    setShowChoiceBtn(false);
+    const recLang = mode === 'en-tr' ? 'tr-TR' : 'en-US';
+    // expected answer
+    const expected = mode === 'en-tr' ? currentWord.tr : currentWord.en;
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { Capacitor } = (await import('@capacitor/core')) as any;
+      if (Capacitor?.isNativePlatform?.()) {
+        const { SpeechRecognition } = await import('@capacitor-community/speech-recognition');
+        const perm = await SpeechRecognition.requestPermissions();
+        if (perm.speechRecognition !== 'granted') { setShowChoiceBtn(true); return; }
+        setListening(true);
+        const result = await SpeechRecognition.start({ language: recLang, maxResults: 3, popup: false, partialResults: false });
+        setListening(false);
+        const matches: string[] = (result.matches ?? []).map((r: string) => normalizeForMatch(r));
+        if (matches.length === 0) { setShowChoiceBtn(true); return; }
+        const expNorm = normalizeForMatch(expected);
+        const matched = matches.some((r) => r === expNorm || r.includes(expNorm) || expNorm.includes(r));
+        if (!matched) { setShowChoiceBtn(true); return; }
+        handleResult(true);
+        return;
+      }
+    } catch {
+      setListening(false);
+      setShowChoiceBtn(true);
+      return;
+    }
+
+    const SpeechRec = getWebSpeechRec();
+    if (!SpeechRec) { setShowChoiceBtn(true); return; }
+    const rec = new SpeechRec();
+    rec.lang = recLang;
+    rec.interimResults = false;
+    rec.maxAlternatives = 3;
+    recognitionRef.current = rec;
+    setListening(true);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    rec.onresult = (e: any) => {
+      const results: string[] = [];
+      for (let i = 0; i < e.results[0].length; i++) {
+        results.push(normalizeForMatch(e.results[0][i].transcript));
+      }
+      setListening(false);
+      const expNorm = normalizeForMatch(expected);
+      const matched = results.some((r) => r === expNorm || r.includes(expNorm) || expNorm.includes(r));
+      if (!matched) { setShowChoiceBtn(true); return; }
+      handleResult(true);
+    };
+    rec.onerror = () => { setListening(false); setShowChoiceBtn(true); };
+    rec.onend = () => setListening(false);
+    rec.start();
+  }
+
+  if (!currentWord) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 py-16">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-cyan-400 border-t-transparent" />
+        <p className="text-sm font-bold text-cyan-600 dark:text-cyan-300">Yükleniyor…</p>
+      </div>
+    );
+  }
+
+  const total = words.length;
+  const progressText = `${wordIdx + 1} / ${total}`;
+
+  const questionLabel = mode === 'en-tr'
+    ? currentWord.en.toUpperCase()
+    : mode === 'tr-en'
+    ? currentWord.tr.toUpperCase()
+    : '? ? ?';
+
+  const modeTag = mode === 'en-tr' ? '🇬🇧 → 🇹🇷' : mode === 'tr-en' ? '🇹🇷 → 🇬🇧' : '🔊 → 🇬🇧';
+  const instructionLine = mode === 'en-tr'
+    ? 'Türkçe anlamını söyle veya seç'
+    : mode === 'tr-en'
+    ? 'İngilizce karşılığını söyle veya seç'
+    : 'Duyduğun kelimeyi İngilizce söyle';
+
+  return (
+    <div className="mx-auto flex max-w-lg flex-col gap-6">
+
+      {/* Progress bar — aynı ReadingWordLevel yapısı */}
+      <div className="flex items-center gap-3">
+        <div className="relative h-3 flex-1 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
+          <div
+            className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-cyan-400 to-blue-500 transition-all duration-500"
+            style={{ width: `${Math.round((wordIdx / total) * 100)}%` }}
+          />
+        </div>
+        <span className="shrink-0 tabular-nums text-xs font-black text-cyan-700 dark:text-cyan-300">{progressText}</span>
+      </div>
+
+      {/* Main card */}
+      <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-cyan-50 via-white to-blue-50 shadow-2xl shadow-cyan-200/60 dark:from-cyan-950/40 dark:via-slate-900 dark:to-blue-950/40 dark:shadow-cyan-900/40">
+        <div className="pointer-events-none absolute -top-10 -right-10 h-40 w-40 rounded-full bg-cyan-300/25 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-10 -left-10 h-40 w-40 rounded-full bg-blue-300/20 blur-3xl" />
+
+        <div className="relative p-4 sm:p-6">
+
+          {/* Mod etiketi */}
+          <div className="mb-4 flex items-center gap-2">
+            <span className="text-xl">🌍</span>
+            <p className="text-xs font-black uppercase tracking-widest text-cyan-600 dark:text-cyan-400">
+              {modeTag} — {instructionLine}
+            </p>
+          </div>
+
+          {choices ? (
+            /* Çoktan seçmeli */
+            <div className="flex flex-col items-center gap-4">
+              <div className="flex w-full items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 px-4 py-8 shadow-xl shadow-cyan-400/40">
+                <span
+                  className="font-logo whitespace-nowrap text-center font-black text-white drop-shadow-lg"
+                  style={{ fontSize: `${Math.max(1.4, Math.min(3.2, 14 / Math.max(questionLabel.length, 1)))}rem`, letterSpacing: '0.05em' }}
+                >
+                  {questionLabel}
+                </span>
+              </div>
+              <div className="flex w-full flex-col gap-3">
+                {choices.map((c, i) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => {
+                      const correct = mode === 'en-tr' ? currentWord.tr : currentWord.en;
+                      handleResult(c === correct);
+                    }}
+                    className="group flex items-center gap-4 rounded-2xl border-2 border-cyan-200 bg-white px-5 py-4 font-black text-cyan-900 shadow-sm transition hover:-translate-y-0.5 hover:border-cyan-400 hover:shadow-md active:scale-[0.98] dark:border-cyan-700 dark:bg-slate-800 dark:text-cyan-100"
+                  >
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-cyan-100 text-sm font-black text-cyan-700 dark:bg-cyan-900 dark:text-cyan-300">
+                      {String.fromCharCode(65 + i)}
+                    </span>
+                    <span className="text-xl tracking-wider">{c}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+          ) : phase === 'question' ? (
+            /* Soru ekranı */
+            <div className="flex flex-col items-center gap-4">
+              <div className="flex w-full items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 px-4 py-8 shadow-xl shadow-cyan-400/40">
+                <span
+                  className="font-logo whitespace-nowrap text-center font-black text-white drop-shadow-lg"
+                  style={{ fontSize: `${Math.max(1.4, Math.min(3.2, 14 / Math.max(questionLabel.length, 1)))}rem`, letterSpacing: '0.05em' }}
+                >
+                  {questionLabel}
+                </span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => void speakEnglish(currentWord.en)}
+                className="group flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-6 py-4 font-black text-white shadow-lg shadow-cyan-400/40 transition hover:-translate-y-0.5 active:scale-95"
+              >
+                <span className="text-3xl transition group-hover:scale-110">🔊</span>
+                <span>{mode === 'en-en' ? 'Tekrar dinle' : 'İngilizce sesini dinle'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPhase('speak')}
+                className="w-full rounded-2xl bg-gradient-to-r from-cyan-500 to-blue-500 py-4 font-black text-white shadow-lg shadow-cyan-400/40 transition hover:-translate-y-0.5 hover:shadow-cyan-500/60 active:scale-[0.98]"
+              >
+                {instructionLine} →
+              </button>
+            </div>
+
+          ) : (
+            /* Mikrofon ekranı */
+            <div className="flex flex-col items-center gap-4">
+              <div className="flex w-full items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 px-4 py-8 shadow-xl shadow-cyan-400/40">
+                <span
+                  className="font-logo whitespace-nowrap text-center font-black text-white drop-shadow-lg"
+                  style={{ fontSize: `${Math.max(1.4, Math.min(3.2, 14 / Math.max(questionLabel.length, 1)))}rem`, letterSpacing: '0.05em' }}
+                >
+                  {questionLabel}
+                </span>
+              </div>
+
+              <p className="text-center text-sm text-slate-500 dark:text-slate-400">{instructionLine}</p>
+
+              <button
+                type="button"
+                onClick={handleSpeak}
+                disabled={listening}
+                className={`relative flex h-24 w-24 items-center justify-center rounded-full text-4xl shadow-2xl transition active:scale-90 disabled:opacity-70 ${
+                  listening
+                    ? 'animate-pulse bg-red-500 shadow-red-400/50'
+                    : 'bg-gradient-to-br from-cyan-400 to-blue-600 shadow-cyan-400/50 hover:scale-105'
+                }`}
+              >
+                {listening ? <span className="absolute inset-0 animate-ping rounded-full bg-red-400 opacity-40" /> : null}
+                <span className="relative">{listening ? '🎙️' : '🎤'}</span>
+              </button>
+              <p className="text-sm font-bold text-cyan-700 dark:text-cyan-300">
+                {listening ? 'Dinliyorum…' : 'Mikrofona bas ve söyle'}
+              </p>
+
+              <button
+                type="button"
+                onClick={() => { setPhase('question'); void speakEnglish(currentWord.en); }}
+                className="flex items-center gap-1.5 text-sm font-bold text-cyan-600 underline decoration-dotted underline-offset-2 hover:text-cyan-800 dark:text-cyan-400 dark:hover:text-cyan-200"
+              >
+                🔊 Tekrar dinle
+              </button>
+
+              {showChoiceBtn && (
+                <button
+                  type="button"
+                  onClick={openChoices}
+                  className="flex items-center gap-2 rounded-xl bg-amber-50 px-5 py-3 text-sm font-black text-amber-700 ring-2 ring-amber-200 transition hover:bg-amber-100 active:scale-95 dark:bg-amber-900/30 dark:text-amber-300 dark:ring-amber-700"
+                >
+                  🎯 Söyleyemedim — seçenekleri göster
+                </button>
+              )}
+
+              {!hasSpeechRec && !choices && (
+                <button
+                  type="button"
+                  onClick={openChoices}
+                  className="flex items-center gap-2 rounded-xl bg-slate-100 px-5 py-3 text-sm font-bold text-slate-600 ring-1 ring-slate-200 transition hover:bg-slate-200 active:scale-95 dark:bg-slate-800 dark:text-slate-300"
+                >
+                  📋 Seçenekleri göster
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Feedback */}
+      {feedback === 'correct' ? (
+        <div className="flex items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-emerald-400 to-teal-500 py-4 shadow-lg shadow-emerald-300/50 dark:shadow-emerald-900/50">
+          <span className="text-3xl">🌟</span>
+          <span className="text-base font-black text-white">Harika!</span>
+        </div>
+      ) : feedback === 'wrong' ? (
+        <div className="flex flex-col items-center gap-1 rounded-2xl bg-gradient-to-r from-rose-400 to-pink-500 py-4 shadow-lg shadow-rose-300/50 dark:shadow-rose-900/50">
+          <div className="flex items-center gap-3">
+            <span className="text-3xl">💪</span>
+            <span className="text-base font-black text-white">Tekrar dene!</span>
+          </div>
+          <p className="text-xs font-semibold text-white/80">
+            Doğru: {mode === 'en-tr' ? currentWord.tr : currentWord.en}
+          </p>
         </div>
       ) : null}
     </div>
@@ -1627,6 +2071,9 @@ function GameStage({
           ) : null}
           {activeType === 'reading-story' ? (
             <ReadingStoryLevel key={`reading-story-${level}`} level={level} difficulty={difficulty} gradeLevel={gradeLevel} onLevelDone={onLevelDone} soundOn={soundOn} onCorrect={onCorrect} onWrong={onWrong} t={t} />
+          ) : null}
+          {activeType === 'english-word' ? (
+            <EnglishWordLevel key={`english-word-${level}`} level={level} difficulty={difficulty} onLevelDone={onLevelDone} soundOn={soundOn} onCorrect={onCorrect} onWrong={onWrong} t={t} />
           ) : null}
         </div>
       )}
@@ -2155,6 +2602,7 @@ export default function KidsGameHubPage() {
                         shape: t('gameCenter.type.shape'),
                         'reading-word': t('gameCenter.type.readingWord'),
                         'reading-story': t('gameCenter.type.readingStory'),
+                        'english-word': t('gameCenter.type.englishWord'),
                       };
                       return (
                         <div
@@ -2216,7 +2664,7 @@ export default function KidsGameHubPage() {
                 <p className="text-sm text-slate-500 dark:text-slate-400">{t('gameCenter.noSessions')}</p>
               ) : (
                 <div className="space-y-3">
-                  {sessions.slice(0, 6).map((s) => {
+                  {sessions.slice(0, 3).map((s) => {
                     const idx = games.findIndex((x) => x.id === s.game.id);
                     const gType = gameTypeFor(s.game, idx >= 0 ? idx : 0);
                     const vis = gameVisual(gType);

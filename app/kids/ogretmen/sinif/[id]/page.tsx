@@ -250,13 +250,13 @@ function truncateInviteUrlDisplay(url: string, head = 22, tail = 6): string {
 }
 
 function studentDisplayName(en: KidsEnrollment): string {
-  return [en.student.first_name, en.student.last_name].filter(Boolean).join(' ').trim() || en.student.email;
+  return [en.student.first_name, en.student.last_name].filter(Boolean).join(' ').trim() || en.student.student_login_name || en.student.email;
 }
 
 function studentInitials(en: KidsEnrollment): string {
   const f = (en.student.first_name || '').trim();
   const l = (en.student.last_name || '').trim();
-  const a = f.charAt(0) || en.student.email.charAt(0) || '?';
+  const a = f.charAt(0) || (en.student.student_login_name || en.student.email).charAt(0) || '?';
   const b = l.charAt(0) || '';
   return (a + b).toUpperCase();
 }
@@ -361,13 +361,13 @@ function formatStarWeekRangeLabel(weekStartIso: string, lang: string): string {
 }
 
 function starStudentDisplayName(u: KidsUser): string {
-  return [u.first_name, u.last_name].filter(Boolean).join(' ').trim() || u.email;
+  return [u.first_name, u.last_name].filter(Boolean).join(' ').trim() || u.student_login_name || u.email;
 }
 
 function starStudentInitials(u: KidsUser): string {
   const f = (u.first_name || '').trim();
   const l = (u.last_name || '').trim();
-  const a = f.charAt(0) || u.email.charAt(0) || '?';
+  const a = f.charAt(0) || (u.student_login_name || u.email).charAt(0) || '?';
   const b = l.charAt(0) || '';
   return (a + b).toUpperCase();
 }
@@ -1154,7 +1154,7 @@ function KidsTeacherClassPageContent() {
 
   async function startParentConversation(en: KidsEnrollment) {
     try {
-      const display = `${en.student.first_name} ${en.student.last_name}`.trim() || en.student.email;
+      const display = `${en.student.first_name} ${en.student.last_name}`.trim() || en.student.student_login_name || en.student.email;
       const conv = await kidsCreateConversation({
         student_id: en.student.id,
         kids_class_id: classId,
@@ -1171,11 +1171,11 @@ function KidsTeacherClassPageContent() {
     if (!ch.created_by_student) return '—';
     const en = students.find((e) => e.student.id === ch.created_by_student);
     if (!en) return `${t('teacherClass.students.fallbackStudent')} #${ch.created_by_student}`;
-    return [en.student.first_name, en.student.last_name].filter(Boolean).join(' ') || en.student.email;
+    return [en.student.first_name, en.student.last_name].filter(Boolean).join(' ') || en.student.student_login_name || en.student.email;
   }
 
   async function removeStudentFromClass(en: KidsEnrollment) {
-    const label = [en.student.first_name, en.student.last_name].filter(Boolean).join(' ').trim() || en.student.email;
+    const label = [en.student.first_name, en.student.last_name].filter(Boolean).join(' ').trim() || en.student.student_login_name || en.student.email;
     const ok = window.confirm(
       t('teacherClass.students.removeConfirm').replace('{name}', label),
     );
@@ -1777,7 +1777,7 @@ function KidsTeacherClassPageContent() {
                           <p className="break-words font-logo text-base font-bold text-slate-900 dark:text-white">
                             {studentDisplayName(en)}
                           </p>
-                          <p className="mt-0.5 break-all text-sm text-zinc-500 dark:text-zinc-400">{en.student.email}</p>
+                          <p className="mt-0.5 break-all text-sm text-zinc-500 dark:text-zinc-400">{en.student.student_login_name || en.student.email}</p>
                           <p className="mt-1 break-all text-xs font-medium text-zinc-400 dark:text-zinc-500">
                             {t('teacherClass.students.studentIdLabel').replace('{id}', String(en.student.id))}
                           </p>

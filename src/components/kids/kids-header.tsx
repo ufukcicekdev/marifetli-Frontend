@@ -156,7 +156,7 @@ export function KidsHeader({ pathPrefix }: KidsHeaderProps) {
                       {[user.first_name, user.last_name].filter(Boolean).join(' ').trim() || user.email}
                     </p>
                     {[user.first_name, user.last_name].filter(Boolean).join(' ').trim() ? (
-                      <p className="truncate text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
+                      <p className="truncate text-xs text-gray-500 dark:text-gray-400">{user.student_login_name || user.email}</p>
                     ) : null}
                     {isKidsAdmin ? (
                       <p className="mt-1 text-xs font-medium text-brand dark:text-brand">{t('header.admin')}</p>

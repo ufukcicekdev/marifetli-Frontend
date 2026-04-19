@@ -603,7 +603,7 @@ export function KidsPreschoolDailyBoard({
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="font-logo text-base font-bold text-slate-900 dark:text-white">{name}</p>
-                    <p className="mt-0.5 truncate text-xs text-zinc-500 dark:text-zinc-400">{st.email}</p>
+                    <p className="mt-0.5 truncate text-xs text-zinc-500 dark:text-zinc-400">{st.student_login_name || st.email}</p>
                     <span
                       className={`mt-2 inline-block rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide ${badgeClass}`}
                     >

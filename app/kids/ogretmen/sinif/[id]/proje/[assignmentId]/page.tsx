@@ -312,14 +312,14 @@ export default function KidsTeacherProjectDetailPage() {
           ) : (
             <ul className="mt-5 space-y-2">
               {notSubmittedStudents.map((stu) => {
-                const label = [stu.first_name, stu.last_name].filter(Boolean).join(' ').trim() || stu.email;
+                const label = [stu.first_name, stu.last_name].filter(Boolean).join(' ').trim() || stu.student_login_name || stu.email;
                 return (
                   <li
                     key={stu.id}
                     className="flex flex-wrap items-baseline justify-between gap-2 rounded-2xl border-2 border-amber-200/80 bg-amber-50/60 px-4 py-3 dark:border-amber-900/50 dark:bg-amber-950/30"
                   >
                     <span className="font-bold text-amber-950 dark:text-amber-50">{label}</span>
-                    <span className="text-xs text-amber-900/80 dark:text-amber-200/90">{stu.email}</span>
+                    <span className="text-xs text-amber-900/80 dark:text-amber-200/90">{stu.student_login_name || stu.email}</span>
                   </li>
                 );
               })}

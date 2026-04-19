@@ -519,6 +519,7 @@ export type KidsHomeworkSubmission = {
     last_name: string;
     created_at: string;
     profile_picture: string | null;
+    student_login_name?: string | null;
   };
   status:
     | 'published'
@@ -570,6 +571,7 @@ export type KidsEnrollment = {
     last_name: string;
     created_at: string;
     profile_picture: string | null;
+    student_login_name?: string | null;
   };
   created_at: string;
   /** Bu sınıfta yayında olan challenge sayısı (öğretmen öğrenci listesi). */
@@ -1997,6 +1999,7 @@ export type KidsKindergartenDailyBoardResponse = {
       last_name: string;
       email: string;
       profile_picture?: string | null;
+      student_login_name?: string | null;
     };
     record: KidsKindergartenDailyRecordRow | null;
   }[];
@@ -2230,6 +2233,7 @@ export type KidsTeacherSubmission = {
     last_name: string;
     created_at: string;
     profile_picture: string | null;
+    student_login_name?: string | null;
   };
   kind: 'steps' | 'video';
   steps_payload: {
@@ -4098,6 +4102,6 @@ export async function kidsGetReadingStory(
   return data as ReadingStory;
 }
 
-export function kidsTtsUrl(text: string): string {
-  return `${kidsApiUrl('/tts/')}?text=${encodeURIComponent(text)}`;
+export function kidsTtsUrl(text: string, lang: 'tr' | 'en' = 'tr'): string {
+  return `${kidsApiUrl('/tts/')}?text=${encodeURIComponent(text)}&lang=${lang}`;
 }

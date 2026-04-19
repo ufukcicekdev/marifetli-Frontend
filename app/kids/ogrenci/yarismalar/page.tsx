@@ -306,7 +306,7 @@ export default function KidsStudentPeerChallengesPage() {
                       </p>
                     ) : null}
                     <p className="mt-2 text-sm text-slate-700 dark:text-gray-300">
-                      <strong>{[inv.inviter.first_name, inv.inviter.last_name].filter(Boolean).join(' ') || inv.inviter.email}</strong>{' '}
+                      <strong>{[inv.inviter.first_name, inv.inviter.last_name].filter(Boolean).join(' ') || inv.inviter.student_login_name || inv.inviter.email}</strong>{' '}
                       {t('competitions.invitedYou')}
                     </p>
                     {inv.personal_message ? (
