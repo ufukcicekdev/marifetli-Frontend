@@ -9,6 +9,7 @@ import { ThemeToggle } from '@/src/components/theme-toggle';
 import { useKidsAuth } from '@/src/providers/kids-auth-provider';
 import { KidsNotificationBell } from '@/src/components/kids/kids-notification-bell';
 import { KIDS_USE_SIDEBAR, kidsLoginPortalHref } from '@/src/lib/kids-config';
+import { kidsAvatarUrl } from '@/src/lib/kids-api';
 import { useKidsI18n } from '@/src/providers/kids-language-provider';
 import { KidsLanguageSelectField } from '@/src/components/kids/kids-language-select';
 
@@ -122,7 +123,15 @@ export function KidsHeader({ pathPrefix }: KidsHeaderProps) {
                 aria-expanded={menuOpen}
               >
                 <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-gray-200 ring-1 ring-gray-200/90 dark:bg-white/20 dark:ring-white/25">
-                  {user.profile_picture ? (
+                  {user.avatar_key ? (
+                    <Image
+                      src={kidsAvatarUrl(user.avatar_key) ?? ''}
+                      alt={user.avatar_key}
+                      width={32}
+                      height={32}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : user.profile_picture ? (
                     <Image
                       src={user.profile_picture}
                       alt=""

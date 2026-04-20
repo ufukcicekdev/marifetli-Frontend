@@ -69,6 +69,9 @@ export function kidsNavLinks(
   if (role === 'teacher') {
     items.push({ href: `${p}/uzman`, labelKey: 'nav.askExpert', icon: 'expert' });
   }
+  if (role === 'teacher' || role === 'parent') {
+    items.push({ href: `${p}/geribildirim`, labelKey: 'nav.feedback', icon: 'announce' });
+  }
   if (role) {
     items.push({ href: `${p}/bildirimler`, labelKey: 'nav.notifications', icon: 'bell' });
     items.push({ href: `${p}/profil`, labelKey: 'nav.profile', icon: 'profile' });

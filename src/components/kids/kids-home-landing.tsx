@@ -389,7 +389,64 @@ export function KidsHomeLanding({ pathPrefix }: { pathPrefix: string }) {
                 </div>
               </section>
 
-              {/* 5 — Sınıf duyuruları */}
+              {/* 5 — Haftalık veli raporu */}
+              <section className="rounded-[2rem] bg-slate-100/80 py-16 dark:bg-zinc-900/50">
+                <div className="mx-auto max-w-7xl px-2">
+                  <div className="grid items-center gap-12 md:grid-cols-2">
+                    <div className="space-y-5 md:pr-8">
+                      <h2 className="font-logo text-3xl font-bold text-slate-900 dark:text-white md:text-4xl">
+                        {t('landing.homeV2.z5w.title')}
+                      </h2>
+                      <p className="text-lg leading-relaxed text-slate-600 dark:text-slate-300">
+                        {t('landing.homeV2.z5w.body')}
+                      </p>
+                      <ul className="space-y-3">
+                        <li className="flex items-center gap-3 font-semibold text-violet-700 dark:text-violet-300">
+                          <BarChart2 className="h-5 w-5 shrink-0" aria-hidden /> {t('landing.homeV2.z5w.b1')}
+                        </li>
+                        <li className="flex items-center gap-3 font-semibold text-violet-700 dark:text-violet-300">
+                          <Bell className="h-5 w-5 shrink-0" aria-hidden /> {t('landing.homeV2.z5w.b2')}
+                        </li>
+                        <li className="flex items-center gap-3 font-semibold text-violet-700 dark:text-violet-300">
+                          <LineChart className="h-5 w-5 shrink-0" aria-hidden /> {t('landing.homeV2.z5w.b3')}
+                        </li>
+                      </ul>
+                    </div>
+                    <div className="relative">
+                      <div className="absolute inset-0 rotate-2 rounded-[2.5rem] bg-violet-500/10" aria-hidden />
+                      {/* Mock e-posta kartı */}
+                      <div className="relative z-10 overflow-hidden rounded-[2.5rem] bg-white shadow-2xl dark:bg-zinc-900">
+                        <div className="bg-gradient-to-r from-violet-600 to-purple-500 px-6 py-5">
+                          <p className="text-xs font-black uppercase tracking-widest text-violet-200">{t('landing.homeV2.z5w.emailBadge')}</p>
+                          <p className="mt-1 text-xl font-black text-white">{t('landing.homeV2.z5w.emailTitle')}</p>
+                        </div>
+                        <div className="space-y-3 p-6">
+                          {[
+                            { icon: '📚', label: t('landing.homeV2.z5w.stat1'), val: '4' },
+                            { icon: '📝', label: t('landing.homeV2.z5w.stat2'), val: '2  •  Ort. 88' },
+                            { icon: '🎮', label: t('landing.homeV2.z5w.stat3'), val: '35 dk' },
+                            { icon: '✅', label: t('landing.homeV2.z5w.stat4'), val: '5 / 5' },
+                          ].map((row) => (
+                            <div key={row.label} className="flex items-center justify-between rounded-xl bg-zinc-50 px-4 py-3 dark:bg-zinc-800">
+                              <span className="flex items-center gap-2 text-sm font-semibold text-slate-600 dark:text-slate-300">
+                                <span>{row.icon}</span> {row.label}
+                              </span>
+                              <span className="text-sm font-black text-slate-900 dark:text-white">{row.val}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="px-6 pb-6">
+                          <div className="rounded-xl bg-violet-600 py-3 text-center text-sm font-black text-white">
+                            {t('landing.homeV2.z5w.emailCta')}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* 6 — Sınıf duyuruları */}
               <section className="mx-auto max-w-7xl px-1 md:px-0">
                 <div className="flex flex-col items-center gap-12 md:flex-row md:items-stretch">
                   <div className="w-full flex-1">

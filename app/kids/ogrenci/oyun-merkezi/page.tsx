@@ -27,6 +27,7 @@ import {
 import {
   kidsCompleteGameSession,
   kidsGetBadgeRoadmap,
+  kidsRefreshDailyQuests,
   kidsGetReadingStory,
   kidsGetReadingWords,
   kidsMyGameSessions,
@@ -2269,8 +2270,10 @@ export default function KidsGameHubPage() {
       setActiveGame(null);
       setActiveType(null);
       setSessions((prev) => [ended, ...prev.filter((x) => x.id !== ended.id)]);
-      if (status === 'completed') toast.success(t('gameCenter.completed'));
-      else toast(t('gameCenter.closed'));
+      if (status === 'completed') {
+        toast.success(t('gameCenter.completed'));
+        kidsRefreshDailyQuests().catch(() => {});
+      } else toast(t('gameCenter.closed'));
       playGameSound(status === 'completed' ? 'finish' : 'tap', soundOn);
       await load();
     } catch (e) {

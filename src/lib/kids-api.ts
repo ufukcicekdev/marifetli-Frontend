@@ -176,6 +176,7 @@ export type KidsUser = {
   role: KidsUserRole;
   created_at: string;
   profile_picture: string | null;
+  avatar_key?: string | null;
   /** Eski API yanıtlarında olmayabilir; öğrenci panelinde varsayılan 0 kullanılır. */
   growth_points?: number;
   growth_stage?: KidsGrowthStage | null;
@@ -2801,6 +2802,7 @@ export async function kidsCreateSubmission(body: {
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Teslim kaydedilemedi');
+  kidsRefreshDailyQuests().catch(() => {});
   return data as KidsSubmissionRecord;
 }
 
@@ -4208,6 +4210,118 @@ export async function kidsGetRSVP(
   return data;
 }
 
+// ── Günlük Görev ─────────────────────────────────────────────────────────────
+
+export type KidsDailyQuestType = 'game_play' | 'homework_submit' | 'test_complete' | 'read_story';
+
+export type KidsDailyQuest = {
+  type: KidsDailyQuestType;
+  done: boolean;
+};
+
+export type KidsDailyQuestStatus = {
+  quests: KidsDailyQuest[];
+  all_completed: boolean;
+  streak: number;
+  date: string;
+};
+
+export async function kidsGetDailyQuests(): Promise<KidsDailyQuestStatus> {
+  const res = await kidsAuthorizedFetch('/student/daily-quests/', { method: 'GET' });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error('Görevler yüklenemedi');
+  return data as KidsDailyQuestStatus;
+}
+
+export async function kidsRefreshDailyQuests(): Promise<KidsDailyQuestStatus> {
+  const res = await kidsAuthorizedFetch('/student/daily-quests/', { method: 'POST' });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error('Görevler güncellenemedi');
+  return data as KidsDailyQuestStatus;
+}
+
+// ── Avatar ────────────────────────────────────────────────────────────────────
+
+export const KIDS_AVATAR_KEYS = ['owl', 'cat', 'fox', 'panda', 'lion', 'bunny', 'bear', 'dragon'] as const;
+export type KidsAvatarKey = (typeof KIDS_AVATAR_KEYS)[number];
+
+export function kidsAvatarUrl(key: string | null | undefined): string | null {
+  if (!key) return null;
+  return `/kids/avatars/${key}.svg`;
+}
+
+export async function kidsSetAvatar(avatarKey: KidsAvatarKey): Promise<void> {
+  const res = await kidsAuthorizedFetch('/profile/avatar/', { method: 'PATCH', body: JSON.stringify({ avatar_key: avatarKey }) });
+  if (!res.ok) throw new Error('Avatar update failed');
+}
+
+// ── Not Defteri ───────────────────────────────────────────────────────────────
+
+export type KidsGradeEntry = {
+  id: number;
+  student_id: number;
+  student_name: string;
+  student_login_name: string | null;
+  class_id?: number;
+  class_name?: string;
+  subject_name: string;
+  period: string;
+  grade_value: number;
+  note: string;
+  updated_at: string;
+};
+
+export async function kidsGetGradesTeacher(
+  classId: number,
+  period?: string,
+): Promise<{ grades: KidsGradeEntry[] }> {
+  const q = new URLSearchParams({ class_id: String(classId) });
+  if (period) q.set('period', period);
+  const res = await kidsAuthorizedFetch(`/grades/?${q}`, { method: 'GET' });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error('Notlar yüklenemedi');
+  return data as { grades: KidsGradeEntry[] };
+}
+
+export async function kidsSaveGrades(
+  classId: number,
+  entries: Array<{ student_id: number; subject_name: string; period: string; grade_value: number; note?: string }>,
+): Promise<{ saved: number; errors: unknown[] }> {
+  const res = await kidsAuthorizedFetch('/grades/', {
+    method: 'POST',
+    body: JSON.stringify({ class_id: classId, entries }),
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error('Notlar kaydedilemedi');
+  return data as { saved: number; errors: unknown[] };
+}
+
+export async function kidsPatchGrade(
+  id: number,
+  body: Partial<{ grade_value: number; note: string; subject_name: string; period: string }>,
+): Promise<KidsGradeEntry> {
+  const res = await kidsAuthorizedFetch(`/grades/${id}/`, {
+    method: 'PATCH',
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error('Not güncellenemedi');
+  return data as KidsGradeEntry;
+}
+
+export async function kidsDeleteGrade(id: number): Promise<void> {
+  const res = await kidsAuthorizedFetch(`/grades/${id}/`, { method: 'DELETE' });
+  if (!res.ok) throw new Error('Not silinemedi');
+}
+
+export async function kidsGetGradesParent(studentId?: number): Promise<{ grades: KidsGradeEntry[] }> {
+  const q = studentId ? `?student_id=${studentId}` : '';
+  const res = await kidsAuthorizedFetch(`/grades/${q}`, { method: 'GET' });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error('Notlar yüklenemedi');
+  return data as { grades: KidsGradeEntry[] };
+}
+
 export async function kidsSendRSVP(
   announcementId: number,
   response: KidsRSVPResponse,
@@ -4221,4 +4335,37 @@ export async function kidsSendRSVP(
   const data = await res.json().catch(() => null);
   if (!res.ok) throw new Error('RSVP gönderilemedi');
   return data;
+}
+
+// ── Geri Bildirim ─────────────────────────────────────────────────────────────
+
+export type KidsFeedbackCategory = 'general' | 'bug' | 'suggestion' | 'praise';
+
+export type KidsFeedbackItem = {
+  id: number;
+  role: string;
+  category: KidsFeedbackCategory;
+  rating: number | null;
+  message: string;
+  created_at: string;
+};
+
+export async function kidsSendFeedback(body: {
+  message: string;
+  category?: KidsFeedbackCategory;
+  rating?: number | null;
+}): Promise<{ id: number; created_at: string }> {
+  const res = await kidsAuthorizedFetch('/feedback/', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error((data as ApiErrorBody)?.detail || 'Gönderilemedi');
+  return data as { id: number; created_at: string };
+}
+
+export async function kidsGetMyFeedback(): Promise<KidsFeedbackItem[]> {
+  const res = await kidsAuthorizedFetch('/feedback/');
+  const data = await res.json().catch(() => ({ results: [] }));
+  return (data.results ?? []) as KidsFeedbackItem[];
 }

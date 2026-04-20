@@ -28,6 +28,7 @@ import {
 } from '@/src/components/kids/kids-ui';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 import { useKidsI18n } from '@/src/providers/kids-language-provider';
+import { KidsFeedbackModal, shouldShowFeedbackModal, dismissFeedbackModal } from '@/src/components/kids/kids-feedback-modal';
 import { MediaSlider } from '@/src/components/media-slider';
 import type { MediaItem } from '@/src/lib/extract-media';
 
@@ -56,6 +57,7 @@ export default function KidsParentPanelPage() {
   const [switchingId, setSwitchingId] = useState<number | null>(null);
   const [overview, setOverview] = useState<KidsParentChildOverview[] | null>(null);
   const [overviewLoading, setOverviewLoading] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [overviewError, setOverviewError] = useState<string | null>(null);
   const [chatTarget, setChatTarget] = useState<{
     studentId: number;
@@ -79,7 +81,6 @@ export default function KidsParentPanelPage() {
   const [openPendingDetailId, setOpenPendingDetailId] = useState<number | null>(null);
   const [gamePolicy, setGamePolicy] = useState<KidsParentGamePolicy | null>(null);
   const [attendanceRecords, setAttendanceRecords] = useState<KidsAttendanceParentRecord[]>([]);
-
   const loadOverview = useCallback(async () => {
     setOverviewLoading(true);
     setOverviewError(null);
@@ -128,6 +129,11 @@ export default function KidsParentPanelPage() {
       return;
     }
     void loadOverview();
+    // 30 saniye sonra geri bildirim modalını göster
+    const timer = setTimeout(() => {
+      if (shouldShowFeedbackModal()) setFeedbackOpen(true);
+    }, 30_000);
+    return () => clearTimeout(timer);
   }, [user, loading, pathPrefix, router, loadOverview]);
 
   async function goToChildPanel(studentId: number) {
@@ -237,6 +243,8 @@ export default function KidsParentPanelPage() {
       : '—';
 
   return (
+    <>
+    {feedbackOpen && <KidsFeedbackModal onClose={() => setFeedbackOpen(false)} />}
     <KidsPanelMax className="max-w-7xl space-y-10 pb-12">
       <KidsSecondaryButton
         type="button"
@@ -895,5 +903,6 @@ export default function KidsParentPanelPage() {
         </KidsCenteredModal>
       ) : null}
     </KidsPanelMax>
+    </>
   );
 }

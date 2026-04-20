@@ -30,6 +30,7 @@ import {
 } from '@/src/lib/kids-api';
 import { kidsLoginPortalHref } from '@/src/lib/kids-config';
 import { useKidsI18n } from '@/src/providers/kids-language-provider';
+import { KidsFeedbackModal, shouldShowFeedbackModal } from '@/src/components/kids/kids-feedback-modal';
 import {
   KidsCard,
   KidsCenteredModal,
@@ -93,6 +94,7 @@ export default function KidsTeacherPanelPage() {
   const [classes, setClasses] = useState<KidsClass[]>([]);
   const [schools, setSchools] = useState<KidsSchool[]>([]);
   const [loading, setLoading] = useState(true);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [classGrade, setClassGrade] = useState('4');
   const [classSection, setClassSection] = useState('A');
   const [description, setDescription] = useState('');
@@ -137,6 +139,10 @@ export default function KidsTeacherPanelPage() {
       return;
     }
     load();
+    const timer = setTimeout(() => {
+      if (shouldShowFeedbackModal()) setFeedbackOpen(true);
+    }, 30_000);
+    return () => clearTimeout(timer);
   }, [authLoading, user, router, pathPrefix, load]);
 
   useEffect(() => {
@@ -633,6 +639,8 @@ export default function KidsTeacherPanelPage() {
   })();
 
   return (
+    <>
+    {feedbackOpen && <KidsFeedbackModal onClose={() => setFeedbackOpen(false)} />}
     <KidsPanelMax className="max-w-6xl overflow-x-hidden">
       <header className="mb-8 sm:mb-10">
         <h1 className="font-logo text-[2rem] font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
@@ -868,5 +876,6 @@ export default function KidsTeacherPanelPage() {
         </KidsCenteredModal>
       ) : null}
     </KidsPanelMax>
+    </>
   );
 }
