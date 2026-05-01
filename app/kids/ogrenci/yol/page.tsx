@@ -3,12 +3,8 @@
 import {
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
-  useRef,
   useState,
-  type Ref,
-  type RefObject,
 } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -16,6 +12,7 @@ import toast from 'react-hot-toast';
 import {
   Award,
   BookOpen,
+  ChevronLeft,
   Flag,
   FlaskConical,
   Footprints,
@@ -51,7 +48,6 @@ function interpolate(template: string, vars: Record<string, string | number>): s
   return s;
 }
 
-/** Üstten alta: hedef/kilit (yukarı) → ilk adım (aşağı) */
 function milestonesForColumn(list: KidsRoadmapMilestone[]): KidsRoadmapMilestone[] {
   return [...list].sort((a, b) => a.order - b.order).reverse();
 }
@@ -72,9 +68,6 @@ function milestoneIconNode(icon: string, className: string) {
 
 type NodeVariant = 'locked' | 'current' | 'done';
 
-/**
- * Alttan üste zikzaklı yol eğrisi; merkez civarından geçerek düğümlerle kesişir.
- */
 const ROAD_PATH_D =
   'M500 810 C265 745 235 685 520 615 S785 535 475 465 S210 385 515 315 S795 235 465 165 S220 95 340 45 S460 12 500 8';
 
@@ -84,43 +77,95 @@ const ROAD_VIEW_H = 820;
 type RoadmapPathAnchor = {
   leftPct: number;
   topPct: number;
-  /** İkon yolun solunda ise metin sağ kolonda */
   labelOnRight: boolean;
 };
 
-function useRoadmapPathAnchors(count: number): { pathRef: RefObject<SVGPathElement | null>; anchors: RoadmapPathAnchor[] } {
-  const pathRef = useRef<SVGPathElement | null>(null);
-  const [anchors, setAnchors] = useState<RoadmapPathAnchor[]>([]);
+// Cubic bezier noktası: P0,P1,P2,P3 kontrol noktaları, t∈[0,1]
+function cubicBezier(p0: number, p1: number, p2: number, p3: number, t: number) {
+  const u = 1 - t;
+  return u * u * u * p0 + 3 * u * u * t * p1 + 3 * u * t * t * p2 + t * t * t * p3;
+}
 
-  const measure = useCallback(() => {
-    const el = pathRef.current;
-    if (!el || count < 1) {
-      setAnchors([]);
-      return;
+// ROAD_PATH_D'yi parse edip t∈[0,1] için x,y döndürür.
+// Path: M500 810 C265 745 235 685 520 615 S785 535 475 465 S210 385 515 315 S795 235 465 165 S220 95 340 45 S460 12 500 8
+// Bunu elle segment listesine çevirdik (başlangıç → bitiş arası bezier segmentleri).
+const PATH_SEGMENTS: Array<{ x0:number;y0:number;x1:number;y1:number;x2:number;y2:number;x3:number;y3:number }> = [
+  // C265 745 235 685 520 615
+  { x0:500,y0:810, x1:265,y1:745, x2:235,y2:685, x3:520,y3:615 },
+  // S785 535 475 465  → x1 = reflect of prev x2 from prev x3
+  { x0:520,y0:615, x1:805,y1:545, x2:785,y2:535, x3:475,y3:465 },
+  // S210 385 515 315
+  { x0:475,y0:465, x1:165,y1:395, x2:210,y2:385, x3:515,y3:315 },
+  // S795 235 465 165
+  { x0:515,y0:315, x1:820,y1:245, x2:795,y2:235, x3:465,y3:165 },
+  // S220 95 340 45
+  { x0:465,y0:165, x1:135,y1:95,  x2:220,y2:95,  x3:340,y3:45  },
+  // S460 12 500 8
+  { x0:340,y0:45,  x1:460,y1:-5,  x2:460,y2:12,  x3:500,y3:8   },
+];
+
+// Arc-length tablosunu önceden hesapla (500 örnek nokta)
+const ARC_SAMPLES = 500;
+type ArcEntry = { t: number; x: number; y: number; dist: number };
+
+function buildArcTable(): ArcEntry[] {
+  const table: ArcEntry[] = [];
+  let totalDist = 0;
+  let prevX = 0, prevY = 0;
+  for (let i = 0; i <= ARC_SAMPLES; i++) {
+    const t = i / ARC_SAMPLES;
+    const segCount = PATH_SEGMENTS.length;
+    const segT = t * segCount;
+    const segIdx = Math.min(Math.floor(segT), segCount - 1);
+    const localT = segT - segIdx;
+    const s = PATH_SEGMENTS[segIdx];
+    const x = cubicBezier(s.x0, s.x1, s.x2, s.x3, localT);
+    const y = cubicBezier(s.y0, s.y1, s.y2, s.y3, localT);
+    if (i > 0) {
+      const dx = x - prevX, dy = y - prevY;
+      totalDist += Math.sqrt(dx * dx + dy * dy);
     }
-    try {
-      const len = el.getTotalLength();
-      const next: RoadmapPathAnchor[] = [];
-      for (let i = 0; i < count; i++) {
-        const along = count <= 1 ? len * 0.5 : len * (1 - i / (count - 1));
-        const p = el.getPointAtLength(along);
-        next.push({
-          leftPct: (p.x / ROAD_VIEW_W) * 100,
-          topPct: (p.y / ROAD_VIEW_H) * 100,
-          labelOnRight: p.x < 500,
-        });
-      }
-      setAnchors(next);
-    } catch {
-      setAnchors([]);
-    }
-  }, [count]);
+    table.push({ t, x, y, dist: totalDist });
+    prevX = x; prevY = y;
+  }
+  return table;
+}
 
-  useLayoutEffect(() => {
-    measure();
-  }, [measure]);
+const ARC_TABLE = buildArcTable();
+const TOTAL_ARC = ARC_TABLE[ARC_TABLE.length - 1].dist;
 
-  return { pathRef, anchors };
+// Arc-length t değerine göre x,y döndür
+function sampleByArc(arcT: number): { x: number; y: number } {
+  const targetDist = arcT * TOTAL_ARC;
+  let lo = 0, hi = ARC_TABLE.length - 1;
+  while (lo < hi - 1) {
+    const mid = (lo + hi) >> 1;
+    if (ARC_TABLE[mid].dist < targetDist) lo = mid; else hi = mid;
+  }
+  const a = ARC_TABLE[lo], b = ARC_TABLE[hi];
+  const span = b.dist - a.dist;
+  const alpha = span < 0.0001 ? 0 : (targetDist - a.dist) / span;
+  return { x: a.x + (b.x - a.x) * alpha, y: a.y + (b.y - a.y) * alpha };
+}
+
+function computeAnchors(count: number): RoadmapPathAnchor[] {
+  if (count < 1) return [];
+  return Array.from({ length: count }, (_, i) => {
+    // i=0 en üst (son milestone), i=count-1 en alt (ilk milestone)
+    // arcT=0 → path başı (alt, 500,810), arcT=1 → path sonu (üst, 500,8)
+    const arcT = count <= 1 ? 0.5 : 1 - i / (count - 1);
+    const { x, y } = sampleByArc(arcT);
+    return {
+      leftPct: (x / ROAD_VIEW_W) * 100,
+      topPct: (y / ROAD_VIEW_H) * 100,
+      labelOnRight: x < 500,
+    };
+  });
+}
+
+function useRoadmapPathAnchors(count: number): { anchors: RoadmapPathAnchor[] } {
+  const anchors = useMemo(() => computeAnchors(count), [count]);
+  return { anchors };
 }
 
 function RoadmapPathBackground() {
@@ -132,83 +177,58 @@ function RoadmapPathBackground() {
       aria-hidden
     >
       <defs>
-        <linearGradient id="kidsRoadmapPathGrad" x1="0%" x2="0%" y1="0%" y2="100%">
-          <stop offset="0%" stopColor="#7c3aed" stopOpacity={1} />
-          <stop offset="55%" stopColor="#a855f7" stopOpacity={1} />
-          <stop offset="100%" stopColor="#e9d5ff" stopOpacity={0.95} />
+        <linearGradient id="kidsRoadGrad" x1="0%" x2="0%" y1="100%" y2="0%">
+          <stop offset="0%" stopColor="#f97316" />
+          <stop offset="33%" stopColor="#a855f7" />
+          <stop offset="66%" stopColor="#3b82f6" />
+          <stop offset="100%" stopColor="#10b981" />
         </linearGradient>
-        <linearGradient id="kidsRoadmapPathEdge" x1="0%" x2="100%" y1="0%" y2="0%">
-          <stop offset="0%" stopColor="#4c1d95" stopOpacity={0.55} />
-          <stop offset="50%" stopColor="#6d28d9" stopOpacity={0.35} />
-          <stop offset="100%" stopColor="#4c1d95" stopOpacity={0.55} />
-        </linearGradient>
+        <filter id="kidsRoadGlow">
+          <feGaussianBlur stdDeviation="6" result="blur" />
+          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
       </defs>
-      {/* Yol tabanı */}
-      <path
-        d={ROAD_PATH_D}
-        fill="none"
-        stroke="url(#kidsRoadmapPathEdge)"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={44}
-        className="opacity-[0.22] dark:opacity-[0.32]"
-      />
-      {/* Orta kesik çizgi */}
-      <path
-        d={ROAD_PATH_D}
-        fill="none"
-        stroke="white"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={3}
-        strokeDasharray="14 22"
-        className="opacity-[0.2] dark:opacity-[0.14]"
-      />
-      {/* Ana mor şerit */}
-      <path
-        d={ROAD_PATH_D}
-        fill="none"
-        stroke="url(#kidsRoadmapPathGrad)"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={26}
-        className="opacity-[0.38] dark:opacity-[0.48]"
-      />
+      {/* Glow gölgesi */}
+      <path d={ROAD_PATH_D} fill="none" stroke="url(#kidsRoadGrad)" strokeWidth={50} strokeLinecap="round" className="opacity-20" filter="url(#kidsRoadGlow)" />
+      {/* Ana renkli yol */}
+      <path d={ROAD_PATH_D} fill="none" stroke="url(#kidsRoadGrad)" strokeWidth={28} strokeLinecap="round" className="opacity-60" />
+      {/* Orta beyaz kesik çizgi */}
+      <path d={ROAD_PATH_D} fill="none" stroke="white" strokeWidth={3} strokeDasharray="16 24" strokeLinecap="round" className="opacity-50" />
     </svg>
   );
 }
 
-function RoadmapMilestoneRow({
-  m,
-  variant,
-  layoutIndex,
-  pathAnchor,
-  t,
-  language,
+// Masaüstü: node doğrudan path üzerinde, etiket yana absolute offset
+function DesktopMilestoneNode({
+  m, variant, layoutIndex, anchor, t, language,
 }: {
   m: KidsRoadmapMilestone;
   variant: NodeVariant;
   layoutIndex: number;
-  /** Masaüstü: yol üzeri konum; null = mobil dikey liste */
-  pathAnchor: RoadmapPathAnchor | null;
+  anchor: RoadmapPathAnchor;
   t: (key: string) => string;
   language: 'tr' | 'en' | 'ge';
 }) {
   const { title: mileTitle, subtitle: mileSubtitle } = localizedMilestoneCopy(m, t);
-  const labelOnRight = pathAnchor ? pathAnchor.labelOnRight : layoutIndex % 2 === 0;
-  const tilt =
-    variant === 'current'
-      ? 'rotate-6 md:rotate-6'
-      : layoutIndex % 2 === 0
-        ? 'rotate-3 md:rotate-3'
-        : '-rotate-12 md:-rotate-12';
+  const labelOnRight = anchor.labelOnRight;
+  const tilt = variant === 'current' ? 'rotate-6' : layoutIndex % 2 === 0 ? 'rotate-3' : '-rotate-12';
 
-  const iconBox =
+  const doneColors = [
+    'from-emerald-400 to-teal-500 shadow-emerald-400/50',
+    'from-sky-400 to-blue-500 shadow-sky-400/50',
+    'from-violet-400 to-purple-600 shadow-violet-400/50',
+    'from-pink-400 to-rose-500 shadow-pink-400/50',
+    'from-amber-400 to-orange-500 shadow-amber-400/50',
+  ];
+  const doneColor = doneColors[layoutIndex % doneColors.length];
+
+  const nodeSize = variant === 'current' ? 'h-[7.5rem] w-[7.5rem]' : 'h-28 w-28';
+  const nodeStyle =
     variant === 'locked'
-      ? 'relative z-10 flex h-28 w-28 items-center justify-center rounded-3xl bg-zinc-200/90 opacity-80 ring-4 ring-slate-900/80 dark:bg-zinc-800/90 dark:ring-slate-950/80'
+      ? 'flex items-center justify-center rounded-3xl bg-slate-100/90 dark:bg-zinc-800 ring-4 ring-slate-300/60 dark:ring-zinc-700 shadow-lg backdrop-blur-sm'
       : variant === 'current'
-        ? 'relative z-10 kids-roadmap-node-pulse flex h-32 w-32 items-center justify-center rounded-3xl bg-linear-to-br from-violet-600 to-violet-800 shadow-2xl shadow-violet-500/40 ring-4 ring-slate-900/50 dark:ring-slate-950/60'
-        : 'relative z-10 flex h-28 w-28 items-center justify-center rounded-3xl border-4 border-emerald-400 bg-white shadow-xl ring-4 ring-slate-900/40 dark:bg-zinc-900 dark:ring-slate-950/50';
+        ? 'flex items-center justify-center rounded-3xl bg-linear-to-br from-yellow-400 via-orange-500 to-pink-500 shadow-2xl shadow-orange-400/60 ring-4 ring-white/60 kids-roadmap-node-pulse'
+        : `flex items-center justify-center rounded-3xl bg-linear-to-br ${doneColor} shadow-xl ring-4 ring-white/50`;
 
   const desc =
     variant === 'locked'
@@ -217,82 +237,115 @@ function RoadmapMilestoneRow({
         ? `${t('roadmap.currentTargetPrefix')} ${mileSubtitle}`
         : mileSubtitle;
 
-  const labelOpacity = variant === 'locked' ? 'opacity-50' : '';
-
-  const desktopLabels = (
-    <div className={`space-y-1 ${labelOpacity}`}>
-      <h4
-        className={`font-logo text-lg font-bold leading-snug sm:text-xl ${
-          variant === 'current' ? 'text-violet-600 dark:text-violet-400' : 'text-slate-900 dark:text-white'
-        }`}
-      >
-        {mileTitle}
-      </h4>
-      <p className="text-sm leading-snug text-slate-500 dark:text-zinc-400">{desc}</p>
+  const labelCard = (
+    <div className={`w-44 rounded-2xl px-3 py-2.5 shadow-md backdrop-blur-sm ${
+      variant === 'locked'
+        ? 'bg-white/60 dark:bg-zinc-900/60 opacity-60'
+        : variant === 'current'
+          ? 'bg-linear-to-br from-orange-50 to-pink-50 dark:from-orange-950/50 dark:to-pink-950/50 ring-1 ring-orange-200/70 dark:ring-orange-800/40'
+          : 'bg-white/85 dark:bg-zinc-900/80 ring-1 ring-white/60 dark:ring-zinc-700/60'
+    }`}>
+      <h4 className={`font-logo text-sm font-bold leading-snug ${
+        variant === 'current' ? 'text-orange-600 dark:text-orange-400'
+        : variant === 'locked' ? 'text-slate-400 dark:text-zinc-500'
+        : 'text-slate-900 dark:text-white'
+      }`}>{mileTitle}</h4>
+      <p className={`mt-0.5 text-xs leading-snug ${variant === 'locked' ? 'text-slate-300 dark:text-zinc-600' : 'text-slate-500 dark:text-zinc-400'}`}>{desc}</p>
       {variant === 'done' && m.earned_at ? (
-        <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-          {new Date(m.earned_at).toLocaleString(language === 'tr' ? 'tr-TR' : language === 'ge' ? 'de-DE' : 'en-US', {
-            dateStyle: 'medium',
-          })}
+        <p className="mt-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+          ✓ {new Date(m.earned_at).toLocaleString(language === 'tr' ? 'tr-TR' : language === 'ge' ? 'de-DE' : 'en-US', { dateStyle: 'medium' })}
         </p>
       ) : null}
     </div>
   );
 
   return (
-    <div className="relative w-full max-w-none">
-      {/* Mobil: ikon ortada, metin altta */}
-      <div className="flex flex-col items-center md:hidden">
-        <div
-          className={`flex items-center justify-center transition-transform duration-500 group-hover:rotate-0 ${tilt} ${iconBox}`}
-        >
-          {variant === 'locked' ? (
-            <Lock className="h-12 w-12 text-slate-400 dark:text-zinc-500" strokeWidth={1.75} aria-hidden />
-          ) : variant === 'current' ? (
-            <Sparkles className="h-14 w-14 text-white" strokeWidth={2} aria-hidden />
-          ) : (
-            milestoneIconNode(m.icon, 'h-12 w-12 text-emerald-500')
-          )}
-        </div>
-        <div className="mt-4 max-w-xs px-2 text-center">
-          <h4 className="font-logo text-lg font-bold text-slate-900 dark:text-white">{mileTitle}</h4>
-          <p className="mt-1 text-sm text-slate-500 dark:text-zinc-400">{desc}</p>
-          {variant === 'done' && m.earned_at ? (
-            <p className="mt-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-              {new Date(m.earned_at).toLocaleString(
-                language === 'tr' ? 'tr-TR' : language === 'ge' ? 'de-DE' : 'en-US',
-                { dateStyle: 'medium' },
-              )}
-            </p>
-          ) : null}
-        </div>
+    // Node merkezi path anchor noktasına gelecek şekilde -translate-x/y-1/2
+    <div
+      className="absolute -translate-x-1/2 -translate-y-1/2"
+      style={{ left: `${anchor.leftPct}%`, top: `${anchor.topPct}%` }}
+    >
+      {/* Node ikonu */}
+      <div className={`relative z-10 transition-transform duration-500 hover:rotate-0 ${tilt} ${nodeSize} ${nodeStyle}`}>
+        {variant === 'locked'
+          ? <Lock className="h-11 w-11 text-slate-300 dark:text-zinc-600" strokeWidth={1.75} aria-hidden />
+          : variant === 'current'
+            ? <Sparkles className="h-14 w-14 text-white drop-shadow-lg" strokeWidth={2} aria-hidden />
+            : milestoneIconNode(m.icon, 'h-12 w-12 text-white drop-shadow-lg')}
       </div>
 
-      {/* Masaüstü: [sol metin] [orta ikon = çizgi] [sağ metin] — metin asla ortadaki şeride binmez */}
-      <div className="group hidden items-center gap-4 md:grid md:grid-cols-[minmax(0,1fr)_7.5rem_minmax(0,1fr)] md:gap-5 lg:grid-cols-[minmax(0,1fr)_8.5rem_minmax(0,1fr)]">
-        <div
-          className={`min-w-0 max-w-md justify-self-end pr-1 text-right ${labelOnRight ? 'invisible pointer-events-none select-none' : ''}`}
-          aria-hidden={labelOnRight}
-        >
-          {!labelOnRight ? desktopLabels : null}
-        </div>
-        <div className="flex justify-center justify-self-center">
-          <div className={`flex items-center justify-center transition-transform duration-500 group-hover:rotate-0 ${tilt} ${iconBox}`}>
-            {variant === 'locked' ? (
-              <Lock className="h-12 w-12 text-slate-400 dark:text-zinc-500" strokeWidth={1.75} aria-hidden />
-            ) : variant === 'current' ? (
-              <Sparkles className="h-14 w-14 text-white" strokeWidth={2} aria-hidden />
-            ) : (
-              milestoneIconNode(m.icon, 'h-12 w-12 text-emerald-500')
-            )}
-          </div>
-        </div>
-        <div
-          className={`min-w-0 max-w-md justify-self-start pl-1 text-left ${!labelOnRight ? 'invisible pointer-events-none select-none' : ''}`}
-          aria-hidden={!labelOnRight}
-        >
-          {labelOnRight ? desktopLabels : null}
-        </div>
+      {/* Etiket: node'un sağına veya soluna, ortalı */}
+      <div
+        className="absolute top-1/2 -translate-y-1/2"
+        style={labelOnRight ? { left: 'calc(100% + 14px)' } : { right: 'calc(100% + 14px)' }}
+      >
+        {labelCard}
+      </div>
+    </div>
+  );
+}
+
+function RoadmapMilestoneRow({
+  m, variant, layoutIndex, t, language,
+}: {
+  m: KidsRoadmapMilestone;
+  variant: NodeVariant;
+  layoutIndex: number;
+  t: (key: string) => string;
+  language: 'tr' | 'en' | 'ge';
+}) {
+  const { title: mileTitle, subtitle: mileSubtitle } = localizedMilestoneCopy(m, t);
+  const tilt = variant === 'current' ? 'rotate-6' : layoutIndex % 2 === 0 ? 'rotate-3' : '-rotate-12';
+
+  const doneColors = [
+    'from-emerald-400 to-teal-500 shadow-emerald-400/50',
+    'from-sky-400 to-blue-500 shadow-sky-400/50',
+    'from-violet-400 to-purple-600 shadow-violet-400/50',
+    'from-pink-400 to-rose-500 shadow-pink-400/50',
+    'from-amber-400 to-orange-500 shadow-amber-400/50',
+  ];
+  const doneColor = doneColors[layoutIndex % doneColors.length];
+
+  const iconBox =
+    variant === 'locked'
+      ? 'flex h-24 w-24 items-center justify-center rounded-3xl bg-slate-100 dark:bg-zinc-800 ring-4 ring-slate-300/60 dark:ring-zinc-700 shadow-lg'
+      : variant === 'current'
+        ? 'kids-roadmap-node-pulse flex h-28 w-28 items-center justify-center rounded-3xl bg-linear-to-br from-yellow-400 via-orange-500 to-pink-500 shadow-2xl shadow-orange-400/60 ring-4 ring-white/60'
+        : `flex h-24 w-24 items-center justify-center rounded-3xl bg-linear-to-br ${doneColor} shadow-xl ring-4 ring-white/50`;
+
+  const desc =
+    variant === 'locked'
+      ? t('roadmap.lockedBadgeShort')
+      : variant === 'current'
+        ? `${t('roadmap.currentTargetPrefix')} ${mileSubtitle}`
+        : mileSubtitle;
+
+  // Sadece mobil için kullanılır
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <div className={`transition-transform duration-500 hover:rotate-0 ${tilt} ${iconBox}`}>
+        {variant === 'locked'
+          ? <Lock className="h-10 w-10 text-slate-300 dark:text-zinc-600" strokeWidth={1.75} aria-hidden />
+          : variant === 'current'
+            ? <Sparkles className="h-12 w-12 text-white drop-shadow" strokeWidth={2} aria-hidden />
+            : milestoneIconNode(m.icon, 'h-10 w-10 text-white drop-shadow')}
+      </div>
+      <div className={`max-w-xs rounded-2xl px-4 py-3 text-center shadow-sm backdrop-blur-sm ${
+        variant === 'locked' ? 'bg-white/50 dark:bg-zinc-900/50 opacity-60'
+        : variant === 'current' ? 'bg-linear-to-r from-orange-50 to-pink-50 dark:from-orange-950/40 dark:to-pink-950/40 ring-1 ring-orange-200/60'
+        : 'bg-white/80 dark:bg-zinc-900/70 ring-1 ring-white/60 dark:ring-zinc-700/60'
+      }`}>
+        <h4 className={`font-logo text-base font-bold ${
+          variant === 'current' ? 'text-orange-600 dark:text-orange-400'
+          : variant === 'locked' ? 'text-slate-400 dark:text-zinc-500'
+          : 'text-slate-900 dark:text-white'
+        }`}>{mileTitle}</h4>
+        <p className={`mt-1 text-sm ${variant === 'locked' ? 'text-slate-300 dark:text-zinc-600' : 'text-slate-500 dark:text-zinc-400'}`}>{desc}</p>
+        {variant === 'done' && m.earned_at ? (
+          <p className="mt-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+            ✓ {new Date(m.earned_at).toLocaleString(language === 'tr' ? 'tr-TR' : language === 'ge' ? 'de-DE' : 'en-US', { dateStyle: 'medium' })}
+          </p>
+        ) : null}
       </div>
     </div>
   );
@@ -327,16 +380,10 @@ export default function KidsStudentRoadmapPage() {
     void load();
   }, [authLoading, user?.id, user?.role, router, pathPrefix, load]);
 
-  const sorted = useMemo(() => {
-    const list = data?.milestones ?? [];
-    return [...list].sort((a, b) => a.order - b.order);
-  }, [data]);
-
+  const sorted = useMemo(() => [...(data?.milestones ?? [])].sort((a, b) => a.order - b.order), [data]);
   const currentKey = useMemo(() => sorted.find((m) => !m.unlocked)?.key ?? null, [sorted]);
-
   const columnMilestones = useMemo(() => milestonesForColumn(sorted), [sorted]);
-
-  const { pathRef, anchors } = useRoadmapPathAnchors(columnMilestones.length);
+  const { anchors } = useRoadmapPathAnchors(columnMilestones.length);
 
   const growthDisplay = data?.growth_points ?? user?.growth_points ?? 0;
   const rankTitle = localizedGrowthStageTitle(user?.growth_stage, t, 'roadmap.rankExplorer');
@@ -345,189 +392,201 @@ export default function KidsStudentRoadmapPage() {
   const unlockedCount = sorted.filter((m) => m.unlocked).length;
   const starSlots = 8;
   const filledStars = Math.min(starSlots, Math.round(starProgress * starSlots));
-
-  const gpFmt = new Intl.NumberFormat(language === 'tr' ? 'tr-TR' : language === 'ge' ? 'de-DE' : 'en-US').format(
-    growthDisplay,
-  );
+  const gpFmt = new Intl.NumberFormat(language === 'tr' ? 'tr-TR' : language === 'ge' ? 'de-DE' : 'en-US').format(growthDisplay);
 
   if (authLoading || !user || user.role !== 'student') {
     return <p className="text-center text-gray-600 dark:text-zinc-400">{t('common.loading')}</p>;
   }
 
   return (
-    <KidsPanelMax className="max-w-7xl px-1 pb-12 sm:px-3 lg:px-6">
-      <div className="space-y-12">
-      <Link
-        href={`${pathPrefix}/ogrenci/panel`}
-        className="inline-block text-sm font-semibold text-violet-600 hover:underline dark:text-violet-400"
-      >
-        {t('roadmap.backToStudent')}
-      </Link>
+    <KidsPanelMax className="max-w-7xl px-1 pb-16 sm:px-3 lg:px-6">
+      {/* Dekoratif arka plan blob'ları */}
+      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
+        <div className="absolute -top-32 -left-32 h-96 w-96 rounded-full bg-violet-400/20 blur-3xl" />
+        <div className="absolute top-1/3 -right-24 h-80 w-80 rounded-full bg-orange-400/15 blur-3xl" />
+        <div className="absolute bottom-1/4 left-1/4 h-72 w-72 rounded-full bg-sky-400/15 blur-3xl" />
+        <div className="absolute -bottom-20 right-1/3 h-64 w-64 rounded-full bg-emerald-400/15 blur-3xl" />
+      </div>
 
-      {/* Hero */}
-      <section className="grid grid-cols-1 gap-6 md:grid-cols-2">
-        <div className="flex items-center justify-between rounded-xl border border-white/40 bg-white/70 p-8 shadow-xl shadow-slate-200/50 backdrop-blur-md dark:border-white/10 dark:bg-zinc-900/60 dark:shadow-none">
-          <div className="space-y-1">
-            <p className="text-sm font-bold uppercase tracking-wider text-violet-600 dark:text-violet-400">
+      <div className="space-y-10">
+        {/* Geri butonu */}
+        <Link
+          href={`${pathPrefix}/ogrenci/panel`}
+          className="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-4 py-2 text-sm font-bold text-violet-600 shadow-sm ring-1 ring-violet-200/60 backdrop-blur-sm transition hover:bg-violet-50 hover:shadow-md dark:bg-zinc-900/70 dark:text-violet-400 dark:ring-violet-800/40"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          {t('roadmap.backToStudent')}
+        </Link>
+
+        {/* Başlık */}
+        <section>
+          <h1 className="font-logo text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-5xl">
+            {t('roadmap.title')} <span className="text-transparent bg-clip-text bg-linear-to-r from-violet-600 to-pink-500">✨</span>
+          </h1>
+          <p className="mt-2 text-lg text-slate-600 dark:text-zinc-400">{t('roadmap.heroSubtitle')}</p>
+        </section>
+
+        {/* Hero kartlar */}
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* Büyüme puanı */}
+          <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-violet-500 to-purple-700 p-6 shadow-xl shadow-violet-500/30">
+            <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10" />
+            <div className="pointer-events-none absolute -bottom-6 -left-6 h-24 w-24 rounded-full bg-white/10" />
+            <p className="relative text-sm font-bold uppercase tracking-wider text-violet-200">
               {t('roadmap.statGrowthLabel')}
             </p>
-            <h2 className="font-logo text-5xl font-black tabular-nums text-slate-900 dark:text-white">
-              {loading ? '…' : gpFmt}
-            </h2>
+            <div className="relative mt-2 flex items-end justify-between">
+              <h2 className="font-logo text-5xl font-black tabular-nums text-white">
+                {loading ? '…' : gpFmt}
+              </h2>
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm">
+                <TrendingUp className="h-7 w-7 text-white" strokeWidth={2.5} aria-hidden />
+              </div>
+            </div>
           </div>
-          <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-violet-500/10 text-violet-600 dark:bg-violet-500/20 dark:text-violet-300">
-            <TrendingUp className="h-10 w-10" strokeWidth={2.25} aria-hidden />
-          </div>
-        </div>
-        <div className="flex items-center justify-between rounded-xl border border-white/40 bg-white/70 p-8 shadow-xl shadow-slate-200/50 backdrop-blur-md dark:border-white/10 dark:bg-zinc-900/60 dark:shadow-none">
-          <div className="min-w-0 space-y-1 pr-3">
-            <p className="text-sm font-bold uppercase tracking-wider text-rose-500 dark:text-rose-400">
+
+          {/* Rütbe */}
+          <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-orange-400 to-pink-600 p-6 shadow-xl shadow-pink-500/30">
+            <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-white/10" />
+            <div className="pointer-events-none absolute -bottom-6 -left-6 h-24 w-24 rounded-full bg-white/10" />
+            <p className="relative text-sm font-bold uppercase tracking-wider text-orange-100">
               {t('roadmap.statRankLabel')}
             </p>
-            <h2 className="font-logo truncate text-4xl font-black text-slate-900 dark:text-white sm:text-5xl">{rankTitle}</h2>
-          </div>
-          <div className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-rose-500/10 text-rose-500 dark:bg-rose-500/20 dark:text-rose-400">
-            <Rocket className="h-10 w-10" strokeWidth={2.25} aria-hidden />
-          </div>
-        </div>
-      </section>
-
-      <section className="space-y-2">
-        <h1 className="font-logo text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">{t('roadmap.title')}</h1>
-        <p className="text-lg text-slate-600 dark:text-zinc-400">{t('roadmap.heroSubtitle')}</p>
-      </section>
-
-      {/* Yol: masaüstünde eğri üzerinde mutlak konum; mobilde dikey liste */}
-      <section className="relative mx-auto w-full max-w-5xl overflow-x-clip py-10 md:py-16">
-        {loading ? (
-          <div className="relative z-[1] mx-auto flex min-h-[min(400px,50vh)] w-full max-w-md items-center justify-center">
-            <div className="h-48 w-full animate-pulse rounded-3xl bg-slate-200/80 dark:bg-zinc-800" />
-          </div>
-        ) : columnMilestones.length === 0 ? (
-          <p className="relative z-[1] py-16 text-center text-slate-500 dark:text-zinc-400">{t('roadmap.emptyMilestones')}</p>
-        ) : (
-          <>
-            <svg
-              className="pointer-events-none absolute h-px w-px overflow-hidden opacity-0"
-              viewBox={`0 0 ${ROAD_VIEW_W} ${ROAD_VIEW_H}`}
-              aria-hidden
-            >
-              <path ref={pathRef as Ref<SVGPathElement>} d={ROAD_PATH_D} fill="none" />
-            </svg>
-
-            <div className="relative z-[1] flex flex-col items-center gap-12 px-2 md:hidden">
-              {columnMilestones.map((m, i) => {
-                const variant: NodeVariant = m.unlocked ? 'done' : m.key === currentKey ? 'current' : 'locked';
-                return (
-                  <RoadmapMilestoneRow
-                    key={m.key}
-                    m={m}
-                    variant={variant}
-                    layoutIndex={i}
-                    pathAnchor={null}
-                    t={t}
-                    language={language}
-                  />
-                );
-              })}
+            <div className="relative mt-2 flex items-end justify-between gap-2">
+              <h2 className="font-logo truncate text-4xl font-black text-white sm:text-5xl">{rankTitle}</h2>
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/20 backdrop-blur-sm">
+                <Rocket className="h-7 w-7 text-white" strokeWidth={2.5} aria-hidden />
+              </div>
             </div>
+          </div>
+        </section>
 
-            <div className="relative z-0 mx-auto hidden min-h-[3200px] w-full md:block">
-              <RoadmapPathBackground />
-              <div className="relative z-[2] min-h-[3200px] w-full">
+        {/* Yol */}
+        <section className="relative mx-auto w-full max-w-5xl overflow-x-clip py-8 md:py-14">
+          {loading ? (
+            <div className="flex min-h-64 items-center justify-center">
+              <div className="h-48 w-full max-w-md animate-pulse rounded-3xl bg-slate-200/80 dark:bg-zinc-800" />
+            </div>
+          ) : columnMilestones.length === 0 ? (
+            <p className="py-16 text-center text-slate-500 dark:text-zinc-400">{t('roadmap.emptyMilestones')}</p>
+          ) : (
+            <>
+              {/* Mobil: dikey liste */}
+              <div className="relative z-1 flex flex-col items-center gap-10 px-2 md:hidden">
                 {columnMilestones.map((m, i) => {
                   const variant: NodeVariant = m.unlocked ? 'done' : m.key === currentKey ? 'current' : 'locked';
-                  const anchor = anchors[i];
                   return (
-                    <div
-                      key={m.key}
-                      className="absolute w-[min(96vw,30rem)] -translate-x-1/2 -translate-y-1/2"
-                      style={
-                        anchor
-                          ? { left: `${anchor.leftPct}%`, top: `${anchor.topPct}%` }
-                          : { left: '50%', top: `${8 + (i * 82) / Math.max(1, columnMilestones.length - 1)}%` }
-                      }
-                    >
-                      <RoadmapMilestoneRow
-                        m={m}
-                        variant={variant}
-                        layoutIndex={i}
-                        pathAnchor={anchor ?? null}
-                        t={t}
-                        language={language}
-                      />
-                    </div>
+                    <RoadmapMilestoneRow key={m.key} m={m} variant={variant} layoutIndex={i} t={t} language={language} />
                   );
                 })}
               </div>
-            </div>
-          </>
-        )}
-      </section>
 
-      {/* Challenge Stars */}
-      <section className="pt-4 md:pt-12">
-        <div className="relative overflow-hidden rounded-xl bg-slate-200/60 p-8 dark:bg-zinc-800/80 md:p-10">
-          <div className="pointer-events-none absolute -bottom-20 -right-20 h-80 w-80 rounded-full bg-violet-500/10 blur-3xl" />
-          <div className="relative z-10 flex flex-col items-start justify-between gap-8 md:flex-row md:items-center">
-            <div className="space-y-3">
-              <h3 className="font-logo text-3xl font-bold text-slate-900 dark:text-white">{t('roadmap.challengeStarsTitle')}</h3>
-              <p className="max-w-md text-slate-600 dark:text-zinc-400">
-                {interpolate(t('roadmap.challengeStarsBody'), { goal: CHALLENGE_STARS_GOAL })}
-              </p>
-              <p className="text-xs text-slate-500 dark:text-zinc-500">
-                {t('roadmap.challengeStarsHint').replace('{limit}', String(data?.teacher_pick_limit ?? 5))}
-              </p>
-            </div>
-            <div className="flex gap-4">
-              <div className="w-32 space-y-2 rounded-lg border border-white/50 bg-white/90 p-6 text-center shadow-sm dark:border-zinc-700 dark:bg-zinc-900/90">
-                <Star className="mx-auto h-10 w-10 text-amber-500" strokeWidth={2} fill="currentColor" aria-hidden />
-                <p className="font-logo text-2xl font-black text-slate-900 dark:text-white">
-                  {starsEarned}/{CHALLENGE_STARS_GOAL}
+              {/* Masaüstü: her node doğrudan path anchor üzerinde */}
+              <div className="relative z-0 mx-auto hidden min-h-800 w-full md:block">
+                <RoadmapPathBackground />
+                <div className="relative z-2 min-h-800 w-full">
+                  {columnMilestones.map((m, i) => {
+                    const variant: NodeVariant = m.unlocked ? 'done' : m.key === currentKey ? 'current' : 'locked';
+                    const anchor = anchors[i];
+                    if (!anchor) return null;
+                    return (
+                      <DesktopMilestoneNode
+                        key={m.key}
+                        m={m}
+                        variant={variant}
+                        layoutIndex={i}
+                        anchor={anchor}
+                        t={t}
+                        language={language}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
+        </section>
+
+        {/* Challenge Stars */}
+        <section>
+          <div className="relative overflow-hidden rounded-2xl bg-linear-to-br from-slate-900 via-violet-950 to-slate-900 p-8 shadow-2xl dark:from-zinc-950 dark:via-violet-950/80 dark:to-zinc-950 md:p-10">
+            {/* Dekor */}
+            <div className="pointer-events-none absolute -top-16 -right-16 h-64 w-64 rounded-full bg-violet-500/20 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-12 -left-12 h-48 w-48 rounded-full bg-amber-500/15 blur-2xl" />
+
+            <div className="relative z-10 flex flex-col items-start justify-between gap-6 md:flex-row md:items-center">
+              <div className="space-y-2">
+                <h3 className="font-logo text-3xl font-bold text-white">{t('roadmap.challengeStarsTitle')}</h3>
+                <p className="max-w-md text-violet-300">
+                  {interpolate(t('roadmap.challengeStarsBody'), { goal: CHALLENGE_STARS_GOAL })}
                 </p>
-                <p className="text-xs font-bold uppercase text-slate-400">{t('roadmap.progressCardLabel')}</p>
+                <p className="text-xs text-violet-400/70">
+                  {t('roadmap.challengeStarsHint').replace('{limit}', String(data?.teacher_pick_limit ?? 5))}
+                </p>
               </div>
-              <div className="w-32 space-y-2 rounded-lg bg-linear-to-br from-amber-400 to-amber-600 p-6 text-center shadow-lg shadow-amber-500/25">
-                <Medal className="mx-auto h-10 w-10 text-white" strokeWidth={2} aria-hidden />
-                <p className="font-logo text-2xl font-black text-white">{unlockedCount}</p>
-                <p className="text-xs font-bold uppercase text-white/80">{t('roadmap.milestonesCardLabel')}</p>
+              <div className="flex gap-3">
+                <div className="w-32 space-y-2 rounded-2xl bg-white/10 p-5 text-center ring-1 ring-white/20 backdrop-blur-sm">
+                  <Star className="mx-auto h-9 w-9 text-amber-400" strokeWidth={0} fill="currentColor" aria-hidden />
+                  <p className="font-logo text-2xl font-black text-white">{starsEarned}/{CHALLENGE_STARS_GOAL}</p>
+                  <p className="text-xs font-bold uppercase text-white/50">{t('roadmap.progressCardLabel')}</p>
+                </div>
+                <div className="w-32 space-y-2 rounded-2xl bg-linear-to-br from-amber-400 to-orange-600 p-5 text-center shadow-lg shadow-amber-500/30">
+                  <Medal className="mx-auto h-9 w-9 text-white" strokeWidth={2} aria-hidden />
+                  <p className="font-logo text-2xl font-black text-white">{unlockedCount}</p>
+                  <p className="text-xs font-bold uppercase text-white/80">{t('roadmap.milestonesCardLabel')}</p>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="relative z-10 mt-10 grid grid-cols-2 gap-4 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
-            {Array.from({ length: starSlots }, (_, i) => (
-              <div
-                key={i}
-                className="flex h-16 items-center justify-center rounded-xl bg-white/40 dark:bg-zinc-900/50"
-              >
-                <Star
-                  className={`h-8 w-8 ${i < filledStars ? 'text-amber-400' : 'text-slate-200 dark:text-zinc-600'}`}
-                  strokeWidth={i < filledStars ? 0 : 1.5}
-                  fill={i < filledStars ? 'currentColor' : 'none'}
-                  aria-hidden
+            {/* Yıldız slotları */}
+            <div className="relative z-10 mt-8 grid grid-cols-4 gap-3 sm:grid-cols-8">
+              {Array.from({ length: starSlots }, (_, i) => (
+                <div
+                  key={i}
+                  className={`flex h-16 items-center justify-center rounded-2xl transition-all duration-300 ${
+                    i < filledStars
+                      ? 'bg-linear-to-br from-amber-400 to-yellow-500 shadow-lg shadow-amber-500/40 scale-105'
+                      : 'bg-white/5 ring-1 ring-white/10'
+                  }`}
+                >
+                  <Star
+                    className={`h-8 w-8 ${i < filledStars ? 'text-white drop-shadow' : 'text-white/20'}`}
+                    strokeWidth={0}
+                    fill="currentColor"
+                    aria-hidden
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Progress bar */}
+            <div className="relative z-10 mt-4">
+              <div className="h-2.5 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full bg-linear-to-r from-amber-400 to-orange-500 transition-all duration-700"
+                  style={{ width: `${starProgress * 100}%` }}
                 />
               </div>
-            ))}
-          </div>
+              <p className="mt-1.5 text-right text-xs font-semibold text-white/40">
+                {Math.round(starProgress * 100)}%
+              </p>
+            </div>
 
-          {data && data.teacher_picks.length > 0 ? (
-            <ul className="relative z-10 mt-8 space-y-2 border-t border-white/30 pt-6 dark:border-zinc-700">
-              <li className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-zinc-400">
-                {t('roadmap.recentStars')}
-              </li>
-              {data.teacher_picks.slice(0, 5).map((p) => (
-                <li key={p.key} className="flex items-center gap-2 text-sm text-slate-700 dark:text-zinc-300">
-                  <Star className="h-4 w-4 shrink-0 text-amber-500" fill="currentColor" aria-hidden />
-                  <span className="min-w-0 truncate">{p.label}</span>
-                </li>
-              ))}
-            </ul>
-          ) : !loading && starsEarned === 0 ? (
-            <p className="relative z-10 mt-8 text-center text-sm text-slate-500 dark:text-zinc-400">{t('roadmap.noStars')}</p>
-          ) : null}
-        </div>
-      </section>
+            {data && data.teacher_picks.length > 0 ? (
+              <ul className="relative z-10 mt-6 space-y-2 border-t border-white/10 pt-5">
+                <li className="text-xs font-bold uppercase tracking-wide text-white/40">{t('roadmap.recentStars')}</li>
+                {data.teacher_picks.slice(0, 5).map((p) => (
+                  <li key={p.key} className="flex items-center gap-2 text-sm text-white/70">
+                    <Star className="h-4 w-4 shrink-0 text-amber-400" fill="currentColor" aria-hidden />
+                    <span className="min-w-0 truncate">{p.label}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : !loading && starsEarned === 0 ? (
+              <p className="relative z-10 mt-6 text-center text-sm text-white/40">{t('roadmap.noStars')}</p>
+            ) : null}
+          </div>
+        </section>
       </div>
     </KidsPanelMax>
   );
